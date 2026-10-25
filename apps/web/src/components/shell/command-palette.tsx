@@ -116,7 +116,7 @@ export const navigationDestinations = (
     },
     {
       id: "org-teams",
-      label: t("common.teams"),
+      label: t("common.members_and_teams"),
       href: `${organizationSettings}/teams`,
       group: organizationGroup,
     },

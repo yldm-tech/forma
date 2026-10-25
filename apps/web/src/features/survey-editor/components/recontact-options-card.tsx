@@ -3,9 +3,11 @@ import { RepeatIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { TSurvey } from "@forma/types/surveys/types";
+import { Alert, AlertDescription } from "../../../components/ui/alert";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { RadioGroup, RadioGroupItem } from "../../../components/ui/radio-group";
+import { resetsCooldownOnEveryPageView } from "../lib/cooldown-reset";
 
 interface DisplayOption {
   id: "displayOnce" | "displayMultiple" | "respondMultiple" | "displaySome";
@@ -168,6 +170,14 @@ export const RecontactOptionsCard = ({ localSurvey, setLocalSurvey }: RecontactO
           </div>
         </div>
       </Collapsible.CollapsibleTrigger>
+      {/* Outside the collapsible part, so it shows while the card is closed too: the trigger that causes it is chosen in another card. */}
+      {resetsCooldownOnEveryPageView(localSurvey) && (
+        <div className="px-4 pb-4">
+          <Alert variant="warning" role="status" data-testid="cooldown-reset-warning">
+            <AlertDescription>{t("workspace.surveys.edit.cooldown_reset_warning")}</AlertDescription>
+          </Alert>
+        </div>
+      )}
       <Collapsible.CollapsibleContent
         className={`flex flex-col ${open && "pb-3"} data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden`}>
         <hr className="py-1 text-slate-600" />

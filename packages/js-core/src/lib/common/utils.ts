@@ -1,4 +1,5 @@
 import { SAMPLING_ID_STORAGE_KEY } from "@/lib/common/constants";
+import { Logger } from "@/lib/common/logger";
 import type {
   TSurveyStyling,
   TUserState,
@@ -63,83 +64,62 @@ export const surveyHasSegmentFilters = (survey: TWorkspaceStateSurvey): boolean 
 };
 
 /**
- * Filters surveys based on the displayOption, recontactDays, and segments
- * @param workspace -  The workspace state
+ * Why a survey cannot be shown to this user right now, or null when it can. The checks run in the order the SDK has always applied them: the survey's display option, then the cooldown, then targeting. The reason is what `?formaDebug=true` prints for every survey left out, so a creator can tell "already shown" from "cooldown" from "not in the segment"; the state carries survey ids, not names.
+ */
+export const getSurveyExclusionReason = (
+  survey: TWorkspaceStateSurvey,
+  settings: TWorkspaceStateSettings,
+  userState: TUserState
+): string | null => {
+  const { displays, responses, lastDisplayAt, segments, userId } = userState.data;
+  const shown = displays.filter((display) => display.surveyId === survey.id).length;
+  const responded = responses.includes(survey.id);
+
+  switch (survey.displayOption) {
+    case "respondMultiple":
+      break;
+    case "displayOnce":
+      if (shown) return "shown once already";
+      break;
+    case "displayMultiple":
+      if (responded) return "already responded";
+      break;
+    case "displaySome":
+      if (survey.displayLimit === null) break;
+      if (responded) return "already responded";
+      if (shown >= survey.displayLimit)
+        return `shown ${shown.toString()}/${survey.displayLimit.toString()} times`;
+      break;
+    default:
+      throw Error("Invalid displayOption");
+  }
+
+  // The cooldown counts from the last display of any survey, not of this one. A survey's own recontactDays (0 = ignore the cooldown) wins over the workspace's; no cooldown at all lets the survey through.
+  const cooldown = survey.recontactDays ?? settings.recontactDays;
+  if (lastDisplayAt && cooldown) {
+    const days = diffInDays(new Date(), new Date(lastDisplayAt));
+    if (days < cooldown) {
+      return `${survey.recontactDays === null ? "workspace" : "survey"} cooldown ${cooldown.toString()}d, last survey shown ${days.toString()}d ago`;
+    }
+  }
+
+  if (!userId) return surveyHasSegmentFilters(survey) ? "segment needs setUserId()" : null;
+  if (survey.segment?.id && segments.includes(survey.segment.id)) return null;
+  return "user not in its segment";
+};
+
+/**
+ * The surveys this user can be shown on a trigger: those `getSurveyExclusionReason` lets through. In debug mode every other survey is logged with its reason.
+ * @param workspace - The workspace state
  * @param userState - The user state
  * @returns The filtered surveys
  */
-
-// takes the workspace and user state and returns the filtered surveys
 export const filterSurveys = (workspace: TWorkspaceState, userState: TUserState): TWorkspaceStateSurvey[] => {
-  const { settings, surveys } = workspace.data;
-  const { displays, responses, lastDisplayAt, segments, userId } = userState.data;
-
-  // Function to filter surveys based on displayOption criteria
-  let filteredSurveys = surveys.filter((survey: TWorkspaceStateSurvey) => {
-    switch (survey.displayOption) {
-      case "respondMultiple":
-        return true;
-      case "displayOnce":
-        return displays.filter((display) => display.surveyId === survey.id).length === 0;
-      case "displayMultiple":
-        return responses.filter((surveyId) => surveyId === survey.id).length === 0;
-
-      case "displaySome":
-        if (survey.displayLimit === null) {
-          return true;
-        }
-
-        // Check if survey response exists, if so, stop here
-        if (responses.filter((surveyId) => surveyId === survey.id).length) {
-          return false;
-        }
-
-        // Otherwise, check if displays length is less than displayLimit
-        return displays.filter((display) => display.surveyId === survey.id).length < survey.displayLimit;
-
-      default:
-        throw Error("Invalid displayOption");
-    }
-  });
-
-  // filter surveys that meet the recontactDays criteria
-  filteredSurveys = filteredSurveys.filter((survey) => {
-    // if no survey was displayed yet, show the survey
-    if (!lastDisplayAt) {
-      return true;
-    }
-
-    // if survey has recontactDays, check if the last display was more than recontactDays ago
-    // The previous approach checked the last display for each survey which is why we still have a surveyId in the displays array.
-    // TODO: Remove the surveyId from the displays array
-    if (survey.recontactDays !== null) {
-      return diffInDays(new Date(), new Date(lastDisplayAt)) >= survey.recontactDays;
-    }
-
-    // use recontactDays of the workspace if survey does not have recontactDays
-    if (settings.recontactDays) {
-      return diffInDays(new Date(), new Date(lastDisplayAt)) >= settings.recontactDays;
-    }
-
-    // if no recontactDays is set, show the survey
-
-    return true;
-  });
-
-  if (!userId) {
-    // exclude surveys that have a segment with filters
-    return filteredSurveys.filter((survey) => {
-      return !surveyHasSegmentFilters(survey);
-    });
-  }
-
-  if (!segments.length) {
-    return [];
-  }
-
-  // filter surveys based on segments
-  return filteredSurveys.filter((survey) => {
-    return survey.segment?.id && segments.includes(survey.segment.id);
+  const logger = Logger.getInstance();
+  return workspace.data.surveys.filter((survey) => {
+    const reason = getSurveyExclusionReason(survey, workspace.data.settings, userState);
+    if (reason) logger.debug(`Survey ${survey.id} left out: ${reason}`);
+    return !reason;
   });
 };
 

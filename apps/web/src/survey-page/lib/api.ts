@@ -12,6 +12,10 @@ export interface TPinResult {
 export const validateSurveyPin = (surveyId: string, pin: string): Promise<TPinResult> =>
   api.post<TPinResult>(`/s/${encodeURIComponent(surveyId)}/pin`, { pin });
 
+/** Opens the PIN gate again with a token a correct PIN returned (pin-session.ts): the survey and the same token, or an ApiError when the token has expired or the survey no longer saves progress. */
+export const resumeSurveyPin = (surveyId: string, pinAuthToken: string): Promise<TPinResult> =>
+  api.post<TPinResult>(`/s/${encodeURIComponent(surveyId)}/pin/resume`, { pinAuthToken });
+
 export interface TLinkSurveyEmailInput {
   email: string;
   suId: string;

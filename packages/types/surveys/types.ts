@@ -1003,6 +1003,10 @@ export const ZSurveyBase = z.object({
    * so reading anonymize off it would retroactively anonymize every survey that already exists.
    */
   isAnonymizeResponsesEnabled: z.boolean(),
+  /**
+   * "Save respondents' progress": a link survey keeps the answers given so far in the respondent's browser for 24 hours, so a reload or a tab the phone discarded goes on in the same response. On by default (`prefault`, like the column's default); a creator turns it off for a kiosk or a shared device.
+   */
+  isProgressSavingEnabled: z.boolean().prefault(true),
   pin: z
     .string()
     .length(4, {
@@ -4049,6 +4053,15 @@ export const ZSurveyElementSummaryOpenText = z.object({
 
 export type TSurveyElementSummaryOpenText = z.infer<typeof ZSurveyElementSummaryOpenText>;
 
+/** A free-text field's answers grouped by value: the ten most frequent values, most frequent first, and how many answers gave any other value. Each share is of the answers the breakdown counts. */
+export const ZSurveySummaryBreakdown = z.object({
+  values: z.array(z.object({ value: z.string(), count: z.number(), percentage: z.number() })),
+  restCount: z.number(),
+  restPercentage: z.number(),
+});
+
+export type TSurveySummaryBreakdown = z.infer<typeof ZSurveySummaryBreakdown>;
+
 export const ZSurveyElementSummaryMultipleChoice = z.object({
   type: z.union([
     z.literal(TSurveyElementTypeEnum.MultipleChoiceMulti),
@@ -4076,6 +4089,8 @@ export const ZSurveyElementSummaryMultipleChoice = z.object({
           })
         )
         .optional(),
+      /** Every value given through Other, grouped; `others` lists only the newest 50. */
+      othersBreakdown: ZSurveySummaryBreakdown.optional(),
     })
   ),
 });
@@ -4322,6 +4337,7 @@ export const ZSurveyElementSummaryHiddenFields = z.object({
       contactAttributes: ZContactAttributes.nullable(),
     })
   ),
+  breakdown: ZSurveySummaryBreakdown,
 });
 
 export type TSurveyElementSummaryHiddenFields = z.infer<typeof ZSurveyElementSummaryHiddenFields>;

@@ -182,6 +182,16 @@ export const ResponseOptionsCard = ({
     setLocalSurvey({ ...localSurvey, surveyClosedMessage: message });
   };
 
+  // On unless turned off; a survey loaded before the setting existed has it on.
+  const isProgressSavingEnabled = localSurvey.isProgressSavingEnabled !== false;
+
+  const handleProgressSavingToggle = () => {
+    setLocalSurvey((prevSurvey) => ({
+      ...prevSurvey,
+      isProgressSavingEnabled: prevSurvey.isProgressSavingEnabled === false,
+    }));
+  };
+
   const handleHideBackButtonToggle = () => {
     setLocalSurvey({ ...localSurvey, isBackButtonHidden: !localSurvey.isBackButtonHidden });
   };
@@ -605,6 +615,15 @@ export const ResponseOptionsCard = ({
                   )}
                 </div>
               </AdvancedOptionToggle>
+
+              {/* Save respondents' progress (D-R03: on by default, off for kiosks and shared devices) */}
+              <AdvancedOptionToggle
+                htmlId="saveRespondentProgress"
+                isChecked={isProgressSavingEnabled}
+                onToggle={handleProgressSavingToggle}
+                title={t("workspace.surveys.edit.save_respondent_progress")}
+                description={t("workspace.surveys.edit.save_respondent_progress_description")}
+              />
             </>
           )}
           <AdvancedOptionToggle

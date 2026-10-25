@@ -62,6 +62,8 @@ func V1Object(sv *Survey) (map[string]any, error) {
 	delete(obj, "inlineTriggers")
 	// v1 never described the inlined embedded-data fields the admin app reads.
 	delete(obj, "embeddedFields")
+	// Nor the link survey's progress saving, which v1 neither reads nor writes.
+	delete(obj, "isProgressSavingEnabled")
 	questions, err := blocksToQuestions(sv.Blocks, sv.Endings)
 	if err != nil {
 		return nil, err
@@ -80,6 +82,7 @@ func V1DeletedObject(sv *Survey) (map[string]any, error) {
 	delete(obj, "languages")
 	delete(obj, "followUps")
 	delete(obj, "embeddedFields")
+	delete(obj, "isProgressSavingEnabled")
 	obj["questions"] = []any{}
 	var segmentID any
 	if sv.Segment != nil {
@@ -611,6 +614,8 @@ func (s *Service) UpdateV1(ctx context.Context, caller Caller, current *Survey, 
 	for k, v := range body {
 		merged[k] = v
 	}
+	// v1 does not describe progress saving, so a body cannot change it.
+	merged["isProgressSavingEnabled"] = current.IsProgressSavingEnabled
 	if questions, ok := body["questions"].([]any); ok && len(questions) > 0 {
 		v1Defaults(merged)
 		endings := merged["endings"]

@@ -309,6 +309,22 @@ describe("the survey", () => {
     expect(document.getElementById("forma-survey-container")).toBeTruthy();
   });
 
+  // F1 and D-R03: progress is saved unless the creator turned it off for a kiosk or a shared device; the offline mode stays behind its link parameter.
+  test("saves respondents' progress unless the survey turned it off", async () => {
+    renderPage({ view: "survey", locale: "en-US", survey: surveyProps() });
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(lastRender()).toMatchObject({ persistProgress: true, offlineSupport: false });
+    cleanup();
+    renderSurvey.mockReset();
+    renderPage({
+      view: "survey",
+      locale: "en-US",
+      survey: surveyProps({ survey: publicSurvey({ isProgressSavingEnabled: false }) }),
+    });
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(lastRender()).toMatchObject({ persistProgress: false, offlineSupport: false });
+  });
+
   // An embedded survey fills its frame; on its own page a card may use the viewport rather than the runtime's 60dvh widget default, which stays the floor on a short (landscape) viewport.
   test("caps a card by the viewport on its own page, not when embedded", async () => {
     renderPage({ view: "survey", locale: "en-US", survey: surveyProps({ isEmbed: false }) });
@@ -463,6 +479,11 @@ describe("the PIN gate", () => {
     const boxes = screen.getAllByRole("textbox");
     fireEvent.change(boxes[0] as HTMLInputElement, { target: { value: pin } });
   };
+  const PIN_TOKEN_KEY = "forma:pin-token:survey-1";
+
+  beforeEach(() => {
+    globalThis.sessionStorage.clear();
+  });
 
   test("asks for the PIN, and renders the survey the server returns with its token", async () => {
     const fetchMock = vi.fn(async () =>
@@ -486,6 +507,74 @@ describe("the PIN gate", () => {
     );
     expect(lastRender().pinAuthToken).toBe("pin-token");
     expect(lastRender().survey.id).toBe("survey-1");
+  });
+
+  test("a correct PIN is kept for the tab's session while the survey saves progress, and forgotten once it is answered", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ survey: publicSurvey(), pinAuthToken: "pin-token" }, { status: 200 }))
+    );
+    renderPage({ view: "pin", locale: "en-US", survey: surveyProps({ survey: null }) });
+    await screen.findByText("This survey is protected. Enter the PIN below.");
+    typePin("1234");
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(globalThis.sessionStorage.getItem(PIN_TOKEN_KEY)).toBe("pin-token");
+
+    act(() => lastRender().onFinished?.("response-1"));
+    expect(globalThis.sessionStorage.getItem(PIN_TOKEN_KEY)).toBeNull();
+  });
+
+  test("a survey that does not save progress keeps no PIN token", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { survey: publicSurvey({ isProgressSavingEnabled: false }), pinAuthToken: "pin-token" },
+          { status: 200 }
+        )
+      )
+    );
+    renderPage({ view: "pin", locale: "en-US", survey: surveyProps({ survey: null }) });
+    await screen.findByText("This survey is protected. Enter the PIN below.");
+    typePin("1234");
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(globalThis.sessionStorage.getItem(PIN_TOKEN_KEY)).toBeNull();
+  });
+
+  // R-03: a reload after the PIN went back to the gate and lost the answers given so far.
+  test("a kept PIN token opens the gate again after a reload, without asking for the PIN", async () => {
+    globalThis.sessionStorage.setItem(PIN_TOKEN_KEY, "kept-token");
+    const fetchMock = vi.fn(async () =>
+      Response.json({ survey: publicSurvey(), pinAuthToken: "kept-token" }, { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderPage({ view: "pin", locale: "en-US", survey: surveyProps({ survey: null }) });
+
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/s/survey-1/pin/resume",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ pinAuthToken: "kept-token" }) })
+    );
+    expect(lastRender().pinAuthToken).toBe("kept-token");
+    expect(screen.queryByText("This survey is protected. Enter the PIN below.")).toBeNull();
+  });
+
+  test("a kept PIN token the server refuses is forgotten, and the PIN is asked for", async () => {
+    globalThis.sessionStorage.setItem(PIN_TOKEN_KEY, "expired-token");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { code: "not_authenticated", message: "PIN token is invalid or expired" },
+          { status: 401 }
+        )
+      )
+    );
+    renderPage({ view: "pin", locale: "en-US", survey: surveyProps({ survey: null }) });
+
+    expect(await screen.findByText("This survey is protected. Enter the PIN below.")).toBeTruthy();
+    expect(globalThis.sessionStorage.getItem(PIN_TOKEN_KEY)).toBeNull();
+    expect(renderSurvey).not.toHaveBeenCalled();
   });
 
   test("a refused PIN turns the boxes red, then clears them", async () => {

@@ -11,6 +11,7 @@ import { IdBadge } from "../../components/ui/id-badge";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { PageContentWrapper, PageHeader, SettingsCard } from "../../components/ui/page";
+import { useUnsavedChanges } from "../../components/shell/unsaved-changes";
 import { cn } from "../../lib/cn";
 import { errorMessage } from "../../lib/errors";
 import { organizationKeys } from "../../lib/queries/organizations";
@@ -97,6 +98,7 @@ const EditWorkspaceNameForm = ({
   const update = useUpdateWorkspace(workspace.id);
   const nameError = workspaceNameError(name);
   const isDirty = name !== workspace.name;
+  useUnsavedChanges(isDirty);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -149,6 +151,7 @@ const EditCooldownPeriodForm = ({
   const update = useUpdateWorkspace(workspace.id);
   const error = cooldownError(value);
   const isDirty = value !== String(workspace.recontactDays);
+  useUnsavedChanges(isDirty);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -204,6 +207,8 @@ const CustomScriptsForm = ({
   const initial = workspace.customHeadScripts ?? "";
   const [scripts, setScripts] = useState(initial);
   const update = useUpdateWorkspace(workspace.id);
+  const isDirty = scripts !== initial;
+  useUnsavedChanges(isDirty);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -246,7 +251,7 @@ const CustomScriptsForm = ({
           size="sm"
           className="w-fit"
           loading={update.isPending}
-          disabled={scripts === initial || isReadOnly}>
+          disabled={!isDirty || isReadOnly}>
           {t("common.save")}
         </Button>
       </form>
@@ -286,7 +291,8 @@ const DeleteWorkspace = ({
       else forgetWorkspace();
       toast.success(t("workspace.general.workspace_deleted_successfully"));
       await queryClient.invalidateQueries({ queryKey: organizationKeys.detail(workspace.organizationId) });
-      await navigate({ href: destination.path });
+      // The workspace is gone, so edits still open in its other cards have nothing left to be saved to.
+      await navigate({ href: destination.path, ignoreBlocker: true });
     } catch (error) {
       toast.error(errorMessage(t, error));
       setDialogOpen(false);

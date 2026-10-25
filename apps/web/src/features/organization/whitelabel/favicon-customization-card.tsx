@@ -1,5 +1,6 @@
 import { type ChangeEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useUnsavedChanges } from "../../../components/shell/unsaved-changes";
 import { Alert, AlertDescription } from "../../../components/ui/alert";
 import { Button } from "../../../components/ui/button";
 import { FileInput } from "../../../components/ui/file-input";
@@ -32,6 +33,8 @@ export const FaviconCustomizationCard = ({ organization }: { organization: Organ
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // An uploaded file is only the organization's favicon once saved.
+  useUnsavedChanges(isEditing && faviconUrl !== (organization.whitelabel?.faviconUrl || undefined));
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

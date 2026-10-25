@@ -410,7 +410,7 @@ export const zh: SiteContent = {
           facts: [
             {
               term: "?formaDebug=true",
-              body: "加到页面 URL 上后，SDK 会在控制台以 `🧱 Forma` 前缀记录每一步，重新获取工作区状态而不使用缓存，并忽略已保存的错误状态。",
+              body: "加到页面 URL 上后，SDK 会在控制台以 `🧱 Forma` 前缀记录每一步，重新获取工作区状态而不使用缓存，并忽略已保存的错误状态。当前用户看不到的每个问卷都会连同原因一起记录，例如 `Survey <id> left out: workspace cooldown 7d, last survey shown 2d ago`；被追踪的动作触发了却无法显示的问卷也会记录。",
             },
             {
               term: "setNonce(nonce)",

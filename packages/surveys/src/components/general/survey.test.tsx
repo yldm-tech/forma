@@ -406,6 +406,274 @@ describe("Survey offline restore", () => {
   });
 });
 
+// F1 (R-03): a link survey that saves progress goes on where the respondent left off after a reload, without the offline mode's prompts.
+describe("Survey progress persistence", () => {
+  const renderWith = (props: Partial<Parameters<typeof Survey>[0]> = {}) =>
+    render(
+      <Survey
+        appUrl="http://localhost:3000"
+        workspaceId="ws1234567890123456789012"
+        survey={baseSurvey}
+        styling={{} as any}
+        isBrandingEnabled={false}
+        languageCode="en"
+        isSpamProtectionEnabled={false}
+        getSetIsResponseSendingFinished={() => {}}
+        {...props}
+      />
+    );
+
+  const leavePage = () => {
+    const event = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    offlineStorageMocks.addPendingResponse.mockResolvedValue(1);
+    offlineStorageMocks.countPendingResponses.mockResolvedValue(0);
+    offlineStorageMocks.getPendingResponses.mockResolvedValue([]);
+    offlineStorageMocks.removePendingResponse.mockResolvedValue(undefined);
+    offlineStorageMocks.clearSurveyProgress.mockResolvedValue(undefined);
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(undefined);
+    offlineStorageMocks.patchSurveyProgressSnapshot.mockResolvedValue(undefined);
+    offlineStorageMocks.saveSurveyProgress.mockResolvedValue(undefined);
+    apiClientMocks.createDisplay.mockResolvedValue({ ok: true, data: { id: "display-created" } });
+    apiClientMocks.createResponse.mockResolvedValue({ ok: true, data: { id: "response-created" } });
+    apiClientMocks.updateResponse.mockResolvedValue({ ok: true, data: { quotaFull: false } });
+    apiClientMocks.getResponseIdByDisplayId.mockResolvedValue({ ok: true, data: { responseId: null } });
+    window.parent.postMessage = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  test("goes on in the same response and display after a reload, and never asks before the page is left", async () => {
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({
+        surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, responseId: "response-saved" },
+      })
+    );
+
+    renderWith({ persistProgress: true });
+
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "response-saved", data: { q2: "block-2-answer" } })
+      )
+    );
+    expect(apiClientMocks.createDisplay).not.toHaveBeenCalled();
+    expect(apiClientMocks.createResponse).not.toHaveBeenCalled();
+    expect(leavePage()).toBe(false);
+  });
+
+  test("offline mode still asks before a survey half answered is left", async () => {
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(makeProgress());
+
+    renderWith({ persistProgress: true, offlineSupport: true });
+
+    await screen.findByTestId("submit-block-2");
+    await waitFor(() => expect(leavePage()).toBe(true));
+  });
+
+  test("keeps nothing in the browser when the survey does not save progress", async () => {
+    renderWith({ persistProgress: false });
+
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalled());
+
+    expect(offlineStorageMocks.getSurveyProgress).not.toHaveBeenCalled();
+    expect(offlineStorageMocks.saveSurveyProgress).not.toHaveBeenCalled();
+    expect(offlineStorageMocks.addPendingResponse).not.toHaveBeenCalled();
+  });
+
+  test("starts afresh when the stored progress belongs to another single-use link", async () => {
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({
+        surveyStateSnapshot: {
+          ...makeProgress().surveyStateSnapshot,
+          responseId: "someone-elses-response",
+          singleUseId: "single-use-1",
+        },
+      })
+    );
+
+    renderWith({ persistProgress: true, mode: "inline", singleUseId: "single-use-2" });
+
+    await waitFor(() => expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id));
+    await waitFor(() => expect(apiClientMocks.createDisplay).toHaveBeenCalled());
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ singleUseId: "single-use-2", data: { q1: "block-1-answer" } })
+      )
+    );
+    expect(apiClientMocks.updateResponse).not.toHaveBeenCalled();
+  });
+
+  test("forgets the stored progress once the server has the final answer", async () => {
+    renderWith({ persistProgress: true });
+
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalled());
+    expect(offlineStorageMocks.clearSurveyProgress).not.toHaveBeenCalled();
+    expect(offlineStorageMocks.saveSurveyProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ surveyId: baseSurvey.id, blockId: "block-2" })
+    );
+
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(expect.objectContaining({ finished: true }))
+    );
+    await waitFor(() => expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id));
+  });
+
+  // An IndexedDB that keeps what is stored, seeded with rows an earlier page left.
+  const storeRows = (seed: object[]) => {
+    const store = { rows: seed.map((row, index) => ({ ...row, id: index + 1 })) as { id: number }[] };
+    let nextId = store.rows.length;
+    offlineStorageMocks.addPendingResponse.mockImplementation(async (entry: object) => {
+      nextId += 1;
+      store.rows.push({ ...entry, id: nextId });
+      return nextId;
+    });
+    offlineStorageMocks.countPendingResponses.mockImplementation(async () => store.rows.length);
+    offlineStorageMocks.getPendingResponses.mockImplementation(async () =>
+      store.rows.map((row) => ({ ...row }))
+    );
+    offlineStorageMocks.removePendingResponse.mockImplementation(async (id: number) => {
+      store.rows = store.rows.filter((row) => row.id !== id);
+    });
+    return store;
+  };
+
+  const earlierRow = (snapshot: Record<string, unknown>, data: Record<string, string>, ageMs = 60_000) => ({
+    surveyId: baseSurvey.id,
+    responseUpdate: { data, finished: false },
+    surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, ...snapshot },
+    createdAt: Date.now() - ageMs,
+  });
+
+  test("an unsent answer of another single-use link goes to that link's response, not into this respondent's", async () => {
+    const otherRespondent = { responseId: "response-A", singleUseId: "single-use-1" };
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({ surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, ...otherRespondent } })
+    );
+    const store = storeRows([earlierRow(otherRespondent, { q1: "A-answer" })]);
+
+    renderWith({ persistProgress: true, mode: "inline", singleUseId: "single-use-2" });
+
+    await waitFor(() => expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id));
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "response-A", data: { q1: "A-answer" } })
+      )
+    );
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ singleUseId: "single-use-2", data: { q1: "block-1-answer" } })
+      )
+    );
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(store.rows).toHaveLength(0));
+  });
+
+  test("an unsent answer older than the progress it belonged to does not pull a fresh start into the old response", async () => {
+    const day = 25 * 60 * 60 * 1000;
+    const stale = { responseId: "response-old", displayId: "display-old" };
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({
+        updatedAt: Date.now() - day,
+        surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, ...stale },
+      })
+    );
+    storeRows([earlierRow(stale, { q1: "old-answer" }, day)]);
+
+    renderWith({ persistProgress: true });
+
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "response-old", data: { q1: "old-answer" } })
+      )
+    );
+    await waitFor(() => expect(apiClientMocks.createDisplay).toHaveBeenCalled());
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ displayId: "display-created", data: { q1: "block-1-answer" } })
+      )
+    );
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledTimes(1);
+  });
+
+  test("an answer from the middle of the survey sent after a reload does not count as the end", async () => {
+    const resumed = { responseId: "response-A" };
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({ surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, ...resumed } })
+    );
+    const store = storeRows([earlierRow(resumed, { q1: "A-answer" })]);
+    const onFinished = vi.fn();
+
+    renderWith({ persistProgress: true, onFinished });
+
+    await waitFor(() => expect(store.rows).toHaveLength(0));
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId: "response-A", data: { q1: "A-answer" } })
+    );
+    // The position just restored survives another reload.
+    expect(offlineStorageMocks.clearSurveyProgress).not.toHaveBeenCalled();
+
+    // The final answer is still in flight.
+    apiClientMocks.updateResponse.mockImplementation(() => new Promise(() => {}));
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "response-A", finished: true })
+      )
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(onFinished).not.toHaveBeenCalled();
+  });
+
+  test("a survey that stopped saving progress removes what earlier respondents left, after sending their answers once", async () => {
+    const store = storeRows([earlierRow({ responseId: "response-A" }, { q1: "A-answer" })]);
+    apiClientMocks.updateResponse.mockResolvedValue({
+      ok: false,
+      error: { code: "internal_server_error", message: "Server error", status: 500 },
+    });
+
+    renderWith({ persistProgress: false });
+
+    await waitFor(() => expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id));
+    await waitFor(() => expect(store.rows).toHaveLength(0));
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledTimes(1);
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId: "response-A", data: { q1: "A-answer" } })
+    );
+
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { q1: "block-1-answer" } })
+      )
+    );
+    expect(offlineStorageMocks.addPendingResponse).not.toHaveBeenCalled();
+  });
+
+  test("keeps no progress for a survey shown on a customer's site", async () => {
+    renderWith({ persistProgress: true, survey: { ...baseSurvey, type: "app" } as TJsWorkspaceStateSurvey });
+
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalled());
+    expect(offlineStorageMocks.getSurveyProgress).not.toHaveBeenCalled();
+    expect(offlineStorageMocks.saveSurveyProgress).not.toHaveBeenCalled();
+  });
+});
+
 // R-01 and R-02: the answers a respondent gives reach the server even when the host re-renders the survey or the connection drops for a while.
 describe("Survey response delivery", () => {
   const serverError = {

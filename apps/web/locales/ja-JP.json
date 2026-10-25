@@ -231,6 +231,7 @@
     "booked": "予約済み",
     "bottom_left": "左下",
     "bottom_right": "右下",
+    "branding_and_links": "ブランディングとリンク",
     "cancel": "キャンセル",
     "canceled": "キャンセル済み",
     "centered_modal": "中央モーダル",
@@ -289,6 +290,10 @@
     "disabled": "無効",
     "disallow": "許可しない",
     "discard": "破棄",
+    "discard_changes_confirm": "変更を破棄",
+    "discard_changes_description": "このページには保存されていない変更があります。このまま移動すると、変更は失われます。",
+    "discard_changes_keep_editing": "編集を続ける",
+    "discard_changes_title": "変更を破棄しますか？",
     "dismissed": "非表示",
     "domain": "ドメイン",
     "done": "完了",
@@ -703,6 +708,9 @@
     "landing": {
       "no_workspaces_warning_subtitle": "ワークスペースへのアクセスを取得するには、組織のオーナーに連絡してください。または、独自の組織を作成して開始することもできます。",
       "no_workspaces_warning_title": "お使いのアカウントはまだワークスペースにアクセスできません。"
+    },
+    "members": {
+      "inactive_tooltip": "このアカウントは管理 API で無効化されています。オーナーまたはマネージャーが PATCH /api/v2/organizations/{organizationId}/users にメールアドレス {email} と isActive: true を送信すると、アクセスを復元できます。"
     },
     "security_tip_github": "セキュリティ修正の情報を受け取りましょう：<githubLink>GitHub の Forma セキュリティアドバイザリ</githubLink>を開き、Watch → Custom → Releases と Security alerts を選択してください。",
     "workspaces": {
@@ -1681,6 +1689,7 @@
       "your_survey_would_not_be_shown": "あなたのフォームは表示されません。"
     },
     "analysis": {
+      "breakdown_rest": "その他すべての値",
       "filter_op": {
         "applied": "付与済み",
         "clicked": "クリック済み",
@@ -1706,7 +1715,9 @@
         "starts_with": "で始まる",
         "submitted": "回答済み"
       },
-      "nps_formula_tooltip": "NPS = 推奨者（9〜10）の割合 − 批判者（0〜6）の割合。回答した{count}人を母数とし、スキップは含みません。"
+      "new_responses_pill": "{count, plural, other {{count} 件の新しい回答}}",
+      "nps_formula_tooltip": "NPS = 推奨者（9〜10）の割合 − 批判者（0〜6）の割合。回答した{count}人を母数とし、スキップは含みません。",
+      "refresh": "結果を更新"
     },
     "api_keys": {
       "add_api_key": "APIキーを追加",
@@ -3049,6 +3060,7 @@
         "convert_to_single_choice": "単一選択に変換",
         "cooldown_period_across_surveys": "クールダウン期間（全サーベイ共通）",
         "cooldown_period_across_surveys_description": "サーベイ疲れを防ぐため、このサーベイがワークスペース全体のクールダウン期間とどのように連携するかを選択してください。",
+        "cooldown_reset_warning": "このフォームはクールダウン期間を無視し、すべてのページビューで表示されるため、繰り返し表示されます。表示されるたびにワークスペースのクールダウン期間がリセットされるため、「クールダウン期間を使用」に設定したフォームは表示されない可能性があります。ページビューのトリガーを特定のページに絞るか、このフォームにクールダウン期間を設定してください。",
         "country": "国",
         "create_group": "グループを作成",
         "create_your_own_survey": "独自のフォームを作成",
@@ -3371,6 +3383,8 @@
         "row_used_in_logic_error": "この行は質問 {questionIndex} のロジックで使用されています。まず、ロジックから削除してください。",
         "rows": "行",
         "save_and_close": "保存して閉じる",
+        "save_respondent_progress": "回答の途中経過を保存",
+        "save_respondent_progress_description": "ページを再読み込みしたり離れたりしても、回答者は24時間以内なら中断したところから同じ回答の続きを再開できます。キオスクや共用端末では次の人に前の人の回答が見えてしまうため、オフにしてください。",
         "scale": "尺度",
         "schedule_survey": "アンケートをスケジュール",
         "scheduled_moment": "{moment}（{timeZone}）に予定されています",
@@ -3565,6 +3579,11 @@
         "partial_responses": "部分的な回答"
       },
       "filter_selected_count": "{count} 件選択中",
+      "list": {
+        "state_truncated": "SDK が読み込むのは、ワークスペースで進行中のアプリ内フォームのうち新しい {limit} 件だけです。それより古いフォームはウェブサイトやアプリに表示されません。不要になったアプリ内フォームを完了または一時停止してください：",
+        "state_truncated_more": "{count, plural, other {ほか {count} 件}}",
+        "state_truncated_title": "{count, plural, other {進行中のアプリ内フォーム {count} 件が表示されません}}"
+      },
       "new_survey": "新規フォーム",
       "no_other_workspaces_available": "このアンケートをコピーできる他のワークスペースがありません。",
       "no_surveys_match_filters": "条件に一致するフォームはありません。",

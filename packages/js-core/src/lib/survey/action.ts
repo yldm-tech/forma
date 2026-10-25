@@ -1,6 +1,7 @@
 import { Config } from "@/lib/common/config";
 import { FORMA_EVENTS, emitFormaEvent } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
+import { getSurveyExclusionReason } from "@/lib/common/utils";
 import { triggerSurvey } from "@/lib/survey/widget";
 import { type InvalidCodeError, type NetworkError, type Result, err, okVoid } from "@/types/error";
 import { type TTrackProperties } from "@/types/survey";
@@ -31,6 +32,8 @@ export const trackAction = async (
   // get a list of surveys that are collecting insights
   const activeSurveys = appConfig.get().filteredSurveys;
 
+  explainUntriggeredSurveys(name, aliasName);
+
   if (Boolean(activeSurveys) && activeSurveys.length > 0) {
     for (const survey of activeSurveys) {
       for (const trigger of survey.triggers) {
@@ -44,6 +47,32 @@ export const trackAction = async (
   }
 
   return okVoid();
+};
+
+/**
+ * Debug output for a tracked action: each survey it is a trigger of that the user cannot be shown, with the reason, or that no survey in the state uses it at all. Without this, debug mode only lists the surveys that can show, and a survey that silently never appears (an "ignore cooldown" survey reset the cooldown, it was already shown once, the user is not in its segment) leaves nothing to go on.
+ */
+const explainUntriggeredSurveys = (name: string, aliasName: string): void => {
+  const logger = Logger.getInstance();
+  const { workspace, user, filteredSurveys } = Config.getInstance().get();
+  const triggered = workspace.data.surveys.filter((survey) =>
+    survey.triggers.some((trigger) => trigger.actionClass.name === name)
+  );
+
+  if (!triggered.length) {
+    const { truncated } = workspace.data;
+    logger.debug(
+      `No survey uses action "${aliasName}"${truncated ? ` (${truncated.toString()} old surveys not in state)` : ""}`
+    );
+    return;
+  }
+
+  for (const survey of triggered) {
+    if (filteredSurveys.some((eligible) => eligible.id === survey.id)) continue;
+    logger.debug(
+      `Survey ${survey.id} left out: ${getSurveyExclusionReason(survey, workspace.data.settings, user) ?? "not re-evaluated yet"}`
+    );
+  }
 };
 
 /**

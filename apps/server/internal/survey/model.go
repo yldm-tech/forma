@@ -127,6 +127,7 @@ type Survey struct {
 	IsAutoProgressingEnabled    bool             `json:"isAutoProgressingEnabled"`
 	IsCaptureIPEnabled          bool             `json:"isCaptureIpEnabled"`
 	IsAnonymizeResponsesEnabled bool             `json:"isAnonymizeResponsesEnabled"`
+	IsProgressSavingEnabled     bool             `json:"isProgressSavingEnabled"`
 	Pin                         *string          `json:"pin"`
 	DisplayPercentage           *float64         `json:"displayPercentage"`
 	Languages                   []SurveyLanguage `json:"languages"`

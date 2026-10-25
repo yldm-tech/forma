@@ -62,9 +62,9 @@ describe("CommandQueue", () => {
     vi.mocked(checkSetup).mockReturnValue({ ok: true, data: undefined });
 
     // Enqueue commands
-    await queue.add(cmdA, CommandType.GeneralAction, true);
-    await queue.add(cmdB, CommandType.GeneralAction, true);
-    await queue.add(cmdC, CommandType.GeneralAction, true);
+    await queue.add("cmdA", cmdA, CommandType.GeneralAction, true);
+    await queue.add("cmdB", cmdB, CommandType.GeneralAction, true);
+    await queue.add("cmdC", cmdC, CommandType.GeneralAction, true);
 
     // Wait for them to finish
     await queue.wait();
@@ -90,11 +90,27 @@ describe("CommandQueue", () => {
       },
     });
 
-    await queue.add(cmd, CommandType.GeneralAction, true);
+    await queue.add("cmd", cmd, CommandType.GeneralAction, true);
     await queue.wait();
 
     // Command should never have been called
     expect(cmd).not.toHaveBeenCalled();
+  });
+
+  test("the setup-not-complete warning names the call it dropped", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.mocked(checkSetup).mockReturnValue({ ok: false, error: { code: "not_setup", message: "Not setup" } });
+    const cmd = vi.fn();
+
+    await queue.add('track("upgrade_clicked")', cmd, CommandType.GeneralAction, true);
+    await queue.wait();
+
+    expect(cmd).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Setup not complete, track("upgrade_clicked") dropped.')
+    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Call setup() first"));
+    warn.mockRestore();
   });
 
   test("executes command if checkSetup is false (no check)", async () => {
@@ -110,7 +126,7 @@ describe("CommandQueue", () => {
     vi.mocked(checkSetup).mockReturnValue({ ok: true, data: undefined });
 
     // Here we pass 'false' for the second argument, so no check is performed
-    await queue.add(cmd, CommandType.GeneralAction, false);
+    await queue.add("cmd", cmd, CommandType.GeneralAction, false);
     await queue.wait();
 
     expect(cmd).toHaveBeenCalledTimes(1);
@@ -139,7 +155,7 @@ describe("CommandQueue", () => {
       throw new Error("some error");
     });
 
-    await queue.add(failingCmd, CommandType.GeneralAction, true);
+    await queue.add("failingCmd", failingCmd, CommandType.GeneralAction, true);
     await queue.wait();
 
     expect(consoleErrorSpy).toHaveBeenCalledWith("🧱 Forma - Global error: ", expect.any(Error));
@@ -164,8 +180,8 @@ describe("CommandQueue", () => {
 
     vi.mocked(checkSetup).mockReturnValue({ ok: true, data: undefined });
 
-    await queue.add(cmd1, CommandType.GeneralAction, true);
-    await queue.add(cmd2, CommandType.GeneralAction, true);
+    await queue.add("cmd1", cmd1, CommandType.GeneralAction, true);
+    await queue.add("cmd2", cmd2, CommandType.GeneralAction, true);
 
     await queue.wait();
 
@@ -189,7 +205,7 @@ describe("CommandQueue", () => {
 
     vi.mocked(checkSetup).mockReturnValue({ ok: true, data: undefined });
 
-    await queue.add(generalActionCmd, CommandType.GeneralAction, true);
+    await queue.add("generalActionCmd", generalActionCmd, CommandType.GeneralAction, true);
     await queue.wait();
 
     expect(mockUpdateQueue.isEmpty).toHaveBeenCalled();
@@ -227,9 +243,9 @@ describe("CommandQueue", () => {
       .mockReturnValueOnce({ ok: false, error: { code: "not_setup", message: "Not setup" } }) // for cmd2
       .mockReturnValueOnce({ ok: true, data: undefined }); // for cmd3
 
-    await queue.add(cmd1, CommandType.Setup, true);
-    await queue.add(cmd2, CommandType.UserAction, true);
-    await queue.add(cmd3, CommandType.GeneralAction, true);
+    await queue.add("cmd1", cmd1, CommandType.Setup, true);
+    await queue.add("cmd2", cmd2, CommandType.UserAction, true);
+    await queue.add("cmd3", cmd3, CommandType.GeneralAction, true);
 
     await queue.wait();
 

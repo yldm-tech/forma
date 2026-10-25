@@ -319,17 +319,17 @@ describe("settings navigation", () => {
     />
   );
 
-  test("self-hosted, the organization settings include the domain page", async () => {
+  test("self-hosted, the organization settings include the branding and links page", async () => {
     stubServer();
     renderAt(navigation(false));
-    const domain = await screen.findByRole("link", { name: t("common.domain") });
+    const domain = await screen.findByRole("link", { name: t("common.branding_and_links") });
     expect(domain.getAttribute("href")).toBe(`/organizations/${ORG}/settings/domain`);
   });
 
-  test("on Forma Cloud there is no domain page", async () => {
+  test("on Forma Cloud there is no branding and links page", async () => {
     stubServer();
     renderAt(navigation(true));
     expect(await screen.findByRole("link", { name: t("common.billing") })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: t("common.domain") })).toBeNull();
+    expect(screen.queryByRole("link", { name: t("common.branding_and_links") })).toBeNull();
   });
 });

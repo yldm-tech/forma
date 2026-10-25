@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
-import type { TSurvey, TSurveySummary } from "@forma/types/surveys/types";
+import type { TSurvey, TSurveySummary, TSurveySummaryBreakdown } from "@forma/types/surveys/types";
 import { getElementsFromBlocks } from "../../survey-editor/lib/client-utils";
 import { getFilterOperatorLabel, getFilterValueLabel } from "./filters";
 
@@ -140,3 +140,8 @@ export const formatNpsScore = (score: number, locale: string): string =>
 /** An average as the score cards print it, to two decimals. An element with no numeric answer has no average: forma2 printed JavaScript's NaN, which the server sends as null. */
 export const formatAverage = (average: number | null): string =>
   average === null || Number.isNaN(average) ? "NaN" : average.toFixed(2);
+
+/** Which view a free-text field's card opens on: the grouped bars once some value repeats, the answers themselves while every value is different (an id, a timestamp), where bars of one would say nothing. */
+export const defaultBreakdownView = (
+  breakdown: TSurveySummaryBreakdown | undefined
+): "aggregated" | "individual" => ((breakdown?.values[0]?.count ?? 0) > 1 ? "aggregated" : "individual");

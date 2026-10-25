@@ -38,7 +38,8 @@ export const UserDropdown = ({
     }
     // Messages about the session just ended, such as a 2FA confirmation, must not follow the user onto the sign-in page.
     for (const shown of toast.getSnapshot()) toast.dismiss(shown.id);
-    await navigate({ href: "/auth/login" });
+    // The session is gone, so a page with unsaved edits has nothing left to keep editing: skip its "Discard changes?" question.
+    await navigate({ href: "/auth/login", ignoreBlocker: true });
   };
 
   return (

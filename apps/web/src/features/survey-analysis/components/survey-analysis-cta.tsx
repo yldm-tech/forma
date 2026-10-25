@@ -49,7 +49,7 @@ export interface AnalysisSearch {
 export const EXAMPLE_STATUS_CADENCE_MS = 2500;
 
 /**
- * forma2's example-responses action of the analysis toolbar: AI-written responses for a survey that has none, so its summary can be explored before it is shared. It is offered to writers of a survey that is not archived, and disabled while AI is unavailable to the workspace, once the survey has responses, and while a generation runs. The wait is shown as status lines in the loading toast, which turns into the result in place.
+ * forma2's example-responses action of the analysis toolbar: AI-written responses for a survey that has none, so its summary can be explored before it is shared. It is offered to writers of a survey that is not archived while the survey is known to have no responses: once it has some the action could only come back after a reset, so it leaves the toolbar rather than stay there disabled, and it waits for the count rather than flash in while it loads. It is disabled while AI is unavailable to the workspace and while a generation runs. The wait is shown as status lines in the loading toast, which turns into the result in place.
  */
 export const useExampleResponsesAction = ({
   survey,
@@ -60,12 +60,14 @@ export const useExampleResponsesAction = ({
 }: {
   survey: TSurvey;
   workspaceId: string;
-  responseCount: number;
+  /** The survey's response count, undefined while it loads. */
+  responseCount: number | undefined;
   isReadOnly: boolean;
   onGenerated: () => Promise<unknown>;
 }): IconAction => {
   const { t } = useTranslation();
-  const ai = useQuery({ ...workspaceAIQuery(workspaceId), enabled: !isReadOnly && !survey.archivedAt }).data;
+  const isOffered = !isReadOnly && !survey.archivedAt && responseCount === 0;
+  const ai = useQuery({ ...workspaceAIQuery(workspaceId), enabled: isOffered }).data;
   const [isGenerating, setIsGenerating] = useState(false);
   const isAIUnavailable = ai?.available !== true;
 
@@ -115,8 +117,6 @@ export const useExampleResponsesAction = ({
   const tooltip = (() => {
     if (isGenerating) return t("workspace.surveys.summary.generating_example_responses");
     if (ai && !ai.available) return getAIUnavailableMessage(ai.reason, t);
-    if (responseCount > 0)
-      return t("workspace.surveys.summary.generate_example_responses_disabled_has_responses");
     return t("workspace.surveys.summary.generate_example_responses");
   })();
 
@@ -124,8 +124,8 @@ export const useExampleResponsesAction = ({
     icon: SparklesIcon,
     tooltip,
     onClick: () => void generate(),
-    disabled: isGenerating || isAIUnavailable || responseCount > 0,
-    isVisible: !isReadOnly && !survey.archivedAt,
+    disabled: isGenerating || isAIUnavailable,
+    isVisible: isOffered,
   };
 };
 
@@ -141,7 +141,8 @@ export const SurveyAnalysisCTA = ({
   workspace: WorkspaceDetail;
   user: Me;
   publicDomain: string;
-  responseCount: number;
+  /** The survey's unfiltered response count, undefined while it loads. */
+  responseCount: number | undefined;
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
@@ -157,6 +158,7 @@ export const SurveyAnalysisCTA = ({
   const [isCautionDialogOpen, setIsCautionDialogOpen] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const { refreshSingleUseId } = useSingleUseId(survey, isReadOnly);
+  const answeredCount = responseCount ?? 0;
 
   const appSetupCompleted = survey.type === "app" && workspace.appSetupCompleted;
   const isStartView = search.share === true;
@@ -231,7 +233,7 @@ export const SurveyAnalysisCTA = ({
   const iconActions: IconAction[] = [
     {
       icon: RefreshCcwIcon,
-      tooltip: t("common.refresh"),
+      tooltip: t("workspace.analysis.refresh"),
       onClick: async () => {
         if (isRefreshing) return;
         setIsRefreshing(true);
@@ -267,7 +269,7 @@ export const SurveyAnalysisCTA = ({
       icon: SquarePenIcon,
       tooltip: t("common.edit"),
       onClick: () => {
-        if (responseCount > 0) setIsCautionDialogOpen(true);
+        if (answeredCount > 0) setIsCautionDialogOpen(true);
         else void navigate({ href: editHref });
       },
       // Archived surveys are read-only; editing is refused by the server, so the entry point is hidden too.
@@ -344,7 +346,7 @@ export const SurveyAnalysisCTA = ({
       )}
       <SuccessMessage survey={survey} workspace={workspace} search={search} setSearch={setSearch} />
 
-      {responseCount > 0 && (
+      {answeredCount > 0 && (
         <EditPublicSurveyAlertDialog
           open={isCautionDialogOpen}
           setOpen={setIsCautionDialogOpen}
@@ -363,7 +365,7 @@ export const SurveyAnalysisCTA = ({
         open={isResetModalOpen}
         setOpen={setIsResetModalOpen}
         title={t("workspace.surveys.summary.delete_all_existing_responses_and_displays")}
-        body={t("workspace.surveys.summary.reset_survey_warning_count", { count: responseCount })}
+        body={t("workspace.surveys.summary.reset_survey_warning_count", { count: answeredCount })}
         buttonText={t("workspace.surveys.summary.reset_survey")}
         onConfirm={() => void handleResetSurvey()}
         buttonVariant="destructive"
