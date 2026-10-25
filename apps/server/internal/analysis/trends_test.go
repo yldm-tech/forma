@@ -102,12 +102,108 @@ func TestBuildTrendsCoversTheFilterWindowInTheZone(t *testing.T) {
 func TestBuildTrendsRefusesTooManyBuckets(t *testing.T) {
 	from, to := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	filter := &response.Criteria{CreatedAt: &response.Range{Min: &from, Max: &to}}
-	_, err := buildTrends(nil, nil, nil, filter, time.UTC, IntervalDay, to)
-	if e, ok := apperr.As(err); !ok || e.Code != CodeTrendTooManyBuckets || e.Status != http.StatusBadRequest {
+	// Responses spread over six years are more days than the buckets hold: by day, the interval the client asked for, they are refused.
+	counts := []dayCounts{{Day: day("2020-01-01"), Responses: 1}, {Day: day("2025-12-31"), Responses: 1}}
+	_, err := buildTrends(nil, counts, nil, filter, time.UTC, IntervalDay, to)
+	if e, ok := apperr.As(err); !ok || e.Code != CodeTrendTooManyBuckets || e.Status != http.StatusBadRequest || !strings.HasSuffix(e.Message, "choose a longer interval") {
 		t.Errorf("by day: %v", err)
 	}
-	if got, err := buildTrends(nil, nil, nil, filter, time.UTC, IntervalMonth, to); err != nil || len(got.Buckets) != 73 {
+	if got, err := buildTrends(nil, counts, nil, filter, time.UTC, IntervalMonth, to); err != nil || len(got.Buckets) != 73 {
 		t.Errorf("by month: %v, %v", got, err)
+	}
+	// Without responses there is nothing to lay out beyond the limit: the trend is empty, not refused.
+	if got, err := buildTrends(nil, nil, nil, filter, time.UTC, IntervalDay, to); err != nil || len(got.Buckets) != 0 {
+		t.Errorf("empty by day: %v, %v", got, err)
+	}
+}
+
+func TestBuildTrendsCutsAFarOffWindowToTheResponses(t *testing.T) {
+	// A custom range from 1900, by month 1522 buckets, of a survey answered in the last few days.
+	from, to := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 26, 0, 0, 0, 0, time.UTC)
+	filter := &response.Criteria{CreatedAt: &response.Range{Min: &from, Max: &to}}
+	counts := []dayCounts{{Day: day("2026-10-20"), Responses: 2, Completed: 1}, {Day: day("2026-10-25"), Responses: 1, Completed: 1}}
+	now := time.Date(2026, 10, 26, 12, 0, 0, 0, time.UTC)
+	for _, interval := range []string{"", IntervalDay, IntervalWeek, IntervalMonth} {
+		got, err := buildTrends(nil, counts, nil, filter, time.UTC, interval, now)
+		if err != nil {
+			t.Errorf("by %q: %v", interval, err)
+			continue
+		}
+		if got.Buckets[0].Start != "2026-10-20" || got.Buckets[len(got.Buckets)-1].End != "2026-10-26" {
+			t.Errorf("by %q: buckets %+v", interval, got.Buckets)
+		}
+	}
+	// The server's pick shows days for the six days with responses, not months back to 1900.
+	if got, _ := buildTrends(nil, counts, nil, filter, time.UTC, "", now); got.Interval != IntervalDay || len(got.Buckets) != 7 {
+		t.Errorf("auto: %s, %d buckets", got.Interval, len(got.Buckets))
+	}
+	// A window that fits keeps its empty lead-in: it follows the filter.
+	recent := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	fits := &response.Criteria{CreatedAt: &response.Range{Min: &recent, Max: &to}}
+	if got, _ := buildTrends(nil, counts, nil, fits, time.UTC, "", now); got.Buckets[0].Start != "2026-10-01" {
+		t.Errorf("fitting window: %+v", got.Buckets[0])
+	}
+	// Responses dated over more than 1000 months apart, which the management API can set, still give the server's pick a trend: the latest 1000 months.
+	spread := []dayCounts{{Day: day("1900-01-05"), Responses: 1}, {Day: day("2026-10-20"), Responses: 1}}
+	got, err := buildTrends(nil, spread, nil, filter, time.UTC, "", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Interval != IntervalMonth || len(got.Buckets) != maxTrendBuckets || got.Buckets[0].Start != "1943-07-01" || got.Buckets[len(got.Buckets)-1].Responses != 1 {
+		t.Errorf("spread auto: %s %d %+v", got.Interval, len(got.Buckets), got.Buckets[0])
+	}
+	// The client's own month is refused, with advice that does not point at a longer interval.
+	if _, err := buildTrends(nil, spread, nil, filter, time.UTC, IntervalMonth, now); err == nil || !strings.HasSuffix(err.Error(), "choose a shorter date range") {
+		t.Errorf("spread by month: %v", err)
+	}
+}
+
+func TestBuildTrendsMarksPartialBuckets(t *testing.T) {
+	// A Tokyo browser's "last 7 days" on 26 October in an organization on UTC: the window starts at 15:00 on the 19th and ends at 14:59:59.999 on the 26th.
+	from, to := time.Date(2026, 10, 19, 15, 0, 0, 0, time.UTC), time.Date(2026, 10, 26, 14, 59, 59, 999e6, time.UTC)
+	filter := &response.Criteria{CreatedAt: &response.Range{Min: &from, Max: &to}}
+	counts := []dayCounts{{Day: day("2026-10-19"), Responses: 1}, {Day: day("2026-10-20"), Responses: 3}, {Day: day("2026-10-25"), Responses: 4}}
+	partial := func(t *Trends) []bool {
+		out := make([]bool, len(t.Buckets))
+		for i, b := range t.Buckets {
+			out[i] = b.Partial
+		}
+		return out
+	}
+
+	// After the 26th the window's first day is cut by its start, its last by its end.
+	got, err := buildTrends(nil, counts, nil, filter, time.UTC, IntervalDay, day("2026-11-01"))
+	if want := []bool{true, false, false, false, false, false, false, true}; err != nil || !reflect.DeepEqual(partial(got), want) {
+		t.Errorf("by day: %v %v, want %v", err, partial(got), want)
+	}
+	// On the 26th itself, today is partial too, as is the week it is in; the week of the 19th is cut by the window's start.
+	now := time.Date(2026, 10, 26, 3, 0, 0, 0, time.UTC)
+	if got, _ := buildTrends(nil, counts, nil, filter, time.UTC, IntervalWeek, now); !reflect.DeepEqual(partial(got), []bool{true, true}) {
+		t.Errorf("by week: %v", partial(got))
+	}
+
+	// A window of whole days in the zone has no partial bucket once it is over, ending at 23:59:59.999 or at 23:59:59.
+	tokyo, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, end := range []time.Time{time.Date(2026, 10, 25, 23, 59, 59, 999e6, tokyo), time.Date(2026, 10, 25, 23, 59, 59, 0, tokyo)} {
+		start := time.Date(2026, 10, 19, 0, 0, 0, 0, tokyo)
+		whole := &response.Criteria{CreatedAt: &response.Range{Min: &start, Max: &end}}
+		got, _ := buildTrends(nil, counts, nil, whole, tokyo, IntervalDay, day("2026-11-01"))
+		for _, b := range got.Buckets {
+			if b.Partial {
+				t.Errorf("window ending %s: %+v is partial", end, b)
+			}
+		}
+	}
+
+	// Without a filter only the interval that has not ended is partial.
+	if got, _ := buildTrends(nil, counts, nil, nil, time.UTC, IntervalMonth, time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)); !reflect.DeepEqual(partial(got), []bool{true}) {
+		t.Errorf("this month: %v", partial(got))
+	}
+	if got, _ := buildTrends(nil, counts, nil, nil, time.UTC, IntervalMonth, day("2026-11-01")); !reflect.DeepEqual(partial(got), []bool{false}) {
+		t.Errorf("last month: %v", partial(got))
 	}
 }
 
@@ -230,11 +326,11 @@ func TestTrendsExportWritesARowPerBucket(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := [][]string{
-		{"Period start", "Period end", "Responses", "Completed", "Completion rate (%)", "Recommend? - NPS", "Recommend? - Answered", "Satisfied? - CSAT satisfied (%)", "Satisfied? - Answered", "Stars - Average", "Stars - Answered"},
-		{"2026-03-01", "2026-03-01", "1", "1", "100", "100", "1", "100", "1", "4", "1"},
-		{"2026-03-02", "2026-03-02", "2", "1", "50", "0", "2", "0", "1", "2", "1"},
-		{"2026-03-03", "2026-03-03", "0", "0", "0", "", "0", "", "0", "", "0"},
-		{"2026-03-04", "2026-03-04", "1", "1", "100", "", "0", "100", "1", "", "0"},
+		{"Period start", "Period end", "Partial period", "Responses", "Completed", "Completion rate (%)", "Recommend? - NPS", "Recommend? - Answered", "Satisfied? - CSAT satisfied (%)", "Satisfied? - Answered", "Stars - Average", "Stars - Answered"},
+		{"2026-03-01", "2026-03-01", "No", "1", "1", "100", "100", "1", "100", "1", "4", "1"},
+		{"2026-03-02", "2026-03-02", "No", "2", "1", "50", "0", "2", "0", "1", "2", "1"},
+		{"2026-03-03", "2026-03-03", "No", "0", "0", "0", "", "0", "", "0", "", "0"},
+		{"2026-03-04", "2026-03-04", "No", "1", "1", "100", "", "0", "100", "1", "", "0"},
 	}
 	if !reflect.DeepEqual(rows, want) {
 		t.Errorf("csv %q, want %q", rows, want)

@@ -33,10 +33,10 @@ const (
 	TrendMetricAverage   = "average"
 )
 
-// maxTrendBuckets bounds the buckets one trend returns; a range that needs more at the interval asked for is refused with CodeTrendTooManyBuckets, so the client offers a longer interval.
+// maxTrendBuckets bounds the buckets one trend returns. A filter window wider than that is cut to the days with responses (fitRange). Responses that span more buckets than that are refused with CodeTrendTooManyBuckets at an interval the client asked for, so it offers a longer one, and cut to the latest months at the server's own pick.
 const maxTrendBuckets = 1000
 
-// CodeTrendTooManyBuckets is the error code of a trend whose range needs more than maxTrendBuckets buckets at the interval asked for.
+// CodeTrendTooManyBuckets is the error code of a trend whose responses span more than maxTrendBuckets buckets at the interval the client asked for.
 const CodeTrendTooManyBuckets = "trend_too_many_buckets"
 
 // The longest span, in days, that autoInterval shows by day, and then by week; anything longer is shown by month.
@@ -56,8 +56,10 @@ type Trends struct {
 
 // TrendBucket is one interval: its first and last day (both inclusive, local dates, cut to the range at the two ends), the responses started in it and how many of them are completed, with that share.
 type TrendBucket struct {
-	Start                string  `json:"start"`
-	End                  string  `json:"end"`
+	Start string `json:"start"`
+	End   string `json:"end"`
+	// Partial is set when the responses read cover only part of the interval: the filter's window starts or ends inside it, as a browser in another zone than the organization's or a "last 24 hours" window makes it do, or the interval has not ended yet. Its counts are then not comparable with a whole interval's.
+	Partial              bool    `json:"partial"`
 	Responses            int     `json:"responses"`
 	Completed            int     `json:"completed"`
 	CompletionPercentage float64 `json:"completionPercentage"`
@@ -253,6 +255,56 @@ func trendRange(filter *response.Criteria, counts []dayCounts, loc *time.Locatio
 	return first, last, true
 }
 
+// bucketCount is how many buckets of the interval the days from first to last fall in.
+func bucketCount(first, last time.Time, interval string) int {
+	from, to := bucketStart(first, interval), bucketStart(last, interval)
+	switch interval {
+	case IntervalWeek:
+		return int(to.Sub(from).Hours()/24)/7 + 1
+	case IntervalMonth:
+		return (to.Year()-from.Year())*12 + int(to.Month()-from.Month()) + 1
+	}
+	return int(to.Sub(from).Hours()/24) + 1
+}
+
+// fitRange cuts the range to what maxTrendBuckets buckets of the interval ("" for the server's pick) can show. A filter window that reaches back further, as a custom range from a far-off year does, starts at the first day with responses instead of laying out empty buckets back to it, and has nothing to cover without responses. Responses that still span more months than that, which only creation times set through the management API make possible, are cut to the latest months when the server picks the interval, so its pick never fails; an interval the client asked for is left to be refused.
+func fitRange(first, last time.Time, counts []dayCounts, interval string) (time.Time, bool) {
+	longest := interval
+	if longest == "" {
+		longest = IntervalMonth
+	}
+	if bucketCount(first, last, longest) <= maxTrendBuckets {
+		return first, true
+	}
+	if len(counts) == 0 {
+		return time.Time{}, false
+	}
+	if earliest := dateOnly(counts[0].Day); earliest.After(first) {
+		first = earliest
+	}
+	if interval == "" && bucketCount(first, last, IntervalMonth) > maxTrendBuckets {
+		first = bucketStart(last, IntervalMonth).AddDate(0, -(maxTrendBuckets - 1), 0)
+	}
+	return first, true
+}
+
+// partialPeriod reports whether the responses read cover only part of the interval from the local day start up to the local day next: the filter's window starts after its first moment or ends before its last, or it has not ended by now. A gap under a second, as a window ending at 23:59:59 leaves, does not count.
+func partialPeriod(start, next time.Time, loc *time.Location, filter *response.Criteria, now time.Time) bool {
+	from := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, loc)
+	to := time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, loc)
+	if now.Before(to) {
+		return true
+	}
+	if filter == nil || filter.CreatedAt == nil {
+		return false
+	}
+	if lo := filter.CreatedAt.Min; lo != nil && lo.After(from) {
+		return true
+	}
+	hi := filter.CreatedAt.Max
+	return hi != nil && hi.Add(time.Second).Before(to)
+}
+
 // trendElements are the survey's elements a trend has a metric for, in document order.
 func trendElements(sv *surveyDoc) []*element {
 	var out []*element
@@ -268,6 +320,9 @@ func trendElements(sv *surveyDoc) []*element {
 func buildTrends(elements []*element, counts []dayCounts, scores []dayScores, filter *response.Criteria, loc *time.Location, interval string, now time.Time) (*Trends, error) {
 	out := &Trends{Interval: interval, TimeZone: loc.String(), Buckets: []TrendBucket{}, Elements: []ElementTrend{}}
 	first, last, ok := trendRange(filter, counts, loc, now)
+	if ok {
+		first, ok = fitRange(first, last, counts, interval)
+	}
 	if out.Interval == "" {
 		out.Interval = IntervalDay
 		if ok {
@@ -279,21 +334,26 @@ func buildTrends(elements []*element, counts []dayCounts, scores []dayScores, fi
 	if ok {
 		for start := bucketStart(first, out.Interval); !start.After(last); start = nextBucket(start, out.Interval) {
 			if len(starts) == maxTrendBuckets {
-				return nil, apperr.InvalidInput(CodeTrendTooManyBuckets, fmt.Sprintf("The range needs more than %d buckets by %s; choose a longer interval", maxTrendBuckets, out.Interval))
+				advice := "choose a longer interval"
+				if out.Interval == IntervalMonth {
+					advice = "choose a shorter date range"
+				}
+				return nil, apperr.InvalidInput(CodeTrendTooManyBuckets, fmt.Sprintf("The responses span more than %d buckets by %s; %s", maxTrendBuckets, out.Interval, advice))
 			}
 			index[start] = len(starts)
 			starts = append(starts, start)
 		}
 	}
 	for i, start := range starts {
-		from, to := start, nextBucket(start, out.Interval).AddDate(0, 0, -1)
+		next := nextBucket(start, out.Interval)
+		from, to := start, next.AddDate(0, 0, -1)
 		if i == 0 && from.Before(first) {
 			from = first
 		}
 		if i == len(starts)-1 && to.After(last) {
 			to = last
 		}
-		out.Buckets = append(out.Buckets, TrendBucket{Start: from.Format(time.DateOnly), End: to.Format(time.DateOnly)})
+		out.Buckets = append(out.Buckets, TrendBucket{Start: from.Format(time.DateOnly), End: to.Format(time.DateOnly), Partial: partialPeriod(start, next, loc, filter, now)})
 	}
 	for _, c := range counts {
 		i, found := index[bucketStart(dateOnly(c.Day), out.Interval)]
@@ -371,9 +431,9 @@ func trendExportFileName(surveyName, interval, format string, now time.Time) str
 	return strings.ToLower(fmt.Sprintf("trends-%s-%s-%s-utc.%s", name, interval, now.UTC().Format("2006-01-02-15-04-05"), format))
 }
 
-// trendExportHeaders are the columns of the trend export: the bucket's days and counts, then per score element its metric and how many answered, headed by the element's headline.
+// trendExportHeaders are the columns of the trend export: the bucket's days, whether it is partial, and its counts, then per score element its metric and how many answered, headed by the element's headline.
 func trendExportHeaders(t *Trends) []string {
-	headers := []string{"Period start", "Period end", "Responses", "Completed", "Completion rate (%)"}
+	headers := []string{"Period start", "Period end", "Partial period", "Responses", "Completed", "Completion rate (%)"}
 	for _, el := range t.Elements {
 		label := map[string]string{TrendMetricNPS: "NPS", TrendMetricSatisfied: "CSAT satisfied (%)", TrendMetricAverage: "Average"}[el.Metric]
 		headers = append(headers, fmt.Sprintf("%s - %s", el.Headline, label), fmt.Sprintf("%s - Answered", el.Headline))
@@ -408,7 +468,11 @@ func (s *Service) ExportTrends(ctx context.Context, userID, surveyID uuid.UUID, 
 		return "", err
 	}
 	for i, b := range t.Buckets {
-		cells = []any{b.Start, b.End, float64(b.Responses), float64(b.Completed), b.CompletionPercentage}
+		partial := "No"
+		if b.Partial {
+			partial = "Yes"
+		}
+		cells = []any{b.Start, b.End, partial, float64(b.Responses), float64(b.Completed), b.CompletionPercentage}
 		for _, el := range t.Elements {
 			p := el.Points[i]
 			var value any
