@@ -217,6 +217,12 @@ func (is *issues) elementFields(p []any, el *Element) {
 				is.add(extend(p, "ctaButtonLabel"), "Button label is required when external button is enabled")
 			}
 		}
+	case ElementSlider:
+		if scale, ok := el.SliderScale(); ok {
+			if field, message := scale.Issue(); field != "" {
+				is.add(extend(p, field), message)
+			}
+		}
 	}
 }
 
