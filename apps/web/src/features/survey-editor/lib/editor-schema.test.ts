@@ -61,6 +61,7 @@ const survey = (): TSurvey =>
     isAutoProgressingEnabled: false,
     isCaptureIpEnabled: false,
     isAnonymizeResponsesEnabled: false,
+    isProgressSavingEnabled: true,
     pin: null,
     displayPercentage: null,
     languages: [

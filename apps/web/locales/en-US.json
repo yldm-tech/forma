@@ -3319,6 +3319,8 @@
         "row_used_in_logic_error": "This row is used in logic of question {questionIndex}. Please remove it from logic first.",
         "rows": "Rows",
         "save_and_close": "Save & Close",
+        "save_respondent_progress": "Save respondents' progress",
+        "save_respondent_progress_description": "Respondents who reload or leave the page can continue where they left off for 24 hours, in the same response. Turn this off for kiosks and shared devices, where the next person would see the previous answers.",
         "scale": "Scale",
         "schedule_survey": "Schedule survey",
         "scheduled_moment": "Scheduled for {moment} ({timeZone})",
