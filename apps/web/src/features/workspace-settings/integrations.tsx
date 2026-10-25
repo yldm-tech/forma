@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { PageContentWrapper, PageHeader } from "../../components/ui/page";
 import type { WorkspaceDetail } from "../../lib/queries/workspaces";
 import { type IntegrationType, integrationsQuery, webhooksQuery } from "../integrations/api";
+import { type AutomationPlatform, AutomationGuideDialog } from "../integrations/components/automation-guide";
 import activepiecesLogo from "../integrations/images/activepieces.webp";
 import airtableLogo from "../integrations/images/airtable.svg";
 import googleSheetsLogo from "../integrations/images/google-sheets.png";
@@ -22,8 +23,8 @@ interface CardProps {
   label: string;
   description: string;
   icon: ReactNode;
-  /** A page of this app, or a page elsewhere, which opens in a new tab. */
-  connect: { to: string; text: string } | { href: string; text: string };
+  /** A page of this app, or a guide this page opens in a dialog. */
+  connect: { to: string; text: string } | { onOpen: () => void; text: string };
   connected: boolean;
   statusText: string;
   disabled: boolean;
@@ -60,18 +61,16 @@ const IntegrationCard = ({
       <p className="text-xs text-slate-500">{description}</p>
       <div className="mt-4 flex gap-x-2">
         {disabled ? (
-          <Button size="sm" variant={unavailable ? "secondary" : "default"} disabled>
+          <Button size="sm" variant={unavailable || !("to" in connect) ? "secondary" : "default"} disabled>
             {connect.text}
           </Button>
-        ) : (
+        ) : "to" in connect ? (
           <Button size="sm" variant={unavailable ? "secondary" : "default"} asChild>
-            {"to" in connect ? (
-              <Link to={connect.to}>{connect.text}</Link>
-            ) : (
-              <a href={connect.href} target="_blank" rel="noreferrer">
-                {connect.text}
-              </a>
-            )}
+            <Link to={connect.to}>{connect.text}</Link>
+          </Button>
+        ) : (
+          <Button size="sm" variant="secondary" onClick={connect.onOpen}>
+            {connect.text}
           </Button>
         )}
       </div>
@@ -81,7 +80,7 @@ const IntegrationCard = ({
 
 const logo = (src: string, alt: string) => <img src={src} alt={alt} className="size-8 object-contain" />;
 
-/** forma2's integrations page: the Javascript SDK, webhooks, the four OAuth integrations, and the automation platforms that subscribe webhooks through the v1 API, with how many each has. Read-only members see the cards but cannot open them, except webhooks and the SDK. */
+/** forma2's integrations page: the Javascript SDK, webhooks, the four OAuth integrations, and the automation platforms that subscribe webhooks through the v1 API, with how many each has. No platform has a published Forma app yet, so their cards open a guide to connecting one with a webhook instead of linking to an app page that does not exist. Read-only members see the cards but cannot open them, except webhooks and the SDK. */
 export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) => {
   const { t } = useTranslation();
   const integrations = useQuery(integrationsQuery(workspace.id));
@@ -89,6 +88,11 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
   const counts = webhookCounts(webhooks.data?.webhooks ?? []);
   const isReadOnly = workspace.access.isReadOnly;
   const base = `/workspaces/${workspace.id}/integrations`;
+  const [guide, setGuide] = useState<AutomationPlatform | null>(null);
+  const guideButton = (platform: AutomationPlatform) => ({
+    onOpen: () => setGuide(platform),
+    text: t("workspace.integrations.automation_guide_button"),
+  });
 
   const isConnected = (type: IntegrationType) =>
     !!integrations.data?.integrations.some((integration) => integration.type === type);
@@ -140,7 +144,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "Zapier",
       description: t("workspace.integrations.zapier_integration_description"),
       icon: logo(zapierLogo, "Zapier Logo"),
-      connect: { href: "https://zapier.com/apps/forma/integrations", text: t("common.connect") },
+      connect: guideButton("zapier"),
       connected: counts.zapier > 0,
       statusText: connectionCountText(t, counts.zapier, "zap"),
       disabled: isReadOnly,
@@ -179,8 +183,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "n8n",
       description: t("workspace.integrations.n8n_integration_description"),
       icon: logo(n8nLogo, "n8n Logo"),
-      // forma2 labelled this card from an n8n integration row that nothing ever creates, so it always read Connect.
-      connect: { href: "https://n8n.io", text: t("common.connect") },
+      connect: guideButton("n8n"),
       connected: counts.n8n > 0,
       statusText: connectionCountText(t, counts.n8n, "integration"),
       disabled: isReadOnly,
@@ -189,7 +192,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "Make.com",
       description: t("workspace.integrations.make_integration_description"),
       icon: logo(makeLogo, "Make Logo"),
-      connect: { href: "https://www.make.com/en/integrations/forma", text: t("common.connect") },
+      connect: guideButton("make"),
       connected: counts.make > 0,
       statusText: connectionCountText(t, counts.make, "integration"),
       disabled: isReadOnly,
@@ -205,7 +208,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       label: "Activepieces",
       description: t("workspace.integrations.activepieces_integration_description"),
       icon: logo(activepiecesLogo, "ActivePieces Logo"),
-      connect: { href: "https://www.activepieces.com/pieces/forma", text: t("common.connect") },
+      connect: guideButton("activepieces"),
       connected: counts.activepieces > 0,
       statusText: connectionCountText(t, counts.activepieces, "integration"),
       disabled: isReadOnly,
@@ -220,6 +223,13 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
           <IntegrationCard key={card.label} {...card} />
         ))}
       </div>
+      {guide && (
+        <AutomationGuideDialog
+          platform={guide}
+          webhooksPath={`${base}/webhooks`}
+          onClose={() => setGuide(null)}
+        />
+      )}
     </PageContentWrapper>
   );
 };
