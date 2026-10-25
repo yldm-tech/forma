@@ -55,7 +55,7 @@ import {
   saveSurveyProgress,
 } from "@/lib/offline-storage";
 import { parseRecallInformation, replaceRecallInfo } from "@/lib/recall";
-import { ResponseQueue } from "@/lib/response-queue";
+import { ResponseQueue, isSameRespondent } from "@/lib/response-queue";
 import { SURVEY_INSTRUCTIONS_ID, getSurveyPagePosition, hasSurveyInstructions } from "@/lib/survey-page";
 import { SurveyState } from "@/lib/survey-state";
 import { useOnlineStatus } from "@/lib/use-online-status";
@@ -89,22 +89,11 @@ const restoreSurveyStateFromSnapshot = (
 // How long a respondent's progress is kept in the browser.
 const PROGRESS_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-// An id that is absent, null or empty is no id.
-const sameId = (a: string | null | undefined, b: string | null | undefined): boolean =>
-  (a === undefined || a === "" ? null : a) === (b === undefined || b === "" ? null : b);
-
 /** Whether stored progress was left by the respondent this page is for: the same single-use link, personal (contact) link and user id. */
-const isSameRespondent = (
+const isProgressOfThisRespondent = (
   snapshot: SerializedSurveyState | undefined,
   surveyState: SurveyState | null
-): boolean => {
-  if (!snapshot || !surveyState) return true;
-  return (
-    sameId(snapshot.singleUseId, surveyState.singleUseId) &&
-    sameId(snapshot.contactId, surveyState.contactId) &&
-    sameId(snapshot.userId, surveyState.userId)
-  );
-};
+): boolean => !snapshot || !surveyState || isSameRespondent(snapshot, surveyState);
 
 interface VariableStackEntry {
   questionId: string;
@@ -270,6 +259,7 @@ export function Survey({
           retryAttempts: 4,
           persistOffline: progressPersistEnabled,
           holdWhileOffline: offlineModeEnabled,
+          isolateEarlierResponses: progressPersistEnabled,
           surveyId: survey.id,
           onResponseSendingFailed: (_, errorCode?: TResponseErrorCodesEnum) => {
             setShowError(true);
@@ -632,7 +622,14 @@ export function Survey({
 
   // --- Progress persistence: restore progress from IndexedDB on mount ---
   useEffect(() => {
-    if (!progressPersistEnabled) return;
+    if (!progressPersistEnabled) {
+      // A link survey whose creator turned progress saving off (a kiosk, a shared device) removes what earlier respondents left on this device while it was on: their progress, and their unsent answers once these have had one chance to arrive.
+      if (isLinkSurvey && !isPreviewMode && responseQueue) {
+        void clearSurveyProgress(survey.id);
+        void responseQueue.sendEarlierResponsesOnce();
+      }
+      return;
+    }
 
     let cancelled = false;
 
@@ -647,11 +644,16 @@ export function Survey({
       // Discard stale progress (older than 24 hours), and progress another respondent left in this browser: a different single-use link, personal link or user id for the same survey starts afresh instead of going on in someone else's response.
       if (
         Date.now() - progress.updatedAt > PROGRESS_MAX_AGE_MS ||
-        !isSameRespondent(progress.surveyStateSnapshot, surveyState)
+        !isProgressOfThisRespondent(progress.surveyStateSnapshot, surveyState)
       ) {
         await clearSurveyProgress(survey.id);
         setProgressRestored(true);
         return;
+      }
+
+      // From here on the page goes on with the stored response, so the answers stored for it are sent as this page's; answers stored for any other response keep going to their own.
+      if (progress.surveyStateSnapshot) {
+        responseQueue?.resumeEarlierResponses(progress.surveyStateSnapshot);
       }
 
       // Check pending responses first — this determines whether the survey is truly complete.
@@ -793,19 +795,9 @@ export function Survey({
         setIsSyncing(false);
         setPendingSyncCount(0);
 
+        // Synced entries are already removed from IndexedDB inside syncPersistedResponses. The ending is not this effect's to declare: the stored rows may all be answers from the middle of the survey, and a synced final answer already reaches onResponseSendingFinished (settleSync), which also forgets the stored progress. Forgetting it here would lose the position just restored on the next reload.
         if (result.syncedCount > 0) {
           console.log(`Forma: Synced ${result.syncedCount} offline response(s)`);
-        }
-
-        // Clean up IndexedDB and mark sending as finished after successful sync
-        // Individual entries are already removed from IndexedDB inside syncPersistedResponses.
-        // Don't use clearPendingResponses here — it would wipe entries added during the async sync.
-        if (result.success) {
-          await clearSurveyProgress(survey.id);
-
-          if (result.syncedCount > 0) {
-            setIsResponseSendingFinished(true);
-          }
         }
       } finally {
         isSyncingRef.current = false;
@@ -813,7 +805,7 @@ export function Survey({
     };
 
     void syncPending();
-  }, [isOnline, progressPersistEnabled, responseQueue, progressRestored, survey.id]);
+  }, [isOnline, progressPersistEnabled, responseQueue, progressRestored]);
 
   // --- Offline mode: warn before leaving mid-survey or with unsent offline responses ---
   // Not for progress persistence alone: a respondent who leaves can come back to where they were, so stopping every one of them with the browser's dialog would cost more than it saves.

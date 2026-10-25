@@ -531,6 +531,139 @@ describe("Survey progress persistence", () => {
     await waitFor(() => expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id));
   });
 
+  // An IndexedDB that keeps what is stored, seeded with rows an earlier page left.
+  const storeRows = (seed: object[]) => {
+    const store = { rows: seed.map((row, index) => ({ ...row, id: index + 1 })) as { id: number }[] };
+    let nextId = store.rows.length;
+    offlineStorageMocks.addPendingResponse.mockImplementation(async (entry: object) => {
+      nextId += 1;
+      store.rows.push({ ...entry, id: nextId });
+      return nextId;
+    });
+    offlineStorageMocks.countPendingResponses.mockImplementation(async () => store.rows.length);
+    offlineStorageMocks.getPendingResponses.mockImplementation(async () =>
+      store.rows.map((row) => ({ ...row }))
+    );
+    offlineStorageMocks.removePendingResponse.mockImplementation(async (id: number) => {
+      store.rows = store.rows.filter((row) => row.id !== id);
+    });
+    return store;
+  };
+
+  const earlierRow = (snapshot: Record<string, unknown>, data: Record<string, string>, ageMs = 60_000) => ({
+    surveyId: baseSurvey.id,
+    responseUpdate: { data, finished: false },
+    surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, ...snapshot },
+    createdAt: Date.now() - ageMs,
+  });
+
+  test("an unsent answer of another single-use link goes to that link's response, not into this respondent's", async () => {
+    const otherRespondent = { responseId: "response-A", singleUseId: "single-use-1" };
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({ surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, ...otherRespondent } })
+    );
+    const store = storeRows([earlierRow(otherRespondent, { q1: "A-answer" })]);
+
+    renderWith({ persistProgress: true, mode: "inline", singleUseId: "single-use-2" });
+
+    await waitFor(() => expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id));
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "response-A", data: { q1: "A-answer" } })
+      )
+    );
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ singleUseId: "single-use-2", data: { q1: "block-1-answer" } })
+      )
+    );
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(store.rows).toHaveLength(0));
+  });
+
+  test("an unsent answer older than the progress it belonged to does not pull a fresh start into the old response", async () => {
+    const day = 25 * 60 * 60 * 1000;
+    const stale = { responseId: "response-old", displayId: "display-old" };
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({
+        updatedAt: Date.now() - day,
+        surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, ...stale },
+      })
+    );
+    storeRows([earlierRow(stale, { q1: "old-answer" }, day)]);
+
+    renderWith({ persistProgress: true });
+
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "response-old", data: { q1: "old-answer" } })
+      )
+    );
+    await waitFor(() => expect(apiClientMocks.createDisplay).toHaveBeenCalled());
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ displayId: "display-created", data: { q1: "block-1-answer" } })
+      )
+    );
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledTimes(1);
+  });
+
+  test("an answer from the middle of the survey sent after a reload does not count as the end", async () => {
+    const resumed = { responseId: "response-A" };
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({ surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, ...resumed } })
+    );
+    const store = storeRows([earlierRow(resumed, { q1: "A-answer" })]);
+    const onFinished = vi.fn();
+
+    renderWith({ persistProgress: true, onFinished });
+
+    await waitFor(() => expect(store.rows).toHaveLength(0));
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId: "response-A", data: { q1: "A-answer" } })
+    );
+    // The position just restored survives another reload.
+    expect(offlineStorageMocks.clearSurveyProgress).not.toHaveBeenCalled();
+
+    // The final answer is still in flight.
+    apiClientMocks.updateResponse.mockImplementation(() => new Promise(() => {}));
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "response-A", finished: true })
+      )
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(onFinished).not.toHaveBeenCalled();
+  });
+
+  test("a survey that stopped saving progress removes what earlier respondents left, after sending their answers once", async () => {
+    const store = storeRows([earlierRow({ responseId: "response-A" }, { q1: "A-answer" })]);
+    apiClientMocks.updateResponse.mockResolvedValue({
+      ok: false,
+      error: { code: "internal_server_error", message: "Server error", status: 500 },
+    });
+
+    renderWith({ persistProgress: false });
+
+    await waitFor(() => expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id));
+    await waitFor(() => expect(store.rows).toHaveLength(0));
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledTimes(1);
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId: "response-A", data: { q1: "A-answer" } })
+    );
+
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { q1: "block-1-answer" } })
+      )
+    );
+    expect(offlineStorageMocks.addPendingResponse).not.toHaveBeenCalled();
+  });
+
   test("keeps no progress for a survey shown on a customer's site", async () => {
     renderWith({ persistProgress: true, survey: { ...baseSurvey, type: "app" } as TJsWorkspaceStateSurvey });
 

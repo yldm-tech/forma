@@ -637,6 +637,15 @@ func TestResumePin(t *testing.T) {
 		}
 	}
 
+	// A token with a good while left still opens the gate.
+	older, err := NewPinToken(e.cfg, id, e.now.Add(-40*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := e.request(http.MethodPost, path, map[string]any{"pinAuthToken": older}); rec.Code != http.StatusOK {
+		t.Fatalf("token with 20 minutes left: %d %s", rec.Code, rec.Body)
+	}
+
 	other := e.survey(ws, "pin", "1234")
 	otherToken, err := NewPinToken(e.cfg, other, e.now)
 	if err != nil {
@@ -646,7 +655,12 @@ func TestResumePin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, tok := range map[string]string{"another survey's token": otherToken, "an expired token": expired, "a forged token": token + "x"} {
+	// A token about to expire asks for the PIN again rather than letting the next answer be refused.
+	expiring, err := NewPinToken(e.cfg, id, e.now.Add(-50*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, tok := range map[string]string{"another survey's token": otherToken, "an expired token": expired, "a token with 10 minutes left": expiring, "a forged token": token + "x"} {
 		rec := e.request(http.MethodPost, path, map[string]any{"pinAuthToken": tok})
 		if rec.Code != http.StatusUnauthorized || strings.Contains(rec.Body.String(), "What do you think") {
 			t.Fatalf("%s: %d %s", name, rec.Code, rec.Body)

@@ -587,13 +587,16 @@ func (s *Service) validatePin(ctx context.Context, rawID, pin string) (pinResult
 // errPinTokenRejected answers a resume whose token no longer opens the survey: expired, issued for another survey, or the survey stopped saving progress. The page asks for the PIN again.
 var errPinTokenRejected = apperr.NotAuthenticated("PIN token is invalid or expired")
 
-// resumePin opens the PIN gate again with the token a correct PIN returned, which the page keeps for the tab's session while the survey saves respondents' progress (isProgressSavingEnabled), so a reload goes on where the respondent left off instead of asking for the PIN again. The token comes back unchanged: it still expires an hour after the PIN was entered, and a survey that no longer saves progress takes the PIN again, so a shared device does not keep it open.
+// pinResumeMargin is how long a kept PIN token must still be valid to open the gate again. The responses refuse an expired token (403), which the page cannot recover from without losing the answer, so a token close to its end asks for the PIN again instead, and the fresh token it gets lasts another hour.
+const pinResumeMargin = 15 * time.Minute
+
+// resumePin opens the PIN gate again with the token a correct PIN returned, which the page keeps for the tab's session while the survey saves respondents' progress (isProgressSavingEnabled), so a reload goes on where the respondent left off instead of asking for the PIN again. The token comes back unchanged, so it still expires an hour after the PIN was entered; one with less than pinResumeMargin left, and any token of a survey that no longer saves progress, takes the PIN again, so a shared device does not keep it open.
 func (s *Service) resumePin(ctx context.Context, rawID, token string) (pinResult, error) {
 	sv, fields, err := s.pinGatedSurvey(ctx, rawID)
 	if err != nil {
 		return pinResult{}, err
 	}
-	if !sv.IsProgressSavingEnabled || !VerifyPinToken(s.cfg, token, sv.ID, s.now()) {
+	if !sv.IsProgressSavingEnabled || !VerifyPinToken(s.cfg, token, sv.ID, s.now().Add(pinResumeMargin)) {
 		return pinResult{}, errPinTokenRejected
 	}
 	public, err := publicSurvey(sv, fields)
