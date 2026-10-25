@@ -171,6 +171,7 @@
   "templates.csat_survey_question_2_placeholder": "ここに回答を入力してください...",
   "templates.csat_upper_label": "非常に満足",
   "templates.cta_description": "情報を表示し、特定の行動を促す",
+  "templates.custom_survey_default_name": "無題のアンケート",
   "templates.custom_survey_description": "テンプレートを使わずにアンケートを作成する。",
   "templates.custom_survey_name": "最初から始める",
   "templates.custom_survey_question_1_headline": "何を知りたいですか？",

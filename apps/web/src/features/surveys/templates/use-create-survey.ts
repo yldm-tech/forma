@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { toast } from "../../../lib/toast";
+import { withSurveyNameFocus } from "../../survey-editor/lib/name-focus";
 import { type CreateFromTemplateInput, createSurveyFromTemplate, v3ErrorMessage } from "../api";
 import { surveyKeys } from "../list/query";
 
@@ -21,7 +22,11 @@ export const useCreateSurveyFromTemplate = (mode?: "cx") => {
   const create = async (input: CreateFromTemplateInput) => {
     try {
       const survey = await mutation.mutateAsync(input);
-      await navigate({ href: surveyEditorPath(input.workspaceId, survey.id, mode) });
+      // A survey from scratch carries a placeholder name, so its editor opens with the name ready to type over.
+      await navigate({
+        href: surveyEditorPath(input.workspaceId, survey.id, mode),
+        ...(input.source === "custom" ? { state: withSurveyNameFocus } : {}),
+      });
     } catch (error) {
       toast.error(v3ErrorMessage(error, t("common.something_went_wrong_please_try_again")));
     }

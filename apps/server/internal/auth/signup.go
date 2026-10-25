@@ -19,6 +19,8 @@ type signupInput struct {
 	InviteToken    string
 	UserLocale     string
 	TurnstileToken string
+	// TimeZone is the browser's IANA zone, already validated (nil when the browser sent none or one this build cannot load).
+	TimeZone *string
 }
 
 // signup creates an account with forma2's createUserAction rules and returns the sign-up intent token the browser keeps.
@@ -117,7 +119,7 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 				err = errInviteTokenInvalid()
 			}
 		} else {
-			orgID, err = tx.provisionOrganization(ctx, userID, in.Name)
+			orgID, err = tx.provisionOrganization(ctx, userID, in.Name, in.TimeZone)
 		}
 		if err != nil {
 			return err

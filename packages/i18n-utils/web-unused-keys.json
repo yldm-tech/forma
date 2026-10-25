@@ -10,6 +10,7 @@
   "auth.signup.password_validation_contain_at_least_1_number",
   "auth.signup.password_validation_minimum_8_and_maximum_128_characters",
   "auth.signup.password_validation_uppercase_and_lowercase",
+  "auth.signup_without_verification_success.user_successfully_created",
   "auth.verification-requested.invalid_email_address",
   "auth.verification-requested.no_email_provided",
   "common.all_roles",
