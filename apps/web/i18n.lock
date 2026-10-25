@@ -1648,6 +1648,35 @@ checksums:
     workspace/analysis/search/chip: c85a01aa86d4b45d821978d2159e0f1b
     workspace/analysis/search/clear: 0ee4a80abe134b7edd90c74f03638877
     workspace/analysis/search/placeholder: 10d646cd0c34d524946bcde9c1405b6f
+    workspace/analysis/trends/answers: 7589736dea1320be93d96dd3652250ee
+    workspace/analysis/trends/answers_count: ec7e0a767e7d1d7c8023259ffda0530d
+    workspace/analysis/trends/chart_label: e790e7054da7a7e371f49181c8aa483d
+    workspace/analysis/trends/completed: 0e4bbce9985f25eb673d9a054c8d5334
+    workspace/analysis/trends/completed_count: a4ddedd805285b4aa85d7732cc8c72a0
+    workspace/analysis/trends/description: e389f4f4f32cbbd5c48b3887d562ed36
+    workspace/analysis/trends/download: abaa71250f83ecaf550b0f49336c149c
+    workspace/analysis/trends/download_csv: 3d31c0f8910933062a3190ecdc9f6f13
+    workspace/analysis/trends/download_error: 17625cfbf1682f82e087cf5e2134968c
+    workspace/analysis/trends/download_xlsx: 20ec11c9498ef5a26bca6fca18a361e0
+    workspace/analysis/trends/empty: f5dfbeddada4a6f24465a7b7903b232b
+    workspace/analysis/trends/hint_average: fe25013c8233deef86c5575591825f08
+    workspace/analysis/trends/hint_completion: 6d6b67caf77cec57ed1a15065bab6e56
+    workspace/analysis/trends/hint_nps: 0406906a7e83bbf95c5c1ded8ea5c3f5
+    workspace/analysis/trends/hint_satisfied: da334d50eebe7c9cfe747af67b3b6fdc
+    workspace/analysis/trends/interval_day: 47648cd60fc313bc3f05b70357a1d675
+    workspace/analysis/trends/interval_label: a0d57ef5e62444b4bb61846e95efbc57
+    workspace/analysis/trends/interval_month: ae7bef950efc406ff0980affabc1a64c
+    workspace/analysis/trends/interval_week: 436fdd694160827dd6ea4644cdd0a8f8
+    workspace/analysis/trends/no_data: 81e91b979968615c55f9c0701fa9bbe3
+    workspace/analysis/trends/not_completed: d011b1ae92a1a8a2676a5d6999bbe6d4
+    workspace/analysis/trends/period: 779afbd6a307574efb9bd957e9622428
+    workspace/analysis/trends/responses_count: 437e022825c7a08481d8f7e56926742d
+    workspace/analysis/trends/title: 90d281f05269f691670c78658097c7ae
+    workspace/analysis/trends/too_many_buckets: fa1ac91ad39d408bc71c11eca80f134f
+    workspace/analysis/trends/view_completion: ed55888cecfeffb013863701974f9917
+    workspace/analysis/trends/view_element: 9d61b0a8177232d42996e14971e346b0
+    workspace/analysis/trends/view_label: 283d6f78bf0b1c6c74c0fe77bd2c07f7
+    workspace/analysis/trends/view_responses: 14bb6c69f906d7bbd1359f7ef1bb3c28
     workspace/api_keys/access: 550606d4a12bdf108c1b12b925ca1b3a
     workspace/api_keys/add_api_key: 3c7633bae18a6e19af7a5af12f9bc3da
     workspace/api_keys/api_key: ce825fec5b3e1f8e27c45b1a63619985
