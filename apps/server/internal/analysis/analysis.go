@@ -1,4 +1,4 @@
-// Package analysis is what the admin app shows about a survey's responses: the summary with forma2's per-element statistics, drop-offs and quotas, the values the response filter offers, the contacts who saw the survey, the CSV and XLSX export, and the survey reset. Filtering itself is the response module's: every operation here takes forma2's TResponseFilterCriteria and compiles it with response.Where.
+// Package analysis is what the admin app shows about a survey's responses: the summary with forma2's per-element statistics, drop-offs and quotas, the trend over time (responses, completion and the score elements by day, week or month in the organization's time zone), the values the response filter offers, the contacts who saw the survey, the CSV and XLSX export, and the survey reset. Filtering itself is the response module's: every operation here takes forma2's TResponseFilterCriteria and compiles it with response.Where.
 package analysis
 
 import (
