@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"slices"
 	"strings"
 	"sync"
@@ -52,6 +53,7 @@ func TestWebhookMatching(t *testing.T) {
 	if err := e.work(job(response.EventResponseCreated, f, r, 1)); err != nil {
 		t.Fatal(err)
 	}
+	e.deliver()
 	if len(all.received()) != 1 || len(listed.received()) != 1 {
 		t.Errorf("subscribers got %d and %d requests", len(all.received()), len(listed.received()))
 	}
@@ -64,6 +66,7 @@ func TestWebhookMatching(t *testing.T) {
 	if err := e.work(job(response.EventResponseUpdated, f, r, 1)); err != nil {
 		t.Fatal(err)
 	}
+	e.deliver()
 	if len(wrongTrigger.received()) != 1 || len(all.received()) != 1 {
 		t.Error("responseUpdated must reach its subscriber only")
 	}
@@ -93,6 +96,7 @@ func TestWebhookPayload(t *testing.T) {
 	if err := e.work(j); err != nil {
 		t.Fatal(err)
 	}
+	e.deliver()
 	got := rec.received()
 	if len(got) != 1 {
 		t.Fatalf("%d deliveries", len(got))
@@ -138,39 +142,93 @@ func TestWebhookPayload(t *testing.T) {
 	}
 }
 
-// forma2's retry rule: a failing webhook fails every attempt but the last, before any side effect, and the retry delivers again to every subscriber with the same webhook-id; the last attempt logs the failure and runs the side effects.
-func TestWebhookFailureRetriesTheJob(t *testing.T) {
+// A failing webhook is retried by a delivery job of its own: the healthy webhook gets the event once, the finished response's side effects run on the pipeline's first attempt, a pipeline job that runs again queues no delivery twice, and the failing one is retried on its own schedule of minutes and hours with the same webhook-id until its attempts run out.
+func TestWebhookFailureIsIsolated(t *testing.T) {
 	e := newEnv(t, Handoffs{})
 	f := e.fixture()
 	owner := e.user("owner@example.com", f.survey)
 	e.member(f.org, owner, "owner")
 	ok, failing := newReceiver(t), newReceiver(t)
-	e.webhook(f.ws, ok.URL, "", "{responseFinished}")
-	e.webhook(f.ws, failing.URL, "", "{responseFinished}")
-	failing.failNext(10)
+	okHook := e.webhook(f.ws, ok.URL, "", "{responseFinished}")
+	failingHook := e.webhook(f.ws, failing.URL, "", "{responseFinished}")
+	failing.failWith(http.StatusMethodNotAllowed, 100)
 	r := e.respond(f, true, `{"q1":"a"}`)
 
-	if err := e.work(job(response.EventResponseFinished, f, r, 1)); err == nil {
-		t.Fatal("a failed webhook must fail a non-final attempt")
-	}
-	if err := e.work(job(response.EventResponseFinished, f, r, 2)); err == nil {
-		t.Fatal("a failed webhook must fail a non-final attempt")
-	}
-	if n := len(e.mail.Messages()); n != 0 {
-		t.Fatalf("%d emails sent on attempts that will be retried", n)
-	}
-	if err := e.work(job(response.EventResponseFinished, f, r, 3)); err != nil {
-		t.Fatalf("the last attempt must carry on: %v", err)
+	if err := e.work(job(response.EventResponseFinished, f, r, 1)); err != nil {
+		t.Fatalf("a failing webhook must not fail the pipeline job: %v", err)
 	}
 	if n := len(e.mail.Messages()); n != 1 {
-		t.Fatalf("%d emails after the last attempt", n)
+		t.Fatalf("%d notification emails before any delivery ran, want 1", n)
 	}
-	got := ok.received()
-	if len(got) != 3 || got[0].Header.Get("Webhook-Id") != got[2].Header.Get("Webhook-Id") {
-		t.Fatalf("the healthy webhook got %d deliveries with ids that differ", len(got))
+	e.deliver()
+	if n, m := len(ok.received()), len(failing.received()); n != 1 || m != 1 {
+		t.Fatalf("deliveries: healthy %d, failing %d; want one each", n, m)
 	}
-	if !strings.Contains(e.logs.String(), "exhausted retries") {
+	if j := e.deliveryJob(okHook); j.State != string(rivertype.JobStateCompleted) {
+		t.Fatalf("healthy delivery job = %+v", j)
+	}
+	j := e.deliveryJob(failingHook)
+	// River keeps a retry due within its scheduler interval available, scheduled in the future, rather than retryable.
+	if (j.State != string(rivertype.JobStateRetryable) && j.State != string(rivertype.JobStateAvailable)) || j.Attempt != 1 || j.MaxAttempts != 8 || j.RetryIn < 5*time.Second || j.RetryIn > 7*time.Second {
+		t.Fatalf("failing delivery job after its first attempt = %+v, want retryable in 5 s", j)
+	}
+
+	// The pipeline job runs again (an interrupted attempt): nothing new is queued, so nobody is delivered to twice.
+	e.exec(`UPDATE river_job SET scheduled_at = now() + interval '1 hour' WHERE id = ?`, j.ID)
+	if err := e.work(job(response.EventResponseFinished, f, r, 2)); err != nil {
+		t.Fatal(err)
+	}
+	e.deliver()
+	if n := e.count(`SELECT count(*) FROM river_job WHERE kind = 'webhook.deliver'`); n != 2 || len(ok.received()) != 1 {
+		t.Fatalf("%d delivery jobs and %d healthy deliveries after the pipeline ran again", n, len(ok.received()))
+	}
+
+	// Its retry is due: only the failing webhook is delivered to again, with the same message id, and the next wait is minutes.
+	e.exec(`UPDATE river_job SET state = 'available', scheduled_at = now() WHERE id = ?`, j.ID)
+	e.deliver()
+	got := failing.received()
+	if len(got) != 2 || got[0].Header.Get("Webhook-Id") != got[1].Header.Get("Webhook-Id") || len(ok.received()) != 1 {
+		t.Fatalf("retry: failing %d deliveries, healthy %d", len(got), len(ok.received()))
+	}
+	if j := e.deliveryJob(failingHook); j.State != string(rivertype.JobStateRetryable) || j.Attempt != 2 || j.RetryIn < 5*time.Minute || j.RetryIn > 5*time.Minute+2*time.Second {
+		t.Fatalf("failing delivery job after its second attempt = %+v, want retryable in 5 min", j)
+	}
+
+	// The last attempt fails: the job is discarded and the failure logged.
+	e.exec(`UPDATE river_job SET state = 'available', scheduled_at = now(), attempt = max_attempts - 1 WHERE id = ?`, j.ID)
+	e.deliver()
+	if j := e.deliveryJob(failingHook); j.State != string(rivertype.JobStateDiscarded) || len(failing.received()) != 3 {
+		t.Fatalf("failing delivery job after its last attempt = %+v", j)
+	}
+	if !strings.Contains(e.logs.String(), "retries exhausted") {
 		t.Error("the exhausted delivery was not logged")
+	}
+}
+
+// A delivery retried after its webhook was deleted, or no longer subscribes to the event, is dropped instead of being sent.
+func TestDeliveryFollowsTheWebhook(t *testing.T) {
+	e := newEnv(t, Handoffs{})
+	f := e.fixture()
+	deleted, unsubscribed := newReceiver(t), newReceiver(t)
+	deletedHook := e.webhook(f.ws, deleted.URL, "", "{responseFinished}")
+	unsubscribedHook := e.webhook(f.ws, unsubscribed.URL, "", "{responseFinished}")
+	deleted.failNext(1)
+	unsubscribed.failNext(1)
+	if err := e.work(job(response.EventResponseFinished, f, e.respond(f, true, `{}`), 1)); err != nil {
+		t.Fatal(err)
+	}
+	e.deliver()
+	e.exec(`DELETE FROM webhooks WHERE id = ?`, deletedHook)
+	e.exec(`UPDATE webhooks SET triggers = '{responseCreated}' WHERE id = ?`, unsubscribedHook)
+	e.exec(`UPDATE river_job SET state = 'available', scheduled_at = now() WHERE kind = 'webhook.deliver'`)
+	e.deliver()
+	for name, hook := range map[string]uuid.UUID{"deleted": deletedHook, "unsubscribed": unsubscribedHook} {
+		if j := e.deliveryJob(hook); j.State != string(rivertype.JobStateCompleted) {
+			t.Errorf("%s webhook's delivery job = %+v, want completed", name, j)
+		}
+	}
+	if len(deleted.received()) != 1 || len(unsubscribed.received()) != 1 {
+		t.Errorf("retried after the webhook changed: %d and %d deliveries", len(deleted.received()), len(unsubscribed.received()))
 	}
 }
 
@@ -386,7 +444,7 @@ func TestHandoffs(t *testing.T) {
 	}
 }
 
-// The worker runs on River: the job the response module enqueues is delivered, a failing webhook is retried after River's backoff with the same webhook-id, and the follow-up and notification side effects run once, after the delivery that succeeded.
+// The worker runs on River: the job the response module enqueues queues the webhook's delivery job, whose failed first attempt is retried five seconds later with the same webhook-id, and the follow-up and notification side effects run once, without waiting for the delivery.
 func TestRiverEndToEnd(t *testing.T) {
 	e := newEnv(t, Handoffs{})
 	f := e.fixture()
@@ -406,6 +464,7 @@ func TestRiverEndToEnd(t *testing.T) {
 	t.Cleanup(cleanup)
 	reg := jobs.NewRegistry(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	RegisterJobs(reg, e.worker)
+	webhook.RegisterJobs(reg, e.hooks, e.log)
 	worker, err := jobs.NewWorker(e.cfg, pool, reg, e.log)
 	if err != nil {
 		t.Fatal(err)
@@ -431,6 +490,11 @@ func TestRiverEndToEnd(t *testing.T) {
 	waitFor(t, "the job to complete", 30*time.Second, func() bool {
 		var state string
 		_ = pool.QueryRow(context.Background(), `SELECT state FROM river_job WHERE id = $1`, res.Job.ID).Scan(&state)
+		return state == string(rivertype.JobStateCompleted)
+	})
+	waitFor(t, "the webhook's retried delivery", 30*time.Second, func() bool {
+		var state string
+		_ = pool.QueryRow(context.Background(), `SELECT state FROM river_job WHERE kind = 'webhook.deliver'`).Scan(&state)
 		return state == string(rivertype.JobStateCompleted)
 	})
 	got := rec.received()

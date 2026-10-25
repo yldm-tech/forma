@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"io"
@@ -23,6 +24,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/notification"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer/mailertest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
@@ -61,6 +63,7 @@ type env struct {
 	mail   *mailertest.Transport
 	logs   *syncBuffer
 	worker *Worker
+	hooks  *webhook.Deliverer
 	log    *slog.Logger
 }
 
@@ -88,7 +91,12 @@ func newEnv(t *testing.T, handoffs Handoffs) *env {
 	}
 	frozen := time.Now()
 	limiter := ratelimit.New(cfg, valkeytest.Client(t), e.log).WithClock(func() time.Time { return frozen })
-	e.worker = NewWorker(cfg, db, webhook.NewDeliverer(webhook.NewRepository(db), ssrf.New(cfg)), followup.NewSender(cfg, db, m, limiter, e.log),
+	enqueuer, err := jobs.NewEnqueuer(e.log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.hooks = webhook.NewDeliverer(webhook.NewRepository(db), ssrf.New(cfg))
+	e.worker = NewWorker(cfg, db, e.hooks, enqueuer, followup.NewSender(cfg, db, m, limiter, e.log),
 		notification.NewNotifier(cfg, db, m, e.log), audit.New(cfg, e.log), handoffs, e.log)
 	return e
 }
@@ -181,12 +189,13 @@ func (e *env) webhook(ws uuid.UUID, url, secret string, triggers string, surveys
 	return id
 }
 
-// receiver is a webhook endpoint that records the requests it gets; fail makes the next n requests answer 500.
+// receiver is a webhook endpoint that records the requests it gets; fail makes the next n requests answer failStatus, 500 unless failWith set another.
 type receiver struct {
 	*httptest.Server
-	mu       sync.Mutex
-	requests []received
-	fail     int
+	mu         sync.Mutex
+	requests   []received
+	fail       int
+	failStatus int
 }
 
 type received struct {
@@ -201,13 +210,13 @@ func newReceiver(t *testing.T) *receiver {
 		body, _ := io.ReadAll(req.Body)
 		r.mu.Lock()
 		r.requests = append(r.requests, received{Header: req.Header.Clone(), Body: body})
-		fail := r.fail > 0
+		fail, status := r.fail > 0, cmp.Or(r.failStatus, http.StatusInternalServerError)
 		if fail {
 			r.fail--
 		}
 		r.mu.Unlock()
 		if fail {
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(status)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -220,6 +229,13 @@ func (r *receiver) failNext(n int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.fail = n
+}
+
+// failWith makes the next n requests answer status.
+func (r *receiver) failWith(status, n int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.fail, r.failStatus = n, status
 }
 
 func (r *receiver) received() []received {
@@ -238,4 +254,61 @@ func waitFor(t *testing.T, what string, deadline time.Duration, cond func() bool
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
+}
+
+// deliver works the queued webhook deliveries on River, as `forma worker` does, until none is due: a delivery that failed is left retryable until its next retry.
+func (e *env) deliver() {
+	e.t.Helper()
+	pool, cleanup, err := jobs.OpenPool(context.Background(), e.cfg)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	defer cleanup()
+	reg := jobs.NewRegistry(e.log)
+	webhook.RegisterJobs(reg, e.hooks, e.log)
+	worker, err := jobs.NewWorker(e.cfg, pool, reg, e.log)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- worker.Run(ctx) }()
+	waitFor(e.t, "the queued webhook deliveries", 30*time.Second, func() bool {
+		return e.count(`SELECT count(*) FROM river_job WHERE kind = 'webhook.deliver' AND state IN ('available', 'running') AND scheduled_at <= now()`) == 0
+	})
+	cancel()
+	if err := <-done; err != nil {
+		e.t.Fatal(err)
+	}
+}
+
+func (e *env) count(query string, args ...any) int {
+	e.t.Helper()
+	var n int
+	if err := e.db.Raw(query, args...).Row().Scan(&n); err != nil {
+		e.t.Fatalf("count %q: %v", query, err)
+	}
+	return n
+}
+
+// deliveryJob is the state of the webhook.deliver job of hook.
+type deliveryJob struct {
+	ID          int64
+	State       string
+	Attempt     int
+	MaxAttempts int
+	RetryIn     time.Duration
+}
+
+func (e *env) deliveryJob(hook uuid.UUID) deliveryJob {
+	e.t.Helper()
+	var j deliveryJob
+	var retryIn float64
+	err := e.db.Raw(`SELECT id, state, attempt, max_attempts, COALESCE(EXTRACT(EPOCH FROM scheduled_at - attempted_at), 0)::float8 FROM river_job WHERE kind = 'webhook.deliver' AND args->>'webhookId' = ?`, hook.String()).
+		Row().Scan(&j.ID, &j.State, &j.Attempt, &j.MaxAttempts, &retryIn)
+	if err != nil {
+		e.t.Fatalf("delivery job of webhook %s: %v", hook, err)
+	}
+	j.RetryIn = time.Duration(retryIn * float64(time.Second))
+	return j
 }

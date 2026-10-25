@@ -477,7 +477,7 @@ func TestRiverEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(cleanup)
-	pipelineWorker := pipeline.NewWorker(e.cfg, e.db, webhook.NewDeliverer(webhook.NewRepository(e.db), ssrf.New(e.cfg)),
+	pipelineWorker := pipeline.NewWorker(e.cfg, e.db, webhook.NewDeliverer(webhook.NewRepository(e.db), ssrf.New(e.cfg)), e.jobs,
 		followup.NewSender(e.cfg, e.db, e.mailer, ratelimit.New(e.cfg, nil, e.log), e.log), notification.NewNotifier(e.cfg, e.db, e.mailer, e.log),
 		audit.New(e.cfg, e.log), pipeline.Handoffs{Workflows: e.enqueuer}, e.log)
 	reg := jobs.NewRegistry(slog.New(slog.NewTextHandler(io.Discard, nil)))
