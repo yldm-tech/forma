@@ -138,10 +138,11 @@ func TestServeSDKBundles(t *testing.T) {
 		"js/surveys.umd.cjs": {Data: []byte("window.formaSurveys={}")},
 		"js/forma.umd.cjs":   {Data: []byte("window.forma={}")},
 		"js/surveys.umd.js":  {Data: []byte("window.formaSurveys={}")},
+		"js/forma.umd.js":    {Data: []byte("window.forma={}")},
 		"js/forma.d.ts":      {Data: []byte("export {}")},
 	})
 
-	for _, p := range []string{"/js/surveys.umd.cjs", "/js/forma.umd.cjs", "/js/surveys.umd.js"} {
+	for _, p := range []string{"/js/surveys.umd.cjs", "/js/forma.umd.cjs", "/js/surveys.umd.js", "/js/forma.umd.js"} {
 		t.Run(p, func(t *testing.T) {
 			rec := get(r, http.MethodGet, p)
 			if rec.Code != http.StatusOK {

@@ -12,6 +12,7 @@ export const en: SiteContent = {
       inAppSurveys: "In-app surveys",
       integrations: "Integrations",
       developers: "Developers",
+      sdk: "SDK reference",
       selfHosting: "Self-hosting",
       github: "GitHub",
       openMenu: "Open menu",
@@ -275,7 +276,8 @@ export const en: SiteContent = {
       sub: "A script tag for surveys in your product, a REST API for everything else.",
       snippet: {
         title: "JavaScript snippet",
-        body: "Loads `/js/forma.umd.cjs` from your Forma instance and renders surveys on your pages.",
+        body: "Loads `/js/forma.umd.js` from your Forma instance and renders surveys on your pages. Calls made before it has loaded are queued.",
+        link: "SDK reference →",
       },
       api: {
         title: "REST API v3",
@@ -333,6 +335,106 @@ export const en: SiteContent = {
             {
               term: "API key",
               body: "A client without OAuth sends an API key in a header, as with the REST API. A read key can list and read; a write or manage key can also create and edit.",
+            },
+          ],
+        },
+      },
+    },
+    sdk: {
+      meta: {
+        title: "Forma JavaScript SDK reference",
+        description:
+          "Install the Forma SDK with a script tag, identify users, set attributes, track actions, listen to events and debug the integration.",
+      },
+      title: "JavaScript SDK reference",
+      sub: "One script tag shows your website and in-app surveys. Everything else is a call on `window.forma`.",
+      install: {
+        title: "Install",
+        body: "Copy the snippet from Integrations → Web & Mobile SDK in Forma, which fills in your workspace ID and your instance's URL, and paste it into the `<head>` of every page. With Google Tag Manager, paste it into a Custom HTML tag that fires on All Pages.",
+        frameworks:
+          'React and Vue: paste it into `index.html`. Next.js: render the same JavaScript with `next/script` and `strategy="beforeInteractive"`, so `window.forma` exists before your components\' effects run: in the root `app/layout.tsx` with the App Router, or directly in `pages/_document.tsx` with the Pages Router. No route hooks are needed. The SDK is not published on npm; mobile SDKs and a WordPress plugin are not available yet.',
+        queue:
+          'Until the script arrives, `window.forma` is a stub: calls are queued, not thrown, and replayed in order once the SDK has loaded and set itself up. A queued call returns nothing, so do not await it. Once the SDK has loaded, the stub forwards to it, so a reference kept from before then still works. In TypeScript, declare the global once, naming the methods you call rather than using an index signature, which `noUncheckedIndexedAccess` makes possibly undefined: `interface Window { forma: Record<"setUserId" | "track" | "logout", (...args: unknown[]) => unknown> }`.',
+      },
+      reference: {
+        title: "Methods",
+        lead: "Every method is called on `window.forma`. The snippet calls `setup({ workspaceId, appUrl })` for you; call it yourself only if you load `/js/forma.umd.js` without the snippet, and before anything else.",
+        identify: {
+          title: "Identify users",
+          facts: [
+            {
+              term: "setUserId(userId)",
+              body: "Identifies the visitor as the contact with that ID, created on first use, so segment targeting and show-once rules apply to the person. IDs are up to 255 characters; a different ID first clears the previous user's state.",
+            },
+            {
+              term: "setAttributes(attributes), setAttribute(key, value)",
+              body: "Set contact attributes for segments. Call `setUserId` first. A string, a number or a `Date` gives a new attribute its type; later values must have the same type, or the server does not store them.",
+            },
+            {
+              term: "setLanguage(language)",
+              body: "Shows surveys in that language: a language code such as `de`, or an alias you configured. Works for anonymous visitors too.",
+            },
+            {
+              term: "logout()",
+              body: "Forgets the user on this browser. Call it on sign-out, so the next person on the device is not treated as the previous one.",
+            },
+          ],
+        },
+        actions: {
+          title: "Actions and single-page apps",
+          facts: [
+            {
+              term: "track(code, { hiddenFields })",
+              body: "Fires the code action with that key (set up under Actions in Forma), which may show a survey. `hiddenFields` fills the survey's hidden fields and is stored with the response; it is deprecated and will be removed in a future version.",
+            },
+            {
+              term: "Page views and routing",
+              body: "The SDK patches `history.pushState` and `replaceState` and listens to `popstate` and `hashchange`, so client-side navigation is a page view on its own. `registerRouteChange()` re-checks the URL by hand for a router that does neither.",
+            },
+            {
+              term: "setEmbeddedData(data), clearEmbeddedData(key?)",
+              body: "Attach data to future responses without triggering anything; `{ key: null }` removes a key, and only fields the survey declares as ingested embedded data are kept. Synchronous, no network.",
+            },
+          ],
+        },
+        events: {
+          title: "Events",
+          body: "`on(event, handler)` returns a function that unsubscribes, as does `off(event, handler)`. The same events are pushed to `window.dataLayer` for Google Tag Manager under a `forma` key. Payloads carry IDs only, never answers.",
+          facts: [
+            {
+              term: "forma_setup_successful",
+              body: "`{ workspaceId }`: setup has finished and the SDK is ready.",
+            },
+            {
+              term: "forma_setup_failed",
+              body: "`{ workspaceId, code, message }`: setup did not complete. `code` is `missing_field`, `invalid_config`, `network_error` or `error_state`.",
+            },
+            {
+              term: "forma_action_tracked",
+              body: "`{ action }`: an action was tracked, by `track()` or on the page.",
+            },
+            { term: "forma_survey_shown", body: "`{ surveyId }`: a survey reached the screen." },
+            {
+              term: "forma_response_submitted",
+              body: "`{ surveyId, responseId, finished }`: on the first answer (`finished: false`), and again when the finished response has been saved.",
+            },
+            { term: "forma_survey_closed", body: "`{ surveyId }`: the survey was dismissed or finished." },
+          ],
+        },
+        debugging: {
+          title: "Debugging and security",
+          facts: [
+            {
+              term: "?formaDebug=true",
+              body: "Add it to the page's URL: the SDK logs each step to the console with the `🧱 Forma` prefix, fetches the workspace state again instead of using its cache, and ignores a stored error state.",
+            },
+            {
+              term: "setNonce(nonce)",
+              body: "With a nonce-based Content Security Policy for styles, pass the nonce (without `nonce-`) before surveys render. Allow your Forma instance in `script-src` and `connect-src`.",
+            },
+            {
+              term: "Caching",
+              body: "The workspace state is cached, so changes to surveys and actions can take several minutes to reach a page that has already loaded the SDK. Debug mode skips the cache.",
             },
           ],
         },

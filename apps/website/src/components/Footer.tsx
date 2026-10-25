@@ -59,6 +59,7 @@ export const SiteFooter = () => {
           title={footer.developers}
           links={[
             { href: pagePath(locale, "developers"), label: nav.developers },
+            { href: pagePath(locale, "sdk"), label: nav.sdk },
             { href: pagePath(locale, "selfHosting"), label: nav.selfHosting },
           ]}
         />

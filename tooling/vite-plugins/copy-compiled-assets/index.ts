@@ -15,9 +15,7 @@ interface CopyCompiledAssetsPluginOptions {
    * `surveys.js` — same directory, same `Cache-Control` — was a `HIT`. That is a full origin round
    * trip for the render-blocking bundle a respondent waits on.
    *
-   * The `.cjs` name cannot simply change: `packages/js-core` hardcodes it into embed snippets that
-   * live on third-party pages and cannot be updated in lockstep. So both names are written, the app
-   * asks for the cacheable one, and embeds keep working.
+   * The `.cjs` names cannot simply change: snippets that hardcode them live on third-party pages and cannot be updated in lockstep. So both names are written, the app and the current install snippets ask for the cacheable one, and installed embeds keep working. `packages/surveys` and `packages/js-core` both use it.
    */
   duplicateSuffixes?: Readonly<Record<string, string>>;
 }
