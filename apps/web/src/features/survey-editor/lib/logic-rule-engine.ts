@@ -247,6 +247,7 @@ export const getLogicRules = (t: TFunction) => {
       [TSurveyElementTypeEnum.NPS]: numericScaleOptions,
       [TSurveyElementTypeEnum.CSAT]: numericScaleOptions,
       [TSurveyElementTypeEnum.CES]: numericScaleOptions,
+      [TSurveyElementTypeEnum.Slider]: numericScaleOptions,
       [TSurveyElementTypeEnum.CTA]: {
         options: [
           {

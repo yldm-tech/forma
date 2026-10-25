@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { formatStoredDateForDisplay, parseStoredDateValue } from "./date-display";
+import { formatStoredDateForDisplay, parseStoredDateTimeValue, parseStoredDateValue } from "./date-display";
 
 describe("date display utils", () => {
   test("parses ISO stored dates", () => {
@@ -44,5 +44,26 @@ describe("date display utils", () => {
 
   test("returns null for invalid stored dates", () => {
     expect(formatStoredDateForDisplay("2025-02-30", "y-M-d")).toBeNull();
+  });
+
+  test("formats a date and time answer with its time of day, in local time", () => {
+    const date = new Date(2025, 4, 6, 14, 30);
+
+    expect(parseStoredDateTimeValue("2025-05-06T14:30")?.getTime()).toBe(date.getTime());
+    expect(formatStoredDateForDisplay("2025-05-06T14:30", "y-M-d", "en-US")).toBe(
+      new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(date)
+    );
+  });
+
+  test("refuses a date and time answer that names no real time", () => {
+    expect(parseStoredDateTimeValue("2025-05-06T24:10")).toBeNull();
+    expect(parseStoredDateTimeValue("2025-02-30T10:00")).toBeNull();
   });
 });
