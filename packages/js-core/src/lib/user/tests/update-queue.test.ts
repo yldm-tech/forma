@@ -153,6 +153,22 @@ describe("UpdateQueue", () => {
     expect(mockLogger.debug).not.toHaveBeenCalledWith(expect.stringContaining("seats"));
   });
 
+  test("processUpdates does not claim any key was written when the server hit the attribute limit", async () => {
+    loggerMock.mockReturnValue(mockLogger as unknown as Logger);
+    (sendUpdates as Mock).mockResolvedValue({
+      ok: true,
+      data: { skippedAttributeKeys: new Set<string>(), attributeLimitExceeded: true },
+    });
+
+    updateQueue.updateAttributes({ plan: "pro", brand_new: "x" });
+    await updateQueue.processUpdates();
+
+    expect(mockLogger.debug).not.toHaveBeenCalledWith(expect.stringContaining("Attributes successfully set"));
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      "Attributes sent: plan, brand_new. Only those that already existed were stored: the workspace attribute limit kept new ones from being created."
+    );
+  });
+
   test("processUpdates logs no success when the server skipped every attribute", async () => {
     loggerMock.mockReturnValue(mockLogger as unknown as Logger);
     (sendUpdates as Mock).mockResolvedValue({

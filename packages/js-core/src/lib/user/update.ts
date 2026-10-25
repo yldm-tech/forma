@@ -74,8 +74,26 @@ const SKIPPED_KEY_PATTERNS: { pattern: RegExp; isList: boolean }[] = [
   { pattern: /Reserved attribute key\(s\): (.+?)\. These keys/g, isList: true },
 ];
 
+// Messages that name the attribute they concern only by meaning, not by key.
+const SKIPPED_KEY_PREFIXES: { prefix: string; key: string }[] = [
+  // invalid_language_ignored names the rejected value, and always concerns `language`.
+  { prefix: "Ignored invalid language code ", key: "language" },
+  // email_already_exists / userid_already_exists: the value belongs to another contact and was not written.
+  { prefix: "The email already exists for this workspace and was not updated", key: "email" },
+  { prefix: "The userId already exists for this workspace and was not updated", key: "userId" },
+];
+
+// attribute_limit_exceeded: "Could not create {count} new attribute(s) as it would exceed the maximum limit of {limit} attribute classes. ..." The server creates none of the new keys and names none of them, so the SDK cannot tell which of the keys it sent were new.
+const ATTRIBUTE_LIMIT_PATTERN =
+  /^Could not create \d+ new attribute\(s\) as it would exceed the maximum limit/;
+
+export const isAttributeLimitExceeded = (text: string): boolean => ATTRIBUTE_LIMIT_PATTERN.test(text);
+
+// attribute_type_validation_error, the one write refusal servers before the type-mismatch move to `errors` still send in `messages`.
+const isTypeMismatch = (text: string): boolean => /\(attribute '.+?' has dataType: /.test(text);
+
 /**
- * The attribute keys the server reports it did not write, read from its `messages` and `errors`. A type mismatch is reported in `messages` by servers that predate it moving to `errors`, so both are read. `invalid_language_ignored` names the rejected value rather than the key, and always concerns `language`.
+ * The attribute keys the server reports it did not write, read from its `messages` and `errors`. A type mismatch is reported in `messages` by servers that predate it moving to `errors`, so both are read.
  */
 export const getSkippedAttributeKeys = (messages: string[] = [], errors: string[] = []): Set<string> => {
   const skipped = new Set<string>();
@@ -87,8 +105,10 @@ export const getSkippedAttributeKeys = (messages: string[] = [], errors: string[
         named.forEach((key) => skipped.add(key));
       }
     }
-    if (text.startsWith("Ignored invalid language code ")) {
-      skipped.add("language");
+    for (const { prefix, key } of SKIPPED_KEY_PREFIXES) {
+      if (text.startsWith(prefix)) {
+        skipped.add(key);
+      }
     }
   }
 
@@ -99,7 +119,9 @@ export const sendUpdates = async ({
   updates,
 }: {
   updates: TUpdates;
-}): Promise<Result<{ skippedAttributeKeys: Set<string> }, ApiErrorResponse>> => {
+}): Promise<
+  Result<{ skippedAttributeKeys: Set<string>; attributeLimitExceeded: boolean }, ApiErrorResponse>
+> => {
   const config = Config.getInstance();
   const logger = Logger.getInstance();
 
@@ -126,9 +148,13 @@ export const sendUpdates = async ({
       logger.error(error);
     });
 
-    // Log informational messages (debug only)
+    // Log informational messages (debug only). A message that reports a value the server refused to store (a type mismatch from a server that still sends it in `messages`, or new keys refused by the attribute limit) is logged as an error instead: the caller asked for that value to be stored, and a debug-only line would leave the failure silent outside debug mode.
     messages?.forEach((message) => {
-      logger.debug(`User update message: ${message}`);
+      if (isTypeMismatch(message) || isAttributeLimitExceeded(message)) {
+        logger.error(message);
+      } else {
+        logger.debug(`User update message: ${message}`);
+      }
     });
 
     config.update({
@@ -143,7 +169,10 @@ export const sendUpdates = async ({
     // prefetch for. Cheap and idempotent when it already ran.
     prefetchSurveysScript(appUrl);
 
-    return ok({ skippedAttributeKeys: getSkippedAttributeKeys(messages, errors) });
+    return ok({
+      skippedAttributeKeys: getSkippedAttributeKeys(messages, errors),
+      attributeLimitExceeded: [...(messages ?? []), ...(errors ?? [])].some(isAttributeLimitExceeded),
+    });
   } catch (e) {
     console.error("error in sending updates: ", e);
 

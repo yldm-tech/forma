@@ -162,14 +162,19 @@ export class UpdateQueue {
                 if (isNewUser) {
                   logger.debug(`User successfully identified: ${effectiveUserId}`);
                 }
-                // Name only the keys that were written: one the server skipped (wrong type, invalid or reserved key) is reported by its own message, and listing it here as well would claim it was stored.
+                // Name only the keys that were written: one the server skipped (wrong type, invalid or reserved key, an email or userId another contact already has) is reported by its own message, and listing it here as well would claim it was stored.
                 if (hasAttributes) {
-                  const { skippedAttributeKeys } = result.data;
+                  const { skippedAttributeKeys, attributeLimitExceeded } = result.data;
                   const writtenKeys = Object.keys(currentUpdates.attributes ?? {}).filter(
                     (key) => !skippedAttributeKeys.has(key)
                   );
                   if (writtenKeys.length > 0) {
-                    logger.debug(`Attributes successfully set: ${writtenKeys.join(", ")}`);
+                    // At the attribute limit the server creates none of the new keys and does not say which keys were new, so none of these can be claimed as written.
+                    logger.debug(
+                      attributeLimitExceeded
+                        ? `Attributes sent: ${writtenKeys.join(", ")}. Only those that already existed were stored: the workspace attribute limit kept new ones from being created.`
+                        : `Attributes successfully set: ${writtenKeys.join(", ")}`
+                    );
                   }
                 }
               } else {
