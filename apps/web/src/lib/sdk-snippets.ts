@@ -77,6 +77,24 @@ window.forma.logout();`,
   };
 };
 
+/** How a page identifies a verified user: the userHash computed on the customer's server (HMAC-SHA256 of the user id under the workspace's identity secret, in hex), then passed to setUserId. The secret stays on the server. */
+export const identityVerificationSnippets = {
+  node: `// On your server (Node.js)
+import { createHmac } from "node:crypto";
+
+const userHash = createHmac("sha256", process.env.FORMA_IDENTITY_SECRET)
+  .update(user.id)
+  .digest("hex");`,
+  python: `# On your server (Python)
+import hashlib, hmac, os
+
+user_hash = hmac.new(
+    os.environ["FORMA_IDENTITY_SECRET"].encode(), user.id.encode(), hashlib.sha256
+).hexdigest()`,
+  client: `// In your page, with the userHash your server rendered or returned
+window.forma.setUserId(user.id, { userHash });`,
+};
+
 /** The website's path prefix for the language closest to the app's: it has en, zh (Simplified) and ja. */
 const websitePrefix = (language: string): string =>
   language.startsWith("ja") ? "/ja" : language.startsWith("zh") ? "/zh" : "";
