@@ -85,6 +85,100 @@ func TestLogWritesTheEvent(t *testing.T) {
 	}
 }
 
+// responseObject is the shape the management APIs record for a response.
+func responseObject(data, variables, contactAttributes, meta any) map[string]any {
+	return map[string]any{
+		"id": "resp-1", "surveyId": "survey-1", "finished": true, "language": "default",
+		"data": data, "variables": variables, "contactAttributes": contactAttributes, "meta": meta,
+		"ttc": map[string]any{"q1": 1200.0},
+	}
+}
+
+func TestLogKeepsOnlyTheKeysOfWhatRespondentsSubmitted(t *testing.T) {
+	answers := []string{"call me on +81 90 1234 5678", "Tanaka Plumbing", "ACME Corp", "https://shop.example.com/checkout?order=991", "Mozilla/5.0 Secret", "JP", "computed from tanaka"}
+	created := responseObject(
+		map[string]any{"q1": answers[0], "nps": 9.0, "matrix": map[string]any{"row": "col"}, "hidden_company": answers[1]},
+		map[string]any{"v1": answers[6]},
+		map[string]any{"company": answers[2], "email": "a@example.com"},
+		map[string]any{"url": answers[3], "userAgent": map[string]any{"browser": answers[4]}, "country": answers[5]},
+	)
+	updated := responseObject(
+		map[string]any{"q1": answers[0], "nps": 10.0, "matrix": map[string]any{"row": "col"}, "hidden_company": answers[1], "q2": "added later"},
+		map[string]any{"v1": answers[6]},
+		map[string]any{"company": answers[2], "email": "a@example.com"},
+		map[string]any{"url": answers[3], "userAgent": map[string]any{"browser": answers[4]}, "country": answers[5]},
+	)
+	updated["finished"] = false
+	contactLike := map[string]any{"contacts": []any{map[string]any{"id": "c1", "data": map[string]any{"note": answers[0]}}}}
+
+	cases := []struct {
+		name    string
+		target  Target
+		old     any
+		new     any
+		changes map[string]any
+	}{
+		{"created response", TargetResponse, nil, created, map[string]any{
+			"id": "resp-1", "surveyId": "survey-1", "finished": true, "language": "default", "ttc": map[string]any{"q1": 1200.0},
+			"data":              map[string]any{"q1": redacted, "nps": redacted, "matrix": redacted, "hidden_company": redacted},
+			"variables":         map[string]any{"v1": redacted},
+			"contactAttributes": map[string]any{"company": redacted, "email": redacted},
+			"meta":              map[string]any{"url": redacted, "userAgent": redacted, "country": redacted},
+		}},
+		{"updated response records the changed keys only", TargetResponse, created, updated, map[string]any{
+			"finished": false,
+			"data":     map[string]any{"nps": redacted, "q2": redacted},
+		}},
+		{"deleted response", TargetResponse, created, nil, map[string]any{
+			"id": "resp-1", "surveyId": "survey-1", "finished": true, "language": "default", "ttc": map[string]any{"q1": 1200.0},
+			"data":              map[string]any{"q1": redacted, "nps": redacted, "matrix": redacted, "hidden_company": redacted},
+			"variables":         map[string]any{"v1": redacted},
+			"contactAttributes": map[string]any{"company": redacted, "email": redacted},
+			"meta":              map[string]any{"url": redacted, "userAgent": redacted, "country": redacted},
+		}},
+		{"null and non-object subtrees", TargetResponse, nil, responseObject(nil, "odd", []any{answers[0]}, nil), map[string]any{
+			"id": "resp-1", "surveyId": "survey-1", "finished": true, "language": "default", "ttc": map[string]any{"q1": 1200.0},
+			"data": nil, "variables": redacted, "contactAttributes": redacted, "meta": nil,
+		}},
+		{"contact, at any depth", TargetContact, nil, contactLike, map[string]any{
+			"contacts": []any{map[string]any{"id": "c1", "data": map[string]any{"note": redacted}}},
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			em, buf := newEmitter(t, config.Config{AuditLogEnabled: true})
+			em.Log(context.Background(), Event{
+				Action: ActionUpdated, TargetType: tc.target, TargetID: "resp-1", ActorType: ActorAPI, ActorID: "key-1",
+				OrganizationID: "org-1", Status: StatusSuccess, OldObject: tc.old, NewObject: tc.new,
+			})
+			for _, answer := range answers {
+				if strings.Contains(buf.String(), answer) {
+					t.Errorf("audit output holds the submitted value %q: %s", answer, buf.String())
+				}
+			}
+			got := lines(t, buf)
+			if len(got) != 1 {
+				t.Fatalf("%d lines, want 1: %s", len(got), buf.String())
+			}
+			if !reflect.DeepEqual(got[0]["changes"], tc.changes) {
+				t.Fatalf("changes = %#v, want %#v", got[0]["changes"], tc.changes)
+			}
+		})
+	}
+}
+
+func TestLogKeepsSubmittedLookingKeysOfOtherTargets(t *testing.T) {
+	em, buf := newEmitter(t, config.Config{AuditLogEnabled: true})
+	em.Log(context.Background(), Event{
+		Action: ActionUpdated, TargetType: TargetWebhook, TargetID: "hook-1", ActorType: ActorUser, ActorID: "user-1",
+		OrganizationID: "org-1", Status: StatusSuccess, NewObject: map[string]any{"meta": map[string]any{"source": "zapier"}},
+	})
+	want := map[string]any{"meta": map[string]any{"source": "zapier"}}
+	if got := lines(t, buf)[0]["changes"]; !reflect.DeepEqual(got, want) {
+		t.Fatalf("changes = %#v, want %#v", got, want)
+	}
+}
+
 func TestLogRecordsFailuresWithTheirEventID(t *testing.T) {
 	em, buf := newEmitter(t, config.Config{AuditLogEnabled: true, AuditLogGetUserIP: true})
 	em.Log(context.Background(), Event{

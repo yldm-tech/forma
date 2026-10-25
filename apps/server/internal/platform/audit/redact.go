@@ -19,6 +19,52 @@ var sensitiveKeys = map[string]bool{
 	"attributes": true, "pin": true, "image": true, "stripecustomerid": true, "filename": true, "state": true,
 }
 
+// keysOnlyTargets are the targets whose objects carry what respondents and contacts submitted. Their events record which keys of the submitted subtrees changed, never the values, so answers (free text may hold contact details) do not end up in log retention, where deleting a response cannot reach them.
+var keysOnlyTargets = map[Target]bool{TargetResponse: true, TargetContact: true}
+
+// submittedKeys are the subtrees, matched against the lowercased key at any depth, that keysOnlyTargets keep the keys of: a response's answers and hidden fields (data), the values its logic computed from them (variables), the contact attributes captured with it, and its request metadata (meta: URL, user agent, location).
+var submittedKeys = map[string]bool{"data": true, "variables": true, "contactattributes": true, "meta": true}
+
+// maskSubmitted replaces the value under every key of each submitted subtree with the redaction mark, at any depth of a generic JSON value. A subtree that is not an object keeps nothing but whether it is null.
+func maskSubmitted(v any) any {
+	switch t := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(t))
+		for k, val := range t {
+			if submittedKeys[strings.ToLower(k)] {
+				out[k] = keysOf(val)
+				continue
+			}
+			out[k] = maskSubmitted(val)
+		}
+		return out
+	case []any:
+		out := make([]any, len(t))
+		for i, val := range t {
+			out[i] = maskSubmitted(val)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+// keysOf is a submitted subtree with its keys kept and every value masked.
+func keysOf(v any) any {
+	switch t := v.(type) {
+	case nil:
+		return nil
+	case map[string]any:
+		out := make(map[string]any, len(t))
+		for k := range t {
+			out[k] = redacted
+		}
+		return out
+	default:
+		return redacted
+	}
+}
+
 // urlSensitiveParams are masked inside any string value that parses as an absolute URL.
 var urlSensitiveParams = map[string]bool{"token": true, "code": true, "state": true}
 
