@@ -8,7 +8,7 @@ export const SetupLayout = ({ children }: { children: ReactNode }) => (
       style={{ scrollbarGutter: "stable both-edges" }}
       className="flex max-h-[90dvh] w-full max-w-160 flex-col items-center gap-y-4 overflow-auto rounded-lg border bg-white p-6 text-center shadow-md sm:p-12">
       <div className="size-20 rounded-lg bg-slate-900 p-2">
-        <FormaLogo className="h-full w-full" />
+        <FormaLogo variant="white" className="h-full w-full" />
       </div>
       {children}
     </div>

@@ -70,7 +70,7 @@ export const ActivityTimeline = ({
           onClick={() => setIsReversed((reversed) => !reversed)}
           aria-label={t("common.activity")}
           aria-pressed={isReversed}
-          className="hover:text-brand-dark flex items-center px-1 text-slate-800">
+          className="flex items-center px-1 text-slate-800 hover:text-slate-600">
           <ArrowDownUpIcon className="inline size-4" />
         </button>
       </div>

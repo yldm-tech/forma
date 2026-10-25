@@ -108,7 +108,7 @@ const renderIcon = (key: string) => {
 
 const ICON_BACKGROUNDS: Record<string, string> = {
   [OptionsType.ATTRIBUTES]: "bg-indigo-500",
-  [OptionsType.ELEMENTS]: "bg-brand-dark",
+  [OptionsType.ELEMENTS]: "bg-slate-700",
   [OptionsType.TAGS]: "bg-indigo-500",
   [OptionsType.QUOTAS]: "bg-slate-500",
 };

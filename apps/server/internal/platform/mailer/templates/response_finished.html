@@ -30,7 +30,7 @@
 {{- end}}
 {{- $label := .T "emails.survey_response_finished_email_view_survey_summary"}}
 {{- if .Content.MoreResponses}}{{$label = .T "emails.survey_response_finished_email_view_more_responses" "responseCount" .Content.MoreResponses}}{{end}}
-<p style="margin:24px 0">{{template "button" (button .Content.ResponsesURL $label)}}</p>
+<p style="margin:24px 0">{{template "button" (.Button .Content.ResponsesURL $label)}}</p>
 <hr style="border:none;border-top:1px solid #eaeaea;margin:26px 0;width:100%">
 <div style="margin-top:16px;text-align:center;font-size:14px">
 <p style="font-size:14px;line-height:24px;margin:16px 0;font-weight:500">{{.T "emails.survey_response_finished_email_dont_want_notifications"}}</p>

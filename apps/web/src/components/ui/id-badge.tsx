@@ -23,7 +23,7 @@ export const IdBadge = ({ id, label, tabIndex }: { id: string; label?: string; t
         aria-label={label ? `${t("common.copy")} ${label} ${id}` : `${t("common.copy")} ${id}`}
         title={copied ? t("common.copied") : t("common.copy")}
         onClick={async () => setCopied(await copyText(id, t))}
-        className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:border-transparent hover:bg-slate-900/80 hover:text-slate-50 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:outline-hidden">
+        className="focus-visible:ring-ring inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:border-transparent hover:bg-slate-900/80 hover:text-slate-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden">
         <span>{id}</span>
         {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
       </button>

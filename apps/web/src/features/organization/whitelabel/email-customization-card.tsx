@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import { Uploader, useIsStorageConfigured } from "../../../components/ui/file-input/components/uploader";
-import { FormaLogo } from "../../../components/ui/logo";
+import { Wordmark } from "../../../components/ui/logo";
 import { SettingsCard } from "../../../components/ui/page";
 import { showStorageNotConfiguredToast } from "../../../components/ui/storage-not-configured-toast";
 import { Muted, Small } from "../../../components/ui/typography";
@@ -104,12 +104,12 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
     }
   };
 
-  // Forma's mark is an <svg> with no size of its own, so it needs one where its box only caps the size; an uploaded <img> keeps its intrinsic size.
-  const logo = (className: string, svgClassName: string) =>
+  // Forma's own logo is the lockup the emails carry (logo-transparent.png, the symbol beside the drawn wordmark), sized by its font size: its <svg> has no size of its own, so it needs one where its box only caps the size; an uploaded <img> keeps its intrinsic size.
+  const logo = (className: string, wordmarkClassName: string) =>
     logoUrl ? (
       <img src={logoUrl} alt={t("common.logo")} className={className} />
     ) : (
-      <FormaLogo className={svgClassName} />
+      <Wordmark className={wordmarkClassName} />
     );
 
   return (
@@ -124,7 +124,7 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
             {logoUrl !== "" && (
               <div className="flex flex-col gap-2">
                 <div className="flex w-max items-center justify-center rounded-lg border border-slate-200 px-4 py-2">
-                  {logo("max-h-24 max-w-full object-contain", "h-16 w-16")}
+                  {logo("max-h-24 max-w-full object-contain", "text-4xl")}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -188,7 +188,7 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
         </div>
         <div className="min-h-52 w-[446px] max-w-full rounded-t-lg border border-slate-100 px-10 pt-10 pb-4 shadow-xl">
           <div data-testid="email-customization-preview" className="mb-4 flex justify-center">
-            {logo("mx-auto max-h-[100px] max-w-full object-contain", "mx-auto max-h-[100px] max-w-full")}
+            {logo("mx-auto max-h-[100px] max-w-full object-contain", "mx-auto text-4xl")}
           </div>
           <p className="font-bold">
             {t("workspace.settings.general.email_customization_preview_email_heading", {

@@ -1,10 +1,13 @@
 // Draws the 1200 × 630 share image of every page in every locale into public/_site/og/<locale>/<page>.png (package.json `og-images`). Run by hand when a page title changes, and commit the result: the images change rarely and drawing them needs a browser, which the image build does not have.
 //
-// Each image is the logo tile at the top left, the page's heading in the locale's system font, ink on white, and a row of mint and teal bars echoing the hero. Flat colours only, so each PNG stays small.
+// Each image is the logo (the symbol and the drawn wordmark, components/Logo.tsx) at the top left, the page's heading in the locale's system font, ink on white, and a row of ink and crimson bars echoing the hero's chart. Flat colours only, so each PNG stays small.
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { Logo } from "../components/Logo";
 import { DICTIONARIES } from "../content";
 import { HTML_LANG, ROUTES, ogImagePath } from "../site";
 
@@ -20,29 +23,28 @@ const escapeHtml = (value: string): string =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const BARS = [
-  ["#038178", 120],
-  ["#00e6ca", 200],
-  ["#038178", 150],
-  ["#00e6ca", 260],
-  ["#038178", 190],
+  ["#0f172a", 120],
+  ["#0f172a", 200],
+  ["#0f172a", 150],
+  ["#d3264a", 260],
+  ["#0f172a", 190],
 ] as const;
 
 const template = (locale: string, heading: string, eyebrow: string): string => `<!doctype html>
 <html lang="${HTML_LANG[locale as keyof typeof HTML_LANG]}"><head><meta charset="utf-8"><style>
   * { margin: 0; box-sizing: border-box; }
   body { width: 1200px; height: 630px; background: #fff; font-family: ${FONTS[locale]}; color: #0f172a; position: relative; overflow: hidden; }
-  .glow { position: absolute; right: -180px; top: -260px; width: 720px; height: 720px; border-radius: 50%; background: #e6fcf8; }
-  .brand { position: absolute; left: 80px; top: 72px; display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
-  .eyebrow { position: absolute; left: 80px; top: 196px; font-size: 26px; font-weight: 600; color: #026a62; }
+  .glow { position: absolute; right: -180px; top: -260px; width: 720px; height: 720px; border-radius: 50%; background: #fcf2f4; }
+  .brand { position: absolute; left: 80px; top: 72px; display: flex; }
+  .eyebrow { position: absolute; left: 80px; top: 196px; font-size: 26px; font-weight: 600; color: #b1203e; }
   h1 { position: absolute; left: 80px; top: 244px; width: 700px; font-size: ${locale === "en" ? 58 : 52}px; line-height: 1.18; font-weight: 700; letter-spacing: ${locale === "en" ? "-0.02em" : "0"}; text-wrap: balance; word-break: ${locale === "ja" ? "auto-phrase" : locale === "zh" ? "keep-all" : "normal"}; overflow-wrap: break-word; }
   .bars { position: absolute; right: 96px; bottom: 0; display: flex; align-items: flex-end; gap: 22px; }
   .bars span { display: block; width: 56px; border-radius: 14px 14px 0 0; }
-  .rule { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: #038178; }
+  .rule { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: #d3264a; }
 </style></head><body>
   <div class="glow"></div>
   <div class="brand">
-    <svg width="64" height="64" viewBox="4 2 40 44"><rect x="6" y="4" width="36" height="40" rx="10" fill="#038178"/><rect x="14" y="17" width="23" height="5" rx="2.5" fill="#00E6CA"/><rect x="14" y="27" width="15" height="5" rx="2.5" fill="#fff"/><circle cx="34" cy="29.5" r="2.5" fill="#00E6CA"/></svg>
-    Forma
+    ${renderToStaticMarkup(createElement(Logo, { height: 64 }))}
   </div>
   <p class="eyebrow">${escapeHtml(eyebrow)}</p>
   <h1>${escapeHtml(heading)}</h1>

@@ -18,7 +18,7 @@ export const SurveyCardArt = () => {
   return (
     <Frame className="mx-auto w-full max-w-md">
       <div className="card shadow-raised p-6">
-        <p className="text-small font-semibold text-teal-700">{t.surveyTitle}</p>
+        <p className="text-small text-crimson-700 font-semibold">{t.surveyTitle}</p>
         <p className="mt-2 text-lg leading-7 font-semibold">{t.npsQuestion}</p>
         <div className="mt-4 grid grid-cols-11 gap-1">
           {Array.from({ length: 11 }, (_, i) => (
@@ -26,7 +26,7 @@ export const SurveyCardArt = () => {
               key={i}
               className={`rounded-chip text-small flex h-9 items-center justify-center border ${
                 i === 8
-                  ? "bg-mint-400 border-teal-600 font-semibold text-teal-900"
+                  ? "bg-crimson-600 border-crimson-600 font-semibold text-white"
                   : "border-line bg-surface-muted text-ink-700"
               }`}>
               {i}
@@ -69,7 +69,7 @@ export const SummaryChartArt = () => {
               <p className="text-small text-ink-700">{option}</p>
               <div className="bg-surface-sunken mt-1.5 h-3 rounded-full">
                 <div
-                  className={`h-3 rounded-full ${BAR_WIDTHS[i]} ${i === 0 ? "bg-teal-600" : "bg-mint-400"}`}
+                  className={`h-3 rounded-full ${BAR_WIDTHS[i]} ${i === 0 ? "bg-crimson-600" : "bg-crimson-300"}`}
                 />
               </div>
             </li>
@@ -92,7 +92,7 @@ const ChainStep = ({ icon, label, value }: { icon: IconName; label: string; valu
   </div>
 );
 
-const Connector = () => <div className="bg-mint-500 ml-9 h-6 w-0.5" />;
+const Connector = () => <div className="bg-crimson-300 ml-9 h-6 w-0.5" />;
 
 export const WorkflowChainArt = () => {
   const { content } = useSite();
@@ -142,20 +142,20 @@ export const DestinationsArt = () => {
       {/* Below sm the question card gets the wider share, so a phrase such as どのくらいですか？ fits its line rather than breaking mid-phrase. */}
       <div className="grid grid-cols-[minmax(0,1.3fr)_2rem_minmax(0,1fr)] items-center sm:grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)]">
         <div className="card shadow-raised p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold text-teal-700">
-            <span className="bg-mint-500 size-2 rounded-full" />
+          <p className="text-crimson-700 flex items-center gap-2 text-xs font-semibold">
+            <span className="bg-crimson-600 size-2 rounded-full" />
             {t.newResponse}
           </p>
           <p className="text-small mt-2 font-semibold">{t.npsQuestion}</p>
           <div className="mt-3 flex items-center gap-2">
-            <span className="rounded-chip bg-mint-400 text-small flex size-8 flex-none items-center justify-center border border-teal-600 font-semibold text-teal-900">
+            <span className="rounded-chip bg-crimson-600 text-small border-crimson-600 flex size-8 flex-none items-center justify-center border font-semibold text-white">
               8
             </span>
             <Skeleton width="w-full" />
           </div>
         </div>
         <svg
-          className="text-mint-500 h-[288px] w-full"
+          className="text-crimson-300 h-[288px] w-full"
           viewBox={`0 0 40 ${height}`}
           preserveAspectRatio="none"
           fill="none"
@@ -177,7 +177,7 @@ export const DestinationsArt = () => {
           {destinations.map((name) => (
             <li key={name} className="card shadow-raised flex h-12 items-center gap-3 px-3">
               {name === "Webhook" ? (
-                <span className="bg-mint-100 inline-flex size-8 flex-none items-center justify-center rounded-[22%] text-teal-900">
+                <span className="bg-crimson-100 text-crimson-900 inline-flex size-8 flex-none items-center justify-center rounded-[22%]">
                   <Icon name="webhook" size={16} />
                 </span>
               ) : (
@@ -219,7 +219,7 @@ export const BrowserPopoverArt = () => {
         <div className="card shadow-raised absolute right-4 bottom-4 w-64 p-4">
           <p className="text-[15px] leading-6 font-semibold">{t.popoverQuestion}</p>
           <div className="text-small mt-3 grid grid-cols-2 gap-2">
-            <span className="rounded-chip bg-teal-600 px-3 py-1.5 text-center font-semibold text-white">
+            <span className="rounded-chip bg-crimson-600 px-3 py-1.5 text-center font-semibold text-white">
               {t.popoverYes}
             </span>
             <span className="rounded-chip border-line border px-3 py-1.5 text-center">{t.popoverNo}</span>
@@ -245,7 +245,7 @@ export const InAppArt = () => {
           </div>
           <div className="flex flex-1 flex-col gap-3">
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="rounded-chip bg-mint-100 px-2 py-1 text-teal-900">
+              <span className="rounded-chip bg-crimson-100 text-crimson-900 px-2 py-1">
                 {t.segmentLabel}: {t.segmentValue}
               </span>
               <span className="rounded-chip bg-surface-sunken text-ink-700 px-2 py-1">
@@ -263,7 +263,7 @@ export const InAppArt = () => {
             {Array.from({ length: 5 }, (_, i) => (
               <span
                 key={i}
-                className={`rounded-chip size-8 border ${i < 4 ? "bg-mint-400 border-teal-600" : "border-line bg-surface-muted"}`}
+                className={`rounded-chip size-8 border ${i < 4 ? "bg-crimson-600 border-crimson-600" : "border-line bg-surface-muted"}`}
               />
             ))}
           </div>

@@ -223,12 +223,16 @@ describe("EmailCustomizationCard", () => {
     expect(button.getAttribute("aria-describedby")).toBe(hint.id);
   });
 
-  test("Forma's own logo is drawn at a fixed size in the thumbnail, which would otherwise collapse it", async () => {
+  test("Forma's own logo is the lockup the emails carry, drawn at a fixed size in the thumbnail and the preview, which would otherwise collapse it", async () => {
     stubServer();
     renderAt(<EmailCustomizationCard organization={organization("owner")} />);
     const replace = await screen.findByTestId("replace-logo-button");
     const thumbnail = replace.closest(".flex-col")?.querySelector("svg");
-    expect(thumbnail?.getAttribute("class")).toContain("h-16 w-16");
+    const preview = screen.getByTestId("email-customization-preview").querySelector("svg");
+    for (const lockup of [thumbnail, preview]) {
+      expect(lockup?.getAttribute("viewBox")).toBe("0 0 212 48");
+      expect(lockup?.parentElement?.getAttribute("class")).toContain("text-4xl");
+    }
   });
 });
 

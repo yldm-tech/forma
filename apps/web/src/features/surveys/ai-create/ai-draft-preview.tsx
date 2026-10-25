@@ -113,7 +113,7 @@ export const AiDraftPreview = ({
         tabIndex={0}
         aria-label={t("workspace.surveys.ai_create.draft_survey")}
         aria-busy={isGenerating}
-        className="min-h-0 flex-1 overflow-y-auto focus-visible:ring-1 focus-visible:ring-slate-400 focus-visible:outline-hidden">
+        className="focus-visible:ring-ring min-h-0 flex-1 overflow-y-auto focus-visible:ring-1 focus-visible:outline-hidden">
         {blocks.map((block) => (
           <section key={block.key} className="-mt-px first:mt-0">
             {showsBlockNames && (

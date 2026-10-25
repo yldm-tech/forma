@@ -52,8 +52,9 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
         {icons[status]}
         <h1 className="text-4xl font-bold text-slate-800">{title}</h1>
         <p className="text-lg leading-10 text-slate-500">{description}</p>
+        {/* Forma's own marketing call to action, next to its wordmark: the brand crimson (white on it 5.07:1, on the 700 hover shade 6.68:1), not the ink primary the shared theme gives respondent-facing buttons. */}
         {showCTA && (
-          <Button className="mt-2" asChild>
+          <Button className="bg-brand mt-2 text-white hover:bg-[#b1203e]" asChild>
             <a href={CREATE_YOUR_OWN_URL}>{t("s.create_your_own")}</a>
           </Button>
         )}

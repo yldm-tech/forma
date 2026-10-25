@@ -293,10 +293,10 @@ export const BlockCard = ({
                     // Dashed hover/focus box, matching the other inline renames in the app
                     // (see workflow-page-title.tsx): slate while hovered, brand while editing.
                     "border border-dashed transition-colors",
-                    "hover:border-slate-300 focus:border-brand-dark",
+                    "hover:border-slate-300 focus:border-ink",
                     // Same specificity means source order decides, and Tailwind emits hover
                     // last — without this the border drops to slate on a hovered focused field.
-                    "focus:hover:border-brand-dark",
+                    "focus:hover:border-ink",
                     "focus:ring-0 focus:ring-offset-0 focus:outline-none"
                   )}
                 />

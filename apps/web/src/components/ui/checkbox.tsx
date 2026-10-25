@@ -10,7 +10,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxPrimitive.CheckboxPr
       className={cn(
         // Same as Switch: keep Radix's absolutely-positioned form-bubble <input> contained in
         // the root so it can't add scrollable overflow to the page inside forms.
-        "peer relative h-5 w-5 shrink-0 rounded-md border border-slate-300 bg-white focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-600 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900",
+        "peer relative h-5 w-5 shrink-0 rounded-md border border-slate-300 bg-white data-[state=checked]:border-brand data-[state=checked]:bg-brand data-[state=checked]:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-600 dark:focus-visible:ring-offset-slate-900",
         className
       )}
       {...props}>

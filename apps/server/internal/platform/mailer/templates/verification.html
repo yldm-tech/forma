@@ -1,7 +1,7 @@
 {{define "content"}}
 {{template "heading" (.T "emails.verification_email_heading")}}
 {{template "text" (.T "emails.verification_email_text")}}
-{{template "button" (button .Content.VerifyLink (.T "emails.verification_email_verify_email"))}}
+{{template "button" (.Button .Content.VerifyLink (.T "emails.verification_email_verify_email"))}}
 {{template "text" (.T "emails.verification_email_click_on_this_link")}}
 {{template "link" .Content.VerifyLink}}
 {{template "bold" (.T "emails.verification_email_link_valid_for_24_hours")}}

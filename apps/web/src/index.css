@@ -38,3 +38,15 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* Selected is crimson in the admin UI (theme.css): native checkboxes and radio buttons, and selected text. Here rather than in theme.css so the public survey page keeps the browser's defaults. */
+@layer base {
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-brand);
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-brand) 25%, white);
+  }
+}

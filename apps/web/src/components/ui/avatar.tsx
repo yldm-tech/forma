@@ -1,7 +1,7 @@
 import { UserIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 
-const COLORS = ["bg-teal-600", "bg-slate-700", "bg-cyan-700", "bg-emerald-700", "bg-sky-700"];
+const COLORS = ["bg-indigo-700", "bg-slate-700", "bg-cyan-700", "bg-emerald-700", "bg-sky-700"];
 
 /** The initials of a name on a colour picked from the user id, so a person keeps their colour everywhere. */
 export const ProfileAvatar = ({
@@ -34,7 +34,7 @@ export const ProfileAvatar = ({
   );
 };
 
-const PERSON_COLORS = ["bg-teal-500", "bg-teal-100", "bg-slate-700"];
+const PERSON_COLORS = ["bg-slate-500", "bg-slate-200", "bg-slate-700"];
 
 /** A respondent's avatar: a colour picked from the contact id, so the same contact looks the same in every list; anonymous respondents share one. */
 export const PersonAvatar = ({ personId, className }: { personId: string; className?: string }) => {
@@ -47,7 +47,7 @@ export const PersonAvatar = ({ personId, className }: { personId: string; classN
       className={cn(
         "flex size-10 shrink-0 items-center justify-center rounded-full",
         color,
-        color === "bg-teal-100" ? "text-teal-700" : "text-white",
+        color === "bg-slate-200" ? "text-slate-700" : "text-white",
         className
       )}>
       <UserIcon className="size-5" />

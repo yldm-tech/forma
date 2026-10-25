@@ -62,7 +62,7 @@ export const WorkflowCanvasNode = memo(
         <div
           className={cn(
             "flex w-64 items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2.5 shadow-sm transition-shadow hover:shadow-md",
-            selected && "ring-2 ring-brand-dark ring-offset-2 ring-offset-slate-50"
+            selected && "ring-2 ring-ink ring-offset-2 ring-offset-slate-50"
           )}>
           <Handle type="target" position={Position.Top} className={HANDLE_CLASS_NAMES} />
           <span

@@ -1,7 +1,7 @@
 import { GITHUB_URL, localePrefix, pagePath } from "../site";
 import { LanguageLinks } from "./Header";
 import { Icon } from "./icons";
-import { LogoMark } from "./Logo";
+import { Logo } from "./Logo";
 import { useSite } from "./site-context";
 import { SmartLink } from "./ui";
 
@@ -13,7 +13,7 @@ const Column = ({ title, links }: { title: string; links: { href: string; label:
         <li key={link.href}>
           <SmartLink
             href={link.href}
-            className="text-ink-700 text-[15px] hover:text-teal-700 hover:underline">
+            className="text-ink-700 hover:text-crimson-700 text-[15px] hover:underline">
             {link.label}
           </SmartLink>
         </li>
@@ -34,8 +34,7 @@ export const SiteFooter = () => {
             href={localePrefix(locale)}
             aria-label={content.common.homeLabel}
             className="inline-flex items-center gap-2">
-            <LogoMark size={28} />
-            <span className="text-lg font-bold tracking-tight">Forma</span>
+            <Logo height={28} />
           </SmartLink>
           <div className="text-small text-ink-500 mt-6 flex items-center gap-2">
             <Icon name="globe" size={16} />
@@ -43,7 +42,7 @@ export const SiteFooter = () => {
           </div>
           <LanguageLinks
             className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[15px]"
-            itemClassName="text-ink-700 hover:text-teal-700 hover:underline aria-[current]:font-semibold aria-[current]:text-ink-900"
+            itemClassName="text-ink-700 hover:text-crimson-700 hover:underline aria-[current]:font-semibold aria-[current]:text-ink-900"
           />
           <p className="text-small text-ink-500 mt-6">{footer.copyright}</p>
         </div>

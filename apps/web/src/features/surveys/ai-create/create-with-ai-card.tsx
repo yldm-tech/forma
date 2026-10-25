@@ -23,8 +23,8 @@ export const CreateWithAICard = ({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group hover:border-brand-dark relative flex flex-col rounded-lg border-2 border-dashed border-slate-300 bg-transparent p-6 text-left transition-colors duration-150">
-        <SparklesIcon className="text-brand-dark size-8 transition-all duration-150 group-hover:scale-110" />
+        className="group relative flex flex-col rounded-lg border-2 border-dashed border-slate-300 bg-transparent p-6 text-left transition-colors duration-150 hover:border-slate-500">
+        <SparklesIcon className="text-ink size-8 transition-all duration-150 group-hover:scale-110" />
         <h3 className="text-md mt-3 mb-1 font-bold text-slate-700">
           {t("workspace.surveys.ai_create.card_title")}
         </h3>

@@ -211,7 +211,7 @@ export const QuotasSummary = ({ quotas }: { quotas: TSurveySummary["quotas"] }) 
             key={quota.id}
             className="grid h-[52px] grid-cols-6 border-b border-slate-100 text-xs text-slate-900 md:text-sm">
             <div className="col-span-1 flex h-full items-center justify-center p-2">
-              <ProgressBar progress={quota.percentage / 100} barColor="bg-brand-dark" height={2} />
+              <ProgressBar progress={quota.percentage / 100} barColor="bg-slate-700" height={2} />
             </div>
             <div className="col-span-3 flex items-center p-2 whitespace-pre-wrap">{quota.name}</div>
             <div className="flex items-center justify-end p-2 whitespace-pre-wrap">{quota.limit}</div>

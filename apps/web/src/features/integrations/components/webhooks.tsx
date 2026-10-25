@@ -580,7 +580,7 @@ export const WebhookDetailModal = ({
                 className={cn(
                   "mr-4 rounded-sm px-1 pb-3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
                   tab === item.id
-                    ? "border-b-2 border-brand-dark font-semibold text-slate-900"
+                    ? "border-b-2 border-brand font-semibold text-slate-900"
                     : "text-slate-500 hover:text-slate-700"
                 )}
                 onClick={() => setTab(item.id)}>

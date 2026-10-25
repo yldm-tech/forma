@@ -271,7 +271,7 @@ export const NotFoundPage = () => {
   return (
     <section className="section-pad">
       <div className="container-site">
-        <p className="text-small font-mono font-semibold text-teal-700">404</p>
+        <p className="text-small text-crimson-700 font-mono font-semibold">404</p>
         <h1 className="text-display mt-4">{page.title}</h1>
         <p className="measure text-ink-700 mt-6 text-lg leading-8">{page.body}</p>
         <div className="mt-8 flex flex-wrap gap-3">

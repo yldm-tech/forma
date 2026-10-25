@@ -101,7 +101,7 @@ export const AddElementButton = ({ addElement, workspace, isCxMode }: AddElement
         className="group h-full w-full text-left"
         data-testid="add-element-trigger">
         <div className="flex">
-          <div className="bg-brand-dark flex w-10 items-center justify-center rounded-l-[7px] group-aria-expanded:rounded-br group-aria-expanded:rounded-bl-none">
+          <div className="bg-primary flex w-10 items-center justify-center rounded-l-[7px] group-aria-expanded:rounded-br group-aria-expanded:rounded-bl-none">
             <PlusIcon className="size-5 text-white" />
           </div>
           <div className="px-4 py-3">

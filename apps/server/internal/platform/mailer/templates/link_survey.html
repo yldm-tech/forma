@@ -2,6 +2,6 @@
 {{template "heading" (.T "emails.verification_email_hey")}}
 {{template "text" (.T "emails.verification_email_thanks")}}
 {{template "text" (.T "emails.verification_email_to_fill_survey")}}
-{{template "button" (button .Content.SurveyLink (.T "emails.verification_email_take_survey"))}}
+{{template "button" (.Button .Content.SurveyLink (.T "emails.verification_email_take_survey"))}}
 <p style="font-size:14px;line-height:24px;margin:16px 0;color:#94a3b8">{{.T "emails.verification_email_survey_name"}}: {{.Content.SurveyName}}</p>
 {{end}}

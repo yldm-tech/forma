@@ -86,7 +86,7 @@ export const AddActionModal = ({
               key={tab.title}
               className={`mr-4 px-1 pb-3 focus:outline-hidden ${
                 activeTab === index
-                  ? "border-brand-dark border-b-2 font-semibold text-slate-900"
+                  ? "border-brand border-b-2 font-semibold text-slate-900"
                   : "text-slate-500 hover:text-slate-700"
               }`}
               onClick={() => handleTabClick(index)}>

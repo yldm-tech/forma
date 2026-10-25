@@ -26,8 +26,8 @@ export const HomePage = () => {
       <section className="relative overflow-hidden">
         <div className="container-site grid items-center gap-12 pt-12 pb-16 lg:grid-cols-[1.05fr_1fr] lg:pt-20 lg:pb-24">
           <div>
-            <p className="bg-mint-50 text-small ring-mint-100 inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold text-teal-900 ring-1">
-              <span className="bg-mint-400 size-2 rounded-full" aria-hidden="true" />
+            <p className="bg-crimson-50 text-small ring-crimson-100 text-crimson-900 inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold ring-1">
+              <span className="bg-crimson-600 size-2 rounded-full" aria-hidden="true" />
               {home.hero.eyebrow}
             </p>
             <h1 className="text-display measure mt-6">{home.hero.title}</h1>

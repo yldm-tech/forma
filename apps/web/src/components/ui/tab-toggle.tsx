@@ -39,7 +39,7 @@ export const TabToggle = <T extends string | number>({
             className={cn(
               "flex-1 cursor-pointer rounded-md py-2 text-center text-sm text-slate-800",
               selectedOption === option.value && "bg-white",
-              "focus:ring-2 focus:ring-brand-dark/50 focus:outline-hidden",
+              "has-focus-visible:ring-2 has-focus-visible:ring-ring",
               disabled && "cursor-not-allowed opacity-50"
             )}>
             <input

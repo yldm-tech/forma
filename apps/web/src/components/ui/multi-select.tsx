@@ -50,7 +50,7 @@ export const MultiSelect = ({ id, value, options, onChange, placeholder, disable
             id={id}
             type="button"
             className={cn(
-              "flex h-10 w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-500 focus:ring-2 focus:ring-slate-400 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+              "flex h-10 w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-500 focus:ring-2 focus:ring-ring focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
             )}>
             <span className="truncate">{placeholder}</span>
             <ChevronDownIcon className="size-4" />

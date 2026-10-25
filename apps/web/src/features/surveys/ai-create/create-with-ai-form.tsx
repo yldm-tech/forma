@@ -213,7 +213,7 @@ export const CreateWithAIForm = ({
             <textarea
               ref={promptInputRef}
               id="ai-survey-prompt"
-              className="min-h-24 w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 focus:outline-hidden"
+              className="focus:ring-ring min-h-24 w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-offset-1 focus:outline-hidden"
               maxLength={AI_SURVEY_PROMPT_MAX_LENGTH}
               placeholder={t("workspace.surveys.ai_create.prompt_placeholder")}
               value={ai.prompt}

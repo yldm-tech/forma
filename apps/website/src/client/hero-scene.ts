@@ -95,7 +95,7 @@ attribute vec2 aRadius;    // corner radius in the card and in the logo
 attribute vec3 aColor;
 attribute vec3 aLogoColor;
 
-const vec3 MINT = vec3(${rgb("mint").join(", ")});
+const vec3 CRIMSON = vec3(${rgb("crimson").join(", ")});
 
 void main() {
   float t = mod(uTime, ${LOOP_SECONDS.toFixed(1)});
@@ -128,9 +128,10 @@ void main() {
   float radius = mix(mix(aRadius.x * aScatter.w, aRadius.x, assemble), aRadius.y, condense);
   radius = mix(radius, aRadius.x * aScatter.w, release);
 
-  vec3 color = kind == ${KIND.answer.toFixed(1)} ? mix(aColor, MINT, answered) : aColor;
-  color = mix(color, aLogoColor, condense);
-  vColor = mix(color, aColor, release);
+  vec3 color = kind == ${KIND.answer.toFixed(1)} ? mix(aColor, CRIMSON, answered) : aColor;
+  // A chip takes its logo colour only once it is nearly in the mark, and every chip gives it back together in the last moment of the hold, before the first one leaves (release eases out, so a chip covers a quarter of its way in its first tenth): mixing white and ink (or ink and crimson) while a chip travels would show a detached grey square or a muddy bar, and in place the same mix reads as the mark fading in and out.
+  color = mix(color, aLogoColor, smoothstep(0.5, 1.0, condense));
+  vColor = mix(color, aColor, smoothstep(10.2, 10.5, t));
   vEdge = aMeta.w * (1.0 - condense) + aMeta.w * release;
 
   place(center, size, radius);
@@ -191,10 +192,10 @@ const chipGeometry = (): { geometry: PlaneGeometry; count: number } => {
     ...Array.from({ length: CLOUD_CHIPS }, () => {
       const w = random() < 0.4 ? between(10, 18) : between(18, 40);
       const h = w < 18 ? w : between(8, 12);
-      const tint: ColorName = (["mint", "teal", "sunken"] as const)[Math.floor(random() * 3)] ?? "sunken";
+      const tint: ColorName = (["crimson", "ink", "sunken"] as const)[Math.floor(random() * 3)] ?? "sunken";
       return {
         card: { x: between(-140, 140), y: between(-100, 100), w, h, r: Math.min(w, h) * 0.3 },
-        logo: { x: LOGO.tile.x, y: LOGO.tile.y, w: 0, h: 0, r: 0 },
+        logo: { x: LOGO.frame.x, y: LOGO.frame.y, w: 0, h: 0, r: 0 },
         color: tint,
         logoColor: tint,
         edge: tint === "sunken",

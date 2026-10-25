@@ -102,7 +102,7 @@ export const WorkflowRunsTable = ({
                       openRun(run);
                     }
                   }}
-                  className="cursor-pointer hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-hidden">
+                  className="focus-visible:ring-ring cursor-pointer hover:bg-slate-100 focus-visible:ring-2 focus-visible:outline-hidden">
                   <TableCell className="min-w-0 px-4 py-2">
                     {showWorkflowColumn ? (
                       <>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import ReactConfetti from "react-confetti";
 
 /** forma2's Confetti: one burst over the whole window, which does not take pointer events. */
-export const Confetti = ({ colors = ["#00C4B8", "#eee"] }: { colors?: string[] }) => {
+export const Confetti = ({ colors = ["#D3264A", "#eee"] }: { colors?: string[] }) => {
   const [windowSize, setWindowSize] = useState({ height: 0, width: 0 });
 
   useEffect(() => {

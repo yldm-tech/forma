@@ -85,7 +85,7 @@ test("the root not-found page carries the wordmark and the signed-in user's lang
     vi.fn(async () => json(200, { id: "u1", name: "Ada", email: "ada@example.com", locale: "ja-JP" }))
   );
   await renderInRouter(<RootNotFound />, new QueryClient());
-  expect(screen.getByText("Forma")).toBeTruthy();
+  expect(screen.getByRole("img", { name: "Forma" })).toBeTruthy();
   await waitFor(() => expect(i18n.language).toBe("ja-JP"));
   expect(screen.getByRole("heading", { name: i18n.t("common.page_not_found") })).toBeTruthy();
 });

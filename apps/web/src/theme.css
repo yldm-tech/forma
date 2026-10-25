@@ -2,17 +2,16 @@
 
 /* Design tokens carried over from forma2's modules/ui/globals.css, limited to what the admin UI's components use. */
 @theme {
-  --color-brand: #00e6ca;
-  --color-brand-light: #00e6ca;
-  --color-brand-dark: #00c4b8;
+  /* The brand crimson (apps/website/src/styles.css's crimson-600) marks what is selected or active: a checked checkbox, radio or switch, the current navigation item and tab, a selected card, and the logo. It never marks an action, an error or a focused field: next to the destructive red it would make a primary button look destructive and a focused input look invalid. brand-subtle is its 50 tint, for a selected surface. */
+  --color-brand: #d3264a;
+  --color-brand-subtle: #fcf2f4;
 
-  /* The website's palette (apps/website/src/styles.css): teal-600 for the primary action and the focus ring, ink-900 for neutral text, mint-50 for a selected or highlighted surface. Each pair below clears WCAG AA against its foreground, and the hover shades are darker so hovering never lowers the contrast. */
-  --color-primary: #038178;
-  --color-primary-hover: #026a62;
+  /* Primary actions and the focus ring are ink. Each pair below clears WCAG AA against its foreground, and the hover shade keeps the contrast. */
+  --color-primary: #0f172a;
+  --color-primary-hover: #1e293b;
   --color-primary-foreground: #ffffff;
 
-  --color-ring: #038178;
-  --color-brand-subtle: #e6fcf8;
+  --color-ring: #0f172a;
   --color-ink: #0f172a;
 
   --color-destructive: #dc2626;

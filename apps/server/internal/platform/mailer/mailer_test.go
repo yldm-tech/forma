@@ -409,6 +409,35 @@ func TestRenderOrganizationLogo(t *testing.T) {
 	}
 }
 
+// The call to action is Forma's crimson only under Forma's logo: an email that carries an organization's logo keeps the neutral black button, so white-labelled emails never show Forma's brand colour.
+func TestRenderButtonColorFollowsLogo(t *testing.T) {
+	t.Parallel()
+	m := newMailer(t, baseConfig(), nil)
+	const crimson, neutral = "background-color:#d3264a", "background-color:#000000"
+	for _, tc := range []struct {
+		name    string
+		content mailer.Content
+		want    string
+		notWant string
+	}{
+		{"forma logo", mailer.LinkSurvey{SurveyName: "S", SurveyLink: "https://x.example.com/s/1"}, crimson, neutral},
+		{"forma logo url", mailer.LinkSurvey{SurveyName: "S", SurveyLink: "https://x.example.com/s/1", LogoURL: "https://forma.yldm.ai/logo-transparent.png"}, crimson, neutral},
+		{"organization logo", mailer.LinkSurvey{SurveyName: "S", SurveyLink: "https://x.example.com/s/1", LogoURL: "https://cdn.example.com/acme.png"}, neutral, crimson},
+		{"organization logo on response finished", mailer.ResponseFinished{SurveyName: "S", ResponsesURL: "https://x.example.com/r", LogoURL: "https://cdn.example.com/acme.png"}, neutral, crimson},
+		{"account email", mailer.PasswordReset{VerifyLink: "https://x.example.com/reset", LinkValidityInMinutes: 30}, crimson, neutral},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, html, err := m.Render("en-US", tc.content)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(html, tc.want+";color:#ffffff") || strings.Contains(html, tc.notWant) {
+				t.Fatalf("button colour: want %s, not %s:\n%s", tc.want, tc.notWant, html)
+			}
+		})
+	}
+}
+
 // forma2's ResponseFinishedEmail (packages/email render.test.ts and response-finished-email.tsx): the survey in the subject, every answered element, the computed and hidden fields, the CTA counting the other responses, and the two unsubscribe links, without the sign-off of the account emails.
 func TestRenderResponseFinished(t *testing.T) {
 	t.Parallel()

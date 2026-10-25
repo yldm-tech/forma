@@ -49,7 +49,7 @@ export const NavigationLink = ({
         "mb-1 rounded-l-md border-r-4 py-2 text-sm",
         padding,
         isActive
-          ? "border-brand-dark bg-slate-50 font-semibold text-slate-900"
+          ? "border-brand bg-slate-50 font-semibold text-slate-900"
           : "border-transparent text-slate-600 transition-all duration-150 ease-in-out hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
       )}>
       <Link
