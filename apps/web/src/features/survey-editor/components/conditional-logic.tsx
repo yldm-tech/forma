@@ -189,7 +189,8 @@ export function ConditionalLogic({
                     "flex w-full grow scroll-mt-16 items-start gap-2 rounded-lg border bg-slate-50 p-3",
                     invalidElements?.includes(logicItem.id) ? "border-red-400" : "border-slate-200"
                   )}>
-                  <div className="min-w-0 flex-1">
+                  {/* w-0 keeps the rule's own width (its widest row of selects) from widening the block card; LogicEditor scrolls horizontally inside the space left beside the menu. */}
+                  <div className="w-0 min-w-0 flex-1">
                     <LogicEditor
                       localSurvey={transformedSurvey}
                       logicItem={logicItem}
