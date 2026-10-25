@@ -6,10 +6,15 @@
 
 -- +goose Up
 
+-- goose runs this migration in one transaction; SET LOCAL bounds only it. DROP FUNCTION takes an ACCESS EXCLUSIVE lock on each function, and a migration should fail fast on a lock wait rather than queue behind it.
+SET LOCAL lock_timeout = '1s';
+
 DROP FUNCTION forma2_import_drift();
 DROP FUNCTION forma2_marks();
 
 -- +goose Down
+
+SET LOCAL lock_timeout = '1s';
 
 -- +goose StatementBegin
 CREATE FUNCTION forma2_marks() RETURNS jsonb AS $$
