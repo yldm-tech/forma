@@ -36,6 +36,29 @@ func TestInfer(t *testing.T) {
 	}
 }
 
+func TestNotNull(t *testing.T) {
+	type list struct {
+		Items []string   `json:"items"`
+		Owner *uuid.UUID `json:"owner"`
+	}
+	s := NotNull(Infer[list](), "items", "owner")
+	raw, err := json.Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"items":{"type":"array","items":{"type":"string"}}`, `"owner":{"type":"string","format":"uuid"}`} {
+		if !strings.Contains(string(raw), want) {
+			t.Errorf("schema %s lacks %s", raw, want)
+		}
+	}
+	defer func() {
+		if recover() == nil {
+			t.Fatal("NotNull of a property that is not nullable did not panic")
+		}
+	}()
+	NotNull(s, "items")
+}
+
 func TestDocument(t *testing.T) {
 	spec := Spec{
 		Schemas: map[string]*Schema{"Widget": Infer[widget]()},

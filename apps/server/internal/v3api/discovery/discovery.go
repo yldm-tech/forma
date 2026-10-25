@@ -55,7 +55,8 @@ func Document(serverURL string) ([]byte, error) {
 
 // RegisterV3 mounts the routes on the /api/v3 group, which renders failures as problems.
 func (h *Handler) RegisterV3(r gin.IRouter) {
-	r.GET("/me", h.v3.Auth(v3api.AuthBoth), h.me)
+	// A key with only organization access is answered too: /me shows nothing beyond the key's own grants, and it is the check the API Keys page suggests for every new key.
+	r.GET("/me", h.v3.Auth(v3api.AuthBothOrganizationKey), h.me)
 	r.GET("/openapi.json", h.openAPI)
 }
 
@@ -72,7 +73,7 @@ type Me struct {
 	APIKey        *MeAPIKey      `json:"apiKey" jsonschema:"The API key, when the request carried one."`
 	User          *MeUser        `json:"user" jsonschema:"The signed-in user, when the request carried no API key."`
 	Organizations []Organization `json:"organizations" jsonschema:"The organizations the caller belongs to: an API key's own organization, or the user's memberships."`
-	Workspaces    []Workspace    `json:"workspaces" jsonschema:"The workspaces the caller may use, by name, with the most it may do in each."`
+	Workspaces    []Workspace    `json:"workspaces" jsonschema:"The workspaces the caller may use, by name, with the most it may do in each. Empty for an API key with only organization access."`
 }
 
 // MeAPIKey is the key a request authenticated with.
@@ -112,7 +113,7 @@ const (
 
 // Spec describes this package's operations.
 func Spec() openapi.Spec {
-	me := openapi.Infer[Me]()
+	me := openapi.NotNull(openapi.Infer[Me](), "organizations", "workspaces")
 	me.Properties["type"].Enum = []any{typeAPIKey, typeUser}
 	workspace := me.Properties["workspaces"].Items
 	workspace.Properties["permission"].Enum = []any{apikey.PermissionRead, apikey.PermissionWrite, apikey.PermissionManage}
@@ -122,7 +123,7 @@ func Spec() openapi.Spec {
 			{
 				Method: http.MethodGet, Path: "/api/v3/me", ID: "getMe", Tag: "Discovery",
 				Summary:     "Who am I",
-				Description: "The API key (or signed-in user) the request authenticated as, its organization and the workspaces it may use with their permission. Start here to find the workspaceId the other operations take.",
+				Description: "The API key (or signed-in user) the request authenticated as, its organization and the workspaces it may use with their permission. A key with only organization access (to members and teams) is answered as well, with no workspaces. Start here to find the workspaceId the other operations take.",
 				Responses:   []openapi.Response{{Status: http.StatusOK, Description: "The caller.", Schema: openapi.Data(openapi.Ref("Me"))}},
 			},
 			{

@@ -92,6 +92,23 @@ func InferWith[T any](overrides map[reflect.Type]*jsonschema.Schema) *jsonschema
 	return s
 }
 
+// NotNull drops null from the inferred types of s's named properties and returns s. Inference types a Go slice, map or pointer as possibly null, since a nil one marshals to null; a property the handler always fills is published as never null, so generated clients need no null check and the modules' tests catch a handler that starts answering null. A name that is not a nullable property of s is a programming error; it panics.
+func NotNull(s *jsonschema.Schema, names ...string) *jsonschema.Schema {
+	for _, name := range names {
+		p := s.Properties[name]
+		if p == nil || !slices.Contains(p.Types, "null") {
+			panic(fmt.Sprintf("openapi: %q is not a nullable property", name))
+		}
+		types := slices.DeleteFunc(slices.Clone(p.Types), func(t string) bool { return t == "null" })
+		if len(types) == 1 {
+			p.Type, p.Types = types[0], nil
+		} else {
+			p.Types = types
+		}
+	}
+	return s
+}
+
 // Object is a closed object schema with the given properties, of which required must be present.
 func Object(description string, properties map[string]*jsonschema.Schema, required ...string) *jsonschema.Schema {
 	return &jsonschema.Schema{Type: "object", Description: description, Properties: properties, Required: required, AdditionalProperties: &jsonschema.Schema{Not: &jsonschema.Schema{}}}
@@ -189,7 +206,7 @@ type invalidParam struct {
 
 // Document is the OpenAPI document of specs, as JSON. serverURL is the instance's address; an empty one leaves the servers list out, so paths are relative to wherever the document was read from.
 func Document(serverURL string, specs ...Spec) ([]byte, error) {
-	schemas := map[string]*jsonschema.Schema{ProblemSchema: Infer[problem]()}
+	schemas := map[string]*jsonschema.Schema{ProblemSchema: NotNull(Infer[problem](), "invalid_params")}
 	paths := map[string]map[string]any{}
 	responses := map[string]any{}
 	for _, spec := range specs {

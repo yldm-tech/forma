@@ -8,8 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/v3api"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api/openapi/openapitest"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api/v3apitest"
 )
@@ -58,6 +60,26 @@ func TestMeWithAnAPIKey(t *testing.T) {
 	}
 	if rec.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("headers %v", rec.Header())
+	}
+
+	// A key with only organization access (no workspace grant), which the API Keys page creates for the members and teams routes, is answered too: its organization, its access and no workspaces.
+	orgOnly := e.APIKey(org, nil)
+	e.Exec(`UPDATE api_keys SET label = 'Directory', organization_access = '{"accessControl":{"read":true,"write":false}}' WHERE label = 'test' AND organization_id = ?`, org)
+	rec = e.Do(v3apitest.Request{Method: http.MethodGet, Path: "/api/v3/me", APIKey: orgOnly})
+	body = meBody{}
+	e.OK(rec, http.StatusOK, &body)
+	doc.Check(t, http.MethodGet, "/api/v3/me", rec)
+	if me := body.Data; me.Type != "apiKey" || me.APIKey == nil || me.APIKey.Label != "Directory" || !me.APIKey.OrganizationAccess.AccessControl.Read || len(me.Organizations) != 1 || me.Organizations[0].ID != org || me.Workspaces == nil || len(me.Workspaces) != 0 {
+		t.Fatalf("an organization-only key %+v", me)
+	}
+	if !strings.Contains(rec.Body.String(), `"workspaces":[]`) {
+		t.Fatalf("an organization-only key's workspaces are not an empty list: %s", rec.Body.String())
+	}
+	// Every other v3 route, mounted with AuthBoth, still refuses it.
+	e.API.GET("/probe", e.V3.Auth(v3api.AuthBoth), func(c *gin.Context) { c.Status(http.StatusNoContent) })
+	e.Problem(e.Do(v3apitest.Request{Method: http.MethodGet, Path: "/api/v3/probe", APIKey: orgOnly}), http.StatusUnauthorized, "not_authenticated", "Not authenticated")
+	if rec := e.Do(v3apitest.Request{Method: http.MethodGet, Path: "/api/v3/probe", APIKey: key}); rec.Code != http.StatusNoContent {
+		t.Fatalf("a key with a workspace grant on an AuthBoth route = %d", rec.Code)
 	}
 
 	// No credentials, or a key that matches nothing, is a 401 problem.

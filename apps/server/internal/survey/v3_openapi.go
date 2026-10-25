@@ -19,7 +19,8 @@ var v3DocumentParts = map[string]string{
 
 // V3OpenAPI describes /api/v3/surveys for the published OpenAPI document. POST /api/v3/surveys/templates accepts only a signed-in session and is not part of it.
 func V3OpenAPI() openapi.Spec {
-	survey := openapi.Infer[v3Resource]()
+	survey := openapi.NotNull(openapi.Infer[v3Resource](), "languages")
+	openapi.NotNull(survey.Properties["distribution"], "triggers")
 	for key, desc := range v3DocumentParts {
 		survey.Properties[key] = &openapi.Schema{Description: desc}
 	}
@@ -34,7 +35,7 @@ func V3OpenAPI() openapi.Spec {
 				"default": {Type: "boolean"},
 				"enabled": {Type: "boolean"},
 			}, "code")},
-			"distribution": openapi.Infer[*v3Distribution](),
+			"distribution": openapi.NotNull(openapi.Infer[*v3Distribution](), "triggers"),
 			"targeting":    openapi.Object("Who sees an app survey.", map[string]*openapi.Schema{"filters": survey.Properties["targeting"].Properties["filters"]}, "filters"),
 		}
 		for key, desc := range v3DocumentParts {
@@ -50,7 +51,10 @@ func V3OpenAPI() openapi.Spec {
 	create, patch := body("workspaceId", "name", "blocks"), body()
 	patch.Description = "Only the keys present change."
 
-	list := openapi.Infer[ListResult]()
+	generated := openapi.Infer[GenerateResult]()
+	openapi.NotNull(generated.Properties["validation"], "invalid_params", "languages")
+
+	list := openapi.NotNull(openapi.Infer[ListResult](), "data")
 	list.Properties["data"].Items = openapi.Ref("SurveyListItem")
 
 	surveyID := openapi.PathID("surveyId", "The survey.")
@@ -72,7 +76,7 @@ func V3OpenAPI() openapi.Spec {
 			"SurveyListItem":  openapi.Infer[v3ListItem](),
 			"SurveyDocument":  create,
 			"SurveyPatch":     patch,
-			"SurveyValidated": openapi.Infer[ValidationResult](),
+			"SurveyValidated": openapi.NotNull(openapi.Infer[ValidationResult](), "invalid_params", "languages"),
 		},
 		Operations: []openapi.Operation{
 			{
@@ -119,7 +123,7 @@ func V3OpenAPI() openapi.Spec {
 					"type":        openapi.Enum("", TypeLink, TypeApp),
 					"languages":   {Type: "array", Items: openapi.String("A locale code."), MinItems: new(1)},
 				}, "workspaceId", "prompt"),
-				Responses: []openapi.Response{{Status: http.StatusOK, Description: "The draft and its validation.", Schema: openapi.Data(openapi.Infer[GenerateResult]())}},
+				Responses: []openapi.Response{{Status: http.StatusOK, Description: "The draft and its validation.", Schema: openapi.Data(generated)}},
 				Problems:  []int{http.StatusBadRequest, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity, http.StatusBadGateway, http.StatusServiceUnavailable},
 			},
 			{

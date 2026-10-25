@@ -38,8 +38,8 @@ func V3OpenAPI() openapi.Spec {
 			"WorkflowListItem":    openapi.Infer[ListItem](),
 			"WorkflowDefinition":  definition,
 			"WorkflowRunListItem": openapi.Infer[RunListItem](),
-			"WorkflowRun":         openapi.Infer[RunResource](),
-			"WorkflowTestResult":  openapi.Infer[TestResult](),
+			"WorkflowRun":         openapi.NotNull(openapi.Infer[RunResource](), "logs"),
+			"WorkflowTestResult":  openapi.NotNull(openapi.Infer[TestResult](), "problems"),
 		},
 		Operations: []openapi.Operation{
 			{
