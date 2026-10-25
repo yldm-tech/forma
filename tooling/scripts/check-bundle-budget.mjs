@@ -28,8 +28,8 @@ export const GZIP_LEVEL = 9;
 export const BUDGETS = [
   {
     path: "apps/web/public/js/surveys.umd.cjs",
-    maxGzipBytes: 314_000,
-    measuredBytes: 299_702, // 2026-10-25
+    maxGzipBytes: 260_400,
+    measuredBytes: 248_033, // 2026-10-25, after the 24 non-English locales moved out of the bundle into /js/surveys-locales/
     builtBy: "pnpm --filter @forma/surveys build",
   },
   {

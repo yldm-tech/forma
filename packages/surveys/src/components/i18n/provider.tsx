@@ -7,8 +7,7 @@ export const I18nProvider = ({ language, children }: { language: string; childre
   const isFirstRender = useRef(true);
   const prevLanguage = useRef(language);
 
-  // Set language synchronously on initial render so children get the correct translations immediately.
-  // This is safe because all translations are pre-loaded (bundled) in i18n.config.ts.
+  // Set language synchronously on initial render so children get the correct translations immediately. This is synchronous because renderSurvey (src/index.ts) mounts this provider only once the language's translations are in memory (English is bundled, the others are fetched first; see i18n.config.ts).
   // On subsequent renders, skip this to avoid overriding language changes made by the user via LanguageSwitch.
   if (isFirstRender.current) {
     if (i18n.language !== language) {
