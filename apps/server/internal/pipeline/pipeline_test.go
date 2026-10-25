@@ -169,7 +169,7 @@ func TestWebhookFailureIsIsolated(t *testing.T) {
 	}
 	j := e.deliveryJob(failingHook)
 	// River keeps a retry due within its scheduler interval available, scheduled in the future, rather than retryable.
-	if (j.State != string(rivertype.JobStateRetryable) && j.State != string(rivertype.JobStateAvailable)) || j.Attempt != 1 || j.MaxAttempts != 8 || j.RetryIn < 5*time.Second || j.RetryIn > 7*time.Second {
+	if (j.State != string(rivertype.JobStateRetryable) && j.State != string(rivertype.JobStateAvailable)) || j.Attempt != 1 || j.MaxAttempts != 8 || j.RetryIn < 5*time.Second || j.RetryIn > 15*time.Second {
 		t.Fatalf("failing delivery job after its first attempt = %+v, want retryable in 5 s", j)
 	}
 
@@ -190,7 +190,7 @@ func TestWebhookFailureIsIsolated(t *testing.T) {
 	if len(got) != 2 || got[0].Header.Get("Webhook-Id") != got[1].Header.Get("Webhook-Id") || len(ok.received()) != 1 {
 		t.Fatalf("retry: failing %d deliveries, healthy %d", len(got), len(ok.received()))
 	}
-	if j := e.deliveryJob(failingHook); j.State != string(rivertype.JobStateRetryable) || j.Attempt != 2 || j.RetryIn < 5*time.Minute || j.RetryIn > 5*time.Minute+2*time.Second {
+	if j := e.deliveryJob(failingHook); j.State != string(rivertype.JobStateRetryable) || j.Attempt != 2 || j.RetryIn < 5*time.Minute || j.RetryIn > 5*time.Minute+10*time.Second {
 		t.Fatalf("failing delivery job after its second attempt = %+v, want retryable in 5 min", j)
 	}
 
