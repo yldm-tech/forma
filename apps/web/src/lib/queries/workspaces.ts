@@ -64,6 +64,20 @@ export interface AppConnection {
   appSetupCompleted: boolean;
 }
 
+/** How far the client API trusts the SDK with the workspace's contacts. The identity secret itself is shown only when it is generated. */
+export interface SdkIdentity {
+  hasSecret: boolean;
+  /** An identify without a valid userHash is refused. */
+  required: boolean;
+  /** Attribute keys the SDK never writes. */
+  protectedAttributeKeys: string[];
+}
+
+/** A newly generated identity secret, shown this once. */
+export interface SdkIdentitySecret extends SdkIdentity {
+  secret: string;
+}
+
 /** A team with access to the workspace. */
 export interface WorkspaceTeam {
   id: string;
@@ -93,6 +107,7 @@ export const BILLING_ROLE_CODE = "billing_role";
 export const workspaceKeys = {
   detail: (id: string) => ["workspaces", id] as const,
   appConnection: (id: string) => ["workspaces", id, "app-connection"] as const,
+  sdkIdentity: (id: string) => ["workspaces", id, "sdk-identity"] as const,
   teams: (id: string) => ["workspaces", id, "teams"] as const,
   languageSurveys: (id: string, languageId: string) =>
     ["workspaces", id, "languages", languageId, "surveys"] as const,
@@ -183,3 +198,39 @@ export const updateLanguage = (workspaceId: string, languageId: string, alias: s
 
 export const deleteLanguage = (workspaceId: string, languageId: string) =>
   api.delete<WorkspaceLanguage>(`/api/app/workspaces/${workspaceId}/languages/${languageId}`);
+
+export const sdkIdentityQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: workspaceKeys.sdkIdentity(workspaceId),
+    queryFn: ({ signal }) =>
+      api.get<SdkIdentity>(`/api/app/workspaces/${workspaceId}/sdk-identity`, { signal }),
+  });
+
+/** Whether verified identities are required and which attributes are protected; a field left out is kept. */
+export const useUpdateSdkIdentity = (workspaceId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { required?: boolean; protectedAttributeKeys?: string[] }) =>
+      api.patch<SdkIdentity>(`/api/app/workspaces/${workspaceId}/sdk-identity`, input),
+    onSuccess: (data) => queryClient.setQueryData(workspaceKeys.sdkIdentity(workspaceId), data),
+  });
+};
+
+/** A new identity secret, replacing the old one at once. */
+export const useRotateSdkIdentitySecret = (workspaceId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<SdkIdentitySecret>(`/api/app/workspaces/${workspaceId}/sdk-identity/secret`),
+    onSuccess: ({ secret: _secret, ...view }) =>
+      queryClient.setQueryData(workspaceKeys.sdkIdentity(workspaceId), view),
+  });
+};
+
+/** Removes the identity secret, which also stops requiring verified identities. */
+export const useRemoveSdkIdentitySecret = (workspaceId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete<SdkIdentity>(`/api/app/workspaces/${workspaceId}/sdk-identity/secret`),
+    onSuccess: (data) => queryClient.setQueryData(workspaceKeys.sdkIdentity(workspaceId), data),
+  });
+};

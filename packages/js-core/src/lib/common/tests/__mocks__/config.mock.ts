@@ -100,13 +100,9 @@ export const mockConfig: TConfig = {
     data: {
       userId: "user_abc",
       segments: ["beta-testers"],
-      displays: [
-        {
-          surveyId: mockSurveyId,
-          createdAt: "2025-01-01T10:00:00Z",
-        },
-      ],
-      responses: [mockSurveyId],
+      // The survey key of mockSurveyId for user_abc (getSurveyKey).
+      displays: ["0149209b"],
+      responses: ["0149209b"],
       lastDisplayAt: "2025-01-02T15:00:00Z",
       language: "en",
     },

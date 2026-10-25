@@ -16,10 +16,12 @@ import {
   getSecureRandom,
   getStyling,
   getSurveyExclusionReason,
+  getSurveyKey,
   handleUrlFilters,
   isNowExpired,
   normalizeAppUrl,
   shouldDisplayBasedOnPercentage,
+  toSurveyKeys,
   wrapThrows,
   wrapThrowsAsync,
 } from "@/lib/common/utils";
@@ -221,7 +223,7 @@ describe("utils.ts", () => {
       workspace.data.surveys = [
         { ...baseSurvey, id: mockSurveyId1, displayOption: "displayOnce" } as TWorkspaceStateSurvey,
       ];
-      user.data.displays = [{ surveyId: mockSurveyId1, createdAt: new Date() }];
+      user.data.displays = [getSurveyKey(null, mockSurveyId1)];
 
       const result = filterSurveys(workspace, user);
       expect(result).toEqual([]);
@@ -231,7 +233,7 @@ describe("utils.ts", () => {
       workspace.data.surveys = [
         { ...baseSurvey, id: mockSurveyId1, displayOption: "displayMultiple" } as TWorkspaceStateSurvey,
       ];
-      user.data.responses = [mockSurveyId1];
+      user.data.responses = [getSurveyKey(null, mockSurveyId1)];
 
       const result = filterSurveys(workspace, user);
       expect(result).toEqual([]);
@@ -247,7 +249,7 @@ describe("utils.ts", () => {
         } as TWorkspaceStateSurvey,
       ];
       // user has 1 display of s1
-      user.data.displays = [{ surveyId: mockSurveyId1, createdAt: new Date() }];
+      user.data.displays = [getSurveyKey(null, mockSurveyId1)];
 
       // No responses => so it's still allowed
       const result = filterSurveys(workspace, user);
@@ -1454,7 +1456,7 @@ describe("filterSurveys() — interaction targeting × recontact/display-cap mat
     {
       name: "in segment but displayOnce + already displayed → hidden (display cap beats membership)",
       survey: { displayOption: "displayOnce", displayLimit: 1 },
-      user: { segments: [SEGMENT], displays: [{ surveyId: SURVEY, createdAt: daysAgo(0) }] },
+      user: { segments: [SEGMENT], displays: [getSurveyKey("user_abc", SURVEY)] },
       shown: false,
     },
     {
@@ -1492,7 +1494,7 @@ describe("filterSurveys() — interaction targeting × recontact/display-cap mat
     {
       name: "in segment + displayMultiple + already responded → hidden",
       survey: { displayOption: "displayMultiple" },
-      user: { segments: [SEGMENT], responses: [SURVEY] },
+      user: { segments: [SEGMENT], responses: [getSurveyKey("user_abc", SURVEY)] },
       shown: false,
     },
     {
@@ -1504,7 +1506,7 @@ describe("filterSurveys() — interaction targeting × recontact/display-cap mat
     {
       name: "in segment + displaySome under limit → shown",
       survey: { displayOption: "displaySome", displayLimit: 2 },
-      user: { segments: [SEGMENT], displays: [{ surveyId: SURVEY, createdAt: daysAgo(0) }] },
+      user: { segments: [SEGMENT], displays: [getSurveyKey("user_abc", SURVEY)] },
       shown: true,
     },
     {
@@ -1512,10 +1514,7 @@ describe("filterSurveys() — interaction targeting × recontact/display-cap mat
       survey: { displayOption: "displaySome", displayLimit: 2 },
       user: {
         segments: [SEGMENT],
-        displays: [
-          { surveyId: SURVEY, createdAt: daysAgo(0) },
-          { surveyId: SURVEY, createdAt: daysAgo(1) },
-        ],
+        displays: [getSurveyKey("user_abc", SURVEY), getSurveyKey("user_abc", SURVEY)],
       },
       shown: false,
     },
@@ -1572,7 +1571,7 @@ describe("getSurveyExclusionReason() — what debug mode says about a survey lef
       ...data,
     },
   });
-  const shownOnce = [{ surveyId: "checkout", createdAt: new Date() }];
+  const shownOnce = [getSurveyKey(null, "checkout")];
 
   test.each([
     [
@@ -1584,7 +1583,7 @@ describe("getSurveyExclusionReason() — what debug mode says about a survey lef
     [
       "shows until answered and was answered",
       survey({ displayOption: "displayMultiple" }),
-      user({ responses: ["checkout"] }),
+      user({ responses: [getSurveyKey(null, "checkout")] }),
       "already responded",
     ],
     [
@@ -1656,5 +1655,29 @@ describe("getSurveyExclusionReason() — what debug mode says about a survey lef
       logger.configure({ logLevel: "error" });
       log.mockRestore();
     }
+  });
+});
+
+describe("survey keys — how the user state names surveys", () => {
+  // The server computes the same keys (apps/server/internal/sdkidentity/identity_test.go asserts these values), so the state it sends lines up with the surveys the SDK knows.
+  test.each([
+    ["user-123", "0199a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b", "22d4f1ac"],
+    [null, "0199a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b", "1ef50fe6"],
+    ["ユーザー😀", "clsurveyaaaaaaaaaaaaaaaa1", "7cb9b764"],
+  ])("getSurveyKey(%j, %s) = %s, as the server computes it", (userId, surveyId, key) => {
+    expect(getSurveyKey(userId, surveyId)).toBe(key);
+  });
+
+  test("a key is per user: the same survey has another key for another user", () => {
+    expect(getSurveyKey("a", "s1")).not.toBe(getSurveyKey("b", "s1"));
+  });
+
+  test("toSurveyKeys reads a state an older SDK stored: displays as objects, responses as survey ids", () => {
+    const key = getSurveyKey("u1", "survey-1");
+    expect(
+      toSurveyKeys("u1", [{ surveyId: "survey-1", createdAt: "2025-01-01T00:00:00Z" }, key, 5, null])
+    ).toEqual([key, key]);
+    expect(toSurveyKeys("u1", ["survey-1"])).toEqual([key]);
+    expect(toSurveyKeys("u1", undefined)).toEqual([]);
   });
 });

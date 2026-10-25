@@ -35,6 +35,7 @@ export const sendUpdatesToBackend = async ({
 
     const response = await api.createOrUpdateUser({
       userId: updates.userId,
+      ...(updates.userHash && { userHash: updates.userHash }),
       attributes: updates.attributes,
     });
 
@@ -64,6 +65,10 @@ export const sendUpdatesToBackend = async ({
   }
 };
 
+/** The server's user state with the userHash it was identified with: the server never returns the hash, and the next identify of the same user needs it again. */
+export const withUserHash = (state: TUserState, userHash: string | undefined): TUserState =>
+  userHash ? { ...state, data: { ...state.data, userHash } } : state;
+
 // The server reports skipped attributes only as English text (apps/server/internal/contact/identify.go messageTemplates), so the keys are read back out of the templates that name them.
 const SKIPPED_KEY_PATTERNS: { pattern: RegExp; isList: boolean }[] = [
   // attribute_type_validation_error: "{error} (attribute '{key}' has dataType: {dataType})"
@@ -72,6 +77,10 @@ const SKIPPED_KEY_PATTERNS: { pattern: RegExp; isList: boolean }[] = [
   { pattern: /with invalid key\(s\): (.+?)\. Keys must/g, isList: true },
   // reserved_attribute_keys: "Reserved attribute key(s): {keys}. These keys are reserved ..."
   { pattern: /Reserved attribute key\(s\): (.+?)\. These keys/g, isList: true },
+  // A protected attribute, which only the Management API, a CSV import or the contact page sets: "Skipped protected attribute(s): {keys}. Protected attributes ..."
+  { pattern: /Skipped protected attribute\(s\): (.+?)\. Protected attributes/g, isList: true },
+  // Email on an identify without a verified userHash: "Skipped attribute 'email': the SDK sets the email only on a verified identify ..."
+  { pattern: /Skipped attribute '(.+?)': the SDK sets/g, isList: false },
 ];
 
 // Messages that name the attribute they concern only by meaning, not by key.
@@ -135,7 +144,7 @@ export const sendUpdates = async ({
       return err(updatesResponse.error);
     }
 
-    const userState = updatesResponse.data.state;
+    const userState = withUserHash(updatesResponse.data.state, updates.userHash);
     const filteredSurveys = filterSurveys(config.get().workspace, userState);
 
     // messages => informational debug messages (e.g., "email already exists")

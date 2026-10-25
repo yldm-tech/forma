@@ -1,6 +1,6 @@
 {
   "case": "v2-responses-create-contact",
-  "description": "v2 response for an identified contact on the app survey.",
+  "description": "v2 response for an identified contact on the app survey, named by the token its identify answered (contactId).",
   "request": {
     "method": "POST",
     "path": "/api/v2/client/<id:workspace>/responses",
@@ -12,7 +12,7 @@
     },
     "body": {
       "surveyId": "<id:survey:app>",
-      "contactId": "<id:contact:user1>",
+      "contactId": "<contact-token:user1>",
       "displayId": "<id:display:contact>",
       "finished": false,
       "data": {

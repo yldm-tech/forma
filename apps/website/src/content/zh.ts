@@ -353,12 +353,16 @@ export const zh: SiteContent = {
           title: "识别用户",
           facts: [
             {
-              term: "setUserId(userId)",
-              body: "将访客识别为该 ID 对应的联系人（首次使用时创建），使分群定向和“只显示一次”规则按人生效。ID 最长 255 个字符；设置不同的 ID 时会先清除上一位用户的状态。",
+              term: "setUserId(userId, { userHash })",
+              body: "将访客识别为该 ID 对应的联系人（首次使用时创建），使分群定向和“只显示一次”规则按人生效。ID 最长 255 个字符；设置不同的 ID 时会先清除上一位用户的状态。`userHash` 用于验证该 ID。",
             },
             {
               term: "setAttributes(attributes)、setAttribute(key, value)",
               body: "设置用于分群的联系人属性，需先调用 `setUserId`。字符串、数字或 `Date` 决定新属性的类型；之后的值必须是同一类型，否则服务端不会保存。",
+            },
+            {
+              term: "身份验证",
+              body: "工作区 ID 是公开的，因此 SDK 不会写入在 Forma 中标记为受保护的属性，邮箱也只为已验证的用户写入。要验证用户，请在“集成 → Web 和移动 SDK”中生成身份验证密钥，在你的服务器上用它计算用户 ID 的 HMAC-SHA256（十六进制），并作为 `userHash` 传入。开启“要求身份验证”后，没有有效哈希的识别请求会被拒绝。",
             },
             {
               term: "setLanguage(language)",

@@ -2235,6 +2235,36 @@ checksums:
     workspace/no_access_cta: c046ccb559a0e2ce8279d0a468e5df91
     workspace/no_access_description: 68c385f2198ec5ae295df227b4a86e3a
     workspace/no_access_title: f56698b2d69b419ef8b93068f7a70880
+    workspace/sdk_identity/description: ec7eaa5d5346f950fb5df1d4654a00c5
+    workspace/sdk_identity/generate: bb8ff14b0ca22d798ce94738038c0ef0
+    workspace/sdk_identity/protected_description: cfad4c204284b74a10d8a7d2d05c7f74
+    workspace/sdk_identity/protected_label: 84b9316e998741f1a1020e071dc7ad72
+    workspace/sdk_identity/protected_placeholder: f7bd56dc623795feff40b42f654896f0
+    workspace/sdk_identity/read_only: c2a8c8f1992baf7f00b0a143fd3ae6e8
+    workspace/sdk_identity/regenerate: 79bc737effc16d0546c048c6aa2ec415
+    workspace/sdk_identity/regenerate_confirm: ff28f5b39f9399a56cba9b1f37ac2a8b
+    workspace/sdk_identity/regenerate_description: 3162666189ac9f9508ed83e456d932f4
+    workspace/sdk_identity/regenerate_title: 4e2e36a74af1afebf67ec3d58a4c37eb
+    workspace/sdk_identity/remove: dba2fe5fe9f83f8078c687f28cba4b52
+    workspace/sdk_identity/remove_confirm: 5150f9fdf88251d03e7480f1ab28fddb
+    workspace/sdk_identity/remove_description: 83eb39ac61b14b7008d9c92a84c89171
+    workspace/sdk_identity/remove_title: 2695a0cf03e8de61c646cdbd5dcd6554
+    workspace/sdk_identity/required_confirm_button: d282f7d02a6c0148dcb3f317f69f0ecf
+    workspace/sdk_identity/required_confirm_description: 2450f7e112b637821448f7b677180d89
+    workspace/sdk_identity/required_confirm_title: 9fe2c2d5525acd555b44bde0687a710f
+    workspace/sdk_identity/required_description: ce28d5e7d8b9d3e9687b4ccce8624362
+    workspace/sdk_identity/required_label: d282f7d02a6c0148dcb3f317f69f0ecf
+    workspace/sdk_identity/required_needs_secret: f001821e6189f8d307d97a256a8be7f7
+    workspace/sdk_identity/saved: 2a5dbcb6562a5de612a861f3c31e1aee
+    workspace/sdk_identity/secret_created_description: d8cb69cf1353cd2b6cbccccf7e5a22a2
+    workspace/sdk_identity/secret_created_title: 3135296d346bdfae2c6c6f7042a34712
+    workspace/sdk_identity/secret_created_warning: 3cbf735068bcf4fe868811e8ca8123f7
+    workspace/sdk_identity/secret_label: e1591477b4190887cdda2e68bdd45e5b
+    workspace/sdk_identity/secret_none: 7ba7627f52cf7df500947450893148e6
+    workspace/sdk_identity/secret_set: feed626d31d3596ea9eff5ca1f5ac187
+    workspace/sdk_identity/title: 628236f464660fbba28666b30b61b680
+    workspace/sdk_identity/usage_description: 0d130dc9ca8cd464eb4718491dc15f13
+    workspace/sdk_identity/usage_label: 472800c1897654120602dfc78fa7fdce
     workspace/segments/add_filter_below: be9b9c51d4d61903e782fb37931d8905
     workspace/segments/add_your_first_filter_to_get_started: 365f9fc1600e2e44e2502e9ad9fde46a
     workspace/segments/any_survey: 7d0016d308c65b27dcabcaf725bb20a5

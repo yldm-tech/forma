@@ -21,6 +21,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
+	"github.com/yldm-tech/forma/apps/server/internal/sdkidentity"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
@@ -484,9 +485,14 @@ func (s *Service) contactPage(ctx context.Context, token string, q query, accept
 	if err != nil {
 		return page{}, err
 	}
+	// The runtime names the contact to the client API by a token rather than by its id: the client API takes contact ids only from workspaces that do not require verified identities, and this token, which the signed link proves, attaches the contact to this survey either way.
+	contactToken, err := sdkidentity.LinkContactToken(s.cfg, sv.WorkspaceID, contactID, sv.ID)
+	if err != nil {
+		return page{}, err
+	}
 	// forma2 passed the contact's existing response here, which the check above has already ruled out.
 	p, err := s.render(renderInput{
-		survey: sv, fields: fields, q: q, singleUseID: singleUseID, contactID: contactID.String(),
+		survey: sv, fields: fields, q: q, singleUseID: singleUseID, contactID: contactToken,
 		workspace: wc, locale: locale, acceptLanguage: acceptLanguage, responseCount: count,
 	})
 	if p.Status == http.StatusNotFound {

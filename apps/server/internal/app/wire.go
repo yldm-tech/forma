@@ -47,6 +47,7 @@ import (
 	surveyv3 "github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/sdkidentity"
 	"github.com/yldm-tech/forma/apps/server/internal/storage"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/emailembed"
@@ -196,10 +197,12 @@ var linkSurveySet = wire.NewSet(
 	linksurvey.NewHandler,
 )
 
-// clientAPISet is the client API under /api/v1/client and /api/v2/client, with its reCAPTCHA verifier.
+// clientAPISet is the client API under /api/v1/client and /api/v2/client, with its reCAPTCHA verifier, and the settings of how far it trusts the SDK with a workspace's contacts (/api/app/workspaces/{id}/sdk-identity).
 var clientAPISet = wire.NewSet(
 	clientapi.NewRecaptcha,
 	clientapi.NewHandler,
+	sdkidentity.NewService,
+	sdkidentity.NewHandler,
 )
 
 // webhookSet is webhooks: the settings page's routes under /api/app, the /api/v1/webhooks subscription API, and the SSRF guard every request to a webhook's URL goes through.

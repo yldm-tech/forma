@@ -3,20 +3,25 @@ import { Logger } from "@/lib/common/logger";
 import { tearDown } from "@/lib/common/setup";
 import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
 import { UpdateQueue } from "@/lib/user/update-queue";
+import { type TSetUserIdOptions } from "@/types/config";
 import { type ApiErrorResponse, type Result, okVoid } from "@/types/error";
 
 const MAX_USER_ID_LENGTH = 255;
 
 // Not `async` (nothing to await), but keeps the Promise return type: this is public
 // SDK API and callers rely on awaiting it.
-export const setUserId = (userId: string): Promise<Result<void, ApiErrorResponse>> => {
+export const setUserId = (
+  userId: string,
+  options?: TSetUserIdOptions
+): Promise<Result<void, ApiErrorResponse>> => {
   const appConfig = Config.getInstance();
   const logger = Logger.getInstance();
   const updateQueue = UpdateQueue.getInstance();
 
   const {
-    data: { userId: currentUserId },
+    data: { userId: currentUserId, userHash: currentUserHash },
   } = appConfig.get().user;
+  const userHash = typeof options?.userHash === "string" && options.userHash ? options.userHash : undefined;
 
   // Validate the new userId before mutating any state, so an invalid replacement
   // does not tear down the existing valid user.
@@ -25,8 +30,14 @@ export const setUserId = (userId: string): Promise<Result<void, ApiErrorResponse
     return Promise.resolve(okVoid());
   }
 
-  // If the same userId is already set, no-op
+  // If the same userId is already set, no-op, unless it comes with a new userHash (the workspace's identity secret was regenerated): the user is identified again with it.
   if (currentUserId === userId) {
+    if (userHash && userHash !== currentUserHash) {
+      logger.debug("Identifying again with the new userHash");
+      updateQueue.updateUserId(userId, userHash);
+      void updateQueue.processUpdates();
+      return Promise.resolve(okVoid());
+    }
     logger.debug("UserId is already set to the same value, skipping");
     return Promise.resolve(okVoid());
   }
@@ -43,7 +54,7 @@ export const setUserId = (userId: string): Promise<Result<void, ApiErrorResponse
     EmbeddedDataStore.getInstance().clearEmbeddedData();
   }
 
-  updateQueue.updateUserId(userId);
+  updateQueue.updateUserId(userId, userHash);
   void updateQueue.processUpdates();
   return Promise.resolve(okVoid());
 };

@@ -79,6 +79,35 @@ describe("UpdateQueue", () => {
     });
   });
 
+  test("updateUserId keeps the userHash it is given", () => {
+    updateQueue.updateUserId(mockUserId1, "hash-1");
+    expect(updateQueue.getUpdates()).toEqual({ userId: mockUserId1, userHash: "hash-1", attributes: {} });
+  });
+
+  test("processUpdates sends the stored userHash for the stored user, and none for another user", async () => {
+    (Config.getInstance as Mock).mockImplementation(() => ({
+      get: vi.fn(() => ({ user: { data: { userId: "mock-user-id", userHash: "stored-hash" } } })),
+      update: vi.fn(),
+    }));
+    (sendUpdates as Mock).mockResolvedValue({ ok: true, data: { skippedAttributeKeys: new Set<string>() } });
+
+    updateQueue.updateAttributes({ plan: "pro" });
+    await updateQueue.processUpdates();
+    expect(sendUpdates).toHaveBeenLastCalledWith({
+      updates: { userId: "mock-user-id", userHash: "stored-hash", attributes: { plan: "pro" } },
+    });
+
+    updateQueue.updateUserId("someone-else");
+    await updateQueue.processUpdates();
+    expect(sendUpdates).toHaveBeenLastCalledWith({ updates: { userId: "someone-else", attributes: {} } });
+
+    updateQueue.updateUserId("someone-else", "their-hash");
+    await updateQueue.processUpdates();
+    expect(sendUpdates).toHaveBeenLastCalledWith({
+      updates: { userId: "someone-else", userHash: "their-hash", attributes: {} },
+    });
+  });
+
   test("updateAttributes sets attributes correctly when updates is null", () => {
     const attributes = mockAttributes;
     updateQueue.updateAttributes(attributes);
