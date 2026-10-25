@@ -18,7 +18,7 @@ The tags `v1.0.0` to `v3.1.0` belong to a different, earlier project that used t
 
 ## Features
 
-- Build surveys in a no-code editor with a range of question types, or start from a template.
+- Build surveys in a no-code editor with a range of question types, or start from a template after previewing it as respondents will see it.
 - Target surveys at specific user groups without shipping application code.
 - Share link surveys, or embed them in your website or app.
 - Invite your organization to collaborate, with teams and per-workspace roles.

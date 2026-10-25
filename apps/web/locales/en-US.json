@@ -3948,6 +3948,8 @@
         "create_a_new_survey": "Create a new survey",
         "multiple_industries": "Multiple industries",
         "no_templates_match": "No templates match “{query}”.",
+        "select_a_template_to_preview": "Choose a template to see it as respondents will.",
+        "template_preview": "Template preview",
         "use_this_template": "Use this template",
         "uses_branching_logic": "This survey uses branching logic."
       },

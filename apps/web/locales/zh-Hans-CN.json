@@ -3948,6 +3948,8 @@
         "create_a_new_survey": "创建新问卷",
         "multiple_industries": "多个行业",
         "no_templates_match": "没有与“{query}”匹配的模板。",
+        "select_a_template_to_preview": "选择一个模板，即可按受访者看到的样子预览。",
+        "template_preview": "模板预览",
         "use_this_template": "使用此模板",
         "uses_branching_logic": "此问卷使用分支逻辑。"
       },

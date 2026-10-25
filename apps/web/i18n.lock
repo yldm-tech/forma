@@ -3781,6 +3781,8 @@ checksums:
     workspace/surveys/templates/create_a_new_survey: b449fa7e482ea6536a9003625b68c6d1
     workspace/surveys/templates/multiple_industries: 7dcb6f6d87feb08f8004dfb5a91e711f
     workspace/surveys/templates/no_templates_match: 1d6565e62d097205107ca71a90f0c43c
+    workspace/surveys/templates/select_a_template_to_preview: 90321beec3905f5a9f0cee27251925d9
+    workspace/surveys/templates/template_preview: b86c4940623ec5529e2f25997642b388
     workspace/surveys/templates/use_this_template: 69020c8b5a521b8f027616bb5c4b64dd
     workspace/surveys/templates/uses_branching_logic: 7ac087d7067d342c17809d4ce497dfe0
     workspace/surveys/undo_archive: 6fa10b811e2894dcdd73718f66c1b481
