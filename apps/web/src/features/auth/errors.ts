@@ -88,3 +88,19 @@ export const ssoStartFailure = (t: TFunction, error: unknown): string =>
 /** Any other form: the forgot-password and resend-verification requests. */
 export const emailFormFailure = (t: TFunction, error: unknown): Failure<"email"> =>
   genericFailure(t, error, ["email"] as const);
+
+/** The change-password form on the profile page: a wrong current password goes under that field and a breached new one under the new password, as the sign-up form places it. */
+export const changePasswordFailure = (
+  t: TFunction,
+  error: unknown
+): Failure<"currentPassword" | "newPassword"> => {
+  if (isCode(error, "invalid_password")) {
+    return {
+      fields: { currentPassword: t("workspace.settings.profile.password_change.incorrect_current_password") },
+    };
+  }
+  if (isCode(error, "password_compromised")) {
+    return { fields: { newPassword: t("auth.password_compromised") } };
+  }
+  return genericFailure(t, error, ["currentPassword", "newPassword"] as const);
+};
