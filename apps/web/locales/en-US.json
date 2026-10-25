@@ -1695,6 +1695,7 @@
       "unable_to_copy_api_key": "Unable to copy API key",
       "unable_to_delete_api_key": "Unable to delete API Key",
       "unknown_workspace": "Unknown workspace",
+      "v3_propagation_note": "New keys work on API v1 and v2 right away. On API v3 and MCP they can take a few seconds to start working.",
       "view_permissions_for": "View permissions for {label}",
       "workspace_access": "Workspace Access",
       "workspace_access_description": "Survey and response data. Grant access one workspace at a time.",

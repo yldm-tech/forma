@@ -128,6 +128,11 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
           {t("workspace.settings.api_keys.add_api_key")}
         </Button>
       </div>
+      {Object.keys(secrets).length > 0 && (
+        <p role="status" className="px-4 pb-2 text-sm text-slate-500">
+          {t("workspace.api_keys.v3_propagation_note")}
+        </p>
+      )}
       {keys.isPending ? (
         <div className="px-4 py-4">
           <LoadingBlock />
