@@ -34,7 +34,7 @@ export const SecondaryNavigation = ({
           <div
             className={cn(
               "bottom-0 mt-auto h-[2px] w-full rounded-t-lg transition-all duration-150 ease-in-out",
-              isActive ? "bg-brand-dark" : "bg-transparent group-hover:bg-slate-300"
+              isActive ? "bg-brand" : "bg-transparent group-hover:bg-slate-300"
             )}
           />
         </div>

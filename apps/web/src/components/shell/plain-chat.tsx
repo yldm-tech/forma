@@ -34,8 +34,8 @@ export const plainSessionQuery = queryOptions({
 export const PLAIN_SCRIPT_ID = "plain-chat-script";
 export const PLAIN_SCRIPT_SRC = "https://chat.cdn-plain.com/index.js";
 
-// Forma brand teal, for the chat panel's accents.
-const BRAND_COLOR = "#00C4B8";
+// Forma brand crimson, for the chat panel's accents.
+const BRAND_COLOR = "#D3264A";
 
 interface PlainCustomerDetails {
   email: string;

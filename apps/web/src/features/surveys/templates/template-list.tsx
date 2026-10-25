@@ -196,8 +196,8 @@ export const TemplateList = ({
             className={cn(
               "border-2 bg-transparent shadow-none",
               activeId === custom.id
-                ? "border-transparent ring-2 ring-brand-dark"
-                : "border-dashed border-slate-300 hover:border-brand-dark hover:ring-0"
+                ? "border-transparent ring-2 ring-brand"
+                : "border-dashed border-slate-300 hover:border-slate-500 hover:ring-0"
             )}
             action={
               <Button
@@ -208,7 +208,7 @@ export const TemplateList = ({
               </Button>
             }>
             <PlusCircleIcon
-              className="text-brand-dark order-first mb-3 size-8 transition-all duration-150 group-hover:scale-110"
+              className="text-ink order-first mb-3 size-8 transition-all duration-150 group-hover:scale-110"
               aria-hidden="true"
             />
           </TemplateCard>

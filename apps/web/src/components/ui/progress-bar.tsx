@@ -30,7 +30,7 @@ export const HalfCircle = ({ value }: { value: number }) => {
       <div className="relative flex h-28 w-52 items-end justify-center overflow-hidden">
         <div className="absolute h-24 w-48 origin-bottom rounded-tl-full rounded-tr-full bg-slate-200" />
         <div
-          className="bg-brand-dark absolute h-24 w-48 origin-bottom rounded-tl-full rounded-tr-full"
+          className="absolute h-24 w-48 origin-bottom rounded-tl-full rounded-tr-full bg-slate-700"
           style={{ rotate: rotation }}
         />
         <div className="absolute h-20 w-40 rounded-tl-full rounded-tr-full bg-white" />

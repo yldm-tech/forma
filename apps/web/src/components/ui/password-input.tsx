@@ -24,7 +24,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
         />
         <button
           type="button"
-          className="focus-visible:ring-brand-dark absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:text-slate-600 focus-visible:ring-2 focus-visible:outline-hidden"
+          className="focus-visible:ring-ring absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:text-slate-600 focus-visible:ring-2 focus-visible:outline-hidden"
           aria-label={showPassword ? t("common.hide_password") : t("common.show_password")}
           aria-pressed={showPassword}
           onClick={() => setShowPassword((shown) => !shown)}>

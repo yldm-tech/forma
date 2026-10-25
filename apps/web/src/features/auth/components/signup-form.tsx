@@ -279,7 +279,7 @@ export const TermsPrivacyLinks = ({ termsUrl, privacyUrl }: { termsUrl?: string;
   const { t } = useTranslation();
   if (!termsUrl && !privacyUrl) return null;
   const linkClasses =
-    "inline-flex min-h-6 items-center rounded-sm py-1 font-semibold hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-brand-dark focus-visible:outline-hidden";
+    "inline-flex min-h-6 items-center rounded-sm py-1 font-semibold hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden";
   return (
     <div className="mt-3 text-center text-xs text-pretty text-slate-500">
       {termsUrl && (

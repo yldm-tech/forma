@@ -105,7 +105,7 @@ export const MultipleChoiceSummary = ({
                     </div>
                   </div>
                   <div className="group-hover:opacity-80">
-                    <ProgressBar barColor="bg-brand-dark" progress={result.percentage / 100} />
+                    <ProgressBar barColor="bg-slate-700" progress={result.percentage / 100} />
                   </div>
                 </div>
                 {result.others && result.others.length > 0 && (
@@ -228,7 +228,7 @@ export const PictureChoiceSummary = ({
                   </p>
                 </div>
               </div>
-              <ProgressBar barColor="bg-brand-dark" progress={result.percentage / 100 || 0} />
+              <ProgressBar barColor="bg-slate-700" progress={result.percentage / 100 || 0} />
             </button>
           );
         })}
@@ -322,8 +322,8 @@ export const MatrixElementSummary = ({
                       })}>
                       <button
                         type="button"
-                        style={{ backgroundColor: `rgba(0,196,184,${getOpacityLevel(percentage)})` }}
-                        className="hover:outline-brand-dark m-1 flex h-full w-40 cursor-pointer items-center justify-center rounded-sm p-4 text-sm text-slate-950 hover:outline-solid"
+                        style={{ backgroundColor: `rgba(148,163,184,${getOpacityLevel(percentage)})` }}
+                        className="hover:outline-ink m-1 flex h-full w-40 cursor-pointer items-center justify-center rounded-sm p-4 text-sm text-slate-950 hover:outline-solid"
                         onClick={() =>
                           setFilter(
                             elementSummary.element.id,

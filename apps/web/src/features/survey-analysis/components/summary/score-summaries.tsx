@@ -155,7 +155,7 @@ export const NPSSummary = ({
               }>
               <div className="flex h-32 w-full flex-col items-center justify-end">
                 <div
-                  className="bg-brand-dark w-full rounded-t-lg border border-slate-200 transition-all group-hover:brightness-110"
+                  className="w-full rounded-t-lg border border-slate-200 bg-slate-700 transition-all group-hover:brightness-110"
                   style={{
                     height: `${Math.max(choice.percentage, 2)}%`,
                     opacity: calculateNPSOpacity(choice.rating),
@@ -236,7 +236,7 @@ const RatingLikeSummary = ({
                       }}
                       onClick={() => filterByRating(result.rating)}>
                       <div
-                        className={`bg-brand-dark h-full ${isFirst ? "rounded-tl-lg" : ""} ${isLast ? "rounded-tr-lg" : ""}`}
+                        className={`h-full bg-slate-700 ${isFirst ? "rounded-tl-lg" : ""} ${isLast ? "rounded-tr-lg" : ""}`}
                         style={{ opacity: 0.3 + ((result.rating ?? 0) / element.range) * 0.7 }}
                       />
                     </ClickableBarSegment>
@@ -300,7 +300,7 @@ const RatingLikeSummary = ({
                       {t("common.count_responses", { count: result.count })}
                     </p>
                   </div>
-                  <ProgressBar barColor="bg-brand-dark" progress={result.percentage / 100} />
+                  <ProgressBar barColor="bg-slate-700" progress={result.percentage / 100} />
                 </button>
               </div>
             ))}
@@ -446,7 +446,7 @@ const ShareRow = ({
       <p className="flex w-32 items-end justify-end text-slate-600">{footer}</p>
     </div>
     <div className="group-hover:opacity-80">
-      <ProgressBar barColor="bg-brand-dark" progress={percentage / 100} />
+      <ProgressBar barColor="bg-slate-700" progress={percentage / 100} />
     </div>
   </>
 );

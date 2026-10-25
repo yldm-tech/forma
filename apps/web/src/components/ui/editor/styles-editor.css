@@ -19,7 +19,7 @@
 }
 
 .editor-container:focus-within {
-  border-color: var(--color-brand-dark);
+  border-color: var(--color-ink);
 }
 
 /*

@@ -91,7 +91,7 @@ export const SurveyEditorTabs = ({
               onClick={() => setActiveId(tab.id)}
               className={cn(
                 tab.id === activeId
-                  ? "border-brand-dark font-semibold text-slate-900"
+                  ? "border-brand font-semibold text-slate-900"
                   : "border-transparent text-slate-500 hover:text-slate-700",
                 "flex h-full shrink-0 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap"
               )}

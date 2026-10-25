@@ -136,14 +136,14 @@ export const HowToSendCard = ({ localSurvey, setLocalSurvey, appSetupCompleted }
                     option.comingSoon
                       ? "border-slate-200 bg-slate-50/50"
                       : option.id === localSurvey.type
-                        ? "cursor-pointer border-brand-dark bg-slate-50"
+                        ? "cursor-pointer border-brand bg-slate-50"
                         : "cursor-pointer bg-slate-50"
                   )}
                   id={`howToSendCardOption-${option.id}`}>
                   <RadioGroupItem
                     value={option.id}
                     id={option.id}
-                    className="aria-checked:border-brand-dark mx-5 disabled:border-slate-400 aria-checked:border-2"
+                    className="aria-checked:border-brand mx-5 disabled:border-slate-400 aria-checked:border-2"
                     disabled={option.comingSoon}
                   />
                   <div className="inline-flex items-center">

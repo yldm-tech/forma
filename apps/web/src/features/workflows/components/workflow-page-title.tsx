@@ -96,7 +96,7 @@ export const WorkflowPageTitle = ({
             className={cn(
               "-mx-2 -my-1 max-w-[28rem] min-w-0 rounded-md border border-dashed border-transparent bg-transparent px-2 py-1 [field-sizing:content]",
               "text-3xl font-bold text-slate-800 transition-colors placeholder:text-slate-400",
-              "hover:border-slate-300 focus:border-brand-dark focus:ring-0 focus:outline-none focus:hover:border-brand-dark",
+              "hover:border-slate-300 focus:border-ink focus:ring-0 focus:outline-none focus:hover:border-ink",
               showNameError &&
                 "border-red-300 hover:border-red-400 focus:border-red-400 focus:hover:border-red-400"
             )}

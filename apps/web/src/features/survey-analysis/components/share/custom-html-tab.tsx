@@ -108,7 +108,7 @@ export const CustomHtmlTab = ({
             value={scripts}
             onChange={(event) => setScripts(event.target.value)}
             placeholder={t("workspace.surveys.share.custom_html.placeholder")}
-            className="focus:border-brand-dark flex w-full rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+            className="focus:border-ink flex w-full rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isReadOnly}
           />
         </div>
