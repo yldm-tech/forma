@@ -21,7 +21,7 @@ func resolveSurveyLanguageCode(lang string, languages []survey.SurveyLanguage) s
 	return selected.Language.Code
 }
 
-// negotiateSurveyLanguageCode picks the survey language for a visitor who asked for none (no ?lang=): the browser's Accept-Language tags, best weighted first, each matched as resolveSurveyLanguageCode matches ?lang=. The first tag that names one of the survey's languages decides: the default language, or an enabled translation. A tag naming nothing or a disabled translation is skipped. With no match the survey opens in its default language, as before.
+// negotiateSurveyLanguageCode picks the survey language for a visitor who asked for none (no ?lang=): the browser's Accept-Language tags, best weighted first. A tag is first matched as resolveSurveyLanguageCode matches ?lang= (exact code, alias, canonical tag) against the languages a visitor can be shown: the default language and the enabled translations. A tag naming none of them outright falls back to a close match, another region of the same language and script (de-AT reads de-DE, a bare "ar" reads ar-SA), unless a later tag of the same language and script names one of them outright, which is then chosen in its place (de-AT,en,de-CH reads de-CH). The first tag that matches decides, so a regional fallback for the preferred language beats an exact match for a later one (de-AT,en reads de-DE). Another language never stands in, even one CLDR rates close (Afrikaans for Dutch, Kazakh for Russian), and Simplified and Traditional Chinese are different scripts that never stand in for each other. With no match the survey opens in its default language.
 func negotiateSurveyLanguageCode(acceptLanguage string, languages []survey.SurveyLanguage) string {
 	if acceptLanguage == "" || len(languages) == 0 {
 		return defaultLanguage
@@ -30,9 +30,22 @@ func negotiateSurveyLanguageCode(acceptLanguage string, languages []survey.Surve
 	if err != nil {
 		return defaultLanguage
 	}
-	for _, tag := range tags {
-		selected := matchSurveyLanguage(tag.String(), languages)
-		if selected == nil || (!selected.Default && !selected.Enabled) {
+	outright := make([]*survey.SurveyLanguage, len(tags))
+	for i, tag := range tags {
+		if selected := matchSurveyLanguage(tag.String(), languages); selected != nil && (selected.Default || selected.Enabled) {
+			outright[i] = selected
+		}
+	}
+	matcher, supported, offered := closeLanguageMatcher(languages)
+	for i, tag := range tags {
+		selected := outright[i]
+		if selected == nil {
+			selected = laterOutrightMatch(tags, outright, i)
+		}
+		if selected == nil {
+			selected = closeSurveyLanguage(matcher, supported, offered, tag)
+		}
+		if selected == nil {
 			continue
 		}
 		if selected.Default {
@@ -41,6 +54,64 @@ func negotiateSurveyLanguageCode(acceptLanguage string, languages []survey.Surve
 		return selected.Language.Code
 	}
 	return defaultLanguage
+}
+
+// laterOutrightMatch is the survey language that the first tag after tags[i] of the same language and script matched outright, which beats a close match for tags[i]; nil when no such tag matched. The script keeps a later bare "zh" (Simplified) from replacing zh-HK (Traditional).
+func laterOutrightMatch(tags []language.Tag, outright []*survey.SurveyLanguage, i int) *survey.SurveyLanguage {
+	for j := i + 1; j < len(tags); j++ {
+		if outright[j] != nil && sameLanguageAndScript(tags[i], tags[j]) {
+			return outright[j]
+		}
+	}
+	return nil
+}
+
+// sameLanguageAndScript reports whether a and b are the same language in the same script, regions aside. Both are canonicalized first, so that aliases of one language (no and nb, tl and fil) compare equal, and the script is the explicit or the likely one (zh-HK is Hant, zh is Hans). A tag without a language subtag (the "*" wildcard, und-US) names no language, so it is never the same as another tag, whatever language x/text would guess for it.
+func sameLanguageAndScript(a, b language.Tag) bool {
+	a, _ = language.All.Canonicalize(a)
+	b, _ = language.All.Canonicalize(b)
+	aBase, aConfidence := a.Base()
+	bBase, bConfidence := b.Base()
+	if aConfidence != language.Exact || bConfidence != language.Exact {
+		return false
+	}
+	aScript, _ := a.Script()
+	bScript, _ := b.Script()
+	return aBase == bBase && aScript == bScript
+}
+
+// closeLanguageMatcher is a CLDR matcher over the languages a visitor can be shown (the default and the enabled translations), with their parsed tags and the languages themselves in the matcher's order. A stored code that is not a valid BCP-47 tag is left out.
+func closeLanguageMatcher(languages []survey.SurveyLanguage) (language.Matcher, []language.Tag, []*survey.SurveyLanguage) {
+	var supported []language.Tag
+	var offered []*survey.SurveyLanguage
+	for i := range languages {
+		l := &languages[i]
+		if !l.Default && !l.Enabled {
+			continue
+		}
+		tag, err := language.Parse(l.Language.Code)
+		if err != nil {
+			continue
+		}
+		supported = append(supported, tag)
+		offered = append(offered, l)
+	}
+	if len(supported) == 0 {
+		return nil, nil, nil
+	}
+	return language.NewMatcher(supported), supported, offered
+}
+
+// closeSurveyLanguage is the offered language the matcher finds close to tag: at least High confidence, and the same language and script, any region. CLDR also rates some cross-language fallbacks High (af to nl, kk to ru, gl to es), so the confidence alone is not enough. A Low match (another script, as zh-TW against zh-Hans-CN), another language, or none is nil.
+func closeSurveyLanguage(matcher language.Matcher, supported []language.Tag, offered []*survey.SurveyLanguage, tag language.Tag) *survey.SurveyLanguage {
+	if matcher == nil || tag == language.Und {
+		return nil
+	}
+	_, index, confidence := matcher.Match(tag)
+	if confidence < language.High || !sameLanguageAndScript(tag, supported[index]) {
+		return nil
+	}
+	return offered[index]
 }
 
 // surveyLanguageCode is the survey language a page renders in: an explicit ?lang= always wins (resolveSurveyLanguageCode), otherwise the browser's languages are negotiated against the survey's.
