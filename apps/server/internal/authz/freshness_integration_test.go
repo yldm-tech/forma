@@ -91,6 +91,53 @@ func TestUnreachableSpiceDBReleasesTheBatchWithoutBlame(t *testing.T) {
 	}
 }
 
+func TestDeliverAPIKeyProjectsThatKeyBeforeTheWorker(t *testing.T) {
+	e := newTestEnv(t)
+	org := e.org()
+	ws := e.workspace(org)
+	e.drain()
+	key, other := e.apiKey(org, true, false), e.apiKey(org, true, false)
+	e.apiKeyWorkspace(key, ws, "read")
+	e.apiKeyWorkspace(other, ws, "read")
+
+	e.delivery.DeliverAPIKey(e.ctx, key)
+	e.expect(APIKey(key), Workspace(ws), map[Action]bool{WorkspaceRead: true})
+	e.expect(APIKey(key), Organization(org), map[Action]bool{OrganizationReadAccess: true})
+	if n := e.countOutbox(`primary_id = ? AND processed_at IS NULL`, key.String()); n != 0 {
+		t.Fatalf("%d of the key's events are still pending", n)
+	}
+	// Only the named aggregate is delivered; the other key waits for the worker as before.
+	if n := e.countOutbox(`primary_id = ? AND processed_at IS NULL AND lease_owner IS NULL AND attempts = 0`, other.String()); n != 2 {
+		t.Fatalf("the other key's events were touched: %d still untouched, want 2", n)
+	}
+	e.expect(APIKey(other), Workspace(ws), map[Action]bool{WorkspaceRead: false})
+	// Nil is AuthZed disabled: nothing to project, nothing to fail.
+	(*Delivery)(nil).DeliverAPIKey(e.ctx, other)
+}
+
+func TestDeliverAPIKeyFallsBackToTheOutboxWhenSpiceDBIsDown(t *testing.T) {
+	e := newTestEnv(t)
+	down, err := NewClient(config.AuthzConfig{Enabled: true, Endpoint: "127.0.0.1:1", Token: "x", Insecure: true, Consistency: "fully_consistent"}, RequestProfile, discardLog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = down.Close() })
+	org := e.org()
+	ws := e.workspace(org)
+	e.drain()
+	key := e.apiKey(org, false, false)
+	e.apiKeyWorkspace(key, ws, "read")
+
+	NewDelivery(e.db, down, discardLog()).DeliverAPIKey(e.ctx, key)
+	// Released exactly as a failed worker batch is: unblamed, unleased, backing off.
+	if n := e.countOutbox(`primary_id = ? AND processed_at IS NULL AND lease_owner IS NULL AND permanent_failures = 0 AND last_error_code = 'authzed_unavailable' AND available_at > now()`, key.String()); n != 2 {
+		t.Fatalf("%d of the key's 2 events were released to the outbox", n)
+	}
+	e.exec(`UPDATE authz_projection_outbox SET available_at = now() WHERE primary_id = ?`, key.String())
+	e.drain()
+	e.expect(APIKey(key), Workspace(ws), map[Action]bool{WorkspaceRead: true})
+}
+
 func TestDeliveryJobRunsOnTheWorker(t *testing.T) {
 	e := newTestEnv(t)
 	org, user := e.org(), e.user()
