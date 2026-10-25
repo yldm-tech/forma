@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { FilesIcon, Trash2Icon, TrashIcon } from "lucide-react";
+import { ExternalLinkIcon, FilesIcon, Trash2Icon, TrashIcon } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertButton, AlertDescription, AlertTitle } from "../../components/ui/alert";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
@@ -16,6 +17,7 @@ import { Switch } from "../../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import {
   type PermissionRow,
+  apiKeyScope,
   canSubmitApiKey,
   effectiveAccess,
   hasDuplicateWorkspace,
@@ -24,6 +26,7 @@ import { copyText } from "../../lib/clipboard";
 import { errorMessage } from "../../lib/errors";
 import {
   type ApiKey,
+  type ApiKeyDisabledReason,
   type ApiKeyPermission,
   type OrganizationAccess,
   apiKeysQuery,
@@ -34,6 +37,8 @@ import {
 import type { OrganizationDetail } from "../../lib/queries/organizations";
 import { type Workspace, workspacesQuery } from "../../lib/queries/workspaces";
 import { accessFlags } from "../../lib/roles";
+import { apiReferenceUrl } from "../../lib/sdk-snippets";
+import { timeSince } from "../../lib/time";
 import { toast } from "../../lib/toast";
 
 const PERMISSIONS: ApiKeyPermission[] = ["read", "write", "manage"];
@@ -51,6 +56,54 @@ export const permissionLabel = (t: TFunction, permission: ApiKeyPermission): str
   }
 };
 
+/** Why a key was disabled, in the user's language. */
+export const disabledReasonLabel = (t: TFunction, reason: ApiKeyDisabledReason): string => {
+  switch (reason) {
+    case "creator_removed":
+      return t("workspace.api_keys.disabled_reason_creator_removed");
+    case "creator_left":
+      return t("workspace.api_keys.disabled_reason_creator_left");
+    case "creator_deleted":
+      return t("workspace.api_keys.disabled_reason_creator_deleted");
+    case "creator_demoted":
+      return t("workspace.api_keys.disabled_reason_creator_demoted");
+  }
+};
+
+/** What a key may reach, in one line: the first workspace grants by name, how many more, and its organization access. */
+export const scopeSummary = (
+  t: TFunction,
+  key: Pick<ApiKey, "workspacePermissions" | "organizationAccess">
+): string => {
+  const scope = apiKeyScope(key);
+  const parts = scope.shown.map((grant) =>
+    t("workspace.api_keys.scope_workspace", {
+      workspace: grant.workspaceName,
+      permission: permissionLabel(t, grant.permission),
+    })
+  );
+  if (scope.more > 0) parts.push(t("workspace.api_keys.scope_more", { count: scope.more }));
+  if (scope.organization) {
+    parts.push(
+      t("workspace.api_keys.scope_organization", { access: permissionLabel(t, scope.organization) })
+    );
+  }
+  return parts.length > 0 ? parts.join(" · ") : t("workspace.api_keys.scope_none");
+};
+
+/** The API reference on the website (REST API v3 and MCP), from the page header. */
+const ApiReferenceLink = () => {
+  const { t, i18n } = useTranslation();
+  return (
+    <Button asChild variant="secondary" size="sm">
+      <a href={apiReferenceUrl(i18n.language)} target="_blank" rel="noopener noreferrer">
+        {t("workspace.api_keys.api_reference")}
+        <ExternalLinkIcon className="ml-1 size-4" aria-hidden="true" />
+      </a>
+    </Button>
+  );
+};
+
 /** forma2's API keys page: owners and managers (organization.manage_api_keys) list, create, relabel and revoke the organization's keys. */
 export const ApiKeysPage = ({ organization }: { organization: OrganizationDetail }) => {
   const { t } = useTranslation();
@@ -66,7 +119,7 @@ export const ApiKeysPage = ({ organization }: { organization: OrganizationDetail
   }
   return (
     <PageContentWrapper>
-      <PageHeader pageTitle={t("common.api_keys")} />
+      <PageHeader pageTitle={t("common.api_keys")} cta={<ApiReferenceLink />} />
       <ConnectAppBanner organizationId={organization.id} />
       <SettingsCard
         title={t("common.api_keys")}
@@ -109,8 +162,8 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const remove = useDeleteApiKey(organizationId);
   const formatDate = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" });
-  // The v3/MCP note is about the keys created on this visit, so it goes away once none of them is listed any more, for instance after the user deletes the one they just created.
-  const createdKeyListed = keys.data?.some((key) => key.id in secrets) ?? false;
+  // The keys created on this visit that are still listed: their plaintext, and the v3/MCP note about them, go away once none of them is listed any more, for instance after the user deletes the one they just created.
+  const createdKeys = keys.data?.filter((key) => key.id in secrets) ?? [];
 
   const deleteKey = async () => {
     if (!deleting) return;
@@ -130,11 +183,7 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
           {t("workspace.settings.api_keys.add_api_key")}
         </Button>
       </div>
-      {createdKeyListed && (
-        <p role="status" className="px-4 pb-2 text-sm text-slate-500">
-          {t("workspace.api_keys.v3_propagation_note")}
-        </p>
-      )}
+      {createdKeys.length > 0 && <NewKeyNotice keys={createdKeys} secrets={secrets} />}
       {keys.isPending ? (
         <div className="px-4 py-4">
           <LoadingBlock />
@@ -151,12 +200,12 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
         <Table aria-label={t("common.api_keys")}>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[25%]">{t("common.label")}</TableHead>
-              <TableHead className="hidden w-[45%] sm:table-cell">
-                {t("workspace.api_keys.api_key")}
-              </TableHead>
-              <TableHead className="w-[20%]">{t("common.created_at")}</TableHead>
-              <TableHead className="w-[10%]">
+              <TableHead className="w-[22%]">{t("common.label")}</TableHead>
+              <TableHead className="hidden w-[28%] md:table-cell">{t("workspace.api_keys.access")}</TableHead>
+              <TableHead className="hidden w-[18%] sm:table-cell">{t("common.created_by")}</TableHead>
+              <TableHead className="w-[14%]">{t("workspace.api_keys.last_used")}</TableHead>
+              <TableHead className="hidden w-[12%] lg:table-cell">{t("common.created_at")}</TableHead>
+              <TableHead className="w-[6%]">
                 <span className="sr-only">{t("common.actions")}</span>
               </TableHead>
             </TableRow>
@@ -165,18 +214,42 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
             {keys.data.map((key) => (
               <TableRow key={key.id} data-testid="api-key-row">
                 <TableCell className="font-semibold">
-                  <button
-                    type="button"
-                    className="text-left hover:underline"
-                    aria-label={t("workspace.api_keys.view_permissions_for", { label: key.label })}
-                    onClick={() => setViewed(key)}>
-                    {key.label}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="text-left hover:underline"
+                      aria-label={t("workspace.api_keys.view_permissions_for", { label: key.label })}
+                      onClick={() => setViewed(key)}>
+                      {key.label}
+                    </button>
+                    {key.disabledReason && (
+                      <Badge
+                        type="error"
+                        size="tiny"
+                        text={t("common.disabled")}
+                        title={disabledReasonLabel(t, key.disabledReason)}
+                      />
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="hidden text-sm text-slate-600 md:table-cell">
+                  {scopeSummary(t, key)}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
-                  <ApiKeyDisplay secret={secrets[key.id]} />
+                  <CreatedBy createdBy={key.createdBy} />
                 </TableCell>
-                <TableCell>{formatDate.format(new Date(key.createdAt))}</TableCell>
+                <TableCell className="text-sm text-slate-600">
+                  {key.lastUsedAt ? (
+                    <time dateTime={key.lastUsedAt} title={formatDate.format(new Date(key.lastUsedAt))}>
+                      {timeSince(key.lastUsedAt, i18n.language)}
+                    </time>
+                  ) : (
+                    t("workspace.api_keys.never_used")
+                  )}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  {formatDate.format(new Date(key.createdAt))}
+                </TableCell>
                 <TableCell>
                   <div className="flex justify-end">
                     <Button
@@ -219,13 +292,36 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
   );
 };
 
-/** The key itself, shown only to the browser that created it and only until it leaves the page; every other key reads "secret". */
-const ApiKeyDisplay = ({ secret }: { secret?: string }) => {
+/** The keys created on this visit, with their plaintext: the server returns it once, so it is shown here, to the browser that created it, until it leaves the page or deletes the key. */
+const NewKeyNotice = ({ keys, secrets }: { keys: ApiKey[]; secrets: Record<string, string> }) => {
   const { t } = useTranslation();
-  if (!secret) return <span className="italic">{t("workspace.api_keys.secret")}</span>;
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="font-mono break-all">{secret}</span>
+    <div className="mx-4 mb-4 space-y-3 rounded-xl border border-green-200 bg-green-50 p-4">
+      <div>
+        <p className="text-sm font-semibold text-slate-800">{t("workspace.api_keys.new_key_title")}</p>
+        <p className="text-sm text-slate-600">{t("workspace.api_keys.new_key_description")}</p>
+      </div>
+      <ul className="space-y-2">
+        {keys.map((key) => (
+          <li key={key.id} className="space-y-1">
+            <p className="text-sm font-medium text-slate-700">{key.label}</p>
+            <ApiKeyDisplay secret={secrets[key.id] ?? ""} />
+          </li>
+        ))}
+      </ul>
+      <p role="status" className="text-sm text-slate-600">
+        {t("workspace.api_keys.v3_propagation_note")}
+      </p>
+    </div>
+  );
+};
+
+/** A plaintext key with a copy button. */
+const ApiKeyDisplay = ({ secret }: { secret: string }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2">
+      <span className="font-mono text-sm break-all">{secret}</span>
       <button
         type="button"
         className="copyApiKeyIcon shrink-0 text-slate-500 hover:text-slate-800"
@@ -234,6 +330,18 @@ const ApiKeyDisplay = ({ secret }: { secret?: string }) => {
         <FilesIcon className="size-4" />
       </button>
     </div>
+  );
+};
+
+/** Who created a key. A creator who no longer belongs to the organization, or whose account is gone, reads as a former member, so an owner can find keys left behind. */
+const CreatedBy = ({ createdBy }: { createdBy: ApiKey["createdBy"] }) => {
+  const { t } = useTranslation();
+  if (createdBy && !createdBy.formerMember) return <span className="text-sm">{createdBy.name}</span>;
+  return (
+    <span className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
+      {createdBy && <span>{createdBy.name}</span>}
+      <Badge type="gray" size="tiny" text={t("workspace.api_keys.former_member")} />
+    </span>
   );
 };
 
@@ -448,9 +556,10 @@ const ViewPermissionModal = ({
   organizationId: string;
   onClose: () => void;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [label, setLabel] = useState(apiKey.label);
   const relabel = useRelabelApiKey(organizationId);
+  const formatDate = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" });
   const unchanged = label.trim() === "" || label === apiKey.label;
 
   const submit = async (e: FormEvent) => {
@@ -472,6 +581,28 @@ const ViewPermissionModal = ({
       </DialogHeader>
       <form onSubmit={submit} className="contents">
         <DialogBody className="space-y-6">
+          {apiKey.disabledReason && apiKey.disabledAt && (
+            <Alert variant="error" role="status">
+              <AlertTitle>{disabledReasonLabel(t, apiKey.disabledReason)}</AlertTitle>
+              <AlertDescription>
+                {t("workspace.api_keys.disabled_description", {
+                  date: formatDate.format(new Date(apiKey.disabledAt)),
+                })}
+              </AlertDescription>
+            </Alert>
+          )}
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            <dt className="font-medium text-slate-800">{t("common.created_by")}</dt>
+            <dd>
+              <CreatedBy createdBy={apiKey.createdBy} />
+            </dd>
+            <dt className="font-medium text-slate-800">{t("workspace.api_keys.last_used")}</dt>
+            <dd className="text-slate-600">
+              {apiKey.lastUsedAt
+                ? formatDate.format(new Date(apiKey.lastUsedAt))
+                : t("workspace.api_keys.never_used")}
+            </dd>
+          </dl>
           <div className="space-y-2">
             <Label htmlFor="api-key-relabel">{t("workspace.api_keys.api_key_label")}</Label>
             <Input

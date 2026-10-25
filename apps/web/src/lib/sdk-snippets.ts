@@ -77,8 +77,14 @@ window.forma.logout();`,
   };
 };
 
-/** The SDK reference on the website, in the website's language closest to the app's: it has en, zh (Simplified) and ja. */
-export const sdkReferenceUrl = (language: string): string => {
-  const prefix = language.startsWith("ja") ? "/ja" : language.startsWith("zh") ? "/zh" : "";
-  return `https://forma.yldm.ai${prefix}/developers/sdk/`;
-};
+/** The website's path prefix for the language closest to the app's: it has en, zh (Simplified) and ja. */
+const websitePrefix = (language: string): string =>
+  language.startsWith("ja") ? "/ja" : language.startsWith("zh") ? "/zh" : "";
+
+/** The SDK reference on the website, in the website's language closest to the app's. */
+export const sdkReferenceUrl = (language: string): string =>
+  `https://forma.yldm.ai${websitePrefix(language)}/developers/sdk/`;
+
+/** The REST API and MCP reference on the website (the developers page's reference section), in the website's language closest to the app's. */
+export const apiReferenceUrl = (language: string): string =>
+  `https://forma.yldm.ai${websitePrefix(language)}/developers/#reference`;

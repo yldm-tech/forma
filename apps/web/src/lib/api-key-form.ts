@@ -1,4 +1,4 @@
-import type { ApiKeyPermission, OrganizationAccess } from "./queries/api-keys";
+import type { ApiKey, ApiKeyPermission, OrganizationAccess } from "./queries/api-keys";
 
 export interface PermissionRow {
   workspaceId: string;
@@ -24,3 +24,26 @@ export const effectiveAccess = (access: OrganizationAccess): OrganizationAccess 
     write: access.accessControl.write,
   },
 });
+
+/** What a key may reach, as the API keys list summarises it in one line. */
+export interface ApiKeyScope {
+  /** The first workspace grants, in the server's order (by workspace name). */
+  shown: ApiKey["workspacePermissions"];
+  /** How many further workspace grants the line leaves out. */
+  more: number;
+  /** The organization access the key holds, write including read; null for none. */
+  organization: "read" | "write" | null;
+}
+
+/** A key's scope for the list: at most limit workspace grants by name, the count of the rest, and its organization access read the way the server reads it (write implies read). */
+export const apiKeyScope = (
+  key: Pick<ApiKey, "workspacePermissions" | "organizationAccess">,
+  limit = 2
+): ApiKeyScope => {
+  const access = effectiveAccess(key.organizationAccess).accessControl;
+  return {
+    shown: key.workspacePermissions.slice(0, limit),
+    more: Math.max(0, key.workspacePermissions.length - limit),
+    organization: access.write ? "write" : access.read ? "read" : null,
+  };
+};
