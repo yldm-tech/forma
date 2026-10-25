@@ -522,4 +522,62 @@ describe("Survey response delivery", () => {
       })
     );
   });
+
+  test("with offline support, finishing after a card that could not be sent shows the ending once the server is back", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // An IndexedDB that keeps what is stored, so the queue hands the sending to its sync of stored answers.
+    let rows: { id: number }[] = [];
+    let nextId = 0;
+    offlineStorageMocks.addPendingResponse.mockImplementation(async (entry: object) => {
+      nextId += 1;
+      rows.push({ ...entry, id: nextId });
+      return nextId;
+    });
+    offlineStorageMocks.countPendingResponses.mockImplementation(async () => rows.length);
+    offlineStorageMocks.getPendingResponses.mockImplementation(async () => rows.map((row) => ({ ...row })));
+    offlineStorageMocks.removePendingResponse.mockImplementation(async (id: number) => {
+      rows = rows.filter((row) => row.id !== id);
+    });
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(undefined);
+    offlineStorageMocks.saveSurveyProgress.mockResolvedValue(undefined);
+    offlineStorageMocks.clearSurveyProgress.mockResolvedValue(undefined);
+    offlineStorageMocks.patchSurveyProgressSnapshot.mockResolvedValue(undefined);
+    apiClientMocks.createResponse.mockResolvedValue(serverError);
+    const onFinished = vi.fn();
+
+    render(
+      <Survey
+        appUrl="http://localhost:3000"
+        workspaceId="ws1234567890123456789012"
+        survey={baseSurvey}
+        styling={{} as any}
+        isBrandingEnabled={false}
+        languageCode="en"
+        offlineSupport
+        isSpamProtectionEnabled={false}
+        getSetIsResponseSendingFinished={() => {}}
+        onFinished={onFinished}
+      />
+    );
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    expect(await screen.findByText("Sending delayed")).toBeTruthy();
+    await vi.advanceTimersByTimeAsync(16_000);
+    expect(apiClientMocks.createResponse).toHaveBeenCalledTimes(5);
+
+    // The server is back, and the respondent finishes before the background retry is due.
+    apiClientMocks.createResponse.mockResolvedValue({ ok: true, data: { id: "response-created" } });
+    fireEvent.click(screen.getByTestId("submit-block-2"));
+
+    await waitFor(() => expect(onFinished).toHaveBeenCalledWith("response-created"));
+    expect(screen.queryByText("Sending delayed")).toBeNull();
+    expect(screen.queryByText("Response Error")).toBeNull();
+    expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        responseId: "response-created",
+        data: { q2: "block-2-answer" },
+        finished: true,
+      })
+    );
+    expect(rows).toHaveLength(0);
+  });
 });

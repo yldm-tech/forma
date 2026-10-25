@@ -4,6 +4,7 @@ import { err, ok } from "@forma/types/error-handlers";
 import { RESPONSE_ALREADY_FINISHED_ERROR_CODE } from "@forma/types/errors";
 import { TResponseUpdate } from "@forma/types/responses";
 import { TResponseErrorCodesEnum } from "@/types/response-error-codes";
+import type { PendingResponseEntry } from "./offline-storage";
 import { RECOVERY_BASE_DELAY_MS, ResponseQueue, delay } from "./response-queue";
 import { SurveyState } from "./survey-state";
 
@@ -1250,6 +1251,149 @@ describe("ResponseQueue", () => {
       ]);
       expect(queue.queue).toHaveLength(0);
       expect(config.onResponseSendingFinished).toHaveBeenCalledTimes(1);
+    });
+
+    // With offline support every answer is also stored in IndexedDB, and once two are stored processQueue leaves the sending to syncPersistedResponses.
+    describe("with offline support", () => {
+      let rows: PendingResponseEntry[];
+
+      beforeEach(async () => {
+        rows = [];
+        let nextId = 0;
+        const storage = await import("./offline-storage");
+        vi.mocked(storage.addPendingResponse).mockImplementation(async (entry) => {
+          nextId += 1;
+          rows.push({ ...entry, id: nextId });
+          return nextId;
+        });
+        vi.mocked(storage.countPendingResponsesStrict).mockImplementation(async () => rows.length);
+        vi.mocked(storage.getPendingResponsesStrict).mockImplementation(async () =>
+          rows.map((row) => ({ ...row }))
+        );
+        vi.mocked(storage.removePendingResponseStrict).mockImplementation(async (id) => {
+          rows = rows.filter((row) => row.id !== id);
+        });
+      });
+
+      afterEach(async () => {
+        const storage = await import("./offline-storage");
+        vi.mocked(storage.addPendingResponse).mockReset().mockResolvedValue(1);
+        vi.mocked(storage.countPendingResponsesStrict).mockReset().mockResolvedValue(0);
+        vi.mocked(storage.getPendingResponsesStrict).mockReset().mockResolvedValue([]);
+        vi.mocked(storage.removePendingResponseStrict).mockReset().mockResolvedValue(undefined);
+      });
+
+      const offlineQueueWith = (overrides = {}) => {
+        surveyState.responseId = "resp1";
+        const offlineConfig = getConfig({ persistOffline: true, surveyId: "s1", ...overrides });
+        const offlineQueue = new ResponseQueue(offlineConfig, surveyState);
+        return { offlineConfig, offlineQueue, api: offlineQueue.api as any };
+      };
+
+      test("a final submission sent together with an earlier unsent card ends the survey and clears the delayed notice", async () => {
+        vi.useFakeTimers();
+        const onResponseSendingDelayedChange = vi.fn();
+        const { offlineConfig, offlineQueue, api } = offlineQueueWith({ onResponseSendingDelayedChange });
+        api.updateResponse.mockResolvedValue(serverError);
+
+        offlineQueue.add({ data: { q1: "one" }, finished: false });
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(api.updateResponse).toHaveBeenCalledTimes(3);
+        expect(onResponseSendingDelayedChange).toHaveBeenLastCalledWith(true);
+
+        // The server is back; the respondent finishes before the background retry is due.
+        api.updateResponse.mockResolvedValue(accepted);
+        offlineQueue.add({ data: { q2: "two" }, finished: true });
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(
+          api.updateResponse.mock.calls.slice(3).map(([update]: [TResponseUpdate]) => update.data)
+        ).toEqual([{ q1: "one" }, { q2: "two" }]);
+        expect(rows).toHaveLength(0);
+        expect(offlineQueue.queue).toHaveLength(0);
+        expect(offlineConfig.onResponseSendingFinished).toHaveBeenCalledTimes(1);
+        expect(onResponseSendingDelayedChange).toHaveBeenLastCalledWith(false);
+        expect(offlineConfig.onResponseSendingFailed).not.toHaveBeenCalled();
+
+        // Nothing is left to retry.
+        await vi.advanceTimersByTimeAsync(RECOVERY_BASE_DELAY_MS * 4);
+        expect(api.updateResponse).toHaveBeenCalledTimes(5);
+      });
+
+      test("stored answers that cannot be sent keep being retried in the background", async () => {
+        vi.useFakeTimers();
+        const onResponseSendingDelayedChange = vi.fn();
+        const { offlineConfig, offlineQueue, api } = offlineQueueWith({ onResponseSendingDelayedChange });
+        api.updateResponse.mockResolvedValue(serverError);
+
+        offlineQueue.add({ data: { q1: "one" }, finished: false });
+        await vi.advanceTimersByTimeAsync(3000);
+        offlineQueue.add({ data: { q2: "two" }, finished: true });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(api.updateResponse).toHaveBeenCalledTimes(4);
+        expect(rows).toHaveLength(2);
+
+        api.updateResponse.mockResolvedValue(accepted);
+        await vi.advanceTimersByTimeAsync(RECOVERY_BASE_DELAY_MS);
+
+        expect(api.updateResponse).toHaveBeenCalledTimes(6);
+        expect(rows).toHaveLength(0);
+        expect(offlineQueue.queue).toHaveLength(0);
+        expect(offlineConfig.onResponseSendingFinished).toHaveBeenCalledTimes(1);
+        expect(onResponseSendingDelayedChange).toHaveBeenLastCalledWith(false);
+      });
+
+      test("an answer given while stored answers are being synced is sent after them", async () => {
+        const { offlineQueue, api } = offlineQueueWith();
+        let releaseFirst!: () => void;
+        api.updateResponse
+          .mockImplementationOnce(
+            () =>
+              new Promise((resolve) => {
+                releaseFirst = () => resolve(accepted);
+              })
+          )
+          .mockResolvedValue(accepted);
+        offlineQueue.queue.push(
+          { data: { q1: "one" }, finished: false },
+          { data: { q2: "two" }, finished: false }
+        );
+        rows.push(
+          {
+            id: 101,
+            surveyId: "s1",
+            responseUpdate: offlineQueue.queue[0],
+            surveyStateSnapshot: { ...offlineQueue["serializeSurveyState"]() },
+            createdAt: Date.now(),
+          },
+          {
+            id: 102,
+            surveyId: "s1",
+            responseUpdate: offlineQueue.queue[1],
+            surveyStateSnapshot: { ...offlineQueue["serializeSurveyState"]() },
+            createdAt: Date.now(),
+          }
+        );
+        offlineQueue["pendingDbIds"].set(offlineQueue.queue[0], 101);
+        offlineQueue["pendingDbIds"].set(offlineQueue.queue[1], 102);
+
+        const sync = offlineQueue.syncPersistedResponses();
+        await flushPromises();
+        offlineQueue.add({ data: { q3: "three" }, finished: true });
+        await flushPromises();
+        releaseFirst();
+        await sync;
+        await flushPromises();
+        await flushPromises();
+
+        expect(api.updateResponse.mock.calls.map(([update]: [TResponseUpdate]) => update.data)).toEqual([
+          { q1: "one" },
+          { q2: "two" },
+          { q3: "three" },
+        ]);
+        expect(rows).toHaveLength(0);
+        expect(offlineQueue.queue).toHaveLength(0);
+      });
     });
   });
 });

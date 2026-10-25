@@ -31,6 +31,16 @@ interface QueueConfig {
   setSurveyState?: (state: SurveyState) => void;
 }
 
+interface SyncOutcome {
+  // Every stored row was either delivered or dropped as permanently rejected.
+  drained: boolean;
+  // A row could not be sent because of the network or the server; it stays stored.
+  sendFailed: boolean;
+  // A delivered row was the final submission.
+  sentFinished: boolean;
+  quotaFullResponse?: TQuotaFullResponse;
+}
+
 export const delay = (ms: number): Promise<void> => {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -459,6 +469,8 @@ export class ResponseQueue {
 
     this.isSyncing = true;
     let syncedCount = 0;
+    // What the sync achieved, settled once the lock is released (see settleSync).
+    const outcome: SyncOutcome = { drained: false, sendFailed: false, sentFinished: false };
 
     try {
       await this.retryProcessedDbIdCleanup();
@@ -466,7 +478,10 @@ export class ResponseQueue {
       const entriesToSync = entries.filter((entry) => {
         return entry.id === undefined || !this.processedDbIdsPendingRemoval.has(entry.id);
       });
-      if (entriesToSync.length === 0) return { success: true, syncedCount: 0 };
+      if (entriesToSync.length === 0) {
+        outcome.drained = true;
+        return { success: true, syncedCount: 0 };
+      }
 
       const processedDbIds = new Set<number>();
 
@@ -491,6 +506,12 @@ export class ResponseQueue {
         }
 
         if (result.ok) {
+          if (entry.responseUpdate.finished) {
+            outcome.sentFinished = true;
+          }
+          if (this.isQuotaFullResponse(result.data)) {
+            outcome.quotaFullResponse = result.data;
+          }
           if (entry.id !== undefined) {
             const removed = await this.removePendingResponseFromIndexedDB(
               entry.id,
@@ -521,6 +542,7 @@ export class ResponseQueue {
           }
 
           // Server/network error — stop syncing, remaining entries stay for next attempt
+          outcome.sendFailed = true;
           this.removeProcessedQueueItemsByDbId(processedDbIds);
           return { success: false, syncedCount };
         }
@@ -530,11 +552,7 @@ export class ResponseQueue {
       }
 
       this.removeProcessedQueueItemsByDbId(processedDbIds);
-
-      // Kick off processQueue for any entries added during sync
-      if (this.queue.length > 0) {
-        this.processQueueInBackground("Failed to process queue after persisted response sync");
-      }
+      outcome.drained = true;
 
       return { success: true, syncedCount };
     } catch (error) {
@@ -542,6 +560,39 @@ export class ResponseQueue {
       return { success: false, syncedCount };
     } finally {
       this.isSyncing = false;
+      this.settleSync(outcome, syncedCount);
+    }
+  }
+
+  /**
+   * Gives a sync the same follow-up as a send through processQueue. processQueue hands its work to syncPersistedResponses once two answers are stored, so without this a final submission delivered by a sync never reaches the ending card, and the delayed notice of an earlier failed card never goes away. Runs after the sync lock is released, so the processQueue it starts for answers added meanwhile is not turned away by that lock.
+   */
+  private settleSync(outcome: SyncOutcome, syncedCount: number) {
+    if (outcome.sentFinished) {
+      this.config.onResponseSendingFinished?.();
+    }
+
+    if (outcome.drained) {
+      if (syncedCount > 0) {
+        this.setDelayed(false);
+        // The connection works again: the next failure starts its backoff from the beginning.
+        this.stopRecovery();
+      }
+    } else if (this.queue.length > 0) {
+      // Answers given on this page are still waiting: keep trying, as processQueue does after a failed burst. Rows left by an earlier visit are retried by the survey when the browser comes back online.
+      if (outcome.sendFailed) {
+        this.setDelayed(true);
+      }
+      this.startRecovery();
+    }
+
+    if (outcome.quotaFullResponse) {
+      this.config.onQuotaFull?.(outcome.quotaFullResponse);
+    }
+
+    // Answers added while the sync ran were not in the rows it read.
+    if (outcome.drained && this.queue.length > 0) {
+      this.processQueueInBackground("Failed to process queue after persisted response sync");
     }
   }
 
