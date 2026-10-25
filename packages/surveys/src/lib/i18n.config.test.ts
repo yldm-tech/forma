@@ -1,7 +1,8 @@
 import { readdirSync } from "node:fs";
-import { describe, expect, test } from "vite-plus/test";
+import localeFiles from "virtual:survey-locale-files";
+import { describe, expect, test, vi } from "vite-plus/test";
 import { SURVEY_RUNTIME_LANGUAGE_CODES } from "@forma/i18n-utils/survey-runtime-languages";
-import i18n, { resolveFallbackBundles } from "./i18n.config";
+import i18n, { loadSurveyLanguage, resolveFallbackBundles } from "./i18n.config";
 
 // Locks down the locale-to-bundle fallback contract (ENG-1067). Bundles are keyed by each language's
 // canonical CLDR-default tag (`de-DE`, `pt-BR`, `zh-Hans-CN`); resolveFallbackBundles maps any requested
@@ -72,12 +73,19 @@ describe("resolveFallbackBundles", () => {
 });
 
 describe("shipped bundles", () => {
-  // supportedLngs, the static imports and the resources map are three hand-maintained lists that must
-  // agree — a language registered as supported without a bundle silently renders English (ENG-2068).
+  // A language registered as supported without a bundle silently renders English (ENG-2068). English is bundled; every other language is a file the runtime fetches (i18n.config.fetch.test.ts).
   test("every supported language has a translation bundle registered", () => {
     const supportedLngs = i18n.options.supportedLngs || [];
     const supported = supportedLngs.filter((code: string) => code !== "cimode");
-    expect([...supported].sort()).toEqual(Object.keys(i18n.options.resources ?? {}).sort());
+    expect(Object.keys(i18n.options.resources ?? {})).toEqual(["en-US"]);
+    expect([...supported].sort()).toEqual(["en-US", ...Object.keys(localeFiles)].sort());
+  });
+
+  // The file names carry a hash of their content, which is what lets the server cache them as immutable: a changed translation must reach respondents under a new name.
+  test("every fetched language is a content-addressed file beside the runtime", () => {
+    for (const [code, file] of Object.entries(localeFiles)) {
+      expect(file).toMatch(new RegExp(`^surveys-locales/${code}\\.[0-9a-f]{12}\\.json$`));
+    }
   });
 
   // SURVEY_RUNTIME_LANGUAGE_CODES is what the workspace default-survey-language picker offers
@@ -95,12 +103,22 @@ describe("shipped bundles", () => {
   test("i18next's support notice is off", () => {
     expect(i18n.options.showSupportNotice).toBe(false);
   });
+});
 
-  test("survey strings resolve for the shipped languages", () => {
-    for (const code of ["id-ID", "km-KH", "ne-NP", "ur-PK", "vi-VN", "zh-Hant-TW"]) {
-      const required = i18n.getFixedT(code)("common.required");
-      expect(required).not.toBe("common.required");
-      expect(required).not.toBe(i18n.getFixedT("en-US")("common.required"));
+// This file runs without a document, so the runtime has no script element to locate its files by, as on a host that put the runtime's code into its page instead of loading the script.
+describe("languages fetched without a runtime script", () => {
+  test("are fetched from the app the survey is rendered for", async () => {
+    const fetchLocale = vi.fn((_url: URL) =>
+      Promise.resolve(new Response(JSON.stringify({ common: { required: "Obbligatorio" } })))
+    );
+    vi.stubGlobal("fetch", fetchLocale);
+    try {
+      await loadSurveyLanguage("it-IT", "https://forma.example/");
+
+      expect(String(fetchLocale.mock.calls[0]?.[0])).toBe(`https://forma.example/js/${localeFiles["it-IT"]}`);
+      expect(i18n.getFixedT("it-IT")("common.required")).toBe("Obbligatorio");
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 });

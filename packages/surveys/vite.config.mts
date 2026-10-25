@@ -1,4 +1,7 @@
 import preact from "@preact/preset-vite";
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync } from "node:fs";
+import { copyFile, mkdir, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { visualizer } from "rollup-plugin-visualizer";
@@ -35,6 +38,71 @@ const stubSurveyUiStylesForVitest = (): Plugin => {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// The runtime bundles English (src/lib/i18n.config.ts imports it) and fetches every other language on demand, because a respondent reads one language and the 24 others were about 45 KB of the gzipped bundle. "virtual:survey-locale-files" maps each of those languages to its file, named by a hash of its content so the server can cache it as immutable; the UMD build writes the files beside the runtime, into apps/web/public/js/surveys-locales/, which the Go server serves at /js/surveys-locales/.
+const LOCALE_FILES_MODULE = "virtual:survey-locale-files";
+const BUNDLED_LOCALE = "en-US";
+const LOCALE_FILES_DIR = "surveys-locales";
+
+interface LocaleFile {
+  tag: string;
+  fileName: string;
+  source: string;
+}
+
+const readLocaleFiles = (): LocaleFile[] => {
+  const localesDir = resolve(__dirname, "locales");
+  return readdirSync(localesDir)
+    .filter((file) => file.endsWith(".json") && file !== `${BUNDLED_LOCALE}.json`)
+    .sort()
+    .map((file) => {
+      const tag = file.slice(0, -".json".length);
+      // Parsed and written again so the file carries no whitespace; the hash is of exactly what is served.
+      const source = JSON.stringify(JSON.parse(readFileSync(resolve(localesDir, file), "utf8")));
+      const hash = createHash("sha256").update(source).digest("hex").slice(0, 12);
+      return { tag, fileName: `${LOCALE_FILES_DIR}/${tag}.${hash}.json`, source };
+    });
+};
+
+const surveyLocaleFiles = ({ ship }: { ship: boolean }): Plugin => {
+  const resolvedId = `\0${LOCALE_FILES_MODULE}`;
+  let root = __dirname;
+  let emitted: LocaleFile[] = [];
+  return {
+    name: "forma:survey-locale-files",
+    configResolved(config) {
+      root = config.root;
+    },
+    resolveId: (id) => (id === LOCALE_FILES_MODULE ? resolvedId : undefined),
+    load(id) {
+      if (id !== resolvedId) return undefined;
+      const files = readLocaleFiles();
+      for (const { tag } of files) this.addWatchFile(resolve(__dirname, "locales", `${tag}.json`));
+      return `export default ${JSON.stringify(Object.fromEntries(files.map(({ tag, fileName }) => [tag, fileName])))};`;
+    },
+    generateBundle() {
+      if (!ship) return;
+      emitted = readLocaleFiles();
+      for (const { fileName, source } of emitted) this.emitFile({ type: "asset", fileName, source });
+    },
+    // Replaces the folder rather than adding to it, so files of earlier builds, which nothing references any more, are not embedded in the server.
+    async writeBundle(options) {
+      if (!ship) return;
+      const outputDir = resolve(root, "../../apps/web/public/js", LOCALE_FILES_DIR);
+      await rm(outputDir, { recursive: true, force: true });
+      await mkdir(outputDir, { recursive: true });
+      const distDir = options.dir ?? resolve(root, "dist");
+      await Promise.all(
+        emitted.map(({ fileName }) =>
+          copyFile(
+            resolve(distDir, fileName),
+            resolve(outputDir, fileName.slice(LOCALE_FILES_DIR.length + 1))
+          )
+        )
+      );
+    },
+  };
+};
 
 const config = ({ mode }: ConfigEnv) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -79,6 +147,7 @@ const config = ({ mode }: ConfigEnv) => {
       },
       plugins: lazyPlugins(() => [
         ...sharedConfig.plugins,
+        surveyLocaleFiles({ ship: true }),
         copyCompiledAssetsPlugin({
           filename: "surveys",
           distDir: resolve(__dirname, "dist"),
@@ -152,6 +221,7 @@ const config = ({ mode }: ConfigEnv) => {
     plugins: lazyPlugins(() => [
       ...sharedConfig.plugins,
       stubSurveyUiStylesForVitest(),
+      surveyLocaleFiles({ ship: false }),
       copyCompiledAssetsPlugin({
         filename: "surveys",
         distDir: resolve(__dirname, "dist"),

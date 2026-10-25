@@ -163,9 +163,13 @@ func TestSurveyPageRendersTheSurvey(t *testing.T) {
 	if fields, ok := sv["embeddedFields"].([]any); !ok || fields == nil {
 		t.Fatalf("embedded fields %v", sv["embeddedFields"])
 	}
-	// The runtime's script is in the document, so it loads alongside the page bundle.
-	if !strings.Contains(p.Body, `<script async src="http://localhost:3999/js/surveys.umd.js"></script>`) {
+	// The runtime's script is in the document, so it loads alongside the page bundle, by a URL pinned to the build so browsers and the CDN keep it until a deploy changes it.
+	if !strings.Contains(p.Body, `<link rel="preload" href="`+testRuntimeSrc+`" as="script" fetchpriority="high"><script async src="`+testRuntimeSrc+`"></script>`) {
 		t.Fatal("the survey runtime is not in the document")
+	}
+	// An English survey needs none of the runtime's translation files.
+	if strings.Contains(p.Body, "surveys-locales") {
+		t.Fatal("an English survey preloads a translation file")
 	}
 }
 

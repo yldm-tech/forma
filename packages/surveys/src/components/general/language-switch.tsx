@@ -5,7 +5,7 @@ import { type TSurveyLanguage } from "@forma/types/surveys/types";
 import { LanguageIcon } from "@/components/icons/language-icon";
 import { mixColor } from "@/lib/color";
 import { getI18nLanguage } from "@/lib/i18n-utils";
-import i18n from "@/lib/i18n.config";
+import { switchSurveyLanguage } from "@/lib/i18n.config";
 import { getLanguageDisplayName, getShortLanguageDisplayName } from "@/lib/language-display-name";
 import { getVisibleSurveyLanguages, isSameLanguageCode } from "@/lib/language-options";
 import { useClickOutside } from "@/lib/use-click-outside-hook";
@@ -75,9 +75,7 @@ export function LanguageSwitch({
 
   const handleI18nLanguage = (languageCode: string) => {
     const calculatedLanguage = getI18nLanguage(languageCode, surveyLanguages);
-    if (i18n.language !== calculatedLanguage) {
-      i18n.changeLanguage(calculatedLanguage);
-    }
+    switchSurveyLanguage(calculatedLanguage);
   };
 
   const changeLanguage = (languageCode: string) => {
