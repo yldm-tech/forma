@@ -3,8 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OTPInput } from "../../components/ui/otp-input";
 import { cn } from "../../lib/cn";
-import { validateSurveyPin } from "../lib/api";
+import { resumeSurveyPin, validateSurveyPin } from "../lib/api";
 import { type TPinError, pinErrorKind } from "../lib/pin-error";
+import { forgetPinToken, keepPinToken, readPinToken } from "../lib/pin-session";
 import type { TPublicSurvey, TSurveyProps } from "../lib/state";
 import { useAppLocale } from "../lib/use-app-locale";
 import { SurveyClientWrapper } from "./survey-client-wrapper";
@@ -15,9 +16,11 @@ const ERROR_RESET_MS = 2000;
 
 /**
  * forma2's PinScreen: four digit boxes. Once all four are entered the server checks them, and a correct PIN returns the survey with the token its responses must carry; until then the survey never reaches the browser.
+ *
+ * When the survey saves respondents' progress, the token is kept for the tab's session (pin-session.ts), and a reload opens the gate with it instead of asking for the PIN again.
  */
 export const PinScreen = (props: Readonly<TSurveyProps>) => {
-  const { surveyId, styling, locale } = props;
+  const { surveyId, styling, locale, isPreview } = props;
   const { t } = useTranslation();
   const isLocaleReady = useAppLocale(locale);
   const [pinEntry, setPinEntry] = useState("");
@@ -28,8 +31,33 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
   const [pinError, setPinError] = useState<TPinError>();
   const boxesRef = useRef<HTMLDivElement>(null);
   const [unlocked, setUnlocked] = useState<{ survey: TPublicSurvey; pinAuthToken: string }>();
+  // A token kept from an earlier visit in this tab is tried before the gate shows.
+  const [resumeToken] = useState(() => (isPreview ? null : readPinToken(surveyId)));
+  const [isResuming, setIsResuming] = useState(resumeToken !== null);
   const isCardless = styling.cardArrangement?.linkSurveys === "cardless";
   const linkSurveyCardMaxWidth = getLinkSurveyCardMaxWidth(styling.linkSurveyCardWidth);
+
+  useEffect(() => {
+    if (resumeToken === null) return;
+    let cancelled = false;
+    resumeSurveyPin(surveyId, resumeToken)
+      .then((result) => {
+        if (!cancelled) setUnlocked(result);
+      })
+      .catch(() => {
+        // Expired, or the survey stopped saving progress: the PIN is asked for again.
+        forgetPinToken(surveyId);
+      })
+      .finally(() => {
+        if (!cancelled) setIsResuming(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resumeToken, surveyId]);
+
+  // Once the final answer is in, a reload asks for the PIN again: the next person at this device has to know it too.
+  const handleFinished = useCallback(() => forgetPinToken(surveyId), [surveyId]);
 
   const resetState = useCallback(() => {
     setRejected(false);
@@ -56,7 +84,12 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
     if (!PIN_PATTERN.test(value)) return;
     setLoading(true);
     validateSurveyPin(surveyId, value)
-      .then(setUnlocked)
+      .then((result) => {
+        if (!isPreview && result.survey.isProgressSavingEnabled !== false) {
+          keepPinToken(surveyId, result.pinAuthToken);
+        }
+        setUnlocked(result);
+      })
       .catch((error: unknown) => {
         setPinError(pinErrorKind(error));
         setRejected(true);
@@ -71,8 +104,8 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
   };
 
   if (!unlocked) {
-    // The gate is nothing but translated chrome, so it waits for its locale instead of painting in another first.
-    if (!isLocaleReady) return null;
+    // The gate is nothing but translated chrome, so it waits for its locale instead of painting in another first; and it does not show while a kept token may still open it.
+    if (!isLocaleReady || isResuming) return null;
     return (
       <main
         className={cn(
@@ -100,5 +133,12 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
     );
   }
 
-  return <SurveyClientWrapper {...props} survey={unlocked.survey} pinAuthToken={unlocked.pinAuthToken} />;
+  return (
+    <SurveyClientWrapper
+      {...props}
+      survey={unlocked.survey}
+      pinAuthToken={unlocked.pinAuthToken}
+      onFinished={handleFinished}
+    />
+  );
 };

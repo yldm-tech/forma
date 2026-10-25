@@ -58,6 +58,7 @@ const createMockSurvey = (languages: TSurvey["languages"] = []): TSurvey =>
     isBackButtonHidden: false,
     isCaptureIpEnabled: false,
     isAnonymizeResponsesEnabled: false,
+    isProgressSavingEnabled: true,
     slug: null,
     metadata: {},
   }) as TSurvey;

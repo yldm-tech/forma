@@ -22,6 +22,8 @@ import { SurveyInline } from "./survey-inline";
 type SurveyClientWrapperProps = Omit<TSurveyProps, "survey"> & {
   survey: TPublicSurvey;
   pinAuthToken?: string;
+  /** Called once the final answer has reached the server; the PIN gate forgets its kept token then. Must be stable: a new function is a changed prop, which renders the survey again. */
+  onFinished?: () => void;
 };
 
 /**
@@ -66,6 +68,7 @@ export const SurveyClientWrapper = ({
   termsUrl,
   isFormaCloud,
   pinAuthToken,
+  onFinished,
 }: SurveyClientWrapperProps) => {
   const searchParams = useMemo(() => new URLSearchParams(globalThis.location.search), []);
 
@@ -75,6 +78,8 @@ export const SurveyClientWrapper = ({
 
   const skipPrefilled = searchParams.get("skipPrefilled") === "true";
   const offlineSupport = searchParams.get("offlineSupport") === "true";
+  // On unless the creator turned it off for a kiosk or a shared device (D-R03); a survey from before the setting existed has it on.
+  const persistProgress = survey.isProgressSavingEnabled !== false;
   const userId = canReadUserIdFromUrl ? getUserIdFromSearchParams(searchParams) : undefined;
   const elements = useMemo(() => getElementsFromSurveyBlocks(survey.blocks), [survey.blocks]);
   const startAt = searchParams.get("startAt");
@@ -242,7 +247,9 @@ export const SurveyClientWrapper = ({
           userId={userId}
           recaptchaSiteKey={recaptchaSiteKey}
           isSpamProtectionEnabled={isSpamProtectionEnabled}
+          persistProgress={persistProgress}
           offlineSupport={offlineSupport}
+          onFinished={onFinished}
           onOfflineStatusChange={offlineSupport ? handleOfflineStatusChange : undefined}
           showCardlessPreviewLogoSlot={isCardless && hasLogo}
         />

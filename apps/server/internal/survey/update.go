@@ -69,6 +69,7 @@ type UpdateInput struct {
 	IsAutoProgressingEnabled    bool    `json:"isAutoProgressingEnabled"`
 	IsCaptureIPEnabled          bool    `json:"isCaptureIpEnabled"`
 	IsAnonymizeResponsesEnabled bool    `json:"isAnonymizeResponsesEnabled"`
+	IsProgressSavingEnabled     *bool   `json:"isProgressSavingEnabled"`
 	ShowLanguageSwitch          *bool   `json:"showLanguageSwitch"`
 	Pin                         *string `json:"pin"`
 	CustomHeadScripts           *string `json:"customHeadScripts"`
@@ -351,6 +352,10 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		rec.DisplayPercentage, rec.Delay = in.DisplayPercentage, in.Delay
 		rec.IsVerifyEmailEnabled, rec.IsBackButtonHidden, rec.IsAutoProgressingEnabled = in.IsVerifyEmailEnabled, in.IsBackButtonHidden, in.IsAutoProgressingEnabled
 		rec.IsCaptureIPEnabled, rec.IsAnonymizeResponsesEnabled, rec.ShowLanguageSwitch = in.IsCaptureIPEnabled, in.IsAnonymizeResponsesEnabled, in.ShowLanguageSwitch
+		// Optional, unlike the switches above: a save that does not carry it (an editor loaded before it existed) keeps the stored value instead of turning progress saving off.
+		if in.IsProgressSavingEnabled != nil {
+			rec.IsProgressSavingEnabled = *in.IsProgressSavingEnabled
+		}
 		rec.Pin, rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.Pin, in.CustomHeadScripts, in.CustomHeadScriptsMode
 		storedStatus := stored.Status
 		if rec.PublishOn, rec.CloseOn, err = normalizeDates(schedule, pickedIn(schedule, in.SchedulingTimeZone), &storedStatus, in.Status, in.PublishOn, in.CloseOn); err != nil {

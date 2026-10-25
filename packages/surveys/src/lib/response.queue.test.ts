@@ -501,16 +501,39 @@ describe("ResponseQueue", () => {
     expect(offlineQueue["pendingDbIds"].has(responseUpdate)).toBe(false);
   });
 
-  test("processQueue returns false when offline and persistOffline is enabled", async () => {
+  test("processQueue holds the answers back while offline in offline mode", async () => {
+    const offlineQueue = new ResponseQueue(
+      getConfig({ persistOffline: true, holdWhileOffline: true, surveyId: "s1" }),
+      getSurveyState()
+    );
+    offlineQueue.queue.push(responseUpdate);
+    const sendSpy = vi.spyOn(offlineQueue, "sendResponse");
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    try {
+      const result = await offlineQueue.processQueue();
+      expect(result.success).toBe(false);
+      expect(sendSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    }
+  });
+
+  // Progress persistence alone (a link survey that saves progress, F1) stores the answers but sends them as a survey without it does, so a final answer that cannot be sent is reported rather than waiting silently.
+  test("processQueue still sends while offline when answers are only persisted", async () => {
     const offlineQueue = new ResponseQueue(
       getConfig({ persistOffline: true, surveyId: "s1" }),
       getSurveyState()
     );
     offlineQueue.queue.push(responseUpdate);
+    const sendSpy = vi.spyOn(offlineQueue, "sendResponse").mockResolvedValue(ok(true));
     Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
-    const result = await offlineQueue.processQueue();
-    expect(result.success).toBe(false);
-    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    try {
+      const result = await offlineQueue.processQueue();
+      expect(result.success).toBe(true);
+      expect(sendSpy).toHaveBeenCalledWith(responseUpdate);
+    } finally {
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    }
   });
 
   test("processQueue returns false when isSyncing is true", async () => {
@@ -524,7 +547,8 @@ describe("ResponseQueue", () => {
     expect(result.success).toBe(false);
   });
 
-  test("processQueue bails out when counting IndexedDB entries rejects", async () => {
+  // An IndexedDB that cannot be read (storage blocked in a frame, a browser without it) must not stop the answers: with progress saving on by default, that would be every answer on such a browser.
+  test("processQueue sends from memory when counting IndexedDB entries rejects", async () => {
     const { countPendingResponsesStrict } = await import("./offline-storage");
     const error = new Error("count failed");
     vi.mocked(countPendingResponsesStrict).mockRejectedValueOnce(error);
@@ -538,8 +562,9 @@ describe("ResponseQueue", () => {
 
     const result = await offlineQueue.processQueue();
 
-    expect(result.success).toBe(false);
-    expect(sendSpy).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+    expect(sendSpy).toHaveBeenCalledWith(responseUpdate);
+    expect(offlineQueue.queue).toHaveLength(0);
     expect(console.error).toHaveBeenCalledWith(
       "Forma: Failed to count pending responses in IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })
@@ -1395,5 +1420,160 @@ describe("ResponseQueue", () => {
         expect(offlineQueue.queue).toHaveLength(0);
       });
     });
+  });
+});
+
+// F1: answers an earlier page stored in IndexedDB reach their own response and never redirect this page's.
+describe("answers stored by an earlier page", () => {
+  const accepted = { ok: true, data: { quotaFull: false } };
+
+  const storedRow = (
+    id: number,
+    snapshot: Partial<PendingResponseEntry["surveyStateSnapshot"]>,
+    update: TResponseUpdate
+  ): PendingResponseEntry => ({
+    id,
+    surveyId: "s1",
+    responseUpdate: update,
+    surveyStateSnapshot: {
+      responseId: null,
+      displayId: null,
+      surveyId: "s1",
+      singleUseId: null,
+      userId: null,
+      contactId: null,
+      responseAcc: { finished: false, data: {} },
+      ...snapshot,
+    },
+    createdAt: Date.now() - 60_000,
+  });
+
+  const makeQueue = (state: SurveyState, overrides = {}) => {
+    const queue = new ResponseQueue(
+      getConfig({ persistOffline: true, isolateEarlierResponses: true, surveyId: "s1", ...overrides }),
+      state
+    );
+    const api = queue.api as any;
+    api.updateResponse.mockResolvedValue(accepted);
+    api.createResponse.mockResolvedValue({ ok: true, data: { id: "created-for-stored" } });
+    return { queue, api };
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("a row of another single-use link goes to its own response and leaves this page's alone", async () => {
+    const { getPendingResponsesStrict, removePendingResponseStrict } = await import("./offline-storage");
+    vi.mocked(getPendingResponsesStrict).mockResolvedValueOnce([
+      storedRow(
+        1,
+        { responseId: "response-A", singleUseId: "single-use-1", displayId: "display-A" },
+        { data: { q1: "A-answer" }, finished: true }
+      ),
+    ]);
+    const live = new SurveyState("s1", "single-use-2");
+    const { queue, api } = makeQueue(live);
+
+    const result = await queue.syncPersistedResponses();
+
+    expect(result).toEqual({ success: true, syncedCount: 1 });
+    expect(api.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId: "response-A", data: { q1: "A-answer" } })
+    );
+    expect(live.responseId).toBeNull();
+    // Another respondent's final answer is not this page's ending.
+    expect(queue.config.onResponseSendingFinished).not.toHaveBeenCalled();
+    expect(removePendingResponseStrict).toHaveBeenCalledWith(1);
+  });
+
+  test("a stored session without a response yet is created once, with its own ids, and its later rows update it", async () => {
+    const { getPendingResponsesStrict } = await import("./offline-storage");
+    const snapshot = { singleUseId: "single-use-1", displayId: "display-A" };
+    vi.mocked(getPendingResponsesStrict).mockResolvedValueOnce([
+      storedRow(1, snapshot, { data: { q1: "A-1" }, finished: false }),
+      storedRow(2, snapshot, { data: { q2: "A-2" }, finished: true }),
+    ]);
+    const live = new SurveyState("s1", "single-use-2");
+    const onResponseCreated = vi.fn();
+    const { queue, api } = makeQueue(live, { onResponseCreated });
+
+    await queue.syncPersistedResponses();
+
+    expect(api.createResponse).toHaveBeenCalledTimes(1);
+    expect(api.createResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ singleUseId: "single-use-1", displayId: "display-A", data: { q1: "A-1" } })
+    );
+    expect(api.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId: "created-for-stored", data: { q2: "A-2" } })
+    );
+    expect(live.responseId).toBeNull();
+    expect(onResponseCreated).not.toHaveBeenCalled();
+  });
+
+  test("the rows of the response the page resumed are sent as this page's", async () => {
+    const { getPendingResponsesStrict } = await import("./offline-storage");
+    const snapshot = { responseId: "response-A", displayId: "display-A" };
+    vi.mocked(getPendingResponsesStrict).mockResolvedValueOnce([
+      storedRow(1, snapshot, { data: { q2: "A-2" }, finished: true }),
+    ]);
+    const live = new SurveyState("s1");
+    const { queue, api } = makeQueue(live);
+    queue.resumeEarlierResponses(storedRow(0, snapshot, { data: {}, finished: false }).surveyStateSnapshot);
+
+    await queue.syncPersistedResponses();
+
+    expect(api.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId: "response-A", data: { q2: "A-2" } })
+    );
+    expect(live.responseId).toBe("response-A");
+    expect(queue.config.onResponseSendingFinished).toHaveBeenCalledTimes(1);
+  });
+
+  test("a row of another display stays isolated even after the page resumed a response", async () => {
+    const { getPendingResponsesStrict } = await import("./offline-storage");
+    vi.mocked(getPendingResponsesStrict).mockResolvedValueOnce([
+      storedRow(
+        1,
+        { responseId: "response-old", displayId: "display-old" },
+        { data: { q1: "old" }, finished: false }
+      ),
+    ]);
+    const live = new SurveyState("s1");
+    live.updateResponseId("response-B");
+    const { queue, api } = makeQueue(live);
+    queue.resumeEarlierResponses(
+      storedRow(0, { responseId: "response-B", displayId: "display-B" }, { data: {}, finished: false })
+        .surveyStateSnapshot
+    );
+
+    await queue.syncPersistedResponses();
+
+    expect(api.updateResponse).toHaveBeenCalledWith(expect.objectContaining({ responseId: "response-old" }));
+    expect(live.responseId).toBe("response-B");
+  });
+
+  test("sendEarlierResponsesOnce sends each stored row once and removes it even when the server does not take it", async () => {
+    const { getPendingResponsesStrict, removePendingResponseStrict } = await import("./offline-storage");
+    vi.mocked(getPendingResponsesStrict).mockResolvedValueOnce([
+      storedRow(
+        1,
+        { responseId: "response-A", displayId: "display-A" },
+        { data: { q1: "A" }, finished: false }
+      ),
+    ]);
+    const live = new SurveyState("s1");
+    const { queue, api } = makeQueue(live, { persistOffline: false, isolateEarlierResponses: false });
+    api.updateResponse.mockResolvedValue({
+      ok: false,
+      error: { code: "internal_server_error", message: "Server error", status: 500 },
+    });
+
+    await queue.sendEarlierResponsesOnce();
+
+    expect(api.updateResponse).toHaveBeenCalledTimes(1);
+    expect(api.updateResponse).toHaveBeenCalledWith(expect.objectContaining({ responseId: "response-A" }));
+    expect(removePendingResponseStrict).toHaveBeenCalledWith(1);
+    expect(live.responseId).toBeNull();
   });
 });

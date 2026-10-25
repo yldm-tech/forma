@@ -6,6 +6,7 @@ import { RECAPTCHA_VERIFICATION_ERROR_CODE } from "@/lib/constants";
 import { TResponseErrorCodesEnum } from "@/types/response-error-codes";
 import { ApiClient } from "./api-client";
 import {
+  type PendingResponseEntry,
   type SerializedSurveyState,
   addPendingResponse,
   countPendingResponsesStrict,
@@ -14,11 +15,37 @@ import {
 } from "./offline-storage";
 import { SurveyState } from "./survey-state";
 
+// An id that is absent, null or empty is no id.
+const normalizeId = (id: string | null | undefined): string | null =>
+  id === undefined || id === "" ? null : id;
+
+type TRespondentIds = Pick<SerializedSurveyState, "singleUseId" | "contactId" | "userId">;
+
+/** Whether two sets of ids name the same respondent: the same single-use link, personal (contact) link and user id. */
+export const isSameRespondent = (a: TRespondentIds, b: TRespondentIds): boolean =>
+  normalizeId(a.singleUseId) === normalizeId(b.singleUseId) &&
+  normalizeId(a.contactId) === normalizeId(b.contactId) &&
+  normalizeId(a.userId) === normalizeId(b.userId);
+
+// Two ids that are both known must be equal; an id not known yet on one side (the display or response was still being created when the row was stored) does not tell the sessions apart.
+const isSameIfBothKnown = (a: string | null | undefined, b: string | null | undefined): boolean => {
+  const left = normalizeId(a);
+  const right = normalizeId(b);
+  return left === null || right === null || left === right;
+};
+
 interface QueueConfig {
   appUrl: string;
   workspaceId: string;
   retryAttempts: number;
+  /** Stores every answer in IndexedDB until the server has it, so answers a closed or reloaded page could not send are sent on the next visit (syncPersistedResponses). */
   persistOffline?: boolean;
+  /** The survey's offline mode: while the browser reports it is offline, answers wait in IndexedDB without a send being attempted, and a failed send is not reported. Only takes effect with persistOffline. */
+  holdWhileOffline?: boolean;
+  /**
+   * Answers an earlier page stored in IndexedDB are sent each with the ids stored with it (its own response, display, single-use link, contact and user) and never change this page's response, unless they belong to the response this page goes on with (resumeEarlierResponses). Without it, a stored answer of another respondent, or of a visit whose progress was discarded, would point this page's answers at that earlier response.
+   */
+  isolateEarlierResponses?: boolean;
   surveyId?: string;
   onResponseCreated?: (responseId: string) => void;
   onResponseSendingFailed?: (responseUpdate: TResponseUpdate, errorCode?: TResponseErrorCodesEnum) => void;
@@ -72,6 +99,10 @@ export class ResponseQueue {
   private isListeningForOnline = false;
   // Ends the backoff wait of the burst in flight, so a send can go out as soon as the connection is back.
   private wakeBackoff: (() => void) | null = null;
+  // When this queue was created: IndexedDB rows stored before it were left by an earlier page.
+  private readonly createdAt = Date.now();
+  // The stored session this page goes on with (resumeEarlierResponses). Earlier rows of any other session are sent on their own (isolateEarlierResponses).
+  private resumedSnapshot: SerializedSurveyState | null = null;
 
   constructor(config: QueueConfig, surveyState: SurveyState) {
     this.config = config;
@@ -277,8 +308,8 @@ export class ResponseQueue {
       return { success: false };
     }
 
-    // If offline and persistence is enabled, don't attempt to send — data is safe in IndexedDB.
-    if (this.config.persistOffline && typeof navigator !== "undefined" && !navigator.onLine) {
+    // In offline mode, don't attempt to send while offline — data is safe in IndexedDB.
+    if (this.isHoldingWhileOffline()) {
       return { success: false };
     }
 
@@ -297,7 +328,8 @@ export class ResponseQueue {
         await this.retryProcessedDbIdCleanup();
         pendingCount = await this.countPersistedResponses();
       } catch {
-        return { success: false };
+        // IndexedDB cannot be read (storage blocked in this frame, a browser without it): it cannot hand the answers to syncPersistedResponses either, so the queue in memory is sent as it is rather than not at all.
+        pendingCount = 0;
       }
 
       // Re-check after await — another processQueue/sync may have started during the yield
@@ -327,8 +359,8 @@ export class ResponseQueue {
       this.handleSuccessfulResponse(responseUpdate, result.quotaFullResponse);
       return { success: true };
     } else {
-      // If offline persistence is enabled and we're now offline, don't treat it as a failure
-      if (this.config.persistOffline && typeof navigator !== "undefined" && !navigator.onLine) {
+      // In offline mode, a send that failed because the browser went offline is not a failure
+      if (this.isHoldingWhileOffline()) {
         this.isRequestInProgress = false;
         this.startRecovery();
         return { success: false };
@@ -362,6 +394,14 @@ export class ResponseQueue {
       this.handleFailedResponse(responseUpdate, result.isRecaptchaError, result.errorCode);
       return { success: false };
     }
+  }
+
+  private isHoldingWhileOffline(): boolean {
+    return (
+      Boolean(this.config.persistOffline && this.config.holdWhileOffline) &&
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    );
   }
 
   private setDelayed(isDelayed: boolean) {
@@ -484,32 +524,21 @@ export class ResponseQueue {
       }
 
       const processedDbIds = new Set<number>();
+      const detachedStates = new Map<string, SurveyState>();
 
       for (const entry of entriesToSync) {
-        // Only restore responseId from snapshot when it was set at capture time.
-        // Otherwise, let the responseId from the previous sendResponse carry forward
-        // (i.e., a create response in the previous iteration sets the responseId for updates).
-        if (entry.surveyStateSnapshot.responseId) {
-          this.surveyState.updateResponseId(entry.surveyStateSnapshot.responseId);
-        }
-
-        let result = await this.sendResponse(entry.responseUpdate);
-
-        // If updateResponse returned 404, the original createResponse likely never reached
-        // the server. Reset responseId and retry as a fresh createResponse.
-        if (!result.ok && result.error?.status === 404 && this.surveyState.responseId !== null) {
-          this.surveyState.responseId = null;
-          if (entry.surveyStateSnapshot.displayId) {
-            this.surveyState.updateDisplayId(entry.surveyStateSnapshot.displayId);
-          }
-          result = await this.sendResponse(entry.responseUpdate);
-        }
+        // A row of another session goes to its own response; the ending and quota of this page are not its business.
+        const isDetached = this.isDetachedEntry(entry);
+        const state = isDetached
+          ? this.detachedStateFor(entry.surveyStateSnapshot, detachedStates)
+          : this.surveyState;
+        const result = await this.sendStoredEntry(entry, state);
 
         if (result.ok) {
-          if (entry.responseUpdate.finished) {
+          if (entry.responseUpdate.finished && !isDetached) {
             outcome.sentFinished = true;
           }
-          if (this.isQuotaFullResponse(result.data)) {
+          if (this.isQuotaFullResponse(result.data) && !isDetached) {
             outcome.quotaFullResponse = result.data;
           }
           if (entry.id !== undefined) {
@@ -562,6 +591,104 @@ export class ResponseQueue {
       this.isSyncing = false;
       this.settleSync(outcome, syncedCount);
     }
+  }
+
+  /**
+   * Called when the page goes on with a response an earlier visit stored (`snapshot` is that visit's stored state): the rows stored for that response are sent as this page's answers, with this page's response. Rows of any other session stay isolated (isolateEarlierResponses).
+   */
+  resumeEarlierResponses(snapshot: SerializedSurveyState) {
+    this.resumedSnapshot = snapshot;
+  }
+
+  /**
+   * Sends, once, the answers earlier pages stored in IndexedDB for this survey, each with the ids stored with it, and removes them whether or not the server took them. For a survey that no longer saves progress: what earlier respondents left on this device must not stay on it, and their answers get one chance to arrive.
+   */
+  async sendEarlierResponsesOnce(): Promise<void> {
+    if (!this.config.surveyId) return;
+
+    let entries: PendingResponseEntry[];
+    try {
+      entries = await getPendingResponsesStrict(this.config.surveyId);
+    } catch (error) {
+      this.logOfflinePersistenceError("Failed to read stored responses from IndexedDB", error);
+      return;
+    }
+
+    const states = new Map<string, SurveyState>();
+    for (const entry of entries) {
+      await this.sendStoredEntry(entry, this.detachedStateFor(entry.surveyStateSnapshot, states));
+      if (entry.id !== undefined) {
+        await this.removePendingResponseFromIndexedDB(
+          entry.id,
+          "Failed to remove stored response from IndexedDB"
+        );
+      }
+    }
+  }
+
+  // A row stored before this queue existed belongs to another session unless it is one of the response this page resumed.
+  private isDetachedEntry(entry: PendingResponseEntry): boolean {
+    if (!this.config.isolateEarlierResponses || entry.createdAt >= this.createdAt) return false;
+    const resumed = this.resumedSnapshot;
+    if (!resumed) return true;
+    const stored = entry.surveyStateSnapshot;
+    return !(
+      isSameRespondent(stored, resumed) &&
+      isSameIfBothKnown(stored.displayId, resumed.displayId) &&
+      isSameIfBothKnown(stored.responseId, resumed.responseId)
+    );
+  }
+
+  // One state per stored session (respondent and display), so a session whose first row creates the response sends its later rows as updates of it.
+  private detachedStateFor(snapshot: SerializedSurveyState, states: Map<string, SurveyState>): SurveyState {
+    const key = JSON.stringify([
+      normalizeId(snapshot.singleUseId),
+      normalizeId(snapshot.contactId),
+      normalizeId(snapshot.userId),
+      normalizeId(snapshot.displayId),
+    ]);
+    let state = states.get(key);
+    if (!state) {
+      state = new SurveyState(
+        this.surveyState.surveyId,
+        snapshot.singleUseId,
+        null,
+        snapshot.userId,
+        snapshot.contactId,
+        // The PIN token proves the PIN of the survey, not of a respondent.
+        this.surveyState.pinAuthToken
+      );
+      state.updateDisplayId(snapshot.displayId);
+      states.set(key, state);
+    }
+    return state;
+  }
+
+  // Sends one stored row with `state`, which it updates as a send through processQueue would.
+  private async sendStoredEntry(
+    entry: PendingResponseEntry,
+    state: SurveyState
+  ): Promise<Result<boolean | TQuotaFullResponse, ApiErrorResponse>> {
+    // Only restore responseId from snapshot when it was set at capture time.
+    // Otherwise, let the responseId from the previous sendResponse carry forward
+    // (i.e., a create response in the previous iteration sets the responseId for updates).
+    if (entry.surveyStateSnapshot.responseId) {
+      state.updateResponseId(entry.surveyStateSnapshot.responseId);
+    }
+
+    const result = await this.sendResponse(entry.responseUpdate, state);
+
+    // If updateResponse returned 404, the original createResponse likely never reached
+    // the server. Reset responseId and retry as a fresh createResponse.
+    if (!result.ok && result.error?.status === 404 && state.responseId !== null) {
+      state.responseId = null;
+      if (entry.surveyStateSnapshot.displayId) {
+        state.updateDisplayId(entry.surveyStateSnapshot.displayId);
+      }
+      return this.sendResponse(entry.responseUpdate, state);
+    }
+
+    return result;
   }
 
   /**
@@ -689,12 +816,13 @@ export class ResponseQueue {
   }
 
   private getCreatePayload(
-    responseUpdate: TResponseUpdate
+    responseUpdate: TResponseUpdate,
+    state: SurveyState
   ): Omit<
     Parameters<ApiClient["createResponse"]>[0],
     "contactId" | "userId" | "singleUseId" | "surveyId" | "displayId" | "recaptchaToken"
   > {
-    if (!this.surveyState.shouldCreateResponseFromState) {
+    if (!state.shouldCreateResponseFromState) {
       return {
         finished: responseUpdate.finished,
         data: { ...responseUpdate.data, ...responseUpdate.hiddenFields },
@@ -706,7 +834,7 @@ export class ResponseQueue {
       };
     }
 
-    const accumulatedResponse = this.surveyState.responseAcc;
+    const accumulatedResponse = state.responseAcc;
 
     return {
       finished: accumulatedResponse.finished,
@@ -753,31 +881,33 @@ export class ResponseQueue {
     );
   }
 
+  // `state` is this page's response unless a stored row of another session is being sent (syncPersistedResponses); only this page's creation is reported.
   async sendResponse(
-    responseUpdate: TResponseUpdate
+    responseUpdate: TResponseUpdate,
+    state: SurveyState = this.surveyState
   ): Promise<Result<boolean | TQuotaFullResponse, ApiErrorResponse>> {
     try {
       let response;
-      if (this.surveyState.responseId !== null) {
+      if (state.responseId !== null) {
         response = await this.api.updateResponse({
           ...responseUpdate,
-          responseId: this.surveyState.responseId,
-          pinAuthToken: this.surveyState.pinAuthToken || null,
+          responseId: state.responseId,
+          pinAuthToken: state.pinAuthToken || null,
         });
 
         if (!response.ok) {
           return err(response.error);
         }
       } else {
-        const createPayload = this.getCreatePayload(responseUpdate);
+        const createPayload = this.getCreatePayload(responseUpdate, state);
         response = await this.api.createResponse({
           ...createPayload,
-          surveyId: this.surveyState.surveyId,
-          contactId: this.surveyState.contactId || null,
-          userId: this.surveyState.userId || null,
-          singleUseId: this.surveyState.singleUseId || null,
-          displayId: this.surveyState.displayId,
-          pinAuthToken: this.surveyState.pinAuthToken || null,
+          surveyId: state.surveyId,
+          contactId: state.contactId || null,
+          userId: state.userId || null,
+          singleUseId: state.singleUseId || null,
+          displayId: state.displayId,
+          pinAuthToken: state.pinAuthToken || null,
           recaptchaToken: this.responseRecaptchaToken ?? undefined,
         });
 
@@ -785,11 +915,13 @@ export class ResponseQueue {
           return err(response.error);
         }
 
-        this.surveyState.updateResponseId(response.data.id);
-        this.surveyState.disableBootstrapResponseCreate();
-        this.config.onResponseCreated?.(response.data.id);
-        if (this.config.setSurveyState) {
-          this.config.setSurveyState(this.surveyState);
+        state.updateResponseId(response.data.id);
+        state.disableBootstrapResponseCreate();
+        if (state === this.surveyState) {
+          this.config.onResponseCreated?.(response.data.id);
+          if (this.config.setSurveyState) {
+            this.config.setSurveyState(this.surveyState);
+          }
         }
       }
 

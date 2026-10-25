@@ -23,7 +23,7 @@ func defaultRecord() record {
 		WelcomeCard: json.RawMessage(`{"enabled": false}`), Blocks: json.RawMessage(`[]`), Endings: json.RawMessage(`[]`),
 		HiddenFields: json.RawMessage(`{"enabled": false}`), Variables: json.RawMessage(`[]`), Metadata: json.RawMessage(`{}`),
 		SingleUse: json.RawMessage(`{"enabled": false, "isEncrypted": true}`), Recaptcha: json.RawMessage(`{"enabled": false, "threshold": 0.1}`),
-		DisplayOption: "displayOnce", CustomHeadScriptsMode: &add,
+		DisplayOption: "displayOnce", CustomHeadScriptsMode: &add, IsProgressSavingEnabled: true,
 	}
 }
 

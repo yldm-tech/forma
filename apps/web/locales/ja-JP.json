@@ -3331,6 +3331,8 @@
         "row_used_in_logic_error": "この行は質問 {questionIndex} のロジックで使用されています。まず、ロジックから削除してください。",
         "rows": "行",
         "save_and_close": "保存して閉じる",
+        "save_respondent_progress": "回答の途中経過を保存",
+        "save_respondent_progress_description": "ページを再読み込みしたり離れたりしても、回答者は24時間以内なら中断したところから同じ回答の続きを再開できます。キオスクや共用端末では次の人に前の人の回答が見えてしまうため、オフにしてください。",
         "scale": "尺度",
         "schedule_survey": "アンケートをスケジュール",
         "scheduled_moment": "{moment}（{timeZone}）に予定されています",
