@@ -23,11 +23,13 @@ import { cn } from "../../../lib/cn";
 import { errorMessage } from "../../../lib/errors";
 import { instanceQuery } from "../../../lib/queries/instance";
 import { isDeepEqual } from "../../../lib/survey/object";
+import { FALLBACK_MISSING_TOAST_ID, checkForEmptyFallBackValue } from "../../../lib/survey/recall";
 import { toast } from "../../../lib/toast";
 import { analysisKeys } from "../../survey-analysis/api";
 import { useCreateSegment } from "../../segments/api";
 import { type SurveySaveInput, saveSurvey, surveyEditorKeys } from "../api";
 import { ZEditorSurvey } from "../lib/editor-schema";
+import { type PublishWarning, getPublishWarnings } from "../lib/publish-warnings";
 import { parseSurveyModifiedElsewhereError } from "../lib/save-conflict";
 import {
   type SurveyIssue,
@@ -55,7 +57,6 @@ interface SurveyMenuBarProps {
   responseCount: number;
   finishedResponseCount: number;
   selectedLanguageCode: string;
-  isCxMode: boolean;
   locale: string;
   setIsCautionDialogOpen: (open: boolean) => void;
   /** The zone the editor shows publish and close dates in, sent with every save. */
@@ -74,7 +75,6 @@ export const SurveyMenuBar = ({
   responseCount,
   finishedResponseCount,
   selectedLanguageCode,
-  isCxMode,
   locale,
   setIsCautionDialogOpen,
   schedulingTimeZone,
@@ -89,6 +89,11 @@ export const SurveyMenuBar = ({
   const [isLinkSurvey, setIsLinkSurvey] = useState(true);
   const [isConfirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [isSurveyPublishing, setIsSurveyPublishing] = useState(false);
+  // A publish or schedule held back for the author to confirm: what the survey still carries over from its template.
+  const [pendingPublish, setPendingPublish] = useState<{
+    status: "inProgress" | "paused";
+    warnings: PublishWarning[];
+  } | null>(null);
   const [isSurveySaving, setIsSurveySaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<AutoSaveStatus>({ state: "idle" });
   const [isLeaving, setIsLeaving] = useState(false);
@@ -209,12 +214,10 @@ export const SurveyMenuBar = ({
 
   const isPublishScheduled = localSurvey.status === "draft" && localSurvey.publishOn !== null;
   const draftSaveLabel = isPublishScheduled ? t("common.save_without_scheduling") : t("common.save_as_draft");
-  let draftPrimaryLabel = t("workspace.surveys.edit.publish");
-  if (isPublishScheduled) {
-    draftPrimaryLabel = t("workspace.surveys.edit.schedule_survey");
-  } else if (isCxMode) {
-    draftPrimaryLabel = t("workspace.surveys.edit.save_and_close");
-  }
+  // The primary button of a draft says what it does in every editor mode: the onboarding (CX) editor once labelled it "Save & Close" while it published the survey.
+  const draftPrimaryLabel = isPublishScheduled
+    ? t("workspace.surveys.edit.schedule_survey")
+    : t("workspace.surveys.edit.publish");
 
   const getDraftSurveyToPersist = (draftSurvey: TSurvey, segment: TSegment | null): TSurvey => ({
     ...draftSurvey,
@@ -285,18 +288,37 @@ export const SurveyMenuBar = ({
       languageLabel: (code) => getLanguageLabel(code, locale) ?? code,
     });
 
-  /** Marks the cards the issues concern, scrolls to the first and reports it, as forma2 did for both its own zod check and a refused save. */
+  /** Shows a card on the Questions tab, switching to it first: from any other tab the card is not mounted, so scrolling alone would leave the author where they were. The scroll waits two frames, by which the tab has mounted. */
+  const showCard = (scrollId: string, fallbackScrollId: string | null) => {
+    setActiveId("elements");
+    scrollElementCardIntoView(scrollId, "start", fallbackScrollId);
+  };
+
+  /** Marks the cards the issues concern, shows the first and reports it, as forma2 did for both its own zod check and a refused save. A translation issue sends the author to the Language tab instead, where it is fixed. */
   const reportIssues = (issues: readonly SurveyIssue[]) => {
     const { firstInvalidScrollId, fallbackScrollId, isNameIssue } = markIssues(issues);
-    if (firstInvalidScrollId) {
-      scrollElementCardIntoView(firstInvalidScrollId, "start", fallbackScrollId);
-    }
     const [firstIssue] = issues;
     if (!firstIssue) return;
     if (isNameIssue) nameInputRef.current?.focus();
     const report = describeIssue(firstIssue);
     toast.error(report.message);
-    if (report.showLanguageTab) setActiveId("language");
+    if (report.showLanguageTab) {
+      setActiveId("language");
+    } else if (firstInvalidScrollId) {
+      showCard(firstInvalidScrollId, fallbackScrollId);
+    }
+  };
+
+  /** A question whose text recalls an answer with no fallback is reported on its card, from whichever tab the save was clicked on: the check is the one isSurveyValid makes, run first so the author is taken to the question instead of only told. The toast shares its id with the one the Questions tab raises for the same question as it mounts, so the author is told once. */
+  const showEmptyFallback = (): boolean => {
+    const element = checkForEmptyFallBackValue(localSurvey, selectedLanguageCode);
+    if (!element) return false;
+    const block = localSurvey.blocks.find((candidate) =>
+      candidate.elements.some((blockElement) => blockElement.id === element.id)
+    );
+    toast.error(t("workspace.surveys.edit.fallback_missing"), { id: FALLBACK_MISSING_TOAST_ID });
+    showCard(element.id, block?.id ?? null);
+    return true;
   };
 
   const validateSurveyWithZod = (): boolean => {
@@ -487,7 +509,7 @@ export const SurveyMenuBar = ({
       return false;
     }
 
-    if (!isSurveyValid(localSurvey, selectedLanguageCode, t, finishedResponseCount)) {
+    if (showEmptyFallback() || !isSurveyValid(localSurvey, selectedLanguageCode, t, finishedResponseCount)) {
       setIsSurveySaving(false);
       return false;
     }
@@ -519,8 +541,8 @@ export const SurveyMenuBar = ({
     setIsLeaving(false);
   };
 
-  /** Publishing ("inProgress") and scheduling ("paused") are full saves that change the status and leave for the survey's summary, which announces the result: ?success=true celebrates a publish and opens a link survey's share modal, ?scheduled=true confirms a schedule. */
-  const publishAs = async (status: "inProgress" | "paused") => {
+  /** Publishing ("inProgress") and scheduling ("paused") are full saves that change the status and leave for the survey's summary, which announces the result: ?success=true celebrates a publish and opens a link survey's share modal, ?scheduled=true confirms a schedule. A valid survey that still carries template text (the default workspace name, a placeholder) is held back once for the author to confirm; `confirmed` is that confirmation. */
+  const publishAs = async (status: "inProgress" | "paused", confirmed = false) => {
     // Scheduling lands on "paused", which is live enough to need a trigger.
     if (blockOnMissingTrigger(status)) return;
 
@@ -533,10 +555,20 @@ export const SurveyMenuBar = ({
 
     if (
       !validateSurveyWithZod() ||
+      showEmptyFallback() ||
       !isSurveyValid(localSurvey, selectedLanguageCode, t, finishedResponseCount)
     ) {
       stop();
       return;
+    }
+
+    if (!confirmed) {
+      const warnings = getPublishWarnings(localSurvey);
+      if (warnings.length > 0) {
+        stop();
+        setPendingPublish({ status, warnings });
+        return;
+      }
     }
 
     try {
@@ -558,6 +590,39 @@ export const SurveyMenuBar = ({
     }
   };
 
+  /** A publish warning as the confirmation dialog lists it. */
+  const describePublishWarning = ({ kind, text, location }: PublishWarning): string => {
+    let where: string;
+    if (location.type === "welcomeCard") {
+      where = t("workspace.surveys.edit.publish_warning_location_welcome_card");
+    } else if (location.type === "ending") {
+      where = t("workspace.surveys.edit.publish_warning_location_ending", {
+        endingNumber: location.endingNumber,
+      });
+    } else {
+      where = t("workspace.surveys.edit.publish_warning_location_question", {
+        blockNumber: location.blockNumber,
+        questionNumber: location.questionNumber,
+      });
+    }
+    return kind === "defaultWorkspaceName"
+      ? t("workspace.surveys.edit.publish_warning_default_workspace_name", { location: where, name: text })
+      : t("workspace.surveys.edit.publish_warning_placeholder", { location: where, placeholder: text });
+  };
+
+  const confirmPendingPublish = () => {
+    if (!pendingPublish) return;
+    setPendingPublish(null);
+    void publishAs(pendingPublish.status, true);
+  };
+
+  /** Keep editing from the publish warning: back to the first card it names. */
+  const editPendingPublish = () => {
+    const [first] = pendingPublish?.warnings ?? [];
+    setPendingPublish(null);
+    if (first) showCard(first.scrollId, first.fallbackScrollId);
+  };
+
   const handleSurveyPublish = () => publishAs("inProgress");
 
   const handleSurveySchedule = () => publishAs("paused");
@@ -567,18 +632,16 @@ export const SurveyMenuBar = ({
   return (
     <div className="border-b border-slate-200 bg-white px-5 py-2.5 sm:flex sm:items-center sm:justify-between sm:gap-x-4">
       <div className="flex h-full min-w-0 items-center gap-x-2 sm:flex-1">
-        {!isCxMode && (
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-full shrink-0"
-            onClick={() => {
-              handleBack();
-            }}>
-            <ArrowLeftIcon />
-            {t("common.back")}
-          </Button>
-        )}
+        <Button
+          size="sm"
+          variant="secondary"
+          className="h-full shrink-0"
+          onClick={() => {
+            handleBack();
+          }}>
+          <ArrowLeftIcon />
+          {t("common.back")}
+        </Button>
         <p className="hidden max-w-48 shrink-0 truncate pl-4 font-semibold whitespace-nowrap md:block">
           {workspace.name} /{" "}
         </p>
@@ -650,18 +713,16 @@ export const SurveyMenuBar = ({
             </TooltipRenderer>
           </>
         )}
-        {!isCxMode && (
-          <Button
-            data-save-button
-            disabled={isSurveySaving}
-            variant="secondary"
-            size="sm"
-            loading={isSurveySaving}
-            onClick={() => (isDraft ? handleSurveySaveDraft() : handleSurveySave())}
-            type="submit">
-            {isDraft ? draftSaveLabel : t("common.save")}
-          </Button>
-        )}
+        <Button
+          data-save-button
+          disabled={isSurveySaving}
+          variant="secondary"
+          size="sm"
+          loading={isSurveySaving}
+          onClick={() => (isDraft ? handleSurveySaveDraft() : handleSurveySave())}
+          type="submit">
+          {isDraft ? draftSaveLabel : t("common.save")}
+        </Button>
         {!isDraft && (
           <Button
             disabled={isSurveySaving}
@@ -722,6 +783,31 @@ export const SurveyMenuBar = ({
         buttonLoading={isLeaving}
         isButtonDisabled={isLeaving}
         onConfirm={() => void handleSaveAndGoBack()}
+      />
+      <ConfirmationModal
+        title={t("workspace.surveys.edit.publish_warning_title")}
+        open={pendingPublish !== null}
+        setOpen={(open) => {
+          if (!open) setPendingPublish(null);
+        }}
+        description={t("workspace.surveys.edit.publish_warning_description")}
+        body={
+          <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+            {pendingPublish?.warnings.map((warning) => (
+              <li key={`${warning.scrollId}-${warning.text}`}>{describePublishWarning(warning)}</li>
+            ))}
+          </ul>
+        }
+        Icon={TriangleAlertIcon}
+        cancelButtonText={t("workspace.surveys.edit.keep_editing")}
+        onCancel={editPendingPublish}
+        buttonText={
+          pendingPublish?.status === "paused"
+            ? t("workspace.surveys.edit.publish_warning_schedule_anyway")
+            : t("workspace.surveys.edit.publish_warning_publish_anyway")
+        }
+        buttonVariant="default"
+        onConfirm={confirmPendingPublish}
       />
     </div>
   );

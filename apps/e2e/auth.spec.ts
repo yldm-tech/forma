@@ -39,7 +39,9 @@ test("signs up, logs in and finishes onboarding with a survey from scratch", asy
     await page.getByRole("button", { name: /Start from scratch/ }).click();
     await page.waitForURL(/\/app\/workspaces\/[^/]+\/surveys\/[^/]+\/edit/);
     await expect(page.getByRole("main").getByRole("heading", { name: DEFAULT_QUESTION })).toBeVisible();
-    await page.getByRole("button", { name: "Save & Close" }).click();
+    // The onboarding editor names its primary button for what it does: Publish, beside Save as draft.
+    await expect(page.getByRole("button", { name: "Save as draft" })).toBeVisible();
+    await page.getByRole("button", { name: "Publish", exact: true }).click();
     await page.waitForURL(/\/app\/workspaces\/[^/]+\/surveys\/[^/]+\/summary/);
     const share = page.getByRole("dialog", { name: "Share survey" });
     await expect(share.getByRole("textbox", { name: "URL" })).toHaveValue(/\/s\/[^/]+$/);

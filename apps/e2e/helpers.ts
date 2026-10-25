@@ -46,7 +46,7 @@ export interface Onboarded extends OnboardedSurvey {
 }
 
 /**
- * Finishes a new account's onboarding the way forma2's finishOnboarding did: the first-survey page, "Start from scratch", then "Save & Close", which publishes that survey as a link survey. Returns where it landed.
+ * Finishes a new account's onboarding the way forma2's finishOnboarding did: the first-survey page, "Start from scratch", then Publish, which publishes that survey as a link survey. Returns where it landed.
  */
 export const finishOnboarding = async (page: Page): Promise<Onboarded> => {
   await page.goto("/");
@@ -54,7 +54,7 @@ export const finishOnboarding = async (page: Page): Promise<Onboarded> => {
   const organizationId = /\/organizations\/([^/]+)/.exec(page.url())![1];
   await page.getByRole("button", { name: /Start from scratch/ }).click();
   await page.waitForURL(/\/app\/workspaces\/[^/]+\/surveys\/[^/]+\/edit/);
-  await page.getByRole("button", { name: "Save & Close" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.waitForURL(/\/app\/workspaces\/[^/]+\/surveys\/[^/]+\/summary/);
   return { organizationId, ...surveyFromURL(page.url()) };
 };

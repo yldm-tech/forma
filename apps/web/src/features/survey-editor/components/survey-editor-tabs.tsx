@@ -75,7 +75,8 @@ export const SurveyEditorTabs = ({
     });
   }, [isStylingTabVisible, isFollowUpsTabVisible, t, hasLanguageErrors]);
 
-  const cxModeHiddenTabIds = new Set<TSurveyEditorTabs>(["settings", "language", "followUps"]);
+  // The onboarding (CX) editor keeps Settings, so the close date, response limit, single-use links and PIN can be set before the first survey goes live; languages and follow-ups wait for the full editor.
+  const cxModeHiddenTabIds = new Set<TSurveyEditorTabs>(["language", "followUps"]);
   const tabsToDisplay = isCxMode
     ? tabsComputed.filter((tab) => !cxModeHiddenTabIds.has(tab.id))
     : tabsComputed;
