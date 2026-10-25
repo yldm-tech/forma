@@ -215,6 +215,74 @@ describe("integrations page", () => {
     );
   });
 
+  // The cards linked to zapier.com/apps/forma and activepieces.com/pieces/forma, which return 404, to a Make page for an app that was never published, and to n8n's home page.
+  test("the automation platforms open a webhook guide in the app instead of linking to an app that does not exist", async () => {
+    stubServer({
+      [`GET ${BASE}`]: () => ({ body: overview([]) }),
+      [`GET /api/app/workspaces/${WS}/webhooks`]: () => ({
+        body: { webhooks: [], allowInternalUrls: false },
+      }),
+    });
+    renderPage(<IntegrationsPage workspace={workspace(false)} />);
+
+    await screen.findAllByText(t("common.not_connected"));
+    const external = [...document.querySelectorAll("a")].filter(
+      (a) => !a.getAttribute("href")?.startsWith("/")
+    );
+    expect(external.map((a) => a.getAttribute("href"))).toEqual([]);
+
+    // The platform's own steps come before Forma's Add Webhook, which tests the URL and refuses one that answers 404: n8n's Production URL does until the workflow is active, and Activepieces' live URL only runs a published flow.
+    const key = (name: string) => `workspace.integrations.automation_guide_${name}`;
+    const steps = {
+      Zapier: ["zapier_step_create", "zapier_step_copy"],
+      "Make.com": ["make_step_create", "make_step_copy"],
+      n8n: ["n8n_step_create", "n8n_step_copy", "n8n_step_activate"],
+      Activepieces: ["activepieces_step_create", "activepieces_step_copy", "activepieces_step_publish"],
+    };
+    const docs = {
+      Zapier: "https://help.zapier.com/",
+      "Make.com": "https://apps.make.com/gateway",
+      n8n: "https://docs.n8n.io/",
+      Activepieces: "https://www.activepieces.com/pieces/webhook",
+    };
+    for (const [label, platformSteps] of Object.entries(steps)) {
+      const platform = card(label);
+      expect(platform.queryByRole("link")).toBeNull();
+      fireEvent.click(
+        platform.getByRole("button", { name: t("workspace.integrations.automation_guide_button") })
+      );
+
+      const dialog = screen.getByRole("dialog");
+      const guide = within(dialog);
+      const name = label === "Make.com" ? "Make" : label;
+      const title = t("workspace.integrations.automation_guide_title", { platform: name });
+      expect(guide.getByRole("heading", { name: title })).toBeTruthy();
+      // The card keeps counting only webhooks a platform's own app subscribed, so it still reads Not Connected after the guide; the guide must not promise to connect it.
+      expect(title).not.toMatch(/connect/i);
+      // "a n8n", "a Activepieces": the description names the platform without an article.
+      expect(dialog.textContent).not.toMatch(new RegExp(`\\ban? ${name}\\b`));
+      const items = guide.getAllByRole("listitem").map((item) => item.textContent);
+      expect(items).toEqual([
+        ...platformSteps.map((step) => t(key(step))),
+        t("workspace.integrations.automation_guide_step_add_webhook"),
+        t("workspace.integrations.automation_guide_step_send_sample", { platform: name }),
+      ]);
+      const docsLink = guide.getByRole("link", {
+        name: t("workspace.integrations.automation_guide_docs_link", { platform: name }),
+      });
+      expect(docsLink.getAttribute("href")?.startsWith(docs[label as keyof typeof docs])).toBe(true);
+      expect(
+        guide
+          .getByRole("link", { name: t("workspace.integrations.automation_guide_open_webhooks") })
+          .getAttribute("href")
+      ).toBe(`/workspaces/${WS}/integrations/webhooks`);
+
+      // The footer's Close; the corner's close button has the same name.
+      fireEvent.click(guide.getAllByRole("button", { name: t("common.close") })[0]!);
+      expect(screen.queryByRole("dialog")).toBeNull();
+    }
+  });
+
   test("a read-only member cannot open the integrations, but still sees the webhooks", async () => {
     stubServer({
       [`GET ${BASE}`]: () => ({ body: overview([]) }),
@@ -229,6 +297,11 @@ describe("integrations page", () => {
       "disabled",
       true
     );
+    for (const label of ["Zapier", "Make.com", "n8n", "Activepieces"]) {
+      expect(
+        card(label).getByRole("button", { name: t("workspace.integrations.automation_guide_button") })
+      ).toHaveProperty("disabled", true);
+    }
     expect(
       card("Webhooks").getByRole("link", { name: t("workspace.integrations.manage_webhooks") })
     ).toBeTruthy();
