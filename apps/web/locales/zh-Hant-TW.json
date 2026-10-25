@@ -1673,6 +1673,34 @@
       "your_survey_would_be_shown_on_this_url": "您的問卷將顯示在此網址。",
       "your_survey_would_not_be_shown": "您的問卷將不會顯示。"
     },
+    "analysis": {
+      "filter_op": {
+        "applied": "已加上",
+        "clicked": "已點擊",
+        "contains": "包含",
+        "does_not_contain": "不包含",
+        "does_not_end_with": "結尾不是",
+        "does_not_start_with": "開頭不是",
+        "ends_with": "結尾為",
+        "equals": "等於",
+        "filled_out": "已填寫",
+        "is": "為",
+        "is_after": "晚於",
+        "is_before": "早於",
+        "is_greater_than": "大於",
+        "is_more_than": "大於",
+        "is_not_set": "未設定",
+        "is_set": "已設定",
+        "not_applied": "未加上",
+        "not_equals": "不等於",
+        "not_in_quota": "不在配額內",
+        "screened_in": "已計入配額",
+        "screened_out_overquota": "已排除（超出配額）",
+        "starts_with": "開頭為",
+        "submitted": "已作答"
+      },
+      "nps_formula_tooltip": "NPS = 推廣者（9–10 分）比例 − 批評者（0–6 分）比例，以作答的 {count} 位受訪者為基數，不計入略過的回應。"
+    },
     "api_keys": {
       "add_api_key": "新增 API 金鑰",
       "api_key": "API 金鑰",

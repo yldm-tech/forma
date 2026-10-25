@@ -46,6 +46,7 @@ import {
 import { cn } from "../../../../lib/cn";
 import { useClickOutside } from "../../../../lib/use-click-outside";
 import { type ElementOption, type ElementOptions, OptionsType } from "../../lib/filter-types";
+import { getFilterTargetLabel } from "../../lib/filters";
 import { RESERVED_FIELD_ICONS } from "../../lib/reserved-fields";
 
 const getOptionsTypeLabel = (type: OptionsType, t: TFunction): string => {
@@ -120,6 +121,7 @@ const getLabelClassName = (type: string, label?: string): string => {
 
 /** One option of the filter picker: its group's icon and its label. */
 export const SelectedCommandItem = ({ label, elementType, type, id }: Partial<ElementOption>) => {
+  const { t } = useTranslation();
   const getDisplayIcon = () => {
     if (!type) return null;
     if (type === OptionsType.ELEMENTS && elementType) return renderIcon(elementType);
@@ -150,7 +152,9 @@ export const SelectedCommandItem = ({ label, elementType, type, id }: Partial<El
         )}>
         {getDisplayIcon()}
       </span>
-      <p className={cn("truncate text-sm text-slate-600", getLabelClassName(type ?? "", label))}>{label}</p>
+      <p className={cn("truncate text-sm text-slate-600", getLabelClassName(type ?? "", label))}>
+        {getFilterTargetLabel({ type, id, label }, t)}
+      </p>
     </div>
   );
 };

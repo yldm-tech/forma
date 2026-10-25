@@ -45,12 +45,11 @@ const conditionOptions = {
   contactInfo: ["is"],
   ranking: ["is"],
 } satisfies Record<string, string[]>;
+// Rating and CES values come from the element's own range (scaleValues), not from this table.
 const filterOptions = {
   openText: ["Filled out", "Skipped"],
-  rating: ["1", "2", "3", "4", "5"],
   nps: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
   csat: ["1", "2", "3", "4", "5"],
-  ces: ["1", "2", "3", "4", "5", "6", "7"],
   cta: ["Clicked", "Dismissed"],
   tags: ["Applied", "Not applied"],
   consent: ["Accepted", "Dismissed"],
@@ -58,6 +57,135 @@ const filterOptions = {
   contactInfo: ["Filled out", "Skipped"],
   ranking: ["Filled out", "Skipped"],
 } satisfies Record<string, string[]>;
+
+/**
+ * The operators a summary card puts in the filter when it is clicked. The English strings in the tables above and below are wire values, not labels: getFormattedFilters matches them and ?filter= carries them, so a click must pass these, never a translated label.
+ */
+export const SUMMARY_FILTER_OPERATOR = {
+  includesEither: "Includes either",
+  includesAll: "Includes all",
+  isEqualTo: "Is equal to",
+  isLessThan: "Is less than",
+  skipped: "Skipped",
+  is: "is",
+} as const;
+
+/** The constant values a summary card can filter by: consent's two outcomes. */
+export const SUMMARY_FILTER_VALUE = {
+  accepted: "Accepted",
+  dismissed: "Dismissed",
+} as const;
+
+/** A picture selection filter value: the choice's 1-based position, which processPictureSelectionFilter reads back. */
+export const pictureFilterValue = (position: number): string => `Picture ${position}`;
+
+const PICTURE_FILTER_VALUE = /^Picture (\d+)$/;
+
+/** What a filter row's operator and value slots belong to: an element type, or an OptionsType group for everything else. */
+type TFilterRowType = string | undefined;
+
+type TFilterLabel = (t: TFunction) => string;
+
+// Wire value → label. Each entry calls t() with a literal key so the catalogue key check sees it.
+const FILTER_OPERATOR_LABELS: Record<string, TFilterLabel> = {
+  "Includes either": (t) => t("workspace.surveys.summary.includes_either"),
+  "Includes all": (t) => t("workspace.surveys.summary.includes_all"),
+  "Is equal to": (t) => t("workspace.surveys.summary.is_equal_to"),
+  "Is less than": (t) => t("workspace.surveys.summary.is_less_than"),
+  "Is more than": (t) => t("workspace.analysis.filter_op.is_more_than"),
+  Submitted: (t) => t("workspace.analysis.filter_op.submitted"),
+  Skipped: (t) => t("common.skipped"),
+  is: (t) => t("workspace.analysis.filter_op.is"),
+  Equals: (t) => t("workspace.analysis.filter_op.equals"),
+  "Not equals": (t) => t("workspace.analysis.filter_op.not_equals"),
+  Contains: (t) => t("workspace.analysis.filter_op.contains"),
+  "Does not contain": (t) => t("workspace.analysis.filter_op.does_not_contain"),
+  "Starts with": (t) => t("workspace.analysis.filter_op.starts_with"),
+  "Does not start with": (t) => t("workspace.analysis.filter_op.does_not_start_with"),
+  "Ends with": (t) => t("workspace.analysis.filter_op.ends_with"),
+  "Does not end with": (t) => t("workspace.analysis.filter_op.does_not_end_with"),
+  "Is greater than": (t) => t("workspace.analysis.filter_op.is_greater_than"),
+  "Is before": (t) => t("workspace.analysis.filter_op.is_before"),
+  "Is after": (t) => t("workspace.analysis.filter_op.is_after"),
+  "Is set": (t) => t("workspace.analysis.filter_op.is_set"),
+  "Is not set": (t) => t("workspace.analysis.filter_op.is_not_set"),
+  Status: (t) => t("common.status"),
+};
+
+const FILTER_VALUE_LABELS: Record<string, TFilterLabel> = {
+  "Filled out": (t) => t("workspace.analysis.filter_op.filled_out"),
+  Skipped: (t) => t("common.skipped"),
+  Clicked: (t) => t("workspace.analysis.filter_op.clicked"),
+  Dismissed: (t) => t("common.dismissed"),
+  Accepted: (t) => t("common.accepted"),
+  Applied: (t) => t("workspace.analysis.filter_op.applied"),
+  "Not applied": (t) => t("workspace.analysis.filter_op.not_applied"),
+  "Screened in": (t) => t("workspace.analysis.filter_op.screened_in"),
+  "Screened out (overquota)": (t) => t("workspace.analysis.filter_op.screened_out_overquota"),
+  "Not in quota": (t) => t("workspace.analysis.filter_op.not_in_quota"),
+};
+
+// Rows whose values are the fixed vocabulary above. Every other row's values are the respondents' or the creator's own text (choice labels, observed field values, language codes), shown as they are even when one happens to read "Skipped".
+const CONSTANT_VALUE_ROW_TYPES = new Set<string>([
+  TSurveyElementTypeEnum.OpenText,
+  TSurveyElementTypeEnum.Address,
+  TSurveyElementTypeEnum.ContactInfo,
+  TSurveyElementTypeEnum.Ranking,
+  TSurveyElementTypeEnum.CTA,
+  TSurveyElementTypeEnum.Consent,
+  OptionsType.TAGS,
+  OptionsType.QUOTAS,
+]);
+
+/** The label of a filter row's operator. A matrix row's operator slot holds the matrix row's own label, shown as it is. */
+export const getFilterOperatorLabel = (type: TFilterRowType, operator: string, t: TFunction): string => {
+  if (type === TSurveyElementTypeEnum.Matrix) return operator;
+  const label = Object.hasOwn(FILTER_OPERATOR_LABELS, operator)
+    ? FILTER_OPERATOR_LABELS[operator]
+    : undefined;
+  return label ? label(t) : operator;
+};
+
+/** The label of one of a filter row's values. */
+export const getFilterValueLabel = (type: TFilterRowType, value: string, t: TFunction): string => {
+  if (type === TSurveyElementTypeEnum.PictureSelection) {
+    const position = PICTURE_FILTER_VALUE.exec(value)?.[1];
+    return position ? t("workspace.surveys.edit.picture_idx", { idx: Number(position) }) : value;
+  }
+  if (!CONSTANT_VALUE_ROW_TYPES.has(type ?? "")) return value;
+  const label = Object.hasOwn(FILTER_VALUE_LABELS, value) ? FILTER_VALUE_LABELS[value] : undefined;
+  return label ? label(t) : value;
+};
+
+/** The label of what a filter row filters on. Only the language row's label is a wire value ("Language", the others key); every other target is named by the survey or the workspace. */
+export const getFilterTargetLabel = (
+  target: { type?: OptionsType; id?: string; label?: string },
+  t: TFunction
+): string => {
+  if (target.type === OptionsType.OTHERS && target.id === "language") return t("common.language");
+  return target.label ?? "";
+};
+
+/** The type a filter row's operator and value belong to: the element type for an element row, the OptionsType group otherwise. */
+export const getFilterRowType = (row: FilterValue): TFilterRowType =>
+  row.elementType.type === OptionsType.ELEMENTS ? row.elementType.elementType : row.elementType.type;
+
+/** What one applied condition reads as on its chip: the operator and the value, shown after the target, each through its label. */
+export const describeFilterCondition = (row: FilterValue, t: TFunction): string => {
+  const rowType = getFilterRowType(row);
+  const operator = row.filterType.filterValue;
+  const value = row.filterType.filterComboBoxValue;
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [
+    operator ? getFilterOperatorLabel(rowType, operator, t) : "",
+    values.map((v) => getFilterValueLabel(rowType, v, t)).join(", "),
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+/** The values 1 to range of a rating or CES scale, as the filter's value strings. */
+const scaleValues = (range: number): string[] => Array.from({ length: range }, (_, i) => String(i + 1));
 
 /** The entry an element type has in one of the option tables above, if any. */
 const optionsFor = (table: Record<string, string[]>, type: string): string[] | undefined =>
@@ -92,8 +220,11 @@ const getElementFilterOption = (
     case TSurveyElementTypeEnum.PictureSelection:
       return {
         ...baseOption,
-        filterComboBoxOptions: element.choices?.map((_, idx) => `Picture ${idx + 1}`) ?? [""],
+        filterComboBoxOptions: element.choices?.map((_, idx) => pictureFilterValue(idx + 1)) ?? [""],
       };
+    case TSurveyElementTypeEnum.Rating:
+    case TSurveyElementTypeEnum.CES:
+      return { ...baseOption, filterComboBoxOptions: scaleValues(element.range) };
     case TSurveyElementTypeEnum.Matrix:
       return {
         type: element.type,
@@ -123,6 +254,19 @@ const META_OP_MAP = {
 
 /** Operators that take no right-hand value; rows carrying them must survive the empty-value cleanup. */
 export const NO_VALUE_FILTER_OPERATORS = ["Is set", "Is not set"];
+
+// The score elements, whose Submitted and Skipped operators take no value: the operator alone is the condition (getFormattedFilters sends {op: "submitted"} / {op: "skipped"}).
+const SCORE_ELEMENT_TYPES = new Set<string>([
+  TSurveyElementTypeEnum.NPS,
+  TSurveyElementTypeEnum.Rating,
+  TSurveyElementTypeEnum.CSAT,
+  TSurveyElementTypeEnum.CES,
+]);
+
+/** Whether a filter row with this type and operator is complete without a value: "Is set" / "Is not set" on any field, "Submitted" / "Skipped" on a score element. The value box is disabled for these, and the popover's empty-value cleanup must keep them. */
+export const isNoValueFilterOperator = (type: TFilterRowType, operator: string | undefined): boolean =>
+  NO_VALUE_FILTER_OPERATORS.includes(operator ?? "") ||
+  (SCORE_ELEMENT_TYPES.has(type ?? "") && (operator === "Submitted" || operator === "Skipped"));
 
 // Operator menus per Embedded Data / reserved field dataType (ENG-1848) — the editor's logic-builder model: string → equality + text ops, number → comparisons, date → before/after, boolean → equality; every family can also match on absence.
 const TEXT_FIELD_OPERATORS = [...Object.keys(META_OP_MAP), ...NO_VALUE_FILTER_OPERATORS];
