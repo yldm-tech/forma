@@ -1,6 +1,6 @@
 {
   "case": "v1-displays-create-userid",
-  "description": "packages/surveys createDisplay with userId, which the client sends to the v1 route.",
+  "description": "packages/surveys createDisplay with userId, which the client sends to the v1 route. The answer names the contact by its token, not by its id.",
   "request": {
     "method": "POST",
     "path": "/api/v1/client/<id:workspace>/displays",
@@ -32,7 +32,7 @@
     "body": {
       "data": {
         "id": "<id:display:v1>",
-        "contactId": "<id:contact:user1>",
+        "contactId": "<contact-token:user1>",
         "surveyId": "<id:survey:app>"
       }
     }

@@ -195,8 +195,8 @@ func (a attributeRow) columns() Columns {
 
 const attributeSelect = `SELECT ca.contact_id, ca.id AS attribute_id, k.id AS key_id, k.key, k.name, k.type, k.data_type, ca.value_text, ca.value_number, ca.value_date FROM contact_attributes ca JOIN contact_attribute_keys k ON k.id = ca.attribute_key_id`
 
-// listContacts is forma2's getContacts: newest first, a page at offset. A search matches a contact with any value containing it, case-insensitively, or whose id it is exactly.
-func (r *Repository) listContacts(ctx context.Context, workspaceID uuid.UUID, offset int, search string) ([]Contact, error) {
+// searchedContacts selects the workspace's contacts a search matches: any value containing it, case-insensitively, or the contact whose id it is exactly; an empty search matches every contact.
+func searchedContacts(workspaceID uuid.UUID, search string) (string, []any) {
 	query := `SELECT c.id, c.created_at, c.updated_at, c.workspace_id FROM contacts c WHERE c.workspace_id = ?`
 	args := []any{workspaceID}
 	if search != "" {
@@ -209,6 +209,12 @@ func (r *Repository) listContacts(ctx context.Context, workspaceID uuid.UUID, of
 		}
 		query += ` AND (` + match + `)`
 	}
+	return query, args
+}
+
+// listContacts is forma2's getContacts: newest first, a page at offset, of the contacts a search matches (searchedContacts).
+func (r *Repository) listContacts(ctx context.Context, workspaceID uuid.UUID, offset int, search string) ([]Contact, error) {
+	query, args := searchedContacts(workspaceID, search)
 	query += ` ORDER BY c.created_at DESC, c.id DESC LIMIT ? OFFSET ?`
 	args = append(args, ItemsPerPage, offset)
 	var rows []contactRow

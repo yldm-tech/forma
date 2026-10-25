@@ -1,6 +1,6 @@
 {
   "case": "v2-displays-create-contact",
-  "description": "v2 display for an identified contact (contactId).",
+  "description": "v2 display for an identified contact, named by the token its identify answered (contactId).",
   "request": {
     "method": "POST",
     "path": "/api/v2/client/<id:workspace>/displays",
@@ -12,7 +12,7 @@
     },
     "body": {
       "surveyId": "<id:survey:app>",
-      "contactId": "<id:contact:user1>"
+      "contactId": "<contact-token:user1>"
     }
   },
   "response": {
@@ -32,7 +32,7 @@
     "body": {
       "data": {
         "id": "<id:display:contact>",
-        "contactId": "<id:contact:user1>",
+        "contactId": "<contact-token:user1>",
         "surveyId": "<id:survey:app>"
       }
     }

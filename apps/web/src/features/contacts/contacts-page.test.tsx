@@ -208,3 +208,68 @@ test("with every linking column hidden, the hint moves to the first visible colu
     company: false,
   });
 });
+
+/** The server's export endpoint on top of stubServer: records each request's body and answers a CSV, or fails with status. */
+const stubExport = (status = 200) => {
+  stubServer();
+  const list = fetch;
+  const bodies: unknown[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (path !== `/api/app/workspaces/${WS}/contacts/export`) return list(path, init);
+      expect(init?.method).toBe("POST");
+      bodies.push(JSON.parse(init?.body as string));
+      if (status !== 200) {
+        return new Response(JSON.stringify({ code: "internal_server_error", message: "x" }), {
+          status,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response("\ufeffemail\nalice@example.com\n", {
+        status: 200,
+        headers: {
+          "content-type": "text/csv;charset=utf-8",
+          "content-disposition": 'attachment; filename="contacts-2026-10-26-00-00-00-utc.csv"',
+        },
+      });
+    })
+  );
+  URL.createObjectURL = vi.fn(() => "blob:contacts");
+  URL.revokeObjectURL = vi.fn();
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+  click.mockClear();
+  return { bodies, click };
+};
+
+test("Export CSV downloads every contact, and with a search, the contacts it matches", async () => {
+  const { bodies, click } = stubExport();
+  renderPage();
+  await screen.findByText("alice@example.com");
+
+  fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+  await vi.waitFor(() => expect(click).toHaveBeenCalledTimes(1));
+  expect(bodies).toEqual([{ search: "" }]);
+  expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("contacts-2026-10-26-00-00-00-utc.csv");
+
+  await search("corp");
+  fireEvent.click(await screen.findByRole("button", { name: "Export matches as CSV" }, { timeout: 3000 }));
+  await vi.waitFor(() => expect(click).toHaveBeenCalledTimes(2));
+  expect(bodies[1]).toEqual({ search: "corp" });
+});
+
+test("a failed export says so", async () => {
+  const { click } = stubExport(500);
+  renderPage();
+  await screen.findByText("alice@example.com");
+
+  fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+  await vi.waitFor(() =>
+    expect(
+      toast
+        .getSnapshot()
+        .some((shown) => shown.message === "The contacts could not be exported. Please try again.")
+    ).toBe(true)
+  );
+  expect(click).not.toHaveBeenCalled();
+});

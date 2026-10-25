@@ -368,12 +368,16 @@ export const en: SiteContent = {
           title: "Identify users",
           facts: [
             {
-              term: "setUserId(userId)",
-              body: "Identifies the visitor as the contact with that ID, created on first use, so segment targeting and show-once rules apply to the person. IDs are up to 255 characters; a different ID first clears the previous user's state.",
+              term: "setUserId(userId, { userHash })",
+              body: "Identifies the visitor as the contact with that ID, created on first use, so segment targeting and show-once rules apply to the person. IDs are up to 255 characters; a different ID first clears the previous user's state. `userHash` verifies the ID.",
             },
             {
               term: "setAttributes(attributes), setAttribute(key, value)",
               body: "Set contact attributes for segments. Call `setUserId` first. A string, a number or a `Date` gives a new attribute its type; later values must have the same type, or the server does not store them.",
+            },
+            {
+              term: "Identity verification",
+              body: "The workspace ID is public, so the SDK never writes attributes marked as protected in Forma, and writes the email only for a verified user. To verify users, generate the identity secret under Integrations → Web & Mobile SDK, compute the HMAC-SHA256 of the user ID under it in hex on your server, and pass it as `userHash`. With verified identities required, an identify without a valid hash is refused.",
             },
             {
               term: "setLanguage(language)",

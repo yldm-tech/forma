@@ -34,7 +34,6 @@ interface PreviewSurveyProps {
   isSpamProtectionAllowed: boolean;
 }
 
-let surveyNameTemp: string;
 let setBlockId = (_: string) => {};
 
 /** The nearest ancestor of `node`, inside `boundary`, that scrolls vertically. */
@@ -233,14 +232,14 @@ export const PreviewSurvey = ({
     }
   };
 
-  // this useEffect is for refreshing the survey preview only if user is switching between templates on survey templates page and hence we are checking for survey.id === "someUniqeId1" which is a common Id for all templates
+  // Starts the preview over when it is handed another survey: the template gallery switches templates without unmounting the preview, so the phone or desktop frame picked for one template stays for the next. The editor's survey keeps its id, so an edit never restarts it.
+  const previewedSurveyId = useRef(survey.id);
   useEffect(() => {
-    if (survey.name !== surveyNameTemp && survey.id === "someUniqueId1") {
-      resetProgress();
-      surveyNameTemp = survey.name;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh preview only when `survey` changes; resetProgress is recreated each render, so depending on it would re-run every render
-  }, [survey]);
+    if (survey.id === previewedSurveyId.current) return;
+    previewedSurveyId.current = survey.id;
+    resetProgress();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restart only when the survey changes; resetProgress is recreated each render, so depending on it would re-run every render
+  }, [survey.id]);
 
   const resetProgress = () => {
     let storePreviewMode = previewMode;

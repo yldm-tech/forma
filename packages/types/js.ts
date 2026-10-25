@@ -74,19 +74,18 @@ export const ZJsWorkspaceState = z.object({
 
 export type TJsWorkspaceState = z.infer<typeof ZJsWorkspaceState>;
 
+// A survey as the identify state names it for one user: hashString("<userId>:<surveyId>") in eight hex digits (js-core getSurveyKey, the server's sdkidentity.SurveyKey). The state never lists survey ids.
+const ZJsSurveyKey = z.string().regex(/^[0-9a-f]{8}$/);
+
 export const ZJsPersonState = z.object({
   expiresAt: z.date().nullable(),
   data: z.object({
     userId: z.string().nullable(),
+    // An opaque contact token ("ct1." and base64url), never the contact's id; the display and response routes accept it as contactId.
     contactId: z.string().nullable(),
     segments: z.array(ZId), // segment ids the person belongs to
-    displays: z.array(
-      z.object({
-        surveyId: ZId,
-        createdAt: z.date(),
-      })
-    ),
-    responses: z.array(ZId), // responded survey ids
+    displays: z.array(ZJsSurveyKey), // one key per display of an app survey, newest first
+    responses: z.array(ZJsSurveyKey), // keys of the app surveys the person responded to
     lastDisplayAt: z.date().nullable(),
     language: z.string().optional(),
   }),

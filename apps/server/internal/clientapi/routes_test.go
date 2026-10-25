@@ -24,13 +24,21 @@ func TestCreateDisplay(t *testing.T) {
 	if d["contactId"] == nil || d["surveyId"] != sv.String() {
 		t.Fatalf("display %v", d)
 	}
-	if e.attribute(d["contactId"], "userId") != "new-user" {
+	// The display names its contact by the token an identify answers, not by id.
+	created := e.contactOf(t, ws, d)
+	if e.attribute(created, "userId") != "new-user" {
 		t.Fatal("v1 did not create the contact")
 	}
-	theirs := stateData(t, e.identify(t, other, map[string]any{"userId": "theirs"}))["contactId"]
-	d = e.post(t, "/api/v2/client/"+ws.String()+"/displays", map[string]any{"surveyId": sv.String(), "contactId": theirs}).data(t)
-	if d["contactId"] != nil {
-		t.Fatalf("v2 attached another workspace's contact: %v", d)
+	d = e.post(t, "/api/v2/client/"+ws.String()+"/displays", map[string]any{"surveyId": sv.String(), "contactId": d["contactId"]}).data(t)
+	if e.contactOf(t, ws, d) != created {
+		t.Fatalf("v2 did not attach the contact its token names: %v", d)
+	}
+	theirs := stateData(t, e.identify(t, other, map[string]any{"userId": "theirs"}))
+	for _, ref := range []any{theirs["contactId"], e.contactOf(t, other, theirs).String()} {
+		d = e.post(t, "/api/v2/client/"+ws.String()+"/displays", map[string]any{"surveyId": sv.String(), "contactId": ref}).data(t)
+		if d["contactId"] != nil {
+			t.Fatalf("v2 attached another workspace's contact by %v: %v", ref, d)
+		}
 	}
 	details := e.post(t, "/api/v1/client/"+ws.String()+"/displays", map[string]any{"surveyId": sv.String(), "userId": strings.Repeat("u", 256)}).expectError(t, 400, "bad_request", msgInvalidFields)
 	if details["userId"] != "User ID cannot exceed 255 characters" {

@@ -32,7 +32,7 @@
       "data": {
         "state": {
           "data": {
-            "contactId": "<id:contact:user1>",
+            "contactId": "<contact-token:user1>",
             "userId": "contract-user-1",
             "segments": [
               "<id:segment:app>"

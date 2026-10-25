@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { PlusCircleIcon, SplitIcon, XIcon } from "lucide-react";
+import { EyeIcon, PlusCircleIcon, SplitIcon, XIcon } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
@@ -18,7 +18,6 @@ import {
   roleOptions,
   usesBranchingLogic,
 } from "./catalog";
-import { useCreateSurveyFromTemplate } from "./use-create-survey";
 
 const roleStyling: Record<TemplateRole, string> = {
   productManager: "border-blue-300 bg-blue-50 text-blue-500",
@@ -129,29 +128,37 @@ const TemplateTags = ({ template, selected }: { template: SurveyTemplate; select
 };
 
 /**
- * forma2's TemplateList: "start from scratch" and the catalog's templates, narrowed by the channel, industry and role filters or by a name search. Choosing a card selects it; its button then creates the survey and opens the editor. A search that matches no template says so and offers to clear it.
+ * forma2's TemplateList: "start from scratch" and the catalog's templates, narrowed by the channel, industry and role filters or by a name search. Choosing a card selects it, which the gallery previews; the chosen card then offers to create the survey and open the editor, and, where the gallery has no room for the preview beside it, to open the preview. A search that matches no template says so and offers to clear it.
  */
 export const TemplateList = ({
   workspaceId,
-  surveyType,
-  defaultLanguage,
   search,
   onClearSearch,
+  activeId,
+  onSelect,
+  onCreate,
+  isCreating,
+  hasPreviewPane,
+  onPreview,
   aiCard,
 }: {
   workspaceId: string;
-  surveyType: "link" | "app";
-  defaultLanguage: string;
   search: string;
   onClearSearch: () => void;
+  activeId: string | null;
+  onSelect: (templateId: string) => void;
+  onCreate: (template: SurveyTemplate) => void;
+  isCreating: boolean;
+  /** The preview sits beside the list, which then has less room for its cards. */
+  hasPreviewPane: boolean;
+  /** Opens the chosen template's preview; absent where the preview sits beside the list. */
+  onPreview?: () => void;
   /** The create-with-AI card, shown after "start from scratch" where the gallery is a workspace's first survey. */
   aiCard?: ReactNode;
 }) => {
   const { t, i18n } = useTranslation();
   const catalog = useQuery(surveyTemplatesQuery(workspaceId, i18n.language));
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [filter, setFilter] = useState<TemplateFilter>(noTemplateFilter);
-  const { create, isPending } = useCreateSurveyFromTemplate();
 
   if (catalog.isPending) {
     return (
@@ -174,39 +181,37 @@ export const TemplateList = ({
     search,
     filter
   );
-  const createFrom = (template: SurveyTemplate) =>
-    void create({
-      workspaceId,
-      templateId: template.id,
-      source: template.id === CUSTOM_TEMPLATE_ID ? "custom" : "catalog",
-      surveyType,
-      defaultLanguage,
-    });
+  const actions = (template: SurveyTemplate, label: string) => (
+    <div className="mt-6 flex max-w-full flex-wrap gap-2">
+      <Button className="max-w-full px-6 py-3" loading={isCreating} onClick={() => onCreate(template)}>
+        <span className="truncate">{label}</span>
+      </Button>
+      {onPreview && (
+        <Button variant="secondary" className="max-w-full px-6 py-3" onClick={onPreview}>
+          <EyeIcon />
+          <span className="truncate">{t("common.preview")}</span>
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <div className="relative z-0 flex-1 px-6 pt-2 pb-6">
       {!search && <TemplateFilters selected={filter} setSelected={setFilter} />}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className={cn("grid grid-cols-1 gap-4", hasPreviewPane ? "xl:grid-cols-2" : "sm:grid-cols-2")}>
         {custom && (
           <TemplateCard
             title={custom.name}
             description={custom.description}
             isActive={activeId === custom.id}
-            onSelect={() => setActiveId(custom.id)}
+            onSelect={() => onSelect(custom.id)}
             className={cn(
               "border-2 bg-transparent shadow-none",
               activeId === custom.id
                 ? "border-transparent ring-2 ring-ink"
                 : "border-dashed border-slate-300 hover:border-slate-500 hover:ring-0"
             )}
-            action={
-              <Button
-                className="mt-6 max-w-full px-6 py-3"
-                loading={isPending}
-                onClick={() => createFrom(custom)}>
-                <span className="truncate">{t("common.create_survey")}</span>
-              </Button>
-            }>
+            action={actions(custom, t("common.create_survey"))}>
             <PlusCircleIcon
               className="text-ink order-first mb-3 size-8 transition-all duration-150 group-hover:scale-110"
               aria-hidden="true"
@@ -231,15 +236,8 @@ export const TemplateList = ({
             title={template.name}
             description={template.description}
             isActive={activeId === template.id}
-            onSelect={() => setActiveId(template.id)}
-            action={
-              <Button
-                className="mt-6 max-w-full px-6 py-3"
-                loading={isPending}
-                onClick={() => createFrom(template)}>
-                <span className="truncate">{t("workspace.surveys.templates.use_this_template")}</span>
-              </Button>
-            }>
+            onSelect={() => onSelect(template.id)}
+            action={actions(template, t("workspace.surveys.templates.use_this_template"))}>
             <div className="order-first mb-3">
               <TemplateTags template={template} selected={filter} />
             </div>

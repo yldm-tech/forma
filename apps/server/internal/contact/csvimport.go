@@ -151,7 +151,7 @@ type mappedTable struct {
 	records []map[string]string
 }
 
-// mapColumns applies the column mapping: an explicit target, else the first key whose name (or key) contains the column as forma2's isStringMatch has it, else the column's own name. Two columns may not fill one key.
+// mapColumns applies the column mapping: an explicit target, else the first key whose name (or key) contains the column as forma2's isStringMatch has it, else the column's own name. Two columns may not fill one key. A cell loses the apostrophe the contacts export put before a formula-like text (undefangCell), so an exported file imports the values it was made from.
 func mapColumns(t *csvTable, keys []Key, attributeMap map[string]string) (*mappedTable, error) {
 	byID := map[string]Key{}
 	for _, k := range keys {
@@ -200,7 +200,7 @@ func mapColumns(t *csvTable, keys []Key, attributeMap map[string]string) (*mappe
 	for r, row := range t.rows {
 		rec := make(map[string]string, len(targets))
 		for i, target := range targets {
-			rec[target] = row[i]
+			rec[target] = undefangCell(row[i])
 		}
 		m.records[r] = rec
 	}
@@ -243,6 +243,8 @@ func validateRecords(m *mappedTable) error {
 // Import is forma2's createContactsFromCSVAction. The file is parsed and mapped, then forma2's createContactsFromCSV runs: values for existing number and date keys must parse or nothing is imported; a new column becomes a key typed from its first value, or a string key when its values disagree; a row whose email no contact has creates a contact, and one whose email a contact has is skipped, merged into it (update) or replaces its values (overwrite). In a merge or overwrite, a userId another contact holds is replaced by the contact's own.
 //
 // As in forma2, the import does not apply MaxAttributeKeys to the keys it creates, and does not check a new contact's userId against other contacts; a file is limited to MaxImportColumns columns instead.
+//
+// Unlike forma2, an empty cell sets nothing: a new or overwritten contact does not get the key, and a merged one keeps the value it has. forma2 stored an empty text there, so a file the contacts export wrote, where a contact's missing keys are empty cells, gave every contact every key on its way back in.
 func (s *Service) Import(ctx context.Context, userID, workspaceID uuid.UUID, in ImportInput) (res *ImportResult, err error) {
 	ev := audit.Event{Action: audit.ActionCreatedFromCSV, TargetType: audit.TargetContact}
 	defer func() { s.record(ctx, ev, err) }()
@@ -463,6 +465,10 @@ func importRecord(ctx context.Context, tx *Repository, workspaceID uuid.UUID, co
 		k, ok := actual[strings.ToLower(col)]
 		if !ok {
 			return uuid.Nil, 0, apperr.InvalidInput(apperr.CodeValidation, fmt.Sprintf("Attribute key %q not found in attribute key map", col))
+		}
+		// An empty cell sets nothing (see Import).
+		if record[col] == "" {
+			continue
 		}
 		if _, seen := row[k.Key]; !seen {
 			order = append(order, k.Key)

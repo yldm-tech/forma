@@ -222,8 +222,8 @@ const EnterCodeStep = ({ onCancel, onDone }: { onCancel: () => void; onDone: () 
     if (!complete) return;
     setError(null);
     try {
-      const result = await enable.mutateAsync(code);
-      toast.success(result.message);
+      await enable.mutateAsync(code);
+      toast.success(t("workspace.settings.profile.two_factor_enabled"));
       onDone();
     } catch (failure) {
       setError(errorMessage(t, failure));
@@ -241,6 +241,10 @@ const EnterCodeStep = ({ onCancel, onDone }: { onCancel: () => void; onDone: () 
         <OTPInput value={code} onChange={setCode} valueLength={6} className="justify-start" />
         <FormError id="enable-two-factor-error">{error}</FormError>
       </fieldset>
+      {/* Turning 2FA on signs out every other session (as changing the password does), so the step that does it says so first. */}
+      <p className="text-xs text-slate-600">
+        {t("workspace.settings.profile.two_factor_signs_out_other_sessions")}
+      </p>
       <div className="flex w-full items-center justify-end gap-x-4">
         <Button variant="secondary" size="sm" type="button" onClick={onCancel}>
           {t("common.cancel")}

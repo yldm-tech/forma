@@ -229,7 +229,7 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
             {t("workspace.settings.general.survey_scheduling_time_zone")}
           </Label>
           <p id="survey-scheduling-time-zone-description" className="text-sm text-slate-500">
-            {t("workspace.settings.general.survey_scheduling_time_zone_description", {
+            {t("workspace.settings.general.survey_scheduling_time_zone_description_with_times", {
               time: getSurveySchedulingTimeLabel(organization.surveyScheduling),
             })}
           </p>
