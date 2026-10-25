@@ -116,26 +116,13 @@ Edit `packages/surveys/i18n.json` to include new target languages:
 }
 ```
 
-#### 2. Update i18n Configuration
+#### 2. Register the Language
 
-Add the language tag to `SURVEY_RUNTIME_LANGUAGE_CODES` in `packages/i18n-utils/src/survey-runtime-languages.ts`, which the runtime uses as `supportedLngs`, then register the bundle in `packages/surveys/src/lib/i18n.config.ts`:
+The build picks up every file in `locales/`: `vite.config.mts` gives each language other than English its own content-hashed file under `/js/surveys-locales/`, which the runtime fetches when a respondent needs it, so there is no import to add. Register the tag where the rest of the product reads the list of runtime languages:
 
-```tsx
-// Add new import
-import newLangTranslations from "../../locales/new-lang.json";
-
-i18n
-  .use(ICU)
-  .use(initReactI18next)
-  .init({
-    fallbackLng: resolveFallbackBundles,
-    supportedLngs: [...SURVEY_RUNTIME_LANGUAGE_CODES],
-    resources: {
-      // ... existing resources
-      "new-lang": { translation: newLangTranslations },
-    },
-  });
-```
+- `SURVEY_RUNTIME_LANGUAGE_CODES` in `packages/i18n-utils/src/survey-runtime-languages.ts`, which the runtime uses as `supportedLngs` and the workspace's default-language picker uses to tell which languages have built-in strings (`src/lib/i18n.config.test.ts` fails when it drifts from `locales/`).
+- `surveyRuntimeLanguages` in `apps/server/internal/langcode/langcode.go`, the server's copy of the same list (`TestRuntimeLanguagesMatchI18nUtils` keeps them identical).
+- The server's validation messages in `apps/server/internal/response/answers/messages.json`, regenerated from `locales/` with `go test ./internal/response/answers -run TestMessagesMatchSurveyLocales -update` in `apps/server/`.
 
 #### 3. Generate Translation Files
 

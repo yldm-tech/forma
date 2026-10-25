@@ -9,7 +9,7 @@ import (
 // surveyRuntimeLanguages is SURVEY_RUNTIME_LANGUAGE_CODES (packages/i18n-utils/src/survey-runtime-languages.ts): the bundles in packages/surveys/locales, the only languages a survey's default language can usefully be set to. TestRuntimeLanguagesMatchI18nUtils keeps the two identical.
 var surveyRuntimeLanguages = []string{
 	"ar-EG", "da-DK", "de-DE", "en-US", "es-ES", "et-EE", "fr-FR", "hi-IN", "hu-HU", "id-ID", "it-IT", "ja-JP", "km-KH",
-	"ne-NP", "nl-NL", "pt-BR", "ro-RO", "ru-RU", "sv-SE", "tr-TR", "ur-PK", "uz-UZ", "vi-VN", "zh-Hans-CN", "zh-Hant-TW",
+	"ko-KR", "ne-NP", "nl-NL", "pt-BR", "ro-RO", "ru-RU", "sv-SE", "tr-TR", "ur-PK", "uz-UZ", "vi-VN", "zh-Hans-CN", "zh-Hant-TW",
 }
 
 var (
