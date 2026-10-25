@@ -4,8 +4,8 @@
 #   tooling/brand/render-icons.sh
 #
 # What it writes, and from what:
-#   apps/web/public/favicon.ico                      16, 32 and 48 px, from favicon.svg (the crimson tile with the frameless mark, legible at 16 px)
-#   apps/web/public/favicon/favicon-{16x16,32x32}.png from favicon.svg
+#   apps/web/public/favicon.ico                      16, 32 and 48 px, 16 px from favicon-16.svg and 32/48 px from favicon.svg: white bars and one white selected dot on the crimson tile, drawn on the 16 and 32 px pixel grids so nothing lands on a half pixel (the detailed mark with rings turned to mush at tab size)
+#   apps/web/public/favicon/favicon-{16x16,32x32}.png from favicon-16.svg and favicon.svg
 #   apps/web/public/favicon/apple-touch-icon.png     180 px, from app-icon-crimson.svg on a full crimson square: iOS rounds the corners itself and fills transparent ones with black
 #   apps/web/public/favicon/android-chrome-{192x192,512x512}.png from app-icon-crimson.svg
 #   apps/web/public/favicon/safari-pinned-tab.svg    symbol.svg in one colour, the mask Safari tints
@@ -28,7 +28,7 @@ strip() {
   magick "${in}" "$@" -strip -define png:exclude-chunks=date,time "${out}"
 }
 
-png "${brand}/favicon.svg" 16 16 "${tmp}/favicon-16.png"
+png "${brand}/favicon-16.svg" 16 16 "${tmp}/favicon-16.png"
 png "${brand}/favicon.svg" 32 32 "${tmp}/favicon-32.png"
 png "${brand}/favicon.svg" 48 48 "${tmp}/favicon-48.png"
 strip "${tmp}/favicon-16.png" "${web}/favicon/favicon-16x16.png"
