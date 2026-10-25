@@ -7,6 +7,7 @@ import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { createEmptyHistoryState, HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
@@ -18,6 +19,7 @@ import { TSurvey, TSurveyRecallItem } from "@forma/types/surveys/types";
 import { cn } from "../../../../lib/cn";
 import { FallbackInput } from "../../../../features/survey-editor/components/element-form-input/components/fallback-input";
 import { exampleTheme } from "../lib/example-theme";
+import { isSeedUpdate } from "../lib/seed-tag";
 import "../styles-editor-frontend.css";
 import "../styles-editor.css";
 import { PlaygroundAutoLinkPlugin as AutoLinkPlugin } from "./auto-link-plugin";
@@ -104,6 +106,30 @@ const SyncEditablePlugin = ({ editable }: Readonly<{ editable: boolean }>) => {
   return null;
 };
 
+/**
+ * Undo and redo for the editor's own text (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z), starting from the text the editor was last loaded with.
+ *
+ * Loading stored text (the initial value, a template or language the caller swaps in, the recall conversion that is part of loading) is not an edit, so it is not an undo step either: each load becomes the new starting point and drops what came before. Otherwise Undo after a reload would bring back text that belongs to another language or to the content that was replaced, and the save listener would write it into the current one.
+ */
+export const EditorHistoryPlugin = () => {
+  const [editor] = useLexicalComposerContext();
+  const [historyState] = useState(createEmptyHistoryState);
+
+  useEffect(
+    () =>
+      editor.registerUpdateListener(({ editorState, tags }) => {
+        if (!isSeedUpdate(tags)) return;
+        // Runs before or after the history listener for the same update; either way the loaded state ends up as the only entry, and the history listener skips a state that is already current.
+        historyState.undoStack = [];
+        historyState.redoStack = [];
+        historyState.current = { editor, editorState };
+      }),
+    [editor, historyState]
+  );
+
+  return <HistoryPlugin externalHistoryState={historyState} />;
+};
+
 export const Editor = (props: TextEditorProps) => {
   const editable = props.editable ?? true;
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -171,6 +197,7 @@ export const Editor = (props: TextEditorProps) => {
                 }
                 ErrorBoundary={LexicalErrorBoundary}
               />
+              <EditorHistoryPlugin />
               <ListPlugin />
               <ListTabIndentationPlugin />
               <LinkPlugin />

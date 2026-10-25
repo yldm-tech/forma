@@ -8,6 +8,7 @@ import {
   $isTextNode,
   COMMAND_PRIORITY_HIGH,
   EditorState,
+  HISTORY_MERGE_TAG,
   KEY_DOWN_COMMAND,
   LexicalNode,
   TextNode,
@@ -352,6 +353,8 @@ export const RecallPlugin = ({
         }
       },
       {
+        // Renaming a recalled item elsewhere relabels it here; that is not an edit of this text, so it folds into the current undo step instead of becoming one.
+        tag: HISTORY_MERGE_TAG,
         onUpdate: () => {
           // Restore the full selection (including cursor position) after reconciliation
           if (!editorHasFocus && savedRange) {
