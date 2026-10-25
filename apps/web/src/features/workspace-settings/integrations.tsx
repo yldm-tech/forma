@@ -17,7 +17,13 @@ import notionLogo from "../integrations/images/notion.png";
 import slackLogo from "../integrations/images/slack.png";
 import webhookLogo from "../integrations/images/webhook.png";
 import zapierLogo from "../integrations/images/zapier.png";
-import { connectionCountText, webhookCounts } from "../integrations/webhooks";
+import {
+  type WebhookAlerts,
+  alertsText,
+  connectionCountText,
+  webhookAlerts,
+  webhookCounts,
+} from "../integrations/webhooks";
 
 interface CardProps {
   label: string;
@@ -30,6 +36,8 @@ interface CardProps {
   disabled: boolean;
   /** The integration cannot be set up on this instance (its OAuth app is not configured); the card then only leads to the page that explains it. */
   unavailable?: boolean;
+  /** Its webhooks' delivery health: red when one lost a delivery, amber while failed deliveries are being retried, instead of the green of a working connection. */
+  alert?: "error" | "warning";
 }
 
 /** forma2's integration Card: what the integration does, whether it is connected, and where to set it up; an integration the instance cannot offer gets a secondary button to the page explaining why. */
@@ -42,17 +50,19 @@ const IntegrationCard = ({
   statusText,
   disabled,
   unavailable = false,
+  alert,
 }: CardProps) => {
+  const dot = alert === "error" ? "bg-red-500" : alert === "warning" ? "bg-amber-500" : "bg-green-500";
   return (
     <div className="relative rounded-xl border border-slate-200 bg-white p-4 text-left shadow-xs">
       <div className="absolute top-4 right-4 flex items-center rounded-sm bg-slate-100 px-2 py-1 text-xs text-slate-500">
         <span className="relative mr-1 flex size-2">
           {connected && (
-            <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+            <span
+              className={`animate-ping-slow absolute inline-flex h-full w-full rounded-full opacity-75 ${dot}`}
+            />
           )}
-          <span
-            className={`relative inline-flex size-2 rounded-full ${connected ? "bg-green-500" : "bg-slate-400"}`}
-          />
+          <span className={`relative inline-flex size-2 rounded-full ${connected ? dot : "bg-slate-400"}`} />
         </span>
         {statusText}
       </div>
@@ -80,12 +90,26 @@ const IntegrationCard = ({
 
 const logo = (src: string, alt: string) => <img src={src} alt={alt} className="size-8 object-contain" />;
 
-/** forma2's integrations page: the Javascript SDK, webhooks, the four OAuth integrations, and the automation platforms that subscribe webhooks through the v1 API, with how many each has. No platform has a published Forma app yet, so their cards open a guide to sending responses to one with a webhook instead of linking to an app page that does not exist. Their status still counts only the webhooks a platform subscribed through the v1 API (their source), not the user webhook the guide creates, which the Webhooks card counts; so the guide does not claim to connect the card. Read-only members see the cards but cannot open them, except webhooks and the SDK. */
+/** forma2's integrations page: the Javascript SDK, webhooks, the four OAuth integrations, and the automation platforms that subscribe webhooks through the v1 API, with how many each has and, for webhooks, how many are failing or retrying. No platform has a published Forma app yet, so their cards open a guide to sending responses to one with a webhook instead of linking to an app page that does not exist. Their status still counts only the webhooks a platform subscribed through the v1 API (their source), not the user webhook the guide creates, which the Webhooks card counts; so the guide does not claim to connect the card. Read-only members see the cards but cannot open them, except webhooks and the SDK. */
 export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) => {
   const { t } = useTranslation();
   const integrations = useQuery(integrationsQuery(workspace.id));
   const webhooks = useQuery(webhooksQuery(workspace.id));
   const counts = webhookCounts(webhooks.data?.webhooks ?? []);
+  const alerts = webhookAlerts(webhooks.data?.webhooks ?? []);
+  // A card of webhooks says how many there are, then how many are failing or retrying, and turns red or amber for them.
+  const webhookStatus = (
+    count: number,
+    noun: "webhook" | "zap" | "integration",
+    alert: WebhookAlerts
+  ): Pick<CardProps, "connected" | "statusText" | "alert"> => ({
+    connected: count > 0,
+    statusText:
+      count > 0
+        ? alertsText(t, connectionCountText(t, count, noun), alert)
+        : connectionCountText(t, count, noun),
+    alert: alert.failing > 0 ? "error" : alert.retrying > 0 ? "warning" : undefined,
+  });
   const isReadOnly = workspace.access.isReadOnly;
   const base = `/workspaces/${workspace.id}/integrations`;
   const [guide, setGuide] = useState<AutomationPlatform | null>(null);
@@ -145,8 +169,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       description: t("workspace.integrations.zapier_integration_description"),
       icon: logo(zapierLogo, "Zapier Logo"),
       connect: guideButton("zapier"),
-      connected: counts.zapier > 0,
-      statusText: connectionCountText(t, counts.zapier, "zap"),
+      ...webhookStatus(counts.zapier, "zap", alerts.zapier),
       disabled: isReadOnly,
     },
     {
@@ -154,8 +177,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       description: t("workspace.integrations.webhook_integration_description"),
       icon: logo(webhookLogo, "Webhook Logo"),
       connect: { to: `${base}/webhooks`, text: t("workspace.integrations.manage_webhooks") },
-      connected: counts.user > 0,
-      statusText: connectionCountText(t, counts.user, "webhook"),
+      ...webhookStatus(counts.user, "webhook", alerts.user),
       disabled: false,
     },
     oauthCard(
@@ -184,8 +206,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       description: t("workspace.integrations.n8n_integration_description"),
       icon: logo(n8nLogo, "n8n Logo"),
       connect: guideButton("n8n"),
-      connected: counts.n8n > 0,
-      statusText: connectionCountText(t, counts.n8n, "integration"),
+      ...webhookStatus(counts.n8n, "integration", alerts.n8n),
       disabled: isReadOnly,
     },
     {
@@ -193,8 +214,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       description: t("workspace.integrations.make_integration_description"),
       icon: logo(makeLogo, "Make Logo"),
       connect: guideButton("make"),
-      connected: counts.make > 0,
-      statusText: connectionCountText(t, counts.make, "integration"),
+      ...webhookStatus(counts.make, "integration", alerts.make),
       disabled: isReadOnly,
     },
     oauthCard(
@@ -209,8 +229,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       description: t("workspace.integrations.activepieces_integration_description"),
       icon: logo(activepiecesLogo, "ActivePieces Logo"),
       connect: guideButton("activepieces"),
-      connected: counts.activepieces > 0,
-      statusText: connectionCountText(t, counts.activepieces, "integration"),
+      ...webhookStatus(counts.activepieces, "integration", alerts.activepieces),
       disabled: isReadOnly,
     },
   ];

@@ -1,7 +1,14 @@
 import type { TFunction } from "i18next";
 import { ApiError } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
-import type { Webhook, WebhookSource, WebhookTrigger } from "./api";
+import type {
+  Webhook,
+  WebhookAttemptOutcome,
+  WebhookDeliveryStatus,
+  WebhookHealth,
+  WebhookSource,
+  WebhookTrigger,
+} from "./api";
 
 // The webhooks page's rules, forma2's modules/integrations/webhooks/lib/utils.ts and the table's display helpers.
 
@@ -141,3 +148,92 @@ export const endpointTestFailure = (t: TFunction, message: string): string =>
   `${t("workspace.integrations.webhooks.endpoint_pinged_error")} \n ${
     message.length < 250 ? message : t("workspace.integrations.webhooks.please_check_console")
   }`;
+
+type BadgeType = "success" | "warning" | "error" | "gray";
+
+/** The badge of a webhook's delivery health: gray until something was sent to it, green while its latest attempt succeeded, amber while failed deliveries are still being retried, red once one ran out of retries. */
+export const webhookHealthBadge = (
+  t: TFunction,
+  health: WebhookHealth | undefined
+): { type: BadgeType; label: string } => {
+  switch (health?.status) {
+    case undefined:
+      return { type: "gray", label: t("workspace.integrations.webhooks.deliveries.health_none") };
+    case "healthy":
+      return { type: "success", label: t("workspace.integrations.webhooks.deliveries.health_healthy") };
+    case "retrying":
+      return { type: "warning", label: t("workspace.integrations.webhooks.deliveries.health_retrying") };
+    case "failing":
+      return { type: "error", label: t("workspace.integrations.webhooks.deliveries.health_failing") };
+  }
+};
+
+/** The badge of one delivery: delivered, retrying, or failed for good. */
+export const deliveryStatusBadge = (
+  t: TFunction,
+  status: WebhookDeliveryStatus
+): { type: BadgeType; label: string } => {
+  switch (status) {
+    case "succeeded":
+      return { type: "success", label: t("workspace.integrations.webhooks.deliveries.status_succeeded") };
+    case "retrying":
+      return { type: "warning", label: t("workspace.integrations.webhooks.deliveries.status_retrying") };
+    case "failed":
+      return { type: "error", label: t("workspace.integrations.webhooks.deliveries.status_failed") };
+  }
+};
+
+/** Why an attempt failed, in one line; null for one that succeeded. The server's reason (a connection error, the URL check's refusal) is English, as the endpoint test shows it. */
+export const attemptFailureText = (t: TFunction, outcome: WebhookAttemptOutcome): string | null => {
+  const message = outcome.failureMessage ?? "";
+  switch (outcome.failure) {
+    case null:
+      return null;
+    case "status":
+      return t("workspace.integrations.webhooks.deliveries.failure_status", {
+        code: outcome.statusCode ?? 0,
+      });
+    case "redirect":
+      return t("workspace.integrations.webhooks.deliveries.failure_redirect", {
+        code: outcome.statusCode ?? 0,
+      });
+    case "timeout":
+      return t("workspace.integrations.webhooks.deliveries.failure_timeout");
+    case "unreachable":
+      return t("workspace.integrations.webhooks.deliveries.failure_unreachable", { message });
+    case "refused":
+      return t("workspace.integrations.webhooks.deliveries.failure_refused", { message });
+  }
+};
+
+export interface WebhookAlerts {
+  failing: number;
+  retrying: number;
+}
+
+/** How many webhooks of each source are failing or retrying, for the integrations page's cards. */
+export const webhookAlerts = (
+  webhooks: readonly Pick<Webhook, "source" | "health">[]
+): Record<WebhookSource, WebhookAlerts> => {
+  const alerts = Object.fromEntries(
+    (["user", "zapier", "make", "n8n", "activepieces"] as const).map((source) => [
+      source,
+      { failing: 0, retrying: 0 },
+    ])
+  ) as Record<WebhookSource, WebhookAlerts>;
+  for (const webhook of webhooks) {
+    if (webhook.health?.status === "failing") alerts[webhook.source].failing += 1;
+    if (webhook.health?.status === "retrying") alerts[webhook.source].retrying += 1;
+  }
+  return alerts;
+};
+
+/** A card's status line with its webhooks' alerts after the count: "2 webhooks · 1 failing". */
+export const alertsText = (t: TFunction, statusText: string, alerts: WebhookAlerts): string => {
+  const parts = [statusText];
+  if (alerts.failing > 0)
+    parts.push(t("workspace.integrations.webhooks.deliveries.card_failing", { count: alerts.failing }));
+  if (alerts.retrying > 0)
+    parts.push(t("workspace.integrations.webhooks.deliveries.card_retrying", { count: alerts.retrying }));
+  return parts.join(" · ");
+};

@@ -16,7 +16,14 @@ import { initI18n } from "../../../lib/i18n";
 import type { WorkspaceDetail } from "../../../lib/queries/workspaces";
 import { toast } from "../../../lib/toast";
 import { IntegrationsPage } from "../../workspace-settings/integrations";
-import type { Integration, IntegrationsOverview, LinkableSurvey, Webhook } from "../api";
+import type {
+  Integration,
+  IntegrationsOverview,
+  LinkableSurvey,
+  Webhook,
+  WebhookDelivery,
+  WebhookHealth,
+} from "../api";
 import { AirtablePage } from "./airtable";
 import { GoogleSheetsPage } from "./google-sheets";
 import { NotionPage } from "./notion";
@@ -154,6 +161,37 @@ const webhook = (overrides: Partial<Webhook> = {}): Webhook => ({
   ...overrides,
 });
 
+const failingHealth: WebhookHealth = {
+  status: "failing",
+  lastAttemptAt: "2026-10-26T00:00:00.000Z",
+  lastSuccessAt: null,
+  failingSince: "2026-10-25T00:00:00.000Z",
+  nextAttemptAt: null,
+  failedCount: 1,
+  statusCode: 405,
+  failure: "status",
+  failureMessage: "Status 405",
+};
+
+const delivery = (overrides: Partial<WebhookDelivery> = {}): WebhookDelivery => ({
+  id: "0192f7a8-1c3e-7b2a-9d4f-0000000000d1",
+  createdAt: "2026-10-25T00:00:00.000Z",
+  event: "responseFinished",
+  responseId: "0192f7a8-1c3e-7b2a-9d4f-0000000000e1",
+  surveyId: survey.id,
+  surveyName: "Feedback",
+  messageId: "3f5a",
+  status: "failed",
+  attempts: 8,
+  lastAttemptAt: "2026-10-26T00:00:00.000Z",
+  nextAttemptAt: null,
+  latencyMs: 41,
+  statusCode: 405,
+  failure: "status",
+  failureMessage: "Status 405",
+  ...overrides,
+});
+
 describe("integrations page", () => {
   const workspace = (isReadOnly: boolean, appSetupCompleted = false) =>
     ({
@@ -188,6 +226,43 @@ describe("integrations page", () => {
         .getAttribute("href")
     ).toBe(`/workspaces/${WS}/integrations/slack`);
     expect(card("Slack").getByText(t("common.not_connected"))).toBeTruthy();
+  });
+
+  test("a webhooks card turns red for a webhook that lost deliveries and amber for one being retried, and says how many", async () => {
+    stubServer({
+      [`GET ${BASE}`]: () => ({ body: overview([]) }),
+      [`GET /api/app/workspaces/${WS}/webhooks`]: () => ({
+        body: {
+          webhooks: [
+            webhook({ health: failingHealth }),
+            webhook({ id: "w2", health: { ...failingHealth, status: "retrying", failedCount: 0 } }),
+            webhook({ id: "w3" }),
+            webhook({
+              id: "w4",
+              source: "zapier",
+              health: { ...failingHealth, status: "retrying", failedCount: 0 },
+            }),
+            webhook({
+              id: "w5",
+              source: "make",
+              health: { ...failingHealth, status: "healthy", failure: null },
+            }),
+          ],
+          allowInternalUrls: false,
+        },
+      }),
+    });
+    renderPage(<IntegrationsPage workspace={workspace(false)} />);
+
+    expect(await screen.findByText("3 webhooks · 1 failing · 1 retrying")).toBeTruthy();
+    const dot = (label: string) =>
+      screen.getByRole("heading", { name: label }).parentElement!.querySelector(".relative.inline-flex")!
+        .className;
+    expect(dot("Webhooks")).toContain("bg-red-500");
+    expect(card("Zapier").getByText("1 zap · 1 retrying")).toBeTruthy();
+    expect(dot("Zapier")).toContain("bg-amber-500");
+    expect(card("Make.com").getByText("1 integration")).toBeTruthy();
+    expect(dot("Make.com")).toContain("bg-green-500");
   });
 
   test("an integration the instance cannot offer says so and only leads to its explanation; a set-up SDK is managed", async () => {
@@ -864,5 +939,161 @@ describe("webhooks", () => {
       dialog.getByRole("checkbox", { name: t("workspace.integrations.webhooks.response_finished") })
     ).toHaveProperty("disabled", true);
     expect(dialog.queryByRole("button", { name: t("common.save_changes") })).toBeNull();
+  });
+  test("each webhook shows its delivery health, and its delivery log resends a lost delivery", async () => {
+    const existing = webhook({ health: failingHealth });
+    const calls = stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [existing], allowInternalUrls: false } }),
+      "GET /api/v3/surveys": surveysList,
+      [`GET /api/app/webhooks/${existing.id}/deliveries`]: () => ({ body: { deliveries: [delivery()] } }),
+      [`POST /api/app/webhooks/${existing.id}/deliveries/${delivery().id}/resend`]: () => ({
+        body: delivery({
+          status: "succeeded",
+          attempts: 9,
+          statusCode: 200,
+          failure: null,
+          failureMessage: null,
+        }),
+      }),
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    const row = await screen.findByRole("button", { name: /Orders/ });
+    const badge = within(row).getByText(t("workspace.integrations.webhooks.deliveries.health_failing"));
+    expect(badge.getAttribute("title")).toContain("The endpoint answered with status 405");
+    fireEvent.click(row);
+    const modal = within(await screen.findByRole("dialog"));
+    expect(modal.getByText("The endpoint answered with status 405")).toBeTruthy();
+    fireEvent.click(
+      modal.getByRole("button", {
+        name: t("workspace.integrations.webhooks.deliveries.view_recent_deliveries"),
+      })
+    );
+
+    const sheet = within(
+      await screen.findByRole("dialog", {
+        name: t("workspace.integrations.webhooks.deliveries.recent_deliveries"),
+      })
+    );
+    expect(
+      await sheet.findByText(t("workspace.integrations.webhooks.deliveries.status_failed"))
+    ).toBeTruthy();
+    expect(sheet.getByRole("link", { name: "Feedback" }).getAttribute("href")).toBe(
+      `/workspaces/${WS}/surveys/${survey.id}/responses`
+    );
+    fireEvent.click(
+      sheet.getByRole("button", { name: t("workspace.integrations.webhooks.deliveries.resend") })
+    );
+
+    await waitFor(() =>
+      expect(toasts()).toContain(t("workspace.integrations.webhooks.deliveries.resend_succeeded"))
+    );
+    expect(calls.filter((call) => call.method === "POST").map((call) => call.path)).toEqual([
+      `/api/app/webhooks/${existing.id}/deliveries/${delivery().id}/resend`,
+    ]);
+  });
+
+  test("a resend that fails again says why; a read-only member sees the log without Resend", async () => {
+    const existing = webhook({ health: failingHealth });
+    stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [existing], allowInternalUrls: false } }),
+      "GET /api/v3/surveys": surveysList,
+      [`GET /api/app/webhooks/${existing.id}/deliveries`]: () => ({ body: { deliveries: [delivery()] } }),
+      [`POST /api/app/webhooks/${existing.id}/deliveries/${delivery().id}/resend`]: () => ({
+        body: delivery({ attempts: 9, statusCode: null, failure: "timeout", failureMessage: "No answer" }),
+      }),
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: t("workspace.integrations.webhooks.deliveries.view_recent_deliveries"),
+      })
+    );
+    const sheet = within(
+      await screen.findByRole("dialog", {
+        name: t("workspace.integrations.webhooks.deliveries.recent_deliveries"),
+      })
+    );
+    fireEvent.click(
+      await sheet.findByRole("button", { name: t("workspace.integrations.webhooks.deliveries.resend") })
+    );
+    await waitFor(() =>
+      expect(toasts()).toContain(
+        t("workspace.integrations.webhooks.deliveries.resend_failed", {
+          reason: "No answer within 5 seconds",
+        })
+      )
+    );
+    cleanup();
+
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly />);
+    fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: t("workspace.integrations.webhooks.deliveries.view_recent_deliveries"),
+      })
+    );
+    const readOnly = within(
+      await screen.findByRole("dialog", {
+        name: t("workspace.integrations.webhooks.deliveries.recent_deliveries"),
+      })
+    );
+    expect(
+      await readOnly.findByText(t("workspace.integrations.webhooks.deliveries.status_failed"))
+    ).toBeTruthy();
+    expect(
+      readOnly.queryByRole("button", { name: t("workspace.integrations.webhooks.deliveries.resend") })
+    ).toBeNull();
+  });
+
+  test("regenerating the signing secret asks first and shows the new secret once; a platform's webhook keeps its secret", async () => {
+    const existing = webhook();
+    const calls = stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({
+        body: {
+          webhooks: [existing, webhook({ id: "w2", name: "Zap", source: "zapier" })],
+          allowInternalUrls: false,
+        },
+      }),
+      "GET /api/v3/surveys": surveysList,
+      [`POST /api/app/webhooks/${existing.id}/secret`]: () => ({ body: { secret: "whsec_bmV3c2VjcmV0" } }),
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("tab", { name: t("common.settings") }));
+    fireEvent.click(
+      dialog.getByRole("button", { name: t("workspace.integrations.webhooks.regenerate_secret.button") })
+    );
+    const confirm = within(
+      await screen.findByRole("dialog", {
+        name: t("workspace.integrations.webhooks.regenerate_secret.title"),
+      })
+    );
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+    fireEvent.click(
+      confirm.getByRole("button", { name: t("workspace.integrations.webhooks.regenerate_secret.confirm") })
+    );
+    expect(await screen.findByDisplayValue("whsec_bmV3c2VjcmV0")).toBeTruthy();
+    expect(calls.filter((call) => call.method === "POST").map((call) => call.path)).toEqual([
+      `/api/app/webhooks/${existing.id}/secret`,
+    ]);
+    cleanup();
+
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Zap/ }));
+    const zap = within(await screen.findByRole("dialog"));
+    fireEvent.click(zap.getByRole("tab", { name: t("common.settings") }));
+    expect(
+      zap.getByText(
+        t("workspace.integrations.webhooks.regenerate_secret.third_party", { platform: "Zapier" })
+      )
+    ).toBeTruthy();
+    expect(
+      zap.queryByRole("button", { name: t("workspace.integrations.webhooks.regenerate_secret.button") })
+    ).toBeNull();
   });
 });

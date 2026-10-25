@@ -247,6 +247,52 @@ export interface Webhook {
   /** The webhook sends for every current and future survey. When unset it sends only for surveyIds, even once they are all deleted. */
   allSurveys: boolean;
   secret?: string;
+  /** Its delivery health, in the list only; absent while nothing was sent to it. */
+  health?: WebhookHealth;
+}
+
+/** healthy: the latest attempt succeeded. retrying: it failed, and every delivery since the last success is still being retried. failing: a delivery since the last success ran out of retries. */
+export type WebhookHealthStatus = "healthy" | "retrying" | "failing";
+
+/** Why an attempt failed: an answer outside 2xx, a redirect (never followed), no answer within 5 seconds, no connection, or a URL the server refuses to send to. */
+export type WebhookDeliveryFailure = "status" | "redirect" | "timeout" | "unreachable" | "refused";
+
+/** The outcome of the latest attempt of a delivery, or of a webhook's latest attempt. */
+export interface WebhookAttemptOutcome {
+  statusCode: number | null;
+  failure: WebhookDeliveryFailure | null;
+  failureMessage: string | null;
+}
+
+export interface WebhookHealth extends WebhookAttemptOutcome {
+  status: WebhookHealthStatus;
+  lastAttemptAt: string;
+  lastSuccessAt: string | null;
+  /** The first failed attempt after the last success. */
+  failingSince: string | null;
+  /** When the latest attempt's delivery is tried again. */
+  nextAttemptAt: string | null;
+  /** The deliveries that ran out of retries since the last success. */
+  failedCount: number;
+}
+
+export type WebhookDeliveryStatus = "succeeded" | "retrying" | "failed";
+
+/** One event sent to a webhook, with the outcome of its latest attempt; its payload stays on the server. */
+export interface WebhookDelivery extends WebhookAttemptOutcome {
+  id: string;
+  createdAt: string;
+  event: WebhookTrigger;
+  responseId: string;
+  surveyId: string;
+  surveyName: string | null;
+  /** The webhook-id header of every attempt, which receivers deduplicate on. */
+  messageId: string;
+  status: WebhookDeliveryStatus;
+  attempts: number;
+  lastAttemptAt: string;
+  nextAttemptAt: string | null;
+  latencyMs: number;
 }
 
 export interface WebhookInput {
@@ -267,6 +313,8 @@ export interface WebhooksList {
 export const webhookKeys = {
   all: (workspaceId: string) => ["workspaces", workspaceId, "webhooks"] as const,
   surveys: (workspaceId: string) => ["workspaces", workspaceId, "webhooks", "surveys"] as const,
+  deliveries: (workspaceId: string, webhookId: string) =>
+    ["workspaces", workspaceId, "webhooks", webhookId, "deliveries"] as const,
 };
 
 /** The surveys a webhook can be scoped to: forma2's page loaded the workspace's 200 most recently updated. */
@@ -318,5 +366,39 @@ export const useDeleteWebhook = (workspaceId: string) => {
   return useMutation({
     mutationFn: (webhookId: string) => api.delete<void>(`/api/app/webhooks/${webhookId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: webhookKeys.all(workspaceId) }),
+  });
+};
+
+/** A webhook's delivery log: its last 100 events, newest first. */
+export const webhookDeliveriesQuery = (workspaceId: string, webhookId: string) =>
+  queryOptions({
+    queryKey: webhookKeys.deliveries(workspaceId, webhookId),
+    queryFn: ({ signal }) =>
+      api
+        .get<{ deliveries: WebhookDelivery[] }>(`/api/app/webhooks/${webhookId}/deliveries`, { signal })
+        .then((res) => res.deliveries),
+  });
+
+/** Sends a delivery again now, with its original body and webhook-id, to the webhook's current URL and signed with its current secret. The answer is the delivery after the attempt, which may have failed again. */
+export const useResendWebhookDelivery = (workspaceId: string, webhookId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (deliveryId: string) =>
+      api.post<WebhookDelivery>(`/api/app/webhooks/${webhookId}/deliveries/${deliveryId}/resend`),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: webhookKeys.deliveries(workspaceId, webhookId) }),
+        queryClient.invalidateQueries({ queryKey: webhookKeys.all(workspaceId), exact: true }),
+      ]),
+  });
+};
+
+/** Replaces a webhook's signing secret; the answer is the only time the new one is shown. */
+export const useRegenerateWebhookSecret = (workspaceId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (webhookId: string) =>
+      api.post<{ secret: string }>(`/api/app/webhooks/${webhookId}/secret`).then((res) => res.secret),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: webhookKeys.all(workspaceId), exact: true }),
   });
 };
