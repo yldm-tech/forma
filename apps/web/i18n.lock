@@ -1611,6 +1611,7 @@ checksums:
     workspace/actions/you_can_track_code_action_anywhere_in_your_app_using: 3c0bbf160b8ddbeef142403103b70554
     workspace/actions/your_survey_would_be_shown_on_this_url: 766fdeeb52d170c156af5d035a1f8c37
     workspace/actions/your_survey_would_not_be_shown: af44fe160f449ff9557ebe5d3686832d
+    workspace/analysis/breakdown_rest: 287d085a84ef8c7a78247c4d85f2fbce
     workspace/analysis/filter_op/applied: a79bcd1e53b38db7b03b506ff2e05904
     workspace/analysis/filter_op/clicked: 5c716b9ed8d3c19778322c42c7f7d2a6
     workspace/analysis/filter_op/contains: 41c8c25407527a5336404313f4c8d650
@@ -1634,7 +1635,9 @@ checksums:
     workspace/analysis/filter_op/screened_out_overquota: eb7bbd4168587cb3ffd85513e5405b97
     workspace/analysis/filter_op/starts_with: f6673c17475708313c6a0f245b561781
     workspace/analysis/filter_op/submitted: 3af81b50bee720e6cf9a6ddbb5f10ce7
+    workspace/analysis/new_responses_pill: 9d45e8c6a91b67744980b06b26ac3903
     workspace/analysis/nps_formula_tooltip: 22f37aac6d65e65a0d787badcb4cf4f5
+    workspace/analysis/refresh: 8dab72d1eded5437272bb02c543e4042
     workspace/api_keys/add_api_key: 3c7633bae18a6e19af7a5af12f9bc3da
     workspace/api_keys/api_key: ce825fec5b3e1f8e27c45b1a63619985
     workspace/api_keys/api_key_copied_to_clipboard: daeeac786ba09ffa650e206609b88f9c

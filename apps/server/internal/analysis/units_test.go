@@ -3,9 +3,11 @@ package analysis
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"math"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -420,5 +422,67 @@ func TestDefaultLanguageMapping(t *testing.T) {
 		if value != c.value || id != c.column || ok != c.ok {
 			t.Errorf("matrix row %d in %s: %v %q %v, want %v %q %v", c.row, c.lang, value, id, ok, c.value, c.column, c.ok)
 		}
+	}
+}
+
+// TestBreakdownCountsTopValuesAndRest checks the grouping behind the hidden-field and Other bars: the ten most frequent values, most frequent first and ties in value order, every other answer in the remainder, shares over every counted answer, and a field with more distinct values than are tracked adding the untracked ones to the remainder.
+func TestBreakdownCountsTopValuesAndRest(t *testing.T) {
+	var c valueCounter
+	for i, n := range []int{5, 3, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1} {
+		for range n {
+			c.add(string(rune('a' + i)))
+		}
+	}
+	got := c.breakdown()
+	want := Breakdown{Values: []ValueCount{
+		{"a", 5, 23.81}, {"b", 3, 14.29}, {"c", 3, 14.29}, {"d", 2, 9.52}, {"e", 1, 4.76},
+		{"f", 1, 4.76}, {"g", 1, 4.76}, {"h", 1, 4.76}, {"i", 1, 4.76}, {"j", 1, 4.76},
+	}, RestCount: 2, RestPercentage: 9.52}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("breakdown\n got %+v\nwant %+v", got, want)
+	}
+
+	var empty valueCounter
+	if got := empty.breakdown(); len(got.Values) != 0 || got.Values == nil || got.RestCount != 0 {
+		t.Errorf("empty breakdown %+v, want no values and no rest", got)
+	}
+
+	var wide valueCounter
+	for i := range breakdownTracked {
+		wide.add(strconv.Itoa(i))
+	}
+	for range 3 {
+		wide.add("late")
+	}
+	wide.add("0")
+	got = wide.breakdown()
+	if got.Values[0] != (ValueCount{"0", 2, 0.02}) || slices.ContainsFunc(got.Values, func(v ValueCount) bool { return v.Value == "late" }) {
+		t.Errorf("a value met after the tracking bound is not in the remainder: %+v", got.Values)
+	}
+	if want := breakdownTracked + 4 - 11; got.RestCount != want {
+		t.Errorf("rest %d, want %d", got.RestCount, want)
+	}
+}
+
+// TestBreakdownBoundsTrackedBytes checks that long values cannot make a breakdown hold more than breakdownTrackedBytes: a new value past the bound, or longer than it, is added to the remainder, while the values already tracked keep counting.
+func TestBreakdownBoundsTrackedBytes(t *testing.T) {
+	const size = 1 << 10
+	long := func(i int) string { return fmt.Sprintf("%0*d", size, i) }
+	var c valueCounter
+	fits := breakdownTrackedBytes / size
+	for i := range fits + 5 {
+		c.add(long(i))
+	}
+	c.add(long(0))
+	c.add(strings.Repeat("x", breakdownTrackedBytes+1))
+	if len(c.counts) != fits || c.bytes != fits*size {
+		t.Errorf("tracked %d values of %d bytes, want %d of %d", len(c.counts), c.bytes, fits, fits*size)
+	}
+	got := c.breakdown()
+	if got.Values[0] != (ValueCount{long(0), 2, percent(2, float64(fits+7))}) {
+		t.Errorf("a tracked value is not counted again: %+v", got.Values[0])
+	}
+	if want := fits + 7 - 2 - (breakdownTop - 1); got.RestCount != want {
+		t.Errorf("rest %d, want %d", got.RestCount, want)
 	}
 }

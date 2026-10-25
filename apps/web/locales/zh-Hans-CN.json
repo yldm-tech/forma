@@ -1681,6 +1681,7 @@
       "your_survey_would_not_be_shown": "你的问卷不会显示。"
     },
     "analysis": {
+      "breakdown_rest": "其他所有值",
       "filter_op": {
         "applied": "已添加",
         "clicked": "已点击",
@@ -1706,7 +1707,9 @@
         "starts_with": "开头是",
         "submitted": "已作答"
       },
-      "nps_formula_tooltip": "NPS = 推荐者（9–10 分）占比 − 贬损者（0–6 分）占比，以作答的 {count} 位受访者为基数，不计跳过的回答。"
+      "new_responses_pill": "{count, plural, other {{count} 条新回复}}",
+      "nps_formula_tooltip": "NPS = 推荐者（9–10 分）占比 − 贬损者（0–6 分）占比，以作答的 {count} 位受访者为基数，不计跳过的回答。",
+      "refresh": "刷新结果"
     },
     "api_keys": {
       "add_api_key": "添加 API 密钥",

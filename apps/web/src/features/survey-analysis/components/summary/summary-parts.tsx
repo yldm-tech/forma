@@ -1,18 +1,24 @@
 import type { TI18nString } from "@forma/types/i18n";
 import type { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
-import type { TSurvey, TSurveyElementSummary } from "@forma/types/surveys/types";
+import type { TSurvey, TSurveyElementSummary, TSurveySummaryBreakdown } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { Link, useParams } from "@tanstack/react-router";
 import { BarChart, BarChartHorizontal, EyeIcon, InboxIcon, SkipForwardIcon } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { IdBadge } from "../../../../components/ui/id-badge";
+import { ProgressBar } from "../../../../components/ui/progress-bar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../../components/ui/tooltip";
 import { cn } from "../../../../lib/cn";
 import { recallToHeadline } from "../../../../lib/survey/recall";
 import { getElementTypes } from "../../../survey-editor/lib/elements";
 import { formatTextWithSlashes } from "../../../survey-editor/lib/utils";
-import { getElementDenominator, getSampleTruncation, satisfactionColor } from "../../lib/summary";
+import {
+  convertFloatToNDecimal,
+  getElementDenominator,
+  getSampleTruncation,
+  satisfactionColor,
+} from "../../lib/summary";
 import { RatingResponse } from "../response-values/rating-response";
 import { useElementImpressions } from "./element-impressions-context";
 
@@ -210,5 +216,53 @@ export const RatingScaleLegend = ({
         <RatingResponse scale={scale} answer={range} range={range} addColors={false} variant="scale" />
       </div>
     </div>
+  );
+};
+
+/** The aggregated view of a free-text field (a hidden field, the values typed into Other): its most frequent values as bars, the others added up in a last bar. Shares are of the answers counted. */
+export const BreakdownBars = ({
+  breakdown,
+  countLabel,
+}: {
+  breakdown: TSurveySummaryBreakdown;
+  countLabel: (count: number) => string;
+}) => {
+  const { t } = useTranslation();
+  const rows = breakdown.values.map((value) => ({ ...value, isRest: false }));
+  if (breakdown.restCount > 0) {
+    rows.push({
+      value: t("workspace.analysis.breakdown_rest"),
+      count: breakdown.restCount,
+      percentage: breakdown.restPercentage,
+      isRest: true,
+    });
+  }
+  return (
+    <ul className="space-y-5">
+      {rows.map((row) => (
+        <li key={row.isRest ? "rest" : `value-${row.value}`}>
+          <div className="flex flex-col justify-between px-2 pb-2 sm:flex-row">
+            <p
+              className={cn(
+                "mr-8 font-semibold break-words",
+                row.isRest ? "text-slate-500 italic" : "ph-no-capture text-slate-700"
+              )}
+              dir="auto">
+              {row.value}
+            </p>
+            <div className="flex shrink-0 gap-x-2">
+              <p className="flex pt-1 text-slate-600 sm:items-end sm:pt-0">{countLabel(row.count)}</p>
+              <p className="rounded-lg bg-slate-100 px-2 text-slate-700">
+                {convertFloatToNDecimal(row.percentage, 2)}%
+              </p>
+            </div>
+          </div>
+          <ProgressBar
+            barColor={row.isRest ? "bg-slate-400" : "bg-slate-700"}
+            progress={row.percentage / 100}
+          />
+        </li>
+      ))}
+    </ul>
   );
 };

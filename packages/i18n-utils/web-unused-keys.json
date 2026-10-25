@@ -162,6 +162,7 @@
   "workspace.surveys.share.send_email.embed_code_copied_to_clipboard_failed",
   "workspace.surveys.summary.average",
   "workspace.surveys.summary.filter_added_successfully",
+  "workspace.surveys.summary.generate_example_responses_disabled_has_responses",
   "workspace.surveys.summary.generating_qr_code",
   "workspace.surveys.summary.reset_survey_warning",
   "workspace.workflows.relative_date",

@@ -551,6 +551,8 @@ export const ZResponseTableData = z.object({
   responseId: z.string(),
   singleUseId: z.string().nullable(),
   createdAt: z.date(),
+  /** Whether the response was completed; `status` is its translated label. */
+  finished: z.boolean(),
   status: z.string(),
   verifiedEmail: z.string(),
   tags: z.array(ZTag),

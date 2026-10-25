@@ -1681,6 +1681,7 @@
       "your_survey_would_not_be_shown": "Your survey would not be shown."
     },
     "analysis": {
+      "breakdown_rest": "All other values",
       "filter_op": {
         "applied": "Applied",
         "clicked": "Clicked",
@@ -1706,7 +1707,9 @@
         "starts_with": "Starts with",
         "submitted": "Submitted"
       },
-      "nps_formula_tooltip": "NPS = % promoters (9 to 10) minus % detractors (0 to 6), out of the {count, plural, one {# respondent} other {# respondents}} who answered. Skips are not counted."
+      "new_responses_pill": "{count, plural, one {{count} new response} other {{count} new responses}}",
+      "nps_formula_tooltip": "NPS = % promoters (9 to 10) minus % detractors (0 to 6), out of the {count, plural, one {# respondent} other {# respondents}} who answered. Skips are not counted.",
+      "refresh": "Refresh results"
     },
     "api_keys": {
       "add_api_key": "Add API Key",
