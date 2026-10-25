@@ -30,6 +30,7 @@ import {
   ZSurveyPictureSelectionElement,
   ZSurveyRankingElement,
   ZSurveyRatingElement,
+  ZSurveySliderElement,
 } from "./elements";
 import { validateElementLabels } from "./elements-validation";
 import { ZSurveyFollowUp } from "./follow-up";
@@ -3119,6 +3120,7 @@ const isInvalidOperatorsForElementType = (
     case TSurveyElementTypeEnum.Rating:
     case TSurveyElementTypeEnum.CSAT:
     case TSurveyElementTypeEnum.CES:
+    case TSurveyElementTypeEnum.Slider:
       if (
         ![
           "equals",
@@ -3282,7 +3284,9 @@ const validateBlockConditions = (
             const validElementTypes: TSurveyElementTypeEnum[] = [TSurveyElementTypeEnum.OpenText];
 
             if (element.inputType === "number") {
-              validElementTypes.push(...[TSurveyElementTypeEnum.Rating, TSurveyElementTypeEnum.NPS]);
+              validElementTypes.push(
+                ...[TSurveyElementTypeEnum.Rating, TSurveyElementTypeEnum.NPS, TSurveyElementTypeEnum.Slider]
+              );
             }
 
             if (["equals", "doesNotEqual"].includes(condition.operator)) {
@@ -3426,7 +3430,8 @@ const validateBlockConditions = (
         }
       } else if (
         element.type === TSurveyElementTypeEnum.NPS ||
-        element.type === TSurveyElementTypeEnum.Rating
+        element.type === TSurveyElementTypeEnum.Rating ||
+        element.type === TSurveyElementTypeEnum.Slider
       ) {
         if (rightOperand?.type === "variable") {
           const variableId = rightOperand.value;
@@ -3457,6 +3462,14 @@ const validateBlockConditions = (
               issues.push({
                 code: "custom",
                 message: `Conditional Logic: NPS score should be between 0 and 10 for "${operator}" in logic no: ${String(logicIndex + 1)} of block ${String(blockIndex + 1)}`,
+                path: ["blocks", blockIndex, "logic", logicIndex, "conditions"],
+              });
+            }
+          } else if (element.type === TSurveyElementTypeEnum.Slider) {
+            if (rightOperand.value < element.min || rightOperand.value > element.max) {
+              issues.push({
+                code: "custom",
+                message: `Conditional Logic: Slider value should be between ${String(element.min)} and ${String(element.max)} for "${operator}" in logic no: ${String(logicIndex + 1)} of block ${String(blockIndex + 1)}`,
                 path: ["blocks", blockIndex, "logic", logicIndex, "conditions"],
               });
             }
@@ -4209,6 +4222,32 @@ export const ZSurveyElementSummaryCes = z.object({
 
 export type TSurveyElementSummaryCes = z.infer<typeof ZSurveyElementSummaryCes>;
 
+/**
+ * A slider's answers: their count, mean, median and extremes, and how they spread over the scale. Each bin covers the positions from `from` to `to`, both included; a scale of at most 11 positions has a bin per position, a longer one 10 bins of whole steps. `average`, `median`, `min` and `max` are 0 when nobody answered.
+ */
+export const ZSurveyElementSummarySlider = z.object({
+  type: z.literal(TSurveyElementTypeEnum.Slider),
+  element: ZSurveySliderElement,
+  responseCount: z.number(),
+  average: z.number(),
+  median: z.number(),
+  min: z.number(),
+  max: z.number(),
+  bins: z.array(
+    z.object({
+      from: z.number(),
+      to: z.number(),
+      count: z.number(),
+      percentage: z.number(),
+    })
+  ),
+  dismissed: z.object({
+    count: z.number(),
+  }),
+});
+
+export type TSurveyElementSummarySlider = z.infer<typeof ZSurveyElementSummarySlider>;
+
 export const ZSurveyElementSummaryCta = z.object({
   type: z.literal(TSurveyElementTypeEnum.CTA),
   element: ZSurveyCTAElement,
@@ -4431,6 +4470,7 @@ export const ZSurveyElementSummary = z.union([
   ZSurveyElementSummaryContactInfo,
   ZSurveyElementSummaryCsat,
   ZSurveyElementSummaryCes,
+  ZSurveyElementSummarySlider,
 ]);
 
 export type TSurveyElementSummary = z.infer<typeof ZSurveyElementSummary>;
