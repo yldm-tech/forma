@@ -163,6 +163,7 @@ export const mapResponsesToTableData = (
   return responses.map((response) => ({
     responseData: extractResponseData(response, survey) as TResponseTableData["responseData"],
     createdAt: response.createdAt,
+    finished: response.finished,
     status: response.finished
       ? t("workspace.surveys.responses.completed")
       : t("workspace.surveys.responses.not_completed"),

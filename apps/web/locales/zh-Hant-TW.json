@@ -1681,6 +1681,7 @@
       "your_survey_would_not_be_shown": "您的問卷將不會顯示。"
     },
     "analysis": {
+      "breakdown_rest": "其他所有值",
       "filter_op": {
         "applied": "已加上",
         "clicked": "已點擊",
@@ -1706,7 +1707,9 @@
         "starts_with": "開頭為",
         "submitted": "已作答"
       },
-      "nps_formula_tooltip": "NPS = 推廣者（9–10 分）比例 − 批評者（0–6 分）比例，以作答的 {count} 位受訪者為基數，不計入略過的回應。"
+      "new_responses_pill": "{count, plural, other {{count} 筆新回應}}",
+      "nps_formula_tooltip": "NPS = 推廣者（9–10 分）比例 − 批評者（0–6 分）比例，以作答的 {count} 位受訪者為基數，不計入略過的回應。",
+      "refresh": "重新整理結果"
     },
     "api_keys": {
       "add_api_key": "新增 API 金鑰",

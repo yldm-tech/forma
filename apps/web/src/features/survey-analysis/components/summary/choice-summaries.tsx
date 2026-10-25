@@ -17,12 +17,18 @@ import { ProgressBar } from "../../../../components/ui/progress-bar";
 import { TooltipRenderer } from "../../../../components/ui/tooltip";
 import { SUMMARY_FILTER_OPERATOR, pictureFilterValue } from "../../lib/filters";
 import { getChoiceIdByValue, getContactIdentifier } from "../../lib/responses";
-import { convertFloatToNDecimal } from "../../lib/summary";
-import { ElementSummaryHeader, SampleTruncationNotice, type SetSummaryFilter } from "./summary-parts";
+import { convertFloatToNDecimal, defaultBreakdownView } from "../../lib/summary";
+import {
+  BreakdownBars,
+  ElementSummaryHeader,
+  SampleTruncationNotice,
+  type SetSummaryFilter,
+  ViewToggle,
+} from "./summary-parts";
 
 type ChoiceSummaryResult = TSurveyElementSummaryMultipleChoice["choices"][number];
 
-/** forma2's MultipleChoiceSummary: each choice's share, Other's typed values, a click filtering by the choice. */
+/** forma2's MultipleChoiceSummary: each choice's share, a click filtering by the choice, and the values typed into Other, grouped into bars or listed one by one. */
 export const MultipleChoiceSummary = ({
   elementSummary,
   survey,
@@ -34,6 +40,9 @@ export const MultipleChoiceSummary = ({
 }) => {
   const { t } = useTranslation();
   const [visibleOtherResponses, setVisibleOtherResponses] = useState(10);
+  const [otherView, setOtherView] = useState(() =>
+    defaultBreakdownView(elementSummary.choices.find((choice) => choice.othersBreakdown)?.othersBreakdown)
+  );
   const otherValue = elementSummary.element.choices.find((choice) => choice.id === "other")?.label.default;
   // Choices with typed Other values go last; the rest by count.
   const results = [...elementSummary.choices].sort((a, b) => {
@@ -81,6 +90,9 @@ export const MultipleChoiceSummary = ({
           {results.map((result) => {
             const choiceId = getChoiceIdByValue(result.value, elementSummary.element);
             const others = (result.others ?? []).filter((other) => other.value !== "");
+            const hasOthers = result.others !== undefined && result.others.length > 0;
+            // The grouped bars need the breakdown; without one the typed values are listed.
+            const othersBreakdown = otherView === "aggregated" ? result.othersBreakdown : undefined;
             return (
               <Fragment key={result.value}>
                 <div
@@ -109,7 +121,23 @@ export const MultipleChoiceSummary = ({
                     <ProgressBar barColor="bg-slate-700" progress={result.percentage / 100} />
                   </div>
                 </div>
-                {result.others && result.others.length > 0 && (
+                {hasOthers && result.othersBreakdown && (
+                  <ViewToggle value={otherView} onChange={setOtherView} />
+                )}
+                {hasOthers && othersBreakdown && (
+                  <div className="mt-4 rounded-lg border border-slate-200">
+                    <div className="flex h-12 items-center rounded-t-lg bg-slate-100 pl-6 text-left text-sm font-semibold text-slate-900">
+                      {t("workspace.surveys.summary.other_values_found")}
+                    </div>
+                    <div className="p-4 md:px-6">
+                      <BreakdownBars
+                        breakdown={othersBreakdown}
+                        countLabel={(count) => t("common.count_selections", { count })}
+                      />
+                    </div>
+                  </div>
+                )}
+                {result.others && hasOthers && !othersBreakdown && (
                   <div className="mt-4 rounded-lg border border-slate-200">
                     <div className="grid h-12 grid-cols-2 content-center rounded-t-lg bg-slate-100 text-left text-sm font-semibold text-slate-900">
                       <div className="col-span-1 pl-6">
