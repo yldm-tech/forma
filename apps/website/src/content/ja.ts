@@ -364,12 +364,16 @@ export const ja: SiteContent = {
           title: "ユーザーの識別",
           facts: [
             {
-              term: "setUserId(userId)",
-              body: "訪問者をその ID のコンタクトとして識別します（初回に作成）。セグメントの絞り込みや「一度だけ表示」がその人に対して働きます。ID は 255 文字まで。別の ID を設定すると、前のユーザーの状態を先に消去します。",
+              term: "setUserId(userId, { userHash })",
+              body: "訪問者をその ID のコンタクトとして識別します（初回に作成）。セグメントの絞り込みや「一度だけ表示」がその人に対して働きます。ID は 255 文字まで。別の ID を設定すると、前のユーザーの状態を先に消去します。`userHash` はその ID を検証します。",
             },
             {
               term: "setAttributes(attributes)、setAttribute(key, value)",
               body: "セグメントに使うコンタクト属性を設定します。先に `setUserId` を呼び出してください。文字列・数値・`Date` が新しい属性の型を決め、以降の値が同じ型でなければサーバーは保存しません。",
+            },
+            {
+              term: "本人確認",
+              body: "ワークスペース ID は公開されているため、SDK は Forma で保護に指定した属性を書き込まず、メールアドレスは本人確認済みのユーザーに限り書き込みます。ユーザーを検証するには、「連携 → Web・モバイル SDK」で本人確認シークレットを生成し、サーバーでユーザー ID のシークレットによる HMAC-SHA256 を 16 進数で計算して `userHash` として渡します。本人確認を必須にすると、有効なハッシュのない identify は拒否されます。",
             },
             {
               term: "setLanguage(language)",
