@@ -468,6 +468,10 @@ func TestTemplates(t *testing.T) {
 		t.Fatalf("template survey %v", created.Data)
 	}
 	e.ok(e.v3(owner, http.MethodPost, surveysPath("/templates"), template("custom", "custom")), http.StatusCreated, &created)
+	// The picker's card keeps its label, but a survey started from scratch gets a name of its own rather than the label (de-DE renders the catalog in en-US).
+	if out.Templates[0].Name != "最初から始める" || created.Data["name"] != "Untitled survey" {
+		t.Fatalf("custom template card %q, survey name %v", out.Templates[0].Name, created.Data["name"])
+	}
 	p := e.problem(e.v3(owner, http.MethodPost, surveysPath("/templates"), template("cart-abandonment", "xm")), http.StatusBadRequest, "Template not found")
 	if p.param(t, "templateId").Reason != "Unknown template for the requested source" {
 		t.Fatalf("%+v", p)

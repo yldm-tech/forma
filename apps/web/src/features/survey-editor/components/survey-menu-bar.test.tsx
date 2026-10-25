@@ -20,6 +20,7 @@ import { initI18n } from "../../../lib/i18n";
 import { instanceKeys } from "../../../lib/queries/instance";
 import { analysisKeys } from "../../survey-analysis/api";
 import { surveyEditorKeys } from "../api";
+import { withSurveyNameFocus } from "../lib/name-focus";
 import { SurveyMenuBar } from "./survey-menu-bar";
 
 const WORKSPACE_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0f";
@@ -212,7 +213,7 @@ const stubAppSurveyEndpoints = (): SaveRequest[] => {
 /** The menu bar inside a router that has the editor and the survey summary it leaves for, opened on the editor with no history behind it, as a new tab or a pasted URL opens it. The editor shows the open tab, and on the Questions tab the cards of the survey's questions, as the editor mounts them. */
 const renderMenuBar = (
   persisted: TSurvey,
-  { initialTab = "elements" }: { initialTab?: TSurveyEditorTabs } = {}
+  { initialTab = "elements", focusName = false }: { initialTab?: TSurveyEditorTabs; focusName?: boolean } = {}
 ) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(surveyEditorKeys.survey(persisted.id), persisted);
@@ -267,10 +268,10 @@ const renderMenuBar = (
       component: () => <h1>Survey list</h1>,
     }),
   ]);
-  const router = createRouter({
-    routeTree,
-    history: createMemoryHistory({ initialEntries: [EDITOR_PATH] }),
-  });
+  const history = createMemoryHistory({ initialEntries: [EDITOR_PATH] });
+  // The navigation that creates a survey from scratch asks for its name to be focused in the history entry's state.
+  if (focusName) history.replace(EDITOR_PATH, withSurveyNameFocus({}));
+  const router = createRouter({ routeTree, history });
 
   render(
     <I18nextProvider i18n={i18n}>
@@ -283,6 +284,22 @@ const renderMenuBar = (
 };
 
 describe("SurveyMenuBar", () => {
+  test("a survey just created from scratch opens with its placeholder name selected", async () => {
+    renderMenuBar(survey({ name: "Untitled survey" }), { focusName: true });
+
+    const name = await screen.findByRole<HTMLInputElement>("textbox", { name: "Survey name" });
+    await waitFor(() => expect(document.activeElement).toBe(name));
+    expect(name.selectionStart).toBe(0);
+    expect(name.selectionEnd).toBe("Untitled survey".length);
+  });
+
+  test("an editor opened any other way leaves the name alone", async () => {
+    renderMenuBar(survey({ name: "Untitled survey" }));
+
+    const name = await screen.findByRole("textbox", { name: "Survey name" });
+    expect(document.activeElement).not.toBe(name);
+  });
+
   test("Publish saves the survey as in progress, caches it for the editor, drops its cached analysis and leaves for its summary, which announces the publish", async () => {
     const saves = stubSaveEndpoint();
     const { queryClient, router } = renderMenuBar(survey());

@@ -105,6 +105,7 @@ checksums:
     auth/password_compromised: d4ab0f66aaed039f956c2515328ed1c9
     auth/saml_connection_error: 03c69c534e7eaafcb2c22b7daf9f3efc
     auth/signup/captcha_failed: 4e1ed87800585b8c1da1514fa86ab943
+    auth/signup/check_your_account: a766d40dd8263060d4f5e514a2d9b257
     auth/signup/company_email_required: 997bf11a31512cedf4ab8acb7b4f56c3
     auth/signup/have_an_account: 6f9c2d441e93cb6df9ef7dc898e80e05
     auth/signup/log_in: 9fb886eff8d1d67d8bb79f5c3f78edde
@@ -655,6 +656,9 @@ checksums:
     emails/verification_new_email_subject: 48e8ebbb04ac6bc420545cea025a4b28
     emails/verification_security_notice: ccc15212d996214c5c2d2ea021951fe2
     emails/verified_link_survey_email_subject: 23449a8b573295a42031a09613c7fb10
+    onboarding/product_name_description: 71e243056ced62e4f193923dc0f091de
+    onboarding/product_name_label: 36d1baa3678419e8198696b0eb746e98
+    onboarding/product_name_placeholder: 5ec6ce1b5ac5c32e07c8c107bc6b3b68
     organizations/landing/no_workspaces_warning_subtitle: 305578d27209f1c4f706fccd53559f52
     organizations/landing/no_workspaces_warning_title: ba051776860ec4d73c7d177b1379bbda
     organizations/security_tip_github: 0c3949dce92da2ab10e070c6033f98b4
@@ -890,6 +894,7 @@ checksums:
     templates/csat_survey_question_2_placeholder: 37ee9c84f3777b9220d4faec1e1c78ee
     templates/csat_upper_label: a3a49eb9cc86972bce6dc41a107f472d
     templates/cta_description: bc94a2ddc965b286a8677b0642696c7e
+    templates/custom_survey_default_name: 9ee3fe213d9c92e59d6a3c7fde1db76f
     templates/custom_survey_description: 0492afdea2ef1bd683eaf48a2bad2caa
     templates/custom_survey_name: 6fc756927ca9ea22c26368cccd64a67e
     templates/custom_survey_question_1_headline: 0abf9d41e0b5c5567c3833fd63048398

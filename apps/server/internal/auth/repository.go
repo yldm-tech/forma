@@ -242,9 +242,12 @@ var defaultContactAttributeKeys = []struct {
 	{"language", "Language", "The language preference of a contact", false},
 }
 
-// provisionOrganization gives a new user what forma2's sign-up gave an uninvited one: "<name>'s Organization" with the user as its owner, a default workspace, and organization alerts switched off for that organization.
-func (r *Repository) provisionOrganization(ctx context.Context, userID uuid.UUID, userName string) (uuid.UUID, error) {
-	orgID, err := r.scanID(ctx, `INSERT INTO organizations (name) VALUES (?) RETURNING id`, userName+"'s Organization")
+// provisionOrganization gives a new user what forma2's sign-up gave an uninvited one: "<name>'s Organization" with the user as its owner, a default workspace, and organization alerts switched off for that organization. timeZone, the browser's zone when it sent a valid one, becomes the organization's display and survey scheduling zone, as for an organization created from the switcher; nil leaves both unset (UTC and the instance's SURVEY_SCHEDULING_TIME_ZONE).
+func (r *Repository) provisionOrganization(ctx context.Context, userID uuid.UUID, userName string, timeZone *string) (uuid.UUID, error) {
+	orgID, err := r.scanID(ctx,
+		`INSERT INTO organizations (name, display_time_zone, survey_scheduling_time_zone) VALUES (?, ?, ?) RETURNING id`,
+		userName+"'s Organization", timeZone, timeZone,
+	)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("create organization: %w", err)
 	}
