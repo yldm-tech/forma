@@ -242,6 +242,13 @@ export function AddFilterModal({
       .filter((segment) => segment.title.toLowerCase().includes(searchValue.toLowerCase()));
   }, [segments, searchValue]);
 
+  // The device comes from the visitor's browser on each visit, so contact counts, which are computed from stored attributes, cannot include it.
+  const deviceFilterHint = (
+    <p data-testid="device-filter-hint" className="px-2 pb-1 text-xs text-slate-500">
+      {t("workspace.segments.device_filter_hint")}
+    </p>
+  );
+
   const deviceTypesFiltered = useMemo(() => {
     if (!searchValue) return devices;
 
@@ -409,6 +416,7 @@ export function AddFilterModal({
 
             {filters.devices.length > 0 && (
               <FilterSection label={t("workspace.segments.devices")}>
+                {deviceFilterHint}
                 {filters.devices.map((deviceType) => (
                   <FilterButton
                     key={deviceType.id}
@@ -499,6 +507,7 @@ export function AddFilterModal({
   const getDevicesTabContent = () => {
     return (
       <div className="flex flex-col">
+        {deviceFilterHint}
         {deviceTypesFiltered.map((deviceType) => (
           <FilterButton
             key={deviceType.id}

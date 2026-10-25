@@ -2210,6 +2210,7 @@
       "delete_segment": "Delete Segment",
       "desktop": "Desktop",
       "device": "Device",
+      "device_filter_hint": "Checked on each visit. Contact counts don't include device conditions.",
       "devices": "Devices",
       "edit_segment": "Edit Segment",
       "error_resetting_filters": "Error resetting filters",

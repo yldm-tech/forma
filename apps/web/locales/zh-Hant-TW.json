@@ -2210,6 +2210,7 @@
       "delete_segment": "刪除區隔",
       "desktop": "桌面版",
       "device": "裝置",
+      "device_filter_hint": "每次造訪時判定。聯絡人數量不計入裝置條件。",
       "devices": "裝置",
       "edit_segment": "編輯區隔",
       "error_resetting_filters": "重設篩選器時發生錯誤",
