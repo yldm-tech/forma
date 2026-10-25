@@ -109,7 +109,12 @@ const SessionRow = ({ session, locale }: { session: UserSession; locale: string 
             {device}
           </span>
           {session.current && (
-            <Badge type="success" size="tiny" text={t("workspace.settings.profile.sessions.this_device")} />
+            <Badge
+              type="success"
+              size="tiny"
+              className="whitespace-nowrap"
+              text={t("workspace.settings.profile.sessions.this_device")}
+            />
           )}
         </div>
       </TableCell>

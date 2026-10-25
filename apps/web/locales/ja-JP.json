@@ -2824,6 +2824,8 @@
         "two_factor_authentication_description": "パスワードが盗まれた場合に備えて、アカウントにセキュリティの追加レイヤーを追加します。",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "二段階認証が有効になりました。認証アプリから6桁のコードを入力してください。",
         "two_factor_code": "二段階認証コード",
+        "two_factor_enabled": "二段階認証を有効にしました。他のすべてのセッションからログアウトしました。",
+        "two_factor_signs_out_other_sessions": "二段階認証を有効にすると、他のすべてのセッションからログアウトされます。このブラウザはログインしたままです。",
         "update_personal_info": "個人情報を更新",
         "warning_cannot_delete_account": "あなたは、この組織の唯一のオーナーです。まず、別のメンバーにオーナーシップを譲渡してください。",
         "warning_cannot_undo": "この操作は元に戻せません",

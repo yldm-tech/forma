@@ -2824,6 +2824,8 @@
         "two_factor_authentication_description": "Add an extra layer of security to your account in case your password is stolen.",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "Two-factor authentication enabled. Please enter the six-digit code from your authenticator app.",
         "two_factor_code": "Two-Factor Code",
+        "two_factor_enabled": "Two-factor authentication is on. Every other session has been signed out.",
+        "two_factor_signs_out_other_sessions": "Turning on two-factor authentication signs you out of every other session. This browser stays signed in.",
         "update_personal_info": "Update your personal information",
         "warning_cannot_delete_account": "You are the only owner of this organization. Please transfer ownership to another member first.",
         "warning_cannot_undo": "This cannot be undone",

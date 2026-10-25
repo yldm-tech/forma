@@ -105,7 +105,10 @@ describe("SessionsCard", () => {
 
     const [mine, phone, unknown] = (await rows()) as [HTMLElement, HTMLElement, HTMLElement];
     expect(within(mine).getByText("Chrome on macOS")).toBeTruthy();
-    expect(within(mine).getByText(t("workspace.settings.profile.sessions.this_device"))).toBeTruthy();
+    // The badge keeps to one line however narrow the Device column gets.
+    expect(within(mine).getByText(t("workspace.settings.profile.sessions.this_device")).className).toContain(
+      "whitespace-nowrap"
+    );
     expect(within(mine).getByText("203.0.113.10")).toBeTruthy();
     expect(within(mine).getByText(t("workspace.settings.profile.sessions.active_now"))).toBeTruthy();
     // This browser signs out from the account menu, not here.

@@ -2824,6 +2824,8 @@
         "two_factor_authentication_description": "在您的密碼被盜時，為您的帳戶新增額外的安全層。",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "已啟用雙重驗證。請輸入您驗證器應用程式中的六位數程式碼。",
         "two_factor_code": "雙重驗證碼",
+        "two_factor_enabled": "雙重驗證已啟用，您的其他所有工作階段都已登出。",
+        "two_factor_signs_out_other_sessions": "啟用雙重驗證後，您的其他所有工作階段都會被登出，目前的瀏覽器會保持登入。",
         "update_personal_info": "更新您的個人資訊",
         "warning_cannot_delete_account": "您是此組織的唯一擁有者。請先將所有權轉讓給其他成員。",
         "warning_cannot_undo": "此操作無法復原",

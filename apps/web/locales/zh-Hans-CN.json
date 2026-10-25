@@ -2824,6 +2824,8 @@
         "two_factor_authentication_description": "为你的账户增加额外的安全层，以防密码被盗。",
         "two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app": "双因素认证已启用。请输入身份验证器应用中的六位验证码。",
         "two_factor_code": "双重身份验证码",
+        "two_factor_enabled": "双因素认证已启用，你的其他所有会话都已登出。",
+        "two_factor_signs_out_other_sessions": "启用双因素认证后，你的其他所有会话都会被登出，当前浏览器保持登录。",
         "update_personal_info": "更新你的个人信息",
         "warning_cannot_delete_account": "你是该组织的唯一拥有者。请先将所有权转移给其他成员。",
         "warning_cannot_undo": "此操作无法撤销。",

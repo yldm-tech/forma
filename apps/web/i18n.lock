@@ -2701,6 +2701,8 @@ checksums:
     workspace/settings/profile/two_factor_authentication_description: 1429e4eeaea193f15fb508875d4fb601
     workspace/settings/profile/two_factor_authentication_enabled_please_enter_the_six_digit_code_from_your_authenticator_app: 308ba145b3dc485ff4f17387e977b1f9
     workspace/settings/profile/two_factor_code: c8597a6518a04027bad18c0f232f3fc4
+    workspace/settings/profile/two_factor_enabled: a1f537d3951ded1a91438551fe990201
+    workspace/settings/profile/two_factor_signs_out_other_sessions: 4fe2b80403c14bb0ea7e298e2e6bf631
     workspace/settings/profile/update_personal_info: 5806f9bae0248a604cf85a2d8790a606
     workspace/settings/profile/warning_cannot_delete_account: 07c25c3829149cd7171e7ad88229deac
     workspace/settings/profile/warning_cannot_undo: dd1b2a59ff244b362d1d0d4eb1dbf7c6

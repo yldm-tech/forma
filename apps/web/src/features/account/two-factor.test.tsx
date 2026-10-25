@@ -114,6 +114,10 @@ test("enrolment walks the steps with focus, inline errors and backup codes that 
   expect(description()?.textContent).toBe(
     i18n.t("workspace.settings.profile.enter_the_code_from_your_authenticator_app_below")
   );
+  // Turning 2FA on signs out every other session, and the step that does it says so beforehand.
+  expect(
+    within(dialog).getByText(i18n.t("workspace.settings.profile.two_factor_signs_out_other_sessions"))
+  ).toBeTruthy();
 
   fireEvent.change(digitBoxes()[0] as HTMLInputElement, { target: { value: "123456" } });
   fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.confirm") }));
@@ -127,6 +131,10 @@ test("enrolment walks the steps with focus, inline errors and backup codes that 
     expect(description()?.textContent).toBe(
       i18n.t("workspace.settings.profile.save_the_following_backup_codes_in_a_safe_place")
     )
+  );
+  // The confirmation is the app's own, in the user's language, and repeats that the other sessions were signed out.
+  expect(toast.getSnapshot().map((shown) => shown.message)).toContain(
+    i18n.t("workspace.settings.profile.two_factor_enabled")
   );
   // The success toast carries a close button of its own; with it gone, no close button may be left.
   act(() => {
