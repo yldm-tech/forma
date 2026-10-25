@@ -33,7 +33,7 @@ export const FormBuilderPage = () => {
           <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {page.share.items.map((item) => (
               <li key={item} data-reveal className="card flex items-center gap-3 p-5">
-                <span className="bg-mint-100 inline-flex size-8 flex-none items-center justify-center rounded-full text-teal-900">
+                <span className="bg-crimson-100 text-crimson-900 inline-flex size-8 flex-none items-center justify-center rounded-full">
                   <Icon name="check" size={16} />
                 </span>
                 <span className="font-medium">{item}</span>

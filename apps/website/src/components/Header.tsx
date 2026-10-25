@@ -1,6 +1,6 @@
 import { GITHUB_URL, HTML_LANG, appLoginHref, LOCALES, LOCALE_NAME, localePrefix, pagePath } from "../site";
 import { Icon, type IconName } from "./icons";
-import { LogoMark } from "./Logo";
+import { Logo } from "./Logo";
 import { useSite } from "./site-context";
 import { PrimaryCta, SmartLink } from "./ui";
 
@@ -71,7 +71,7 @@ const LanguageSwitcher = () => {
       <div id="language-menu" hidden className="card shadow-raised absolute right-0 mt-2 w-44 p-2">
         <LanguageLinks
           className="flex flex-col"
-          itemClassName="block rounded-chip px-3 py-2 hover:bg-surface-sunken aria-[current]:font-semibold aria-[current]:text-teal-700"
+          itemClassName="block rounded-chip px-3 py-2 hover:bg-surface-sunken aria-[current]:font-semibold aria-[current]:text-crimson-700"
         />
       </div>
     </div>
@@ -84,7 +84,7 @@ export const SiteHeader = () => {
   const product = useProductLinks();
   const top = useTopLinks();
   const navLink =
-    "rounded-button px-3 py-2 font-medium text-ink-700 hover:bg-surface-sunken hover:text-ink-900 aria-[current=page]:text-teal-700";
+    "rounded-button px-3 py-2 font-medium text-ink-700 hover:bg-surface-sunken hover:text-ink-900 aria-[current=page]:text-crimson-700";
 
   return (
     <>
@@ -96,8 +96,7 @@ export const SiteHeader = () => {
             href={localePrefix(locale)}
             aria-label={content.common.homeLabel}
             className="flex items-center gap-2">
-            <LogoMark size={30} />
-            <span className="text-xl font-bold tracking-tight">Forma</span>
+            <Logo height={30} />
           </SmartLink>
 
           <nav aria-label={nav.label} className="hidden lg:block">
@@ -181,8 +180,7 @@ export const SiteHeader = () => {
             href={localePrefix(locale)}
             aria-label={content.common.homeLabel}
             className="flex items-center gap-2">
-            <LogoMark size={30} />
-            <span className="text-xl font-bold tracking-tight">Forma</span>
+            <Logo height={30} />
           </SmartLink>
           <button type="button" data-sheet-close className="btn btn-ghost min-h-11 px-2.5">
             <Icon name="x" size={22} />
@@ -225,7 +223,7 @@ export const SiteHeader = () => {
             </p>
             <LanguageLinks
               className="mt-2 flex flex-wrap gap-2"
-              itemClassName="block rounded-button border border-line px-3 py-2 aria-[current]:border-teal-600 aria-[current]:font-semibold aria-[current]:text-teal-700"
+              itemClassName="block rounded-button border border-line px-3 py-2 aria-[current]:border-crimson-600 aria-[current]:font-semibold aria-[current]:text-crimson-700"
             />
           </div>
           <div className="mt-8 flex flex-col gap-3">

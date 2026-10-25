@@ -122,7 +122,7 @@ export const FeatureCard = ({
     <IconTile icon={icon} />
     <Heading className="text-h3 flex flex-wrap items-center gap-2">
       {href && !linkLabel ? (
-        <SmartLink href={href} className="after:absolute after:inset-0 hover:text-teal-700">
+        <SmartLink href={href} className="hover:text-crimson-700 after:absolute after:inset-0">
           {title}
         </SmartLink>
       ) : (
@@ -147,7 +147,7 @@ export const CheckList = ({ items }: { items: readonly string[] }) => (
   <ul className="flex flex-col gap-3">
     {items.map((item) => (
       <li key={item} className="flex gap-3">
-        <span className="bg-mint-100 mt-1 inline-flex size-5 flex-none items-center justify-center rounded-full text-teal-900">
+        <span className="bg-crimson-100 text-crimson-900 mt-1 inline-flex size-5 flex-none items-center justify-center rounded-full">
           <Icon name="check" size={14} />
         </span>
         <span className="text-ink-700">
@@ -221,9 +221,9 @@ export const CtaBand = () => {
       <div className="container-site">
         <div
           data-reveal
-          className="rounded-panel bg-mint-50 flex flex-col items-start gap-6 px-6 py-12 sm:px-12 lg:flex-row lg:items-center lg:justify-between">
+          className="rounded-panel bg-crimson-50 flex flex-col items-start gap-6 px-6 py-12 sm:px-12 lg:flex-row lg:items-center lg:justify-between">
           <div className="measure">
-            <h2 id="cta-band" className="text-h2 text-teal-900">
+            <h2 id="cta-band" className="text-h2 text-crimson-900">
               {band.title}
             </h2>
             <p className="text-ink-700 mt-3">{SIGNUP_OPEN ? band.body.open : band.body.closed}</p>

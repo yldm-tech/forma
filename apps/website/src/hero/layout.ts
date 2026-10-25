@@ -14,11 +14,11 @@ export interface Rect {
 }
 
 export const COLORS = {
-  mint: "#00e6ca",
-  teal: "#038178",
+  crimson: "#d3264a",
+  ink: "#0f172a",
   sunken: "#f1f5f9",
   white: "#ffffff",
-  mint100: "#c2f7ee",
+  crimson100: "#fae5e9",
   edge: "#e2e8f0",
 } as const;
 export type ColorName = keyof typeof COLORS;
@@ -26,7 +26,7 @@ export type ColorName = keyof typeof COLORS;
 /** How a chip behaves beyond moving between its three states. */
 export const KIND = {
   plain: 0,
-  /** Turns mint in the Answer phase. */
+  /** Turns crimson in the Answer phase. */
   answer: 1,
   /** The text field's caret: sweeps right in the Answer phase. */
   caret: 2,
@@ -49,7 +49,7 @@ const inCard = (left: number, top: number, w: number, h: number, r: number): Rec
   r,
 });
 
-// The logo mark (apps/web/public/favicon/safari-pinned-tab.svg, a 48-unit grid) at three times its size, its tile centred at (-90, 0): the card condenses into it in the Understand phase.
+// The logo symbol (tooling/brand/symbol.svg, a 48-unit grid) at three times its size, centred at (-90, 0): the card condenses into it in the Understand phase. Every part is a filled rounded rectangle, so the strokes are drawn as fills: the frame is an ink square with a white one inside it, each unselected option's ring an ink disc with a white one inside it, and each line a pill as long as the stroke with its round caps.
 const LOGO_SCALE = 3;
 const LOGO_CENTER = { x: -90, y: 0 };
 const inLogo = (cx: number, cy: number, w: number, h: number, r: number): Rect => ({
@@ -59,11 +59,25 @@ const inLogo = (cx: number, cy: number, w: number, h: number, r: number): Rect =
   h: h * LOGO_SCALE,
   r: r * LOGO_SCALE,
 });
+/** symbol.svg's stroke widths and ring radius: a stroke is centred on its path, so its outer edge is half a stroke outside it and its inner edge half a stroke inside. */
+const FRAME_STROKE = 4.2;
+const RING_STROKE = 3;
+const RING_RADIUS = 2.7;
+const disc = (cx: number, cy: number, r: number): Rect => inLogo(cx, cy, r * 2, r * 2, r);
+/** A round-capped line from x1 to x2 at y, `width` thick. */
+const line = (x1: number, x2: number, y: number, width: number): Rect =>
+  inLogo((x1 + x2) / 2, y, x2 - x1 + width, width, width / 2);
 export const LOGO = {
-  tile: inLogo(24, 24, 36, 40, 36 * 0.22),
-  longBar: inLogo(25.5, 19.5, 23, 5, 2.5),
-  shortBar: inLogo(21.5, 29.5, 15, 5, 2.5),
-  dot: inLogo(34, 29.5, 5, 5, 2.5),
+  frame: inLogo(24, 24, 36.5 + FRAME_STROKE, 36.5 + FRAME_STROKE, 10.5 + FRAME_STROKE / 2),
+  frameInside: inLogo(24, 24, 36.5 - FRAME_STROKE, 36.5 - FRAME_STROKE, 10.5 - FRAME_STROKE / 2),
+  topRing: disc(16.1, 15.5, RING_RADIUS + RING_STROKE / 2),
+  topRingInside: disc(16.1, 15.5, RING_RADIUS - RING_STROKE / 2),
+  topLine: line(22.6, 31.6, 15.5, 4.2),
+  dot: disc(16.1, 24, 4.1),
+  selectedLine: line(22.6, 34.8, 24, 4.6),
+  bottomRing: disc(16.1, 32.5, RING_RADIUS + RING_STROKE / 2),
+  bottomRingInside: disc(16.1, 32.5, RING_RADIUS - RING_STROKE / 2),
+  bottomLine: line(22.6, 28.2, 32.5, 4.2),
 };
 
 const HIDDEN_IN_LOGO: Rect = { x: LOGO_CENTER.x, y: LOGO_CENTER.y, w: 0, h: 0, r: 0 };
@@ -89,63 +103,68 @@ const TYPED_WIDTH = 150;
 
 const field = inCard(24, 146, 292, 30, 8);
 
-/** The chips that make up the survey card, in drawing order (later ones on top). */
+/** Where each rating chip goes in the logo: the two unselected rings and the shortest line; the answered one and the last one vanish. */
+const RATING_IN_LOGO: (Rect | undefined)[] = [LOGO.topRing, LOGO.bottomRing, LOGO.bottomLine];
+/** Where each NPS chip goes in the logo: the white insides of the two rings, drawn over the ink discs the rating chips become, and the answered one becomes the selected dot. */
+const NPS_IN_LOGO: (Rect | undefined)[] = [LOGO.topRingInside, LOGO.bottomRingInside];
+
+/** The chips that make up the survey card, in drawing order (later ones on top). The text field comes straight after the card: it overlaps nothing but its own typed text and caret in the card, and in the logo it is the frame's white inside, which everything else is drawn over. */
 export const CARD_CHIPS: Chip[] = [
-  { card: CARD, logo: LOGO.tile, color: "white", logoColor: "teal", edge: true, kind: KIND.plain },
+  { card: CARD, logo: LOGO.frame, color: "white", logoColor: "ink", edge: true, kind: KIND.plain },
+  { card: field, logo: LOGO.frameInside, color: "white", logoColor: "white", edge: true, kind: KIND.plain },
   {
     card: inCard(24, 24, 180, 14, 7),
-    logo: LOGO.longBar,
-    color: "teal",
-    logoColor: "mint",
+    logo: LOGO.selectedLine,
+    color: "ink",
+    logoColor: "crimson",
     edge: false,
     kind: KIND.plain,
   },
   {
     card: inCard(24, 46, 120, 10, 5),
-    logo: LOGO.shortBar,
+    logo: LOGO.topLine,
     color: "sunken",
-    logoColor: "white",
+    logoColor: "ink",
     edge: false,
     kind: KIND.plain,
   },
   ...Array.from({ length: RATING_COUNT }, (_, i): Chip => ({
     card: inCard(24 + i * 30, 72, 22, 22, 6),
-    logo: HIDDEN_IN_LOGO,
+    logo: RATING_IN_LOGO[i] ?? HIDDEN_IN_LOGO,
     color: "sunken",
-    logoColor: "teal",
+    logoColor: "ink",
     edge: true,
     kind: i === ANSWERED_RATING ? KIND.answer : KIND.plain,
   })),
   ...Array.from({ length: NPS_COUNT }, (_, i): Chip => ({
     card: inCard(24 + i * 27, 110, 22, 18, 5),
-    logo: i === ANSWERED_NPS ? LOGO.dot : HIDDEN_IN_LOGO,
+    logo: i === ANSWERED_NPS ? LOGO.dot : (NPS_IN_LOGO[i] ?? HIDDEN_IN_LOGO),
     color: "sunken",
-    logoColor: "mint",
+    logoColor: i === ANSWERED_NPS ? "crimson" : "white",
     edge: true,
     kind: i === ANSWERED_NPS ? KIND.answer : KIND.plain,
   })),
-  { card: field, logo: HIDDEN_IN_LOGO, color: "white", logoColor: "teal", edge: true, kind: KIND.plain },
   {
     card: { x: field.x - field.w / 2 + 10 + TYPED_WIDTH / 2, y: field.y, w: TYPED_WIDTH, h: 8, r: 4 },
     logo: HIDDEN_IN_LOGO,
-    color: "mint100",
-    logoColor: "mint100",
+    color: "crimson100",
+    logoColor: "crimson100",
     edge: false,
     kind: KIND.typed,
   },
   {
     card: { x: field.x - field.w / 2 + 10, y: field.y, w: 2, h: 16, r: 1 },
     logo: HIDDEN_IN_LOGO,
-    color: "teal",
-    logoColor: "teal",
+    color: "ink",
+    logoColor: "ink",
     edge: false,
     kind: KIND.caret,
   },
   {
     card: inCard(220, 198, 96, 30, 15),
     logo: HIDDEN_IN_LOGO,
-    color: "teal",
-    logoColor: "teal",
+    color: "crimson",
+    logoColor: "crimson",
     edge: false,
     kind: KIND.pulse,
   },
@@ -160,7 +179,7 @@ export const answeredCard = (): { rect: Rect; color: ColorName; edge: boolean }[
     if (chip.kind === KIND.caret) {
       return { rect: { ...chip.card, x: chip.card.x + TYPED_SWEEP }, color: chip.color, edge: chip.edge };
     }
-    return { rect: chip.card, color: chip.kind === KIND.answer ? "mint" : chip.color, edge: chip.edge };
+    return { rect: chip.card, color: chip.kind === KIND.answer ? "crimson" : chip.color, edge: chip.edge };
   });
 
 // The five rising bars the dots stream into, to the right of the logo: two dots wide, no numbers.
@@ -184,7 +203,7 @@ export const DOTS: Dot[] = BAR_ROWS.flatMap((rows, bar) =>
     return {
       x: 30 + bar * 36 + (column === 0 ? -DOT_PITCH / 2 : DOT_PITCH / 2),
       y: BAR_BASE_Y + row * DOT_PITCH,
-      color: bar === BAR_ROWS.length - 1 ? "mint" : "teal",
+      color: bar === BAR_ROWS.length - 1 ? "crimson" : "ink",
       bar,
       row,
     };

@@ -5,13 +5,17 @@
   --color-*: initial;
   --color-white: #ffffff;
   --color-transparent: transparent;
-  --color-teal-600: #038178;
-  --color-teal-700: #026a62;
-  --color-teal-900: #053b37;
-  --color-mint-50: #e6fcf8;
-  --color-mint-100: #c2f7ee;
-  --color-mint-400: #00e6ca;
-  --color-mint-500: #00c4b8;
+  /* The brand crimson, #d3264a, is 600: white text on it is 5.07:1, and so is 600 as text on white. 700 and darker carry text on every tint below (700 on 100 is 5.55:1), so links and small accent text use 700. 50 to 400 are surfaces, lines and fills that carry no text of their own colour. */
+  --color-crimson-50: #fcf2f4;
+  --color-crimson-100: #fae5e9;
+  --color-crimson-200: #f4c9d2;
+  --color-crimson-300: #eb9dae;
+  --color-crimson-400: #e06780;
+  --color-crimson-500: #d84060;
+  --color-crimson-600: #d3264a;
+  --color-crimson-700: #b1203e;
+  --color-crimson-800: #8f1933;
+  --color-crimson-900: #6e1327;
   --color-ink-900: #0f172a;
   --color-ink-700: #334155;
   --color-ink-500: #64748b;
@@ -121,7 +125,7 @@
     outline-offset: 2px;
     box-shadow:
       0 0 0 2px #fff,
-      0 0 0 4px var(--color-teal-600);
+      0 0 0 4px var(--color-crimson-600);
     border-radius: 4px;
   }
 
@@ -227,12 +231,12 @@
   }
 
   .btn-primary {
-    background: var(--color-teal-600);
+    background: var(--color-crimson-600);
     color: #fff;
   }
 
   .btn-primary:hover {
-    background: var(--color-teal-700);
+    background: var(--color-crimson-700);
   }
 
   .btn-secondary {
@@ -253,8 +257,9 @@
     background: var(--color-surface-sunken);
   }
 
+  /* 700, not the brand 600: links also sit on the crimson tints (the beta banner, the CTA band), where 600 drops under 4.5:1. */
   .link {
-    color: var(--color-teal-600);
+    color: var(--color-crimson-700);
     font-weight: 600;
     text-decoration: underline;
     text-decoration-thickness: 1px;
@@ -262,10 +267,10 @@
   }
 
   .link:hover {
-    color: var(--color-teal-700);
+    color: var(--color-crimson-800);
   }
 
-  /* The logo's tile: teal with a mint glyph, a 22% corner radius. */
+  /* The app icon's tile: crimson with a white glyph, a 22% corner radius. */
   .icon-tile {
     display: inline-flex;
     align-items: center;
@@ -273,8 +278,8 @@
     width: 44px;
     height: 44px;
     border-radius: 22%;
-    background: var(--color-teal-600);
-    color: var(--color-mint-400);
+    background: var(--color-crimson-600);
+    color: #fff;
     flex: none;
   }
 
@@ -328,7 +333,7 @@
   }
 
   .hero-glow {
-    background: radial-gradient(closest-side, var(--color-mint-50), rgb(230 252 248 / 0) 100%);
+    background: radial-gradient(closest-side, var(--color-crimson-50), rgb(252 242 244 / 0) 100%);
   }
 
   .hero-canvas {

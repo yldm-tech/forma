@@ -27,19 +27,19 @@ const LocaleHintTemplate = ({ locale, page }: { locale: Locale; page: PageId | u
     <template data-locale-hint={locale}>
       <div
         lang={HTML_LANG[locale]}
-        className="border-mint-100 bg-mint-50 text-small border-b text-teal-900"
+        className="border-crimson-100 bg-crimson-50 text-small text-crimson-900 border-b"
         data-locale-hint-bar>
         <div className="container-site flex min-h-11 items-center justify-between gap-4 py-1.5">
           <a
             href={page ? pagePath(locale, page) : localePrefix(locale)}
             hrefLang={HTML_LANG[locale]}
-            className="link text-teal-700 hover:text-teal-900">
+            className="link text-crimson-700 hover:text-crimson-900">
             {hint.text}
           </a>
           <button
             type="button"
             data-locale-hint-dismiss
-            className="rounded-chip hover:bg-mint-100 px-2 py-1 font-medium">
+            className="rounded-chip hover:bg-crimson-100 px-2 py-1 font-medium">
             {hint.dismiss}
           </button>
         </div>
@@ -96,7 +96,7 @@ export const Document = ({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{meta.title}</title>
         <meta name="description" content={meta.description} />
-        <meta name="theme-color" content="#038178" />
+        <meta name="theme-color" content="#d3264a" />
         {page ? null : <meta name="robots" content="noindex" />}
         {url ? <link rel="canonical" href={url} /> : null}
         {page
@@ -141,10 +141,10 @@ export const Document = ({
       </head>
       <body className="bg-surface flex min-h-dvh flex-col antialiased">
         <SiteContext.Provider value={{ locale, page, content }}>
-          {/* The base :focus-visible ring is a box-shadow, so the raised shadow would replace it; the ring utilities compose with --tw-shadow and keep the teal ring. */}
+          {/* The base :focus-visible ring is a box-shadow, so the raised shadow would replace it; the ring utilities compose with --tw-shadow and keep the crimson ring. */}
           <a
             href="#main"
-            className="rounded-button focus:shadow-raised sr-only z-50 bg-white px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:px-4 focus:py-2 focus:ring-2 focus:ring-teal-600 focus:ring-offset-2">
+            className="rounded-button focus:shadow-raised focus:ring-crimson-600 sr-only z-50 bg-white px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:px-4 focus:py-2 focus:ring-2 focus:ring-offset-2">
             {content.common.skipToContent}
           </a>
           <SiteHeader />
