@@ -7,8 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/apikey/disable"
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/org"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
 )
@@ -496,7 +498,8 @@ func (h *Handler) v2UpdateUser(c *gin.Context) {
 			}
 		}
 	}
-	if err := h.repo.updateOrgUser(ctx, organizationID, current, patch); err != nil {
+	disabled, err := h.repo.updateOrgUser(ctx, organizationID, current, patch)
+	if err != nil {
 		switch {
 		case errors.Is(err, errLastOwner):
 			v2Error(c, http.StatusConflict, detail("role", "Cannot remove the last owner of the organization"))
@@ -531,7 +534,19 @@ func (h *Handler) v2UpdateUser(c *gin.Context) {
 		updated.Teams = append([]string{}, teamNames...)
 	}
 	h.v2Record(c, "", nil, updated)
+	h.v2DisabledKeys(c, disabled)
 	v2OK(c, updated, nil)
+}
+
+// v2DisabledKeys records the audit events of the API keys a role change through the users API disabled, attributed, as the change itself is, to the key that made it.
+func (h *Handler) v2DisabledKeys(c *gin.Context, keys []disable.Key) {
+	ctx := c.Request.Context()
+	p := v2Principal(c)
+	for _, e := range disable.Events(keys, disable.ReasonCreatorDemoted) {
+		e.ActorType, e.ActorID = audit.ActorAPI, p.APIKeyID.String()
+		e.APIURL = h.cfg.WebAppURL.Scheme + "://" + h.cfg.WebAppURL.Host + c.Request.URL.RequestURI()
+		h.audit.Log(ctx, audit.FromRequest(ctx, e))
+	}
 }
 
 // ---- workspace teams ----

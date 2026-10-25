@@ -41,13 +41,16 @@ func TestKeyLifecycle(t *testing.T) {
 	}
 	var created Created
 	res.decode(t, &created)
-	for _, leaked := range []string{"hashedKey", "lookupHash", "hashed_key", "lookup_hash", "createdBy", "lastUsedAt"} {
+	for _, leaked := range []string{"hashedKey", "lookupHash", "hashed_key", "lookup_hash"} {
 		if strings.Contains(string(res.body), leaked) {
 			t.Fatalf("create response exposes %s: %s", leaked, res.body)
 		}
 	}
 	if !strings.HasPrefix(created.Key, Prefix) || len(created.Key) != 47 || created.Label != "CI" || created.OrganizationAccess != readAccess {
 		t.Fatalf("created = %+v", created)
+	}
+	if created.CreatedBy == nil || *created.CreatedBy != (Creator{ID: owner, Name: "Ada"}) || created.LastUsedAt != nil || created.DisabledAt != nil || created.DisabledReason != nil {
+		t.Fatalf("created = %s, want created by its owner, never used, enabled", res.body)
 	}
 	wantGrants := []WorkspaceGrant{{growth, "Growth", PermissionWrite}, {ops, "Ops", PermissionManage}}
 	if len(created.WorkspacePermissions) != 2 || created.WorkspacePermissions[0] != wantGrants[0] || created.WorkspacePermissions[1] != wantGrants[1] {

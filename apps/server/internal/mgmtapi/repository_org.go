@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/apps/server/internal/apikey/disable"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
 )
 
@@ -317,12 +318,15 @@ type userPatch struct {
 // managesTeams is whether the organization role administers every team of the organization (owner, manager).
 func managesTeams(role string) bool { return role == "owner" || role == "manager" }
 
-// updateOrgUser applies a patch to a member of the organization. Demoting or deactivating the organization's last active owner is refused (errLastOwner, errLastActiveOwner), and so is a change to the name or isActive of a user who also belongs to another organization (errSharedAccount): both live on the user's account, which every organization of the user shares. The checks and the write run in one Serializable transaction, so two concurrent changes cannot both pass them. Demotion from owner or manager to a lower role makes the user a contributor of the organization's teams they administered, the reverse of what promotion through the app does; a plain member who is a team admin stays one when their role is sent unchanged.
-func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID, current *orgUser, p userPatch) error {
+// updateOrgUser applies a patch to a member of the organization. Demoting or deactivating the organization's last active owner is refused (errLastOwner, errLastActiveOwner), and so is a change to the name or isActive of a user who also belongs to another organization (errSharedAccount): both live on the user's account, which every organization of the user shares. The checks and the write run in one Serializable transaction, so two concurrent changes cannot both pass them. Demotion from owner or manager to a lower role makes the user a contributor of the organization's teams they administered, the reverse of what promotion through the app does; a plain member who is a team admin stays one when their role is sent unchanged. A role below manager disables the API keys the user created in the organization, which it returns, as the app's role change does.
+func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID, current *orgUser, p userPatch) ([]disable.Key, error) {
 	activeOwner := current.Role == "owner" && current.IsActive
 	demoting := activeOwner && p.Role != nil && *p.Role != "owner"
 	deactivating := activeOwner && p.IsActive != nil && !*p.IsActive
-	return database.Serializable(ctx, r.db, func(tx *gorm.DB) error {
+	var disabled []disable.Key
+	err := database.Serializable(ctx, r.db, func(tx *gorm.DB) error {
+		// Assigned, not appended: a retried transaction runs this again.
+		disabled = nil
 		if demoting || deactivating {
 			var others int64
 			if err := tx.Raw(`SELECT count(*) FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.is_active AND u.id <> ?`, organizationID, current.ID).Scan(&others).Error; err != nil {
@@ -371,9 +375,19 @@ func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID
 					return fmt.Errorf("demote team memberships: %w", err)
 				}
 			}
+			if !disable.ManagesKeys(*p.Role) {
+				var err error
+				if disabled, err = disable.CreatedBy(ctx, tx, current.ID, &organizationID, disable.ReasonCreatorDemoted); err != nil {
+					return err
+				}
+			}
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return disabled, nil
 }
 
 // ---- workspace teams ----

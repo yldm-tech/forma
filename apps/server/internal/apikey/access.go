@@ -47,13 +47,28 @@ type WorkspaceGrant struct {
 	Permission    string    `json:"permission"`
 }
 
-// View is what the admin UI sees of a key. The hashes, the creator and the last use stay on the server; forma2 sent both hashes to the browser in its create and update responses.
+// View is what the admin UI sees of a key. The hashes stay on the server; forma2 sent both hashes to the browser in its create and update responses.
 type View struct {
 	ID                   uuid.UUID          `json:"id"`
 	Label                string             `json:"label"`
 	CreatedAt            time.Time          `json:"createdAt"`
 	OrganizationAccess   OrganizationAccess `json:"organizationAccess"`
 	WorkspacePermissions []WorkspaceGrant   `json:"workspacePermissions"`
+	// LastUsedAt is the last request the key authenticated, recorded at most every usageWriteInterval; nil when it was never used.
+	LastUsedAt *time.Time `json:"lastUsedAt"`
+	// CreatedBy is the user who created the key; nil when their account is gone, or the key was imported without one.
+	CreatedBy *Creator `json:"createdBy"`
+	// DisabledAt and DisabledReason are set together once the key was disabled (apikey/disable), and are nil while it works.
+	DisabledAt     *time.Time `json:"disabledAt"`
+	DisabledReason *string    `json:"disabledReason"`
+}
+
+// Creator is the user who created a key, as the organization's managers may see them.
+type Creator struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	// FormerMember is set when the creator no longer belongs to the key's organization.
+	FormerMember bool `json:"formerMember"`
 }
 
 // Created is a new key with its plaintext, which is returned this once and never stored.

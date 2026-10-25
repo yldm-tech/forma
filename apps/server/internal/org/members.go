@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/apikey/disable"
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
@@ -51,38 +52,41 @@ func (s *Service) manageUsers(ctx context.Context, userID, organizationID uuid.U
 	return s.limiter.Apply(ctx, ratelimit.ActionStateMutation, organizationID.String())
 }
 
-// ChangeRole is forma2's updateMembershipAction. Billing is a Forma Cloud role; a manager may only assign the member role and may not touch an owner; and demoting an owner is refused when no other active owner would remain, checked in the same serializable transaction as the write. Promotion to owner or manager makes the user admin of their teams in the organization.
+// ChangeRole is forma2's updateMembershipAction. Billing is a Forma Cloud role; a manager may only assign the member role and may not touch an owner; and demoting an owner is refused when no other active owner would remain, checked in the same serializable transaction as the write. Promotion to owner or manager makes the user admin of their teams in the organization. A role below manager disables the API keys the user created in the organization, in the same transaction.
 func (s *Service) ChangeRole(ctx context.Context, userID, organizationID, targetUserID uuid.UUID, role string) (*Membership, error) {
-	old, m, err := s.changeRole(ctx, userID, organizationID, targetUserID, role)
+	old, m, disabled, err := s.changeRole(ctx, userID, organizationID, targetUserID, role)
 	s.record(ctx, audit.ActionUpdated, audit.TargetMembership, Membership{UserID: targetUserID, OrganizationID: organizationID}.auditID(), organizationID.String(), err, old, m)
+	if err == nil {
+		s.recordDisabledKeys(ctx, disabled, disable.ReasonCreatorDemoted)
+	}
 	return m, err
 }
 
-func (s *Service) changeRole(ctx context.Context, userID, organizationID, targetUserID uuid.UUID, role string) (old, updated *Membership, err error) {
+func (s *Service) changeRole(ctx context.Context, userID, organizationID, targetUserID uuid.UUID, role string) (old, updated *Membership, disabled []disable.Key, err error) {
 	current, err := s.repo.membership(ctx, userID, organizationID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if current == nil {
-		return nil, nil, apperr.Forbidden("User not a member of this organization")
+		return nil, nil, nil, apperr.Forbidden("User not a member of this organization")
 	}
 	if err := s.manageUsers(ctx, userID, organizationID); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if role == RoleBilling && !s.cfg.IsFormaCloud {
-		return nil, nil, apperr.InvalidInput(apperr.CodeValidation, msgBillingNotAllowed)
+		return nil, nil, nil, apperr.InvalidInput(apperr.CodeValidation, msgBillingNotAllowed)
 	}
 	if current.Role == RoleManager && role != RoleMember {
-		return nil, nil, apperr.OperationNotAllowed(msgManagerAssignMember)
+		return nil, nil, nil, apperr.OperationNotAllowed(msgManagerAssignMember)
 	}
 	if old, err = s.repo.membership(ctx, targetUserID, organizationID); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if old == nil {
-		return nil, nil, apperr.NotFound("Membership", "")
+		return nil, nil, nil, apperr.NotFound("Membership", "")
 	}
 	if current.Role != RoleOwner && old.Role == RoleOwner {
-		return old, nil, apperr.OperationNotAllowed(msgOnlyOwnersEditOwner)
+		return old, nil, nil, apperr.OperationNotAllowed(msgOnlyOwnersEditOwner)
 	}
 	write := func(tx *Repository) error {
 		// Re-read under the transaction: the guards below must see the role the write replaces.
@@ -112,47 +116,57 @@ func (s *Service) changeRole(ctx context.Context, userID, organizationID, target
 		if !found {
 			return apperr.NotFound("Membership", "")
 		}
+		// Assigned, not appended: a retried transaction runs this again.
+		disabled = nil
+		if !disable.ManagesKeys(role) {
+			if disabled, err = disable.CreatedBy(ctx, tx.db, targetUserID, &organizationID, disable.ReasonCreatorDemoted); err != nil {
+				return err
+			}
+		}
 		updated, err = tx.membership(ctx, targetUserID, organizationID)
 		return err
 	}
 	if err := s.repo.serializable(ctx, write); err != nil {
-		return old, nil, err
+		return old, nil, nil, err
 	}
-	return old, updated, nil
+	return old, updated, disabled, nil
 }
 
-// RemoveMember is forma2's deleteMembershipAction: nobody removes themselves (they leave instead), a manager may not remove an owner, and the last active owner is never removed. The member's team memberships in the organization go with it.
+// RemoveMember is forma2's deleteMembershipAction: nobody removes themselves (they leave instead), a manager may not remove an owner, and the last active owner is never removed. The member's team memberships in the organization go with it, and the API keys they created there are disabled.
 func (s *Service) RemoveMember(ctx context.Context, userID, organizationID, targetUserID uuid.UUID) error {
-	old, err := s.removeMember(ctx, userID, organizationID, targetUserID)
+	old, disabled, err := s.removeMember(ctx, userID, organizationID, targetUserID)
 	s.record(ctx, audit.ActionDeleted, audit.TargetMembership, Membership{UserID: targetUserID, OrganizationID: organizationID}.auditID(), organizationID.String(), err, old, nil)
+	if err == nil {
+		s.recordDisabledKeys(ctx, disabled, disable.ReasonCreatorRemoved)
+	}
 	return err
 }
 
-func (s *Service) removeMember(ctx context.Context, userID, organizationID, targetUserID uuid.UUID) (*Membership, error) {
+func (s *Service) removeMember(ctx context.Context, userID, organizationID, targetUserID uuid.UUID) (old *Membership, disabled []disable.Key, err error) {
 	if err := s.manageUsers(ctx, userID, organizationID); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if targetUserID == userID {
-		return nil, apperr.OperationNotAllowed(msgDeleteSelf)
+		return nil, nil, apperr.OperationNotAllowed(msgDeleteSelf)
 	}
 	current, err := s.repo.membership(ctx, userID, organizationID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if current == nil {
-		return nil, apperr.Forbidden(msgNotAMember)
+		return nil, nil, apperr.Forbidden(msgNotAMember)
 	}
 	target, err := s.repo.membership(ctx, targetUserID, organizationID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if target == nil {
-		return nil, &apperr.Error{Status: http.StatusNotFound, Code: apperr.CodeNotFound, Message: msgNotAMember}
+		return nil, nil, &apperr.Error{Status: http.StatusNotFound, Code: apperr.CodeNotFound, Message: msgNotAMember}
 	}
 	if current.Role == RoleManager && target.Role == RoleOwner {
-		return target, apperr.OperationNotAllowed(msgManagerDeleteOwner)
+		return target, nil, apperr.OperationNotAllowed(msgManagerDeleteOwner)
 	}
-	return target, s.repo.serializable(ctx, func(tx *Repository) error {
+	err = s.repo.serializable(ctx, func(tx *Repository) error {
 		// Re-read under the transaction: the owner guards must see the role being removed.
 		target, err := tx.membership(ctx, targetUserID, organizationID)
 		if err != nil {
@@ -173,36 +187,47 @@ func (s *Service) removeMember(ctx context.Context, userID, organizationID, targ
 				return apperr.InvalidInput(apperr.CodeValidation, msgLastOwnerDelete)
 			}
 		}
-		return tx.deleteMembership(ctx, targetUserID, organizationID)
+		if err := tx.deleteMembership(ctx, targetUserID, organizationID); err != nil {
+			return err
+		}
+		disabled, err = disable.CreatedBy(ctx, tx.db, targetUserID, &organizationID, disable.ReasonCreatorRemoved)
+		return err
 	})
+	if err != nil {
+		return target, nil, err
+	}
+	return target, disabled, nil
 }
 
-// Leave is forma2's leaveOrganizationAction: any member may leave, except an owner (even when other owners exist; they must be demoted first) and a user for whom this is their only organization.
+// Leave is forma2's leaveOrganizationAction: any member may leave, except an owner (even when other owners exist; they must be demoted first) and a user for whom this is their only organization. The API keys the member created in the organization are disabled.
 func (s *Service) Leave(ctx context.Context, userID, organizationID uuid.UUID) error {
-	old, err := s.leave(ctx, userID, organizationID)
+	old, disabled, err := s.leave(ctx, userID, organizationID)
 	s.record(ctx, audit.ActionDeleted, audit.TargetMembership, Membership{UserID: userID, OrganizationID: organizationID}.auditID(), organizationID.String(), err, old, nil)
+	if err == nil {
+		s.recordDisabledKeys(ctx, disabled, disable.ReasonCreatorLeft)
+	}
 	return err
 }
 
-func (s *Service) leave(ctx context.Context, userID, organizationID uuid.UUID) (*Membership, error) {
+func (s *Service) leave(ctx context.Context, userID, organizationID uuid.UUID) (old *Membership, disabled []disable.Key, err error) {
 	if err := s.authz.Require(ctx, authz.User(userID), authz.OrganizationRead, authz.Organization(organizationID)); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := s.limiter.Apply(ctx, ratelimit.ActionStateMutation, organizationID.String()); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	m, err := s.repo.membership(ctx, userID, organizationID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if m == nil {
-		return nil, apperr.Forbidden(msgNotAMember)
+		return nil, nil, apperr.Forbidden(msgNotAMember)
 	}
 	if m.Role == RoleOwner {
-		return m, apperr.OperationNotAllowed(msgLeaveOwned)
+		return m, nil, apperr.OperationNotAllowed(msgLeaveOwned)
 	}
 	// Counted inside the transaction, so leaving two organizations at once cannot leave the user with none.
-	return m, s.repo.serializable(ctx, func(tx *Repository) error {
+	err = s.repo.serializable(ctx, func(tx *Repository) error {
 		n, err := tx.membershipCount(ctx, userID)
 		if err != nil {
 			return err
@@ -210,6 +235,22 @@ func (s *Service) leave(ctx context.Context, userID, organizationID uuid.UUID) (
 		if n <= 1 {
 			return apperr.InvalidInput(apperr.CodeValidation, msgLeaveOnly)
 		}
-		return tx.deleteMembership(ctx, userID, organizationID)
+		if err := tx.deleteMembership(ctx, userID, organizationID); err != nil {
+			return err
+		}
+		disabled, err = disable.CreatedBy(ctx, tx.db, userID, &organizationID, disable.ReasonCreatorLeft)
+		return err
 	})
+	if err != nil {
+		return m, nil, err
+	}
+	return m, disabled, nil
+}
+
+// recordDisabledKeys records the audit events of the API keys a membership change disabled, attributed to the user who made the change.
+func (s *Service) recordDisabledKeys(ctx context.Context, keys []disable.Key, reason string) {
+	for _, e := range disable.Events(keys, reason) {
+		e.ActorType = audit.ActorUser
+		s.audit.Log(ctx, audit.FromRequest(ctx, e))
+	}
 }

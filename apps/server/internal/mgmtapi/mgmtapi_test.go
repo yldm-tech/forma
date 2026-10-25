@@ -496,3 +496,52 @@ func TestV2ListFilters(t *testing.T) {
 		t.Errorf("id= = %v, want both members", got)
 	}
 }
+
+// Owner decision D-AO02, through the users API: a role below manager disables the API keys the user created in the organization, with an audit event each attributed to the key that made the change, and a disabled key is refused from then on. Promotion and keys of other organizations are untouched.
+func TestV2UsersDemotionDisablesTheCreatorsKeys(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	org, ownerKey := s.bound["<id:organization>"], s.bound["<api-key:manage>"]
+	users := "/api/v2/organizations/" + org + "/users"
+	manager := e.user("Manager", "manager@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'manager', true)`, manager, org)
+	managerKey, managerKeyID := e.apiKey(uuid.MustParse(org), manager, "manager", true, true)
+	elsewhere := e.insert(`INSERT INTO organizations (name) VALUES ('Elsewhere') RETURNING id`)
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'manager', true)`, manager, elsewhere)
+	_, foreignKeyID := e.apiKey(elsewhere, manager, "elsewhere", true, false)
+	e.deliver()
+	reason := func(id uuid.UUID) string {
+		var r *string
+		if err := e.db.Raw(`SELECT disabled_reason FROM api_keys WHERE id = ?`, id).Row().Scan(&r); err != nil {
+			t.Fatal(err)
+		}
+		if r == nil {
+			return ""
+		}
+		return *r
+	}
+
+	expectStatus(t, "promote the manager", e.do("PATCH", users, map[string]any{"email": "manager@example.com", "role": "owner"}, "x-api-key", ownerKey), 200)
+	if got := reason(managerKeyID); got != "" {
+		t.Fatalf("a promotion disabled the key (%s)", got)
+	}
+	expectStatus(t, "the key works", e.do("GET", "/api/v2/organizations/"+org+"/teams", nil, "x-api-key", managerKey), 200)
+
+	expectStatus(t, "demote to member", e.do("PATCH", users, map[string]any{"email": "manager@example.com", "role": "member"}, "x-api-key", ownerKey), 200)
+	if got := reason(managerKeyID); got != "creator_demoted" {
+		t.Fatalf("disabled_reason = %q, want creator_demoted", got)
+	}
+	if got := reason(foreignKeyID); got != "" {
+		t.Fatalf("the key of another organization was disabled (%s)", got)
+	}
+	var disabled []auditEvent
+	for _, ev := range e.audits() {
+		if ev.Action == "disabled" {
+			disabled = append(disabled, ev)
+		}
+	}
+	if len(disabled) != 1 || disabled[0].Target.ID != managerKeyID.String() || disabled[0].Target.Type != "apiKey" || disabled[0].Actor.Type != "api" || disabled[0].Actor.ID != s.keys["manage"].String() || disabled[0].OrganizationID != org || disabled[0].Status != "success" {
+		t.Fatalf("disabled events = %+v", disabled)
+	}
+	expectStatus(t, "the disabled key", e.do("GET", "/api/v2/organizations/"+org+"/teams", nil, "x-api-key", managerKey), 401)
+}

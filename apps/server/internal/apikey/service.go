@@ -85,13 +85,17 @@ func (s *Service) Create(ctx context.Context, user httpapi.Actor, organizationID
 		row.Grants = append(row.Grants, grantInput(p))
 		grants = append(grants, WorkspaceGrant{WorkspaceID: p.WorkspaceID, WorkspaceName: names[p.WorkspaceID], Permission: p.Permission})
 	}
-	id, createdAt, err := s.repo.create(ctx, row)
+	stored, err := s.repo.create(ctx, row)
 	if err != nil {
 		return nil, err
 	}
+	id := stored.ID
 	// The plaintext goes out only once the key's relationships are in SpiceDB, so a caller that uses it at once is not refused by /api/v3 or MCP; a failed delivery falls back to the outbox.
 	s.delivery.DeliverAPIKey(ctx, id)
-	view := View{ID: id, Label: in.Label, CreatedAt: createdAt, OrganizationAccess: in.OrganizationAccess, WorkspacePermissions: grants}
+	view := View{
+		ID: id, Label: in.Label, CreatedAt: stored.CreatedAt, OrganizationAccess: in.OrganizationAccess, WorkspacePermissions: grants,
+		CreatedBy: &Creator{ID: user.UserID, Name: stored.CreatorName},
+	}
 	analytics.Capture(user.UserID.String(), "api_key_created", analytics.Properties{"api_key_id": id.String()}, analytics.Groups{OrganizationID: organizationID.String()})
 	return &Created{View: view, Key: key.Key}, nil
 }
@@ -143,7 +147,7 @@ func (s *Service) UpdateLabel(ctx context.Context, user httpapi.Actor, organizat
 	return view, nil
 }
 
-// Delete revokes a key. Deletion is the only revocation: keys never expire.
+// Delete revokes a key. Keys never expire; besides deletion, a key is only ever disabled, when its creator leaves the organization or loses the role that may create keys (apikey/disable).
 func (s *Service) Delete(ctx context.Context, user httpapi.Actor, organizationID, id uuid.UUID) (err error) {
 	event := audit.Event{Action: audit.ActionDeleted, TargetType: audit.TargetAPIKey, TargetID: id.String(), OrganizationID: organizationID.String()}
 	var deleted *View
