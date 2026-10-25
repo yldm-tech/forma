@@ -23,7 +23,11 @@ import { TUserLocale } from "@forma/types/user";
 import { addMultiLanguageLabels, createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
 import { getDefaultEndingCard } from "../lib/survey-builder";
 import { isConditionGroup } from "../lib/survey-logic";
-import { checkForEmptyFallBackValue, recallToHeadline } from "../../../lib/survey/recall";
+import {
+  FALLBACK_MISSING_TOAST_ID,
+  checkForEmptyFallBackValue,
+  recallToHeadline,
+} from "../../../lib/survey/recall";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { getTSurveyElementTypeEnumName } from "../lib/elements";
 import { AddElementButton } from "./add-element-button";
@@ -830,7 +834,7 @@ export const ElementsView = ({
     const elementWithEmptyFallback = checkForEmptyFallBackValue(localSurvey, selectedLanguageCode);
     if (elementWithEmptyFallback && activeElementId !== elementWithEmptyFallback.id) {
       setActiveElementId(elementWithEmptyFallback.id);
-      toast.error(t("workspace.surveys.edit.fallback_missing"));
+      toast.error(t("workspace.surveys.edit.fallback_missing"), { id: FALLBACK_MISSING_TOAST_ID });
     }
   }, [activeElementId, setActiveElementId, localSurvey, selectedLanguageCode, t]);
 

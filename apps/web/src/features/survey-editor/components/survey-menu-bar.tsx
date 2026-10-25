@@ -23,6 +23,7 @@ import { cn } from "../../../lib/cn";
 import { errorMessage } from "../../../lib/errors";
 import { instanceQuery } from "../../../lib/queries/instance";
 import { isDeepEqual } from "../../../lib/survey/object";
+import { FALLBACK_MISSING_TOAST_ID, checkForEmptyFallBackValue } from "../../../lib/survey/recall";
 import { toast } from "../../../lib/toast";
 import { analysisKeys } from "../../survey-analysis/api";
 import { useCreateSegment } from "../../segments/api";
@@ -308,6 +309,18 @@ export const SurveyMenuBar = ({
     }
   };
 
+  /** A question whose text recalls an answer with no fallback is reported on its card, from whichever tab the save was clicked on: the check is the one isSurveyValid makes, run first so the author is taken to the question instead of only told. The toast shares its id with the one the Questions tab raises for the same question as it mounts, so the author is told once. */
+  const showEmptyFallback = (): boolean => {
+    const element = checkForEmptyFallBackValue(localSurvey, selectedLanguageCode);
+    if (!element) return false;
+    const block = localSurvey.blocks.find((candidate) =>
+      candidate.elements.some((blockElement) => blockElement.id === element.id)
+    );
+    toast.error(t("workspace.surveys.edit.fallback_missing"), { id: FALLBACK_MISSING_TOAST_ID });
+    showCard(element.id, block?.id ?? null);
+    return true;
+  };
+
   const validateSurveyWithZod = (): boolean => {
     const result = ZEditorSurvey.safeParse(localSurvey);
     if (result.success) return true;
@@ -496,7 +509,7 @@ export const SurveyMenuBar = ({
       return false;
     }
 
-    if (!isSurveyValid(localSurvey, selectedLanguageCode, t, finishedResponseCount)) {
+    if (showEmptyFallback() || !isSurveyValid(localSurvey, selectedLanguageCode, t, finishedResponseCount)) {
       setIsSurveySaving(false);
       return false;
     }
@@ -542,6 +555,7 @@ export const SurveyMenuBar = ({
 
     if (
       !validateSurveyWithZod() ||
+      showEmptyFallback() ||
       !isSurveyValid(localSurvey, selectedLanguageCode, t, finishedResponseCount)
     ) {
       stop();

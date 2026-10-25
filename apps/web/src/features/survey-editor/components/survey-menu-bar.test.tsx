@@ -700,6 +700,60 @@ describe("SurveyMenuBar", () => {
     expect(scrolled).toEqual([]);
   });
 
+  test.each([
+    ["Publish", "draft"],
+    ["Save", "inProgress"],
+  ] as const)(
+    "%s of a survey with a recall that has no fallback, clicked on the Settings tab, saves nothing and opens the Questions tab on that question",
+    async (button, status) => {
+      const scrolled = recordScrolls();
+      const saves = stubSaveEndpoint();
+      const { router } = renderMenuBar(
+        survey({
+          status,
+          blocks: [
+            {
+              id: "blockone0000000000000000",
+              name: "Block 1",
+              elements: [
+                {
+                  id: "q1",
+                  type: TSurveyElementTypeEnum.OpenText,
+                  headline: { default: "How was it?" },
+                  required: true,
+                  inputType: "text",
+                  charLimit: { enabled: false },
+                },
+              ],
+            },
+            {
+              id: "blocktwo0000000000000000",
+              name: "Block 2",
+              elements: [
+                {
+                  id: "q2",
+                  type: TSurveyElementTypeEnum.OpenText,
+                  headline: { default: "You said #recall:q1/fallback:# earlier" },
+                  required: true,
+                  inputType: "text",
+                  charLimit: { enabled: false },
+                },
+              ],
+            },
+          ],
+        } as Partial<TSurvey>),
+        { initialTab: "settings" }
+      );
+
+      fireEvent.click(await screen.findByRole("button", { name: button }));
+
+      await waitFor(() => expect(screen.getByTestId("active-tab").textContent).toBe("elements"));
+      await waitFor(() => expect(scrolled).toEqual(["q2"]));
+      expect(saves).toEqual([]);
+      expect(router.state.location.pathname).toBe(EDITOR_PATH);
+    }
+  );
+
   const templateSurvey = () =>
     survey({
       blocks: [

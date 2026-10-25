@@ -192,6 +192,9 @@ export const recallToHeadline = <T extends TSurvey>(
   return newHeadline;
 };
 
+/** The id of the toast that reports a recall with no fallback, so the editor's reports of it replace each other instead of piling up. */
+export const FALLBACK_MISSING_TOAST_ID = "fallback-missing";
+
 // Checks for survey questions with a "recall" pattern but no fallback value.
 export const checkForEmptyFallBackValue = (survey: TSurvey, language: string): TSurveyElement | null => {
   const doesTextHaveRecall = (text: string) => {
