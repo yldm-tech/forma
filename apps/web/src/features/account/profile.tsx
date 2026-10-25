@@ -28,16 +28,17 @@ import {
   meQuery,
   signOut,
   useRequestEmailChange,
-  useRequestPasswordResetLink,
   useUpdateProfile,
 } from "../../lib/queries/auth";
 import { toast } from "../../lib/toast";
 import { emailError, userNameError } from "../../lib/validation";
 import { AuthorizedAppsCard } from "./authorized-apps";
+import { ChangePassword } from "./change-password";
 import { DeleteAccount } from "./delete-account";
+import { SessionsCard } from "./sessions";
 import { AccountSecurity } from "./two-factor";
 
-/** forma2's profile page: personal information, two-factor authentication for password users, the connected MCP clients, and deleting the account. */
+/** forma2's profile page: personal information, the password and two-factor authentication for password users, where the user is signed in, the connected MCP clients, and deleting the account. */
 export const ProfilePage = () => {
   const { t } = useTranslation();
   const { data: me } = useSuspenseQuery(meQuery);
@@ -55,9 +56,13 @@ export const ProfilePage = () => {
           width="full"
           title={t("common.security")}
           description={t("workspace.settings.profile.security_description")}>
-          <AccountSecurity user={me} />
+          <ChangePassword />
+          <div className="pt-6">
+            <AccountSecurity user={me} />
+          </div>
         </SettingsCard>
       )}
+      <SessionsCard locale={me.locale} />
       <AuthorizedAppsCard locale={me.locale} />
       <SettingsCard
         width="full"
@@ -85,7 +90,6 @@ export const EditProfileDetailsForm = ({ user }: { user: Me }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const update = useUpdateProfile();
   const changeEmail = useRequestEmailChange();
-  const resetLink = useRequestPasswordResetLink();
   const isPasswordUser = user.identityProvider === "email";
   // A new address is confirmed from the new mailbox where the instance verifies addresses; without SMTP that mail never goes out, so the address cannot be changed here.
   const emailChangeUnavailable =
@@ -140,18 +144,6 @@ export const EditProfileDetailsForm = ({ user }: { user: Me }) => {
     await navigate({ href: "/email-change-without-verification-success" });
   };
 
-  const resetPassword = async () => {
-    try {
-      await resetLink.mutateAsync();
-    } catch (error) {
-      toast.error(errorMessage(t, error));
-      return;
-    }
-    toast.success(t("auth.forgot-password.email-sent.heading"));
-    await signOut(queryClient, { reason: "password_reset" });
-    await navigate({ href: "/auth/login" });
-  };
-
   return (
     <>
       <form className="w-full max-w-sm pb-4" onSubmit={submit} noValidate>
@@ -200,25 +192,6 @@ export const EditProfileDetailsForm = ({ user }: { user: Me }) => {
             ))}
           </Select>
         </div>
-        {/* The reset link is mailed, so without SMTP the button could only fail. */}
-        {options.data?.passwordResetEnabled && options.data.smtpConfigured && isPasswordUser && (
-          <div className="mt-4 space-y-2">
-            <Label htmlFor="reset-password">{t("auth.forgot-password.reset_password")}</Label>
-            <p className="mt-1 text-sm text-slate-500">
-              {t("auth.forgot-password.reset_password_description")}
-            </p>
-            <div className="flex items-center justify-between gap-2">
-              <Input type="email" id="reset-password" value={user.email} disabled readOnly />
-              <Button
-                type="button"
-                onClick={() => void resetPassword()}
-                loading={resetLink.isPending}
-                variant="secondary">
-                {t("auth.forgot-password.reset_password")}
-              </Button>
-            </div>
-          </div>
-        )}
         <Button
           type="submit"
           className="mt-4"

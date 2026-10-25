@@ -2662,6 +2662,15 @@ checksums:
     workspace/settings/profile/lost_access: 70292321ff8232218d2261b11c40bc0a
     workspace/settings/profile/or_enter_the_following_code_manually: c209f319f38984d8718cd272a2a60b97
     workspace/settings/profile/organizations_delete_message: 9ca1794c9a63c8d82462abcf7109d31f
+    workspace/settings/profile/password_change/current_password: 6fd6e34a5137a2432dda7add98083964
+    workspace/settings/profile/password_change/current_password_required: 4c4f22e97119541ce9f30410a0a12db6
+    workspace/settings/profile/password_change/email_reset_link: 3a57f14d4c45ac2f5542e13d5965c621
+    workspace/settings/profile/password_change/forgot_current_password: 541ec09a54b2e90247d018d58ec8d35d
+    workspace/settings/profile/password_change/incorrect_current_password: b64a3e039ea5bdec6e874fe9690658d9
+    workspace/settings/profile/password_change/other_sessions_signed_out_hint: 73432f485384e11292cb78587d2c5b46
+    workspace/settings/profile/password_change/password_changed: 7dfe9358980a7dcfd7fa59a769ce7f0e
+    workspace/settings/profile/password_change/submit: fe6d4ba303b82f4833b3293f0c4e88c0
+    workspace/settings/profile/password_change/title: fe6d4ba303b82f4833b3293f0c4e88c0
     workspace/settings/profile/permanent_removal_of_all_of_your_personal_information_and_data: bb9350769bbf3a843714fe34ad270b8d
     workspace/settings/profile/personal_information: 2eecd6c04e15f12e228464f63cfed90a
     workspace/settings/profile/please_enter_email_to_confirm_account_deletion: 5153847dd52ef5cb5adc5db733ed79a8
@@ -2669,6 +2678,23 @@ checksums:
     workspace/settings/profile/save_the_following_backup_codes_in_a_safe_place: a5b9d38083770375f2372f93ac9a7b2b
     workspace/settings/profile/scan_the_qr_code_below_with_your_authenticator_app: 5a6b60928590ce3b6be1bdf1d34cd45e
     workspace/settings/profile/security_description: e833adde4e3e26795e61a93619c6caec
+    workspace/settings/profile/sessions/active_now: b0cfdef50ab490b29dfbec2111d5b582
+    workspace/settings/profile/sessions/browser_on_os: 97fa773854cb32c1e1b916050b015d03
+    workspace/settings/profile/sessions/description: a8d8b9de98be4e361b0bc4173a3f357e
+    workspace/settings/profile/sessions/device: c009f849d689c745de9e38ad17644c7a
+    workspace/settings/profile/sessions/ip_address: 79ea1200f4587e52966880938ddd4651
+    workspace/settings/profile/sessions/last_active: 833712383424618a815ba6e820028a37
+    workspace/settings/profile/sessions/other_sessions_signed_out: db39e950f6998c27251cfaf145aa37bb
+    workspace/settings/profile/sessions/session_signed_out: 9b35bc8727b06aee3c1f11e0d70a9b24
+    workspace/settings/profile/sessions/sign_out: 6d842546a84e919c519bf8cbffdf25a0
+    workspace/settings/profile/sessions/sign_out_other_sessions: 5cfce9832965ffcd7b6b8b719982adc4
+    workspace/settings/profile/sessions/sign_out_other_sessions_confirmation: f4aac0cab66bad03741571fe5c5edfbf
+    workspace/settings/profile/sessions/sign_out_session: 3f047bf54eef1b2ade8193ce0132a7eb
+    workspace/settings/profile/sessions/signed_in: b90e14c7692374e4b215e7c35fdba314
+    workspace/settings/profile/sessions/this_device: 5ca6cf44129fbc0be98a9997aa6dd1ba
+    workspace/settings/profile/sessions/title: c775652cb31428e3d673d928f2f644d7
+    workspace/settings/profile/sessions/unknown: 5cd12b882fe90320f93130c1b50e2e32
+    workspace/settings/profile/sessions/unknown_device: 89f4b6fe795be5d15823de7675cdfd85
     workspace/settings/profile/sole_owned_organization_item: 69589b0e98c72996e41c30fed3e0a578
     workspace/settings/profile/sole_owned_organizations_hint: aa6ab22de77235e34611b6b063d80ed3
     workspace/settings/profile/two_factor_authentication: 97a428a54e41d68810a12dbae075f371
