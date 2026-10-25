@@ -111,10 +111,42 @@ window.forma.setLanguage("de");
 window.forma.logout();
 ```
 
-- `setUserId(userId)` identifies the visitor as the contact with that ID, creating it on first use. IDs are up to 255 characters. Setting a different ID first clears the previous user's state, as `logout()` does.
-- `setAttribute(key, value)` and `setAttributes(attributes)` set contact attributes, which segments filter on. Call `setUserId` first: attributes without a user are rejected with a console error. A string, a number or a `Date` (or an ISO 8601 date string) gives the attribute its type the first time it is written; later values must have the same type, otherwise the server does not store that value. Updates are batched and sent together.
+- `setUserId(userId, options?)` identifies the visitor as the contact with that ID, creating it on first use. IDs are up to 255 characters. Setting a different ID first clears the previous user's state, as `logout()` does. `options.userHash` verifies the ID, see [Verify identities](#verify-identities).
+- `setAttribute(key, value)` and `setAttributes(attributes)` set contact attributes, which segments filter on. Call `setUserId` first: attributes without a user are rejected with a console error. A string, a number or a `Date` (or an ISO 8601 date string) gives the attribute its type the first time it is written; later values must have the same type, otherwise the server does not store that value. Updates are batched and sent together. Attributes marked as protected in Forma are never written by the SDK, and the email only for a verified user; the console error names each attribute that was skipped.
+- `setEmail(email)` sets the `email` attribute. Forma stores it only when the user was identified with a valid `userHash`.
 - `setLanguage(language)` sets the language surveys are shown in: a language code (`de`) or an alias you configured for the workspace's languages. It works for anonymous visitors too; for an identified user it is stored as the `language` attribute.
 - `logout()` forgets the user on this browser. Call it on sign-out, so the next person on the same device is not treated as the previous one.
+
+## Verify identities
+
+The workspace ID in the snippet is public, so anyone can call the SDK's API with any user ID. Forma therefore trusts the browser only so far:
+
+- The SDK never writes an attribute marked as protected. Mark the attributes your own systems own (a plan, a role, an account tier) in the **Identity verification** card of the workspace's **Web & Mobile SDK** page in Forma (under Integrations), and set them through the Management API, a CSV import or the contact page.
+- The SDK writes the email only for a verified user.
+- The user state the SDK receives names neither the contact nor any survey by ID.
+
+To verify users, generate the workspace's identity secret on the same page. It is shown once; store it on your server like any other secret and never send it to the browser. For each signed-in user, your server computes the HMAC-SHA256 of the user ID under the secret, in hex, and your page passes it to `setUserId`:
+
+```js
+// Node.js, on your server
+import { createHmac } from "node:crypto";
+const userHash = createHmac("sha256", process.env.FORMA_IDENTITY_SECRET).update(user.id).digest("hex");
+```
+
+```python
+# Python, on your server
+import hashlib, hmac
+user_hash = hmac.new(FORMA_IDENTITY_SECRET.encode(), user.id.encode(), hashlib.sha256).hexdigest()
+```
+
+```js
+// In the page, with the userHash your server rendered or returned
+window.forma.setUserId(user.id, { userHash });
+```
+
+The SDK keeps the hash with the user and sends it with every identify, so pass it wherever you call `setUserId`. A hash that does not match is logged as a console error and the user is identified without verification.
+
+Once every page sends a `userHash`, turn on **Require verified identities**. Forma then refuses an identify without a valid hash, so nobody can identify as one of your users or read their state, and displays and responses that name a user ID without a valid hash are recorded without a contact. Regenerating the secret invalidates every hash computed with the old one at once: while verification is required, users are refused until your server uses the new secret.
 
 ## Track actions
 

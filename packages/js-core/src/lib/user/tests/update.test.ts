@@ -9,8 +9,8 @@ import {
   mockUserId,
   mockWorkspaceId,
 } from "@/lib/user/tests/__mocks__/update.mock";
-import { getSkippedAttributeKeys, sendUpdates, sendUpdatesToBackend } from "@/lib/user/update";
-import { type TUpdates } from "@/types/config";
+import { getSkippedAttributeKeys, sendUpdates, sendUpdatesToBackend, withUserHash } from "@/lib/user/update";
+import { type TUpdates, type TUserState } from "@/types/config";
 
 vi.mock("@/lib/common/config", () => ({
   Config: {
@@ -340,6 +340,18 @@ describe("getSkippedAttributeKeys", () => {
     ).toEqual(new Set(["email", "userId"]));
   });
 
+  test("reads an email the identify was not verified for, and protected attributes, as not written", () => {
+    expect(
+      getSkippedAttributeKeys(
+        [],
+        [
+          "Skipped attribute 'email': the SDK sets the email only on a verified identify, setUserId(userId, { userHash }). Without identity verification, set it from your server through the Management API.",
+          "Skipped protected attribute(s): plan, tier. Protected attributes are set only through the Management API, a CSV import or the contact page, never by the SDK.",
+        ]
+      )
+    ).toEqual(new Set(["email", "plan", "tier"]));
+  });
+
   test("does not treat informational messages as skipped keys", () => {
     expect(
       getSkippedAttributeKeys(
@@ -350,5 +362,44 @@ describe("getSkippedAttributeKeys", () => {
         undefined
       )
     ).toEqual(new Set());
+  });
+});
+
+describe("userHash", () => {
+  test("sendUpdates sends the userHash and keeps it in the stored user state, which the server never returns", async () => {
+    const update = vi.fn();
+    (Config.getInstance as Mock).mockImplementation(() => ({
+      get: vi.fn().mockReturnValue({
+        appUrl: mockAppUrl,
+        workspaceId: mockWorkspaceId,
+        workspace: { data: { surveys: [] } },
+      }),
+      update,
+    }));
+    (Logger.getInstance as Mock).mockImplementation(() => ({ debug: vi.fn(), error: vi.fn() }));
+    const createOrUpdateUser = vi.fn().mockResolvedValue({
+      ok: true,
+      data: { state: { data: { userId: mockUserId, displays: [], responses: [] }, expiresAt: new Date() } },
+    });
+    (ApiClient as Mock).mockImplementation(function MockApiClient() {
+      return { createOrUpdateUser };
+    });
+
+    const result = await sendUpdates({ updates: { userId: mockUserId, userHash: "abc123", attributes: {} } });
+
+    expect(result.ok).toBe(true);
+    expect(createOrUpdateUser).toHaveBeenCalledWith({
+      userId: mockUserId,
+      userHash: "abc123",
+      attributes: {},
+    });
+    const stored = update.mock.calls[0][0] as { user: { data: { userHash?: string } } };
+    expect(stored.user.data.userHash).toBe("abc123");
+  });
+
+  test("withUserHash leaves a state alone without a hash", () => {
+    const state = { expiresAt: null, data: { userId: "u1" } } as unknown as TUserState;
+    expect(withUserHash(state, undefined)).toBe(state);
+    expect(withUserHash(state, "h").data.userHash).toBe("h");
   });
 });

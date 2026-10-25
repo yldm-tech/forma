@@ -5,10 +5,17 @@ import { FORMA_EVENTS, type TSetupFailureCode, emitFormaEvent } from "@/lib/comm
 import { Logger } from "@/lib/common/logger";
 import { getIsSetup, setIsSetup } from "@/lib/common/status";
 import { TimeoutStack } from "@/lib/common/timeout-stack";
-import { filterSurveys, getIsDebug, isNowExpired, normalizeAppUrl, wrapThrows } from "@/lib/common/utils";
+import {
+  filterSurveys,
+  getIsDebug,
+  isNowExpired,
+  normalizeAppUrl,
+  toSurveyKeys,
+  wrapThrows,
+} from "@/lib/common/utils";
 import { addLiveRegionContainer, closeSurvey, prefetchSurveysScript } from "@/lib/survey/widget";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
-import { sendUpdatesToBackend } from "@/lib/user/update";
+import { sendUpdatesToBackend, withUserHash } from "@/lib/user/update";
 import { fetchWorkspaceState } from "@/lib/workspace/state";
 import {
   type TConfig,
@@ -102,8 +109,9 @@ const completeLegacyUserState = (legacyUser: TLegacyConfig["user"]): TUserState 
       ...defaults,
       ...legacyData,
       segments: Array.isArray(legacyData.segments) ? legacyData.segments : defaults.segments,
-      displays: Array.isArray(legacyData.displays) ? legacyData.displays : defaults.displays,
-      responses: Array.isArray(legacyData.responses) ? legacyData.responses : defaults.responses,
+      // Legacy states name surveys by id; the state names them by survey key now.
+      displays: toSurveyKeys(legacyData.userId ?? null, legacyData.displays),
+      responses: toSurveyKeys(legacyData.userId ?? null, legacyData.responses),
     },
   };
 };
@@ -275,16 +283,18 @@ export const setup = async (
         }
 
         if (userState.data.userId) {
+          const { userHash } = userState.data;
           const updatesResponse = await sendUpdatesToBackend({
             appUrl,
             workspaceId: effectiveId,
             updates: {
               userId: userState.data.userId,
+              ...(userHash && { userHash }),
             },
           });
 
           if (updatesResponse.ok) {
-            userState = updatesResponse.data.state;
+            userState = withUserHash(updatesResponse.data.state, userHash);
           } else {
             const message = `Error updating user state: ${updatesResponse.error.code} - ${updatesResponse.error.responseMessage ?? ""}`;
             logger.error(message);
