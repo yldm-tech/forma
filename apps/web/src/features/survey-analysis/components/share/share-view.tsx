@@ -43,9 +43,10 @@ export const ShareView = ({
   ];
 
   return (
-    <div className="flex h-full lg:grid lg:min-h-[620px] lg:grid-cols-4">
+    // On large screens the view fills the share modal's frame (min(700px, 90dvh) less the dialog's 1rem padding) and no more: the dialog's own scroller has no definite height, so the frame is spelled out here. Each column then scrolls inside it, and a tall tab (an embed preview) no longer spills past the dialog over the backdrop.
+    <div className="flex h-full lg:grid lg:h-[calc(min(700px,90dvh)-2rem)] lg:grid-cols-4 lg:grid-rows-1">
       <nav
-        className="hidden h-full flex-col gap-4 rounded-l-lg border-r border-slate-200 bg-white p-4 lg:col-span-1 lg:flex"
+        className="hidden h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-l-lg border-r border-slate-200 bg-white p-4 lg:col-span-1 lg:flex"
         aria-label={t("workspace.surveys.summary.share_survey")}>
         {groups.map((group) => (
           <div key={group.id} className="flex flex-col gap-1">
@@ -70,7 +71,7 @@ export const ShareView = ({
           </div>
         ))}
       </nav>
-      <div className="h-full w-full grow overflow-y-auto rounded-lg bg-slate-50 px-4 py-6 lg:col-span-3 lg:p-6">
+      <div className="h-full min-h-0 w-full grow overflow-y-auto rounded-lg bg-slate-50 px-4 py-6 lg:col-span-3 lg:p-6">
         {activeTab && (
           <TabContainer key={activeTab.id} title={activeTab.title} description={activeTab.description}>
             {activeTab.content}
