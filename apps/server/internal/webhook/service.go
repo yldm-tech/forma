@@ -126,7 +126,7 @@ func resolveSurveyIDs(raw []string) ([]uuid.UUID, error) {
 	return out, nil
 }
 
-// List is the settings page's webhooks, forma2's getWebhooks: workspace.read, newest first, never with their secrets.
+// List is the settings page's webhooks, forma2's getWebhooks: workspace.read, newest first, never with their secrets, each with its delivery health.
 func (s *Service) List(ctx context.Context, userID, workspaceID uuid.UUID) ([]View, error) {
 	if err := s.authz.Require(ctx, authz.User(userID), authz.WorkspaceRead, authz.Workspace(workspaceID)); err != nil {
 		return nil, err
@@ -135,9 +135,14 @@ func (s *Service) List(ctx context.Context, userID, workspaceID uuid.UUID) ([]Vi
 	if err != nil {
 		return nil, err
 	}
+	health, err := s.repo.health(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]View, len(found))
 	for i, w := range found {
 		out[i] = w.appView()
+		out[i].Health = health[w.ID]
 	}
 	return out, nil
 }

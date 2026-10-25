@@ -9,7 +9,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
-// Handler serves the webhooks page's routes under /api/app: the list, the endpoint test, create, edit and delete.
+// Handler serves the webhooks page's routes under /api/app: the list, the endpoint test, create, edit and delete, a webhook's delivery log and resend, and a new signing secret.
 type Handler struct {
 	svc      *Service
 	sessions httpapi.SessionAuth
@@ -27,6 +27,9 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.POST("/workspaces/:workspaceId/webhooks/test", h.test)
 	g.PATCH("/webhooks/:webhookId", h.update)
 	g.DELETE("/webhooks/:webhookId", h.delete)
+	g.GET("/webhooks/:webhookId/deliveries", h.deliveries)
+	g.POST("/webhooks/:webhookId/deliveries/:deliveryId/resend", h.resend)
+	g.POST("/webhooks/:webhookId/secret", h.regenerateSecret)
 }
 
 // ListResponse is the webhooks page's data: the workspace's webhooks, and whether DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS lets the URL field accept http and internal hosts, which forma2's page passed to its client-side URL check.
@@ -122,4 +125,56 @@ func (h *Handler) delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// DeliveriesResponse is a webhook's delivery log, newest first.
+type DeliveriesResponse struct {
+	Deliveries []DeliveryView `json:"deliveries"`
+}
+
+func (h *Handler) deliveries(c *gin.Context) {
+	id, err := httpapi.ParamUUID(c, "webhookId")
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	out, err := h.svc.Deliveries(c.Request.Context(), userID(c), id)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, DeliveriesResponse{Deliveries: out})
+}
+
+func (h *Handler) resend(c *gin.Context) {
+	id, err := httpapi.ParamUUID(c, "webhookId")
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	deliveryID, err := httpapi.ParamUUID(c, "deliveryId")
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	out, err := h.svc.Resend(c.Request.Context(), userID(c), id, deliveryID)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func (h *Handler) regenerateSecret(c *gin.Context) {
+	id, err := httpapi.ParamUUID(c, "webhookId")
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	out, err := h.svc.RegenerateSecret(c.Request.Context(), userID(c), id)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
 }
