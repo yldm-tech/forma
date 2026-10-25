@@ -13,7 +13,7 @@ import (
 // linkIVSize is the 16-byte IV of the link value format (the AES block size, not GCM's usual 12).
 const linkIVSize = 16
 
-// EncryptLinkValue seals a value that travels in a link or token this server issues (a contact survey token's ids, a single-use id, a verified email): AES-256-GCM under ENCRYPTION_KEY with a random 16-byte IV, written as hex "iv:ciphertext:tag". Links already sent carry this format, so it does not change.
+// EncryptLinkValue seals a value that travels in a link or token this server issues (a contact survey token's ids, a verified email): AES-256-GCM under ENCRYPTION_KEY with a random 16-byte IV, written as hex "iv:ciphertext:tag". Links already sent carry this format, so it does not change.
 func EncryptLinkValue(plaintext string, key []byte) (string, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {

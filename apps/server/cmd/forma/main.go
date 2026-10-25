@@ -112,6 +112,9 @@ func serve(ctx context.Context) error {
 	}
 	log := logger.New(cfg, os.Stdout)
 	defer startTelemetry(ctx, cfg, log)()
+	if err := refuseUnreadForma2Data(ctx, cfg, log); err != nil {
+		return err
+	}
 	return runServer(ctx, cfg, log)
 }
 
@@ -122,7 +125,19 @@ func worker(ctx context.Context) error {
 	}
 	log := logger.New(cfg, os.Stdout)
 	defer startTelemetry(ctx, cfg, log)()
+	if err := refuseUnreadForma2Data(ctx, cfg, log); err != nil {
+		return err
+	}
 	return runWorker(ctx, cfg, log)
+}
+
+// refuseUnreadForma2Data stops serve, worker and start on a database that holds forma2's data and no user of this server's, unless FORMA_IGNORE_FORMA2_DATA is set: started there, the server would come up empty and admit its first sign-up as administrator.
+func refuseUnreadForma2Data(ctx context.Context, cfg config.Config, log *slog.Logger) error {
+	if cfg.IgnoreForma2Data {
+		log.WarnContext(ctx, "not checking the database for forma2's data (FORMA_IGNORE_FORMA2_DATA is set); forma2's tables are not read")
+		return nil
+	}
+	return database.RefuseUnreadForma2Data(ctx, cfg.DatabaseURL)
 }
 
 func runServer(ctx context.Context, cfg config.Config, log *slog.Logger) error {

@@ -1,37 +1,15 @@
--- Drops the bookkeeping of the retired forma2 data import: forma2_imports (00008, 00009), the record of an import or a discard that the startup guard and `forma import-forma2 --refresh` read, and the functions forma2_marks() and forma2_import_drift() (00009) that compared forma2's tables with that record. The import, its CLI and the guard are gone, so nothing reads them any more.
+-- Drops the functions of the retired forma2 data import: forma2_marks() and forma2_import_drift() (00009), which compared forma2's tables with the latest import or discard recorded in forma2_imports. The import, its CLI and the startup guard that called them are gone, so nothing calls them any more. No trigger calls either function.
 --
--- Only this server's own objects are dropped. A database can still hold forma2's tables ("User", "Survey", ...) next to this schema, possibly with rows that were never imported; they are left exactly as they are. No trigger calls either function, so none is dropped with them.
+-- forma2_imports itself stays. A release before this one refuses to start on a database whose forma2 "User" table has rows and that has no forma2_imports table, so dropping it would stop an image rollback on any database that imported forma2. That release's guard skips the drift check when forma2_import_drift() is missing, so dropping the functions does not stop it. Only this server's own objects are touched: forma2's tables ("User", "Survey", ...) that a database may still hold next to this schema are left exactly as they are.
 --
--- The Down section recreates the table and the functions as 00008 and 00009 left them, so the migrations before this one still go down, but the rows the table held are gone.
+-- The Down section recreates the two functions as 00009 left them.
 
 -- +goose Up
 
--- goose runs this migration in one transaction; SET LOCAL bounds only it. forma2_imports holds a row or two at most, but the ACCESS EXCLUSIVE lock DROP TABLE takes waits behind any open reader of it, and a migration should fail fast rather than queue every later query behind it.
-SET LOCAL lock_timeout = '1s';
-
 DROP FUNCTION forma2_import_drift();
 DROP FUNCTION forma2_marks();
--- squawk-ignore ban-drop-table
-DROP TABLE forma2_imports;
 
 -- +goose Down
-
-SET LOCAL lock_timeout = '1s';
-
-CREATE TABLE forma2_imports (
-    id uuid PRIMARY KEY DEFAULT uuidv7(),
-    started_at timestamptz NOT NULL,
-    completed_at timestamptz NOT NULL DEFAULT now(),
-    outcome text NOT NULL CHECK (outcome IN ('imported', 'discarded')),
-    legacy_namespace uuid,
-    source_counts jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(source_counts) = 'object'),
-    target_counts jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(target_counts) = 'object'),
-    reason text,
-    CHECK ((outcome = 'imported') = (legacy_namespace IS NOT NULL)),
-    CHECK ((outcome = 'discarded') = (reason IS NOT NULL AND reason <> '')),
-    target_digests jsonb CHECK (jsonb_typeof(target_digests) = 'object'),
-    source_marks jsonb CHECK (jsonb_typeof(source_marks) = 'object')
-);
 
 -- +goose StatementBegin
 CREATE FUNCTION forma2_marks() RETURNS jsonb AS $$

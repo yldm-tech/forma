@@ -39,6 +39,8 @@ type Config struct {
 	DatabaseURL string `env:"DATABASE_URL,required,notEmpty"`
 	// DatabaseMaxOpenConns caps the pool of one process; every forma process holds its own pool.
 	DatabaseMaxOpenConns int `env:"DATABASE_MAX_OPEN_CONNS" envDefault:"20"`
+	// IgnoreForma2Data starts the server on a database whose forma2 "User" table has rows while this server has no user yet, which it otherwise refuses (database.RefuseUnreadForma2Data): forma2's data is then left unread, and the first sign-up becomes the administrator.
+	IgnoreForma2Data bool `env:"FORMA_IGNORE_FORMA2_DATA" envDefault:"0"`
 
 	// RedisURL points at Valkey, which holds the rate-limit counters. forma2 required it outside its test environment, and so does every forma process.
 	RedisURL string `env:"REDIS_URL,required,notEmpty"`

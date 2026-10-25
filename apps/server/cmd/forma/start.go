@@ -53,6 +53,11 @@ func start(ctx context.Context) error {
 		}
 	}
 
+	// A database that holds only forma2's data would come up as an empty instance; refuse unless told to start empty.
+	if err := refuseUnreadForma2Data(ctx, cfg, log); err != nil {
+		return err
+	}
+
 	if !startup.WorkerEnabled {
 		log.InfoContext(ctx, "starting the server without the job worker (BULLMQ_WORKER_ENABLED=0)")
 		return runServer(ctx, cfg, log)

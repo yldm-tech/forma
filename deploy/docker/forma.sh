@@ -262,6 +262,34 @@ override_header() {
   echo "services:"
 }
 
+# ---- database ----
+
+psql_forma() {
+  compose exec -T postgres psql -U postgres -d forma -tA -c "$1" | tr -d '[:space:]'
+}
+
+# check_database is the server's own startup refusal (database.RefuseUnreadForma2Data), run before anything but PostgreSQL is started: the database holds forma2's data (its "User" table has rows) and no user of this server's. The server does not read forma2's tables, so started there it would serve an empty instance whose first sign-up becomes its administrator. FORMA_IGNORE_FORMA2_DATA=1 in .env skips the check here and in the server.
+check_database() {
+  local tables counts
+  case "$(dotenv_get FORMA_IGNORE_FORMA2_DATA .env)" in
+    1 | t | T | true | TRUE | True) return 0 ;;
+  esac
+  compose up -d --wait postgres >/dev/null
+  tables=$(psql_forma "SELECT (to_regclass('public.\"User\"') IS NOT NULL)::text || ',' || (to_regclass('public.users') IS NOT NULL)::text")
+  case "$tables" in
+    true,true) counts=$(psql_forma "SELECT (EXISTS (SELECT 1 FROM \"User\"))::text || ',' || (EXISTS (SELECT 1 FROM users))::text") ;;
+    true,*) counts=$(psql_forma "SELECT (EXISTS (SELECT 1 FROM \"User\"))::text || ',false'") ;;
+    *) return 0 ;;
+  esac
+  if [ "$counts" = "true,false" ]; then
+    cat >&2 <<EOF
+The database holds the data of the retired Next.js release (forma2), and the server has no user of its own: it does not read forma2's tables, so started now it would serve an empty instance whose first sign-up becomes its administrator.
+Nothing but PostgreSQL was started. To keep forma2's data, import it with release v0.2.48 or earlier (forma import-forma2) first. To start empty on purpose, set FORMA_IGNORE_FORMA2_DATA=1 in $PWD/.env and run ./forma.sh update again.
+EOF
+    exit 1
+  fi
+}
+
 # ---- commands ----
 
 ask() {
@@ -579,6 +607,7 @@ update_forma() {
   fi
 
   compose pull
+  check_database
   # forma-migrate applies the schema and authzed-initialize the authorization schema before the server and the worker start (depends_on).
   compose up -d --remove-orphans
   echo "Forma is updated. Follow the start with 'cd $PWD && docker compose logs -f forma forma-worker'."

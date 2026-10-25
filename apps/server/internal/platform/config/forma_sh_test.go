@@ -79,12 +79,13 @@ func requireBash(t *testing.T) {
 	}
 }
 
-// installEnv is an installation in a temporary directory: the release's compose file and an .env that still sets retired variables, with docker and sudo replaced by a script that logs its arguments.
+// installEnv is an installation in a temporary directory: the release's compose file and an .env that still sets retired variables, with docker and sudo replaced by a script that logs its arguments and answers the database queries from FAKE_DB_*.
 type installEnv struct {
-	t    *testing.T
-	root string
-	dir  string
-	log  string
+	t      *testing.T
+	root   string
+	dir    string
+	log    string
+	dbVars []string
 }
 
 func newInstall(t *testing.T) *installEnv {
@@ -97,6 +98,10 @@ func newInstall(t *testing.T) *installEnv {
 	}
 	fake := `#!/bin/sh
 printf '%s %s\n' "$(basename "$0")" "$*" >> "$FAKE_DOCKER_LOG"
+case "$*" in
+  *to_regclass*) echo "$FAKE_DB_TABLES" ;;
+  *'FROM "User"'*) echo "$FAKE_DB_USERS" ;;
+esac
 exit 0
 `
 	for _, name := range []string{"docker", "sudo"} {
@@ -129,6 +134,7 @@ func (e *installEnv) run(args ...string) (string, error) {
 		"PATH="+filepath.Join(e.root, "bin")+string(os.PathListSeparator)+os.Getenv("PATH"),
 		"FAKE_DOCKER_LOG="+e.log, "FORMA_SOURCE_DIR="+source, "FORMA_DIR=forma",
 	)
+	cmd.Env = append(cmd.Env, e.dbVars...)
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	err := cmd.Run()
@@ -282,6 +288,59 @@ func TestFormaShRefusesAForma2Install(t *testing.T) {
 			}
 			if calls := strings.Join(e.dockerCalls(), "\n"); strings.Contains(calls, "compose up") || strings.Contains(calls, "compose pull") {
 				t.Errorf("the stack was started:\n%s", calls)
+			}
+		})
+	}
+}
+
+// The server does not read forma2's tables: started on a database where only they hold users, it would serve an empty instance whose first sign-up becomes its administrator, so the update stops before starting anything but PostgreSQL, as the server itself would (database.RefuseUnreadForma2Data). FORMA_IGNORE_FORMA2_DATA=1 skips the check.
+func TestFormaShUpdateRefusesUnreadForma2Data(t *testing.T) {
+	for name, tc := range map[string]struct {
+		db     []string
+		ignore bool
+		refuse bool
+	}{
+		"users table empty":    {db: []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_USERS=true,false"}, refuse: true},
+		"users table missing":  {db: []string{"FAKE_DB_TABLES=true,false", "FAKE_DB_USERS=true,false"}, refuse: true},
+		"own users":            {db: []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_USERS=true,true"}},
+		"forma2 table empty":   {db: []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_USERS=false,false"}},
+		"no forma2 table":      {db: []string{"FAKE_DB_TABLES=false,true"}},
+		"started empty anyway": {db: []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_USERS=true,false"}, ignore: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newInstall(t)
+			e.dbVars = tc.db
+			if tc.ignore {
+				f, err := os.OpenFile(filepath.Join(e.dir, ".env"), os.O_APPEND|os.O_WRONLY, 0)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := f.WriteString("FORMA_IGNORE_FORMA2_DATA=1\n"); err != nil {
+					t.Fatal(err)
+				}
+				if err := f.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			out, err := e.run("update")
+			calls := strings.Join(e.dockerCalls(), "\n")
+			if tc.refuse {
+				if err == nil || !strings.Contains(out, "retired Next.js release") || !strings.Contains(out, "FORMA_IGNORE_FORMA2_DATA=1") {
+					t.Fatalf("update: %v\n%s", err, out)
+				}
+				if strings.Contains(calls, "compose up -d --remove-orphans") {
+					t.Errorf("the stack was started:\n%s", calls)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("update: %v\n%s", err, out)
+			}
+			if !strings.Contains(calls, "compose up -d --remove-orphans") {
+				t.Errorf("the stack was not started:\n%s", calls)
+			}
+			if tc.ignore && strings.Contains(calls, "psql") {
+				t.Errorf("the database was queried although FORMA_IGNORE_FORMA2_DATA=1:\n%s", calls)
 			}
 		})
 	}

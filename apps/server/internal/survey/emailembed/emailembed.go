@@ -1,6 +1,6 @@
 // Package emailembed is a survey's email embed, forma2's preview email template (apps/web/modules/email/components/preview-email-template.tsx rendered by getEmailTemplateHtml): the survey's first element as email-safe HTML in the survey's card style, each answer a link that opens the survey with it prefilled. The share modal's Email tab shows it and copies it, and mails it to the member as a preview (sendEmbedSurveyPreviewEmailAction).
 //
-// forma2 rendered the template with React Email: components that lay out in tables, a Tailwind pass that inlines every class against a theme built from the styling, and lucide icons. This package writes the same markup directly; testdata/forma2.json holds forma2's own renderings, which the tests compare against element by element and style declaration by style declaration.
+// forma2 rendered the template with React Email: components that lay out in tables, a Tailwind pass that inlines every class against a theme built from the styling, and lucide icons. This package writes the same markup directly; testdata/golden.json holds the renderings, which the tests compare against element by element and style declaration by style declaration.
 package emailembed
 
 import (
