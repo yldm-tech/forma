@@ -2249,7 +2249,10 @@ checksums:
     workspace/sdk_identity/remove_confirm: 5150f9fdf88251d03e7480f1ab28fddb
     workspace/sdk_identity/remove_description: 83eb39ac61b14b7008d9c92a84c89171
     workspace/sdk_identity/remove_title: 2695a0cf03e8de61c646cdbd5dcd6554
-    workspace/sdk_identity/required_description: e253b34051853da05101cd52d689a494
+    workspace/sdk_identity/required_confirm_button: d282f7d02a6c0148dcb3f317f69f0ecf
+    workspace/sdk_identity/required_confirm_description: 2450f7e112b637821448f7b677180d89
+    workspace/sdk_identity/required_confirm_title: 9fe2c2d5525acd555b44bde0687a710f
+    workspace/sdk_identity/required_description: ce28d5e7d8b9d3e9687b4ccce8624362
     workspace/sdk_identity/required_label: d282f7d02a6c0148dcb3f317f69f0ecf
     workspace/sdk_identity/required_needs_secret: f001821e6189f8d307d97a256a8be7f7
     workspace/sdk_identity/saved: 2a5dbcb6562a5de612a861f3c31e1aee

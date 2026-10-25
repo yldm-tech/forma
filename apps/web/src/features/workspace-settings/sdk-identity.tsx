@@ -81,6 +81,8 @@ const SdkIdentitySettings = ({
   const { t } = useTranslation();
   const update = useUpdateSdkIdentity(workspaceId);
   const keys = useQuery(attributeKeysQuery(workspaceId));
+  // Turning required verification on logs out every browser whose user has no valid userHash and stops link surveys opened with ?userId= from attaching responses, so it waits for a confirmation; turning it off does not.
+  const [confirmRequired, setConfirmRequired] = useState(false);
 
   const save = async (input: { required?: boolean; protectedAttributeKeys?: string[] }) => {
     try {
@@ -89,6 +91,11 @@ const SdkIdentitySettings = ({
     } catch (error) {
       toast.error(errorMessage(t, error));
     }
+  };
+
+  const requireVerification = async () => {
+    await save({ required: true });
+    setConfirmRequired(false);
   };
 
   // The workspace's keys that can be protected, plus any protected key that no longer exists, so it can still be removed.
@@ -116,9 +123,23 @@ const SdkIdentitySettings = ({
           id="sdk-identity-required"
           checked={identity.required}
           disabled={!canManage || !identity.hasSecret || update.isPending}
-          onCheckedChange={(required) => void save({ required })}
+          onCheckedChange={(required) => {
+            if (required) setConfirmRequired(true);
+            else void save({ required });
+          }}
         />
       </div>
+      <ConfirmationModal
+        open={confirmRequired}
+        setOpen={setConfirmRequired}
+        title={t("workspace.sdk_identity.required_confirm_title")}
+        body={
+          <p className="text-sm text-slate-600">{t("workspace.sdk_identity.required_confirm_description")}</p>
+        }
+        buttonText={t("workspace.sdk_identity.required_confirm_button")}
+        buttonLoading={update.isPending}
+        onConfirm={() => void requireVerification()}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="sdk-identity-protected">{t("workspace.sdk_identity.protected_label")}</Label>

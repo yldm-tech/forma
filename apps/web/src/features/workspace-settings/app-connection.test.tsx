@@ -173,12 +173,38 @@ test("a manager generates the identity secret, then requires verified identities
   expect(document.body.textContent).not.toContain("the-new-secret");
   const enabled = screen.getByRole("switch", { name: t("workspace.sdk_identity.required_label") });
   expect(enabled.hasAttribute("disabled")).toBe(false);
+
+  // Requiring verification waits for a confirmation that says what else it turns off.
   fireEvent.click(enabled);
+  const confirmation = await screen.findByRole("dialog");
+  expect(confirmation.textContent).toContain(t("workspace.sdk_identity.required_confirm_description"));
+  expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+  fireEvent.click(within(confirmation).getByRole("button", { name: t("common.cancel") }));
+  await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+
+  fireEvent.click(enabled);
+  fireEvent.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: t("workspace.sdk_identity.required_confirm_button"),
+    })
+  );
   await vi.waitFor(() =>
     expect(requests).toContainEqual({
       method: "PATCH",
       path: `/api/app/workspaces/${WS}/sdk-identity`,
       body: { required: true },
+    })
+  );
+  await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  // Turning it off again needs no confirmation.
+  fireEvent.click(screen.getByRole("switch", { name: t("workspace.sdk_identity.required_label") }));
+  await vi.waitFor(() =>
+    expect(requests).toContainEqual({
+      method: "PATCH",
+      path: `/api/app/workspaces/${WS}/sdk-identity`,
+      body: { required: false },
     })
   );
 });
