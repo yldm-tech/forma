@@ -353,9 +353,9 @@ export const ja: SiteContent = {
         title: "インストール",
         body: "Forma の「連携 → Web・モバイル SDK」からスニペットをコピーし（ワークスペース ID とインスタンスの URL は入力済みです）、すべてのページの `<head>` に貼り付けます。Google Tag Manager では、すべてのページで配信されるカスタム HTML タグに貼り付けます。",
         frameworks:
-          "React と Vue：`index.html` に貼り付けます。Next.js：ルートレイアウトで同じ JavaScript を `next/script` で読み込みます。ルート用の hook は不要です。SDK は npm では公開されておらず、モバイル SDK と WordPress プラグインもまだ提供していません。",
+          'React と Vue：`index.html` に貼り付けます。Next.js：同じ JavaScript を `next/script` と `strategy="beforeInteractive"` で読み込みます。これで `window.forma` はコンポーネントの effect より先に定義されます。App Router ではルートの `app/layout.tsx` に、Pages Router では `pages/_document.tsx` に直接置きます。ルート用の hook は不要です。SDK は npm では公開されておらず、モバイル SDK と WordPress プラグインもまだ提供していません。',
         queue:
-          "スクリプトが届くまで、`window.forma` はスタブです。呼び出しはエラーにならずキューに入り、SDK の読み込みとセットアップが終わると順番に実行されます。キューに入った呼び出しは何も返さないので、await しないでください。TypeScript では、グローバルを一度だけ宣言します：`interface Window { forma: { [method: string]: (...args: unknown[]) => unknown } }`。",
+          'スクリプトが届くまで、`window.forma` はスタブです。呼び出しはエラーにならずキューに入り、SDK の読み込みとセットアップが終わると順番に実行されます。キューに入った呼び出しは何も返さないので、await しないでください。SDK の読み込み後はスタブが SDK に呼び出しを転送するため、読み込み前に保持した参照もそのまま使えます。TypeScript では、グローバルを一度だけ宣言し、呼び出すメソッドを名前で列挙します。インデックスシグネチャは `noUncheckedIndexedAccess` で undefined の可能性ありと扱われます：`interface Window { forma: Record<"setUserId" | "track" | "logout", (...args: unknown[]) => unknown> }`。',
       },
       reference: {
         title: "メソッド",

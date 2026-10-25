@@ -15,10 +15,12 @@ Copy the snippet from your workspace in Forma, under **Integrations → Web & Mo
     var f = (window.forma = window.forma || {});
     if (f.setup || f.q) return;
     f.q = [];
+    var l;
     "setUserId setEmail setAttribute setAttributes setLanguage track logout registerRouteChange setNonce setEmbeddedData clearEmbeddedData on off"
       .split(" ")
       .forEach(function (m) {
         f[m] = function () {
+          if (l) return l[m].apply(l, arguments);
           f.q.push([m, arguments]);
         };
       });
@@ -34,7 +36,9 @@ Copy the snippet from your workspace in Forma, under **Integrations → Web & Mo
         };
       r(!0);
       s.setup({ workspaceId: workspaceId, appUrl: appUrl });
+      l = s;
       r(!1);
+      f.q.length = 0;
     };
     var e = document.getElementsByTagName("script")[0];
     e.parentNode.insertBefore(t, e);
@@ -53,28 +57,43 @@ import Script from "next/script";
 
 export default function FormaScript() {
   return (
-    <Script id="forma-sdk" strategy="afterInteractive">
+    <Script id="forma-sdk" strategy="beforeInteractive">
       {`...the JavaScript between the <script> tags above...`}
     </Script>
   );
 }
 ```
 
-Render `<FormaScript />` inside `<body>` in `app/layout.tsx` (App Router) or in `pages/_app.tsx` (Pages Router). It needs no route hooks: the SDK watches the history API itself.
+App Router: render `<FormaScript />` in the root `app/layout.tsx`. Pages Router: Next runs a `beforeInteractive` script only from `pages/_document.tsx`, and only a `<Script>` placed there directly, not one inside your own component, so put the `<Script>` element itself in the `<Head>` of `pages/_document.tsx`. `beforeInteractive` puts the snippet in the server HTML ahead of hydration, so `window.forma` exists before any component's effect runs; with `afterInteractive` it is injected from an effect, and a call from a component rendered before it throws. It needs no route hooks: the SDK watches the history API itself.
 
 ### Calls before the SDK has loaded
 
-The snippet defines `window.forma` straight away as a small stub. Calls to the methods it lists are queued, not thrown, and replayed in order once the SDK has loaded: `on`, `off`, `setNonce`, `setEmbeddedData` and `clearEmbeddedData` before `setup`, everything else after it. A queued call returns nothing, so do not `await` it or keep the function `on()` returns until the SDK is there.
+The snippet defines `window.forma` straight away as a small stub. Calls to the methods it lists are queued, not thrown, and replayed in order once the SDK has loaded: `on`, `off`, `setNonce`, `setEmbeddedData` and `clearEmbeddedData` before `setup`, everything else after it. A queued call returns nothing, so do not `await` it or keep the function `on()` returns until the SDK is there. Once the SDK has loaded, the stub's methods forward to it, so a reference to `window.forma` or to one of its methods kept from before then still works.
 
 Without the snippet's stub (for example a plain `<script src=".../js/forma.umd.js">` and your own `setup()` call), call `setup()` first: a call that reaches the SDK before setup has finished is dropped with the console warning `🧱 Forma - Setup not complete.`
 
 ### TypeScript
 
-The SDK is a global, so declare it once, for example in `src/forma.d.ts`:
+The SDK is a global, so declare it once, for example in `src/forma.d.ts`. The methods are named rather than declared through an index signature, which `noUncheckedIndexedAccess` would make possibly undefined:
 
 ```ts
 interface Window {
-  forma: { [method: string]: (...args: unknown[]) => unknown };
+  forma: Record<
+    | "setUserId"
+    | "setEmail"
+    | "setAttribute"
+    | "setAttributes"
+    | "setLanguage"
+    | "track"
+    | "logout"
+    | "registerRouteChange"
+    | "setNonce"
+    | "setEmbeddedData"
+    | "clearEmbeddedData"
+    | "on"
+    | "off",
+    (...args: unknown[]) => unknown
+  >;
 }
 ```
 

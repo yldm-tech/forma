@@ -1762,7 +1762,7 @@
       "loader_docs_description": "識別使用者、設定屬性、追蹤動作、回應 SDK 事件以及偵錯整合：",
       "loader_docs_link": "SDK 參考文件",
       "loader_nextjs_step_1": "在根版面配置旁新增 forma-script.tsx，並貼上下方程式碼片段。它會透過 next/script 載入 SDK。",
-      "loader_nextjs_step_2": "App Router：在 app/layout.tsx 的 <body> 中渲染 <FormaScript />。Pages Router：在 pages/_app.tsx 中渲染它。",
+      "loader_nextjs_step_2": "App Router：在根 app/layout.tsx 中渲染 <FormaScript />。Pages Router：Next.js 只會執行直接寫在 pages/_document.tsx 中的 beforeInteractive <Script>，因此請把程式碼片段中的 <Script> 元素直接放進 pages/_document.tsx 的 <Head> 中。",
       "loader_react_step": "將下方程式碼片段貼到 index.html 的 <head> 標籤中（Create React App 專案為 public/index.html）。",
       "loader_usage_step": "在應用程式的任何位置透過 window.forma 呼叫 SDK。指令碼載入完成前的呼叫會先排入佇列，載入後依序執行。使用 TypeScript 時，請加入一次程式碼片段中的型別宣告。",
       "loader_vue_step": "將下方程式碼片段貼到專案根目錄下 index.html 的 <head> 標籤中。",

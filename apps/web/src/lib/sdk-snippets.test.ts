@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
+import ts from "typescript";
 import { expect, test } from "vite-plus/test";
 import { SDK_STUB_METHODS, sdkReferenceUrl, sdkSnippets } from "./sdk-snippets";
 
@@ -109,6 +110,36 @@ test("calls made before the SDK has loaded are queued, not thrown, and replayed 
   ]);
 });
 
+// App code that keeps `const forma = window.forma` (or one of its methods) from before the load would otherwise push into a queue nobody replays again, and lose every call without an error.
+test("a reference to the stub kept from before the SDK loaded forwards to the SDK afterwards", () => {
+  const { html } = sdkSnippets("ws-1", APP_URL);
+  const { inserted, window } = runLoader(htmlScript(html));
+  const held = window.forma as Record<string, (...args: unknown[]) => unknown> & { q: unknown[] };
+  const heldTrack = held.track;
+  held.setUserId?.("user-1");
+
+  const calls: unknown[][] = [];
+  const sdk = fakeSdk(calls);
+  const unsubscribe = () => undefined;
+  sdk.on = (...args) => {
+    calls.push(["on", ...args]);
+    return unsubscribe;
+  };
+  window.forma = sdk;
+  inserted[0]?.onload?.();
+  calls.length = 0;
+
+  heldTrack?.("upgrade_clicked");
+  held.setUserId?.("user-2");
+  expect(held.on?.("forma_survey_shown", () => undefined)).toBe(unsubscribe);
+  expect(calls.map((call) => call.slice(0, 2))).toEqual([
+    ["track", "upgrade_clicked"],
+    ["setUserId", "user-2"],
+    ["on", "forma_survey_shown"],
+  ]);
+  expect(held.q).toEqual([]);
+});
+
 test("a second copy of the snippet, or one running after the SDK is loaded, adds no second script", () => {
   const { html } = sdkSnippets("ws-1", APP_URL);
   const first = runLoader(htmlScript(html));
@@ -139,6 +170,13 @@ test("the Next.js snippet uses no routing hooks and runs the same loader", () =>
   expect(calls).toEqual([["setup", { workspaceId: "ws-1", appUrl: APP_URL }]]);
 });
 
+// afterInteractive injects the script from an effect inside <Script>, which runs after the effects of the components rendered before it: with `<body>{children}<FormaScript /></body>`, a page's effect that calls window.forma.setUserId throws, since the stub does not exist yet. beforeInteractive puts it in the server HTML ahead of hydration.
+test("the Next.js snippet defines the stub before hydration", () => {
+  const { nextjs } = sdkSnippets("ws-1", APP_URL);
+  expect(nextjs).toContain('<Script id="forma-sdk" strategy="beforeInteractive">');
+  expect(nextjs).not.toMatch(/afterInteractive|lazyOnload|worker/);
+});
+
 test("the usage snippet calls the global the loader defines", () => {
   const { usage } = sdkSnippets(WORKSPACE_ID, APP_URL);
   expect(usage).toContain("interface Window");
@@ -146,6 +184,41 @@ test("the usage snippet calls the global the loader defines", () => {
     expect(usage).toContain(call);
   }
 });
+
+/** Type-checks in-memory files against the DOM lib and returns the error messages. */
+const typeErrors = (files: Record<string, string>, options: ts.CompilerOptions): string[] => {
+  const host = ts.createCompilerHost(options);
+  const readFile = host.readFile.bind(host);
+  const getSourceFile = host.getSourceFile.bind(host);
+  host.fileExists = (name) => name in files || ts.sys.fileExists(name);
+  host.readFile = (name) => files[name] ?? readFile(name);
+  host.getSourceFile = (name, language, ...rest) => {
+    const source = files[name];
+    return source === undefined
+      ? getSourceFile(name, language, ...rest)
+      : ts.createSourceFile(name, source, language);
+  };
+  const program = ts.createProgram(Object.keys(files), options, host);
+  return ts
+    .getPreEmitDiagnostics(program)
+    .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+};
+
+// An index signature makes every method `T | undefined` under noUncheckedIndexedAccess, so the page's own `window.forma.setUserId(...)` failed with TS2722 in projects that turn it on.
+test("the usage snippet's declaration type-checks its own calls, with or without noUncheckedIndexedAccess", () => {
+  const { usage } = sdkSnippets(WORKSPACE_ID, APP_URL);
+  const files = { "/app/usage.ts": `declare const user: { id: string };\n${usage}\n` };
+  const base: ts.CompilerOptions = {
+    strict: true,
+    noEmit: true,
+    target: ts.ScriptTarget.ES2020,
+    lib: ["lib.es2020.d.ts", "lib.dom.d.ts"],
+    types: [],
+  };
+  expect(typeErrors(files, base)).toEqual([]);
+  expect(typeErrors(files, { ...base, noUncheckedIndexedAccess: true })).toEqual([]);
+  for (const method of SDK_STUB_METHODS) expect(usage).toContain(`"${method}"`);
+}, 30_000);
 
 // The website shows the same snippet with placeholders (apps/website/src/site.ts JS_SNIPPET); a fix to one that misses the other would teach visitors a loader the app no longer gives them.
 test("the website's snippet is the same loader", () => {

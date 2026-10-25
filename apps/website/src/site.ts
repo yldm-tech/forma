@@ -178,9 +178,9 @@ export const JS_SNIPPET = `<!-- START Forma Surveys -->
     var appUrl = "https://forma.yldm.ai"; // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
     var workspaceId = "<your-workspace-id>";
     var f=window.forma=window.forma||{};if(f.setup||f.q)return;f.q=[];
-    "setUserId setEmail setAttribute setAttributes setLanguage track logout registerRouteChange setNonce setEmbeddedData clearEmbeddedData on off".split(" ").forEach(function(m){f[m]=function(){f.q.push([m,arguments])}});
+    var l;"setUserId setEmail setAttribute setAttributes setLanguage track logout registerRouteChange setNonce setEmbeddedData clearEmbeddedData on off".split(" ").forEach(function(m){f[m]=function(){if(l)return l[m].apply(l,arguments);f.q.push([m,arguments])}});
     var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/forma.umd.js";
-    t.onload=function(){var s=window.forma,i=/^(on|off|setNonce|setEmbeddedData|clearEmbeddedData)$/,r=function(p){f.q.forEach(function(c){if(i.test(c[0])===p)s[c[0]].apply(s,c[1])})};r(!0);s.setup({workspaceId: workspaceId, appUrl: appUrl});r(!1)};
+    t.onload=function(){var s=window.forma,i=/^(on|off|setNonce|setEmbeddedData|clearEmbeddedData)$/,r=function(p){f.q.forEach(function(c){if(i.test(c[0])===p)s[c[0]].apply(s,c[1])})};r(!0);s.setup({workspaceId: workspaceId, appUrl: appUrl});l=s;r(!1);f.q.length=0};
     var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e)}();
 </script>
 <!-- END Forma Surveys -->`;

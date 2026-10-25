@@ -1762,7 +1762,7 @@
       "loader_docs_description": "Identify users, set attributes, track actions, react to SDK events and debug the integration:",
       "loader_docs_link": "SDK reference",
       "loader_nextjs_step_1": "Create forma-script.tsx next to your root layout with the snippet below. It loads the SDK through next/script.",
-      "loader_nextjs_step_2": "App Router: render <FormaScript /> inside <body> in app/layout.tsx. Pages Router: render it in pages/_app.tsx.",
+      "loader_nextjs_step_2": "App Router: render <FormaScript /> in the root app/layout.tsx. Pages Router: Next runs a beforeInteractive script only from pages/_document.tsx, and only a <Script> placed there directly, so put the <Script> element from the snippet in the <Head> of pages/_document.tsx instead.",
       "loader_react_step": "Paste the snippet below into the <head> of index.html (public/index.html with Create React App).",
       "loader_usage_step": "Call the SDK through window.forma anywhere in your app. Calls made before the script has loaded are queued and run once it has. In TypeScript, add the declaration from the snippet once.",
       "loader_vue_step": "Paste the snippet below into the <head> of index.html at the root of your project.",

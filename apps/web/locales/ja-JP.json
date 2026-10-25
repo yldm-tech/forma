@@ -1762,7 +1762,7 @@
       "loader_docs_description": "ユーザーの識別、属性の設定、アクションのトラッキング、SDKイベントへの対応、デバッグについて：",
       "loader_docs_link": "SDKリファレンス",
       "loader_nextjs_step_1": "ルートレイアウトと同じ場所にforma-script.tsxを作成し、以下のスニペットを貼り付けてください。SDKはnext/scriptで読み込まれます。",
-      "loader_nextjs_step_2": "App Routerではapp/layout.tsxの<body>内で<FormaScript />をレンダリングします。Pages Routerではpages/_app.tsxでレンダリングします。",
+      "loader_nextjs_step_2": "App Routerでは、ルートのapp/layout.tsxで<FormaScript />をレンダリングします。Pages RouterのNext.jsはpages/_document.tsxに直接置かれた<Script>しかbeforeInteractiveで実行しないため、スニペットの<Script>要素をpages/_document.tsxの<Head>内に直接置いてください。",
       "loader_react_step": "以下のスニペットをindex.htmlの<head>内に貼り付けてください（Create React Appではpublic/index.html）。",
       "loader_usage_step": "アプリ内のどこからでもwindow.formaでSDKを呼び出せます。スクリプトの読み込み前に行った呼び出しはキューに入り、読み込み後に順番に実行されます。TypeScriptでは、スニペットにある型宣言を一度だけ追加してください。",
       "loader_vue_step": "以下のスニペットを、プロジェクト直下にあるindex.htmlの<head>内に貼り付けてください。",

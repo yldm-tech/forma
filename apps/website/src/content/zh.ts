@@ -342,9 +342,9 @@ export const zh: SiteContent = {
         title: "安装",
         body: "在 Forma 的“集成 → Web 和移动 SDK”中复制代码片段（已填好你的工作区 ID 和实例 URL），粘贴到每个页面的 `<head>` 中。使用 Google Tag Manager 时，将其粘贴到触发条件为“所有页面”的自定义 HTML 代码中。",
         frameworks:
-          "React 和 Vue：粘贴到 `index.html`。Next.js：在根布局中用 `next/script` 渲染同一段 JavaScript，无需路由 hook。SDK 尚未发布到 npm，移动端 SDK 和 WordPress 插件也暂未提供。",
+          'React 和 Vue：粘贴到 `index.html`。Next.js：用 `next/script` 并设置 `strategy="beforeInteractive"` 渲染同一段 JavaScript，这样 `window.forma` 会在组件的 effect 运行前就已存在：App Router 放在根 `app/layout.tsx` 中，Pages Router 直接放在 `pages/_document.tsx` 中。无需路由 hook。SDK 尚未发布到 npm，移动端 SDK 和 WordPress 插件也暂未提供。',
         queue:
-          "脚本加载完成前，`window.forma` 是一个占位对象：调用会先进入队列而不会报错，SDK 加载并完成初始化后按顺序执行。排队中的调用没有返回值，请不要 await。使用 TypeScript 时，声明一次全局变量：`interface Window { forma: { [method: string]: (...args: unknown[]) => unknown } }`。",
+          '脚本加载完成前，`window.forma` 是一个占位对象：调用会先进入队列而不会报错，SDK 加载并完成初始化后按顺序执行。排队中的调用没有返回值，请不要 await。SDK 加载后，占位对象会把调用转发给 SDK，因此加载前保存的引用仍然有效。使用 TypeScript 时，声明一次全局变量，逐个写出你调用的方法名，不要使用索引签名（开启 `noUncheckedIndexedAccess` 时，通过索引签名取到的方法可能为 undefined）：`interface Window { forma: Record<"setUserId" | "track" | "logout", (...args: unknown[]) => unknown> }`。',
       },
       reference: {
         title: "方法",

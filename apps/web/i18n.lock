@@ -1692,7 +1692,7 @@ checksums:
     workspace/app-connection/loader_docs_description: d0f689860ef84aaa76aa0aa5beef089e
     workspace/app-connection/loader_docs_link: 1fd208a889f405c4f32e8ac23ccfa8bf
     workspace/app-connection/loader_nextjs_step_1: 60b9ba700f6c6bf9168a1a5701fcd749
-    workspace/app-connection/loader_nextjs_step_2: ec6a512d27deb1686656930d7f66c48e
+    workspace/app-connection/loader_nextjs_step_2: 11605f358f28fb60e856700c9120c330
     workspace/app-connection/loader_react_step: 645978e35ec843e3d64deccda0e53262
     workspace/app-connection/loader_usage_step: 0138743b6c475c7c905f46029fe12a1c
     workspace/app-connection/loader_vue_step: 13f701ba67f622d43eebb8efb0e3f6dd

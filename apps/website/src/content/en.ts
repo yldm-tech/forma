@@ -352,9 +352,9 @@ export const en: SiteContent = {
         title: "Install",
         body: "Copy the snippet from Integrations → Web & Mobile SDK in Forma, which fills in your workspace ID and your instance's URL, and paste it into the `<head>` of every page. With Google Tag Manager, paste it into a Custom HTML tag that fires on All Pages.",
         frameworks:
-          "React and Vue: paste it into `index.html`. Next.js: render the same JavaScript with `next/script` in your root layout, no route hooks needed. The SDK is not published on npm; mobile SDKs and a WordPress plugin are not available yet.",
+          'React and Vue: paste it into `index.html`. Next.js: render the same JavaScript with `next/script` and `strategy="beforeInteractive"`, so `window.forma` exists before your components\' effects run: in the root `app/layout.tsx` with the App Router, or directly in `pages/_document.tsx` with the Pages Router. No route hooks are needed. The SDK is not published on npm; mobile SDKs and a WordPress plugin are not available yet.',
         queue:
-          "Until the script arrives, `window.forma` is a stub: calls are queued, not thrown, and replayed in order once the SDK has loaded and set itself up. A queued call returns nothing, so do not await it. In TypeScript, declare the global once: `interface Window { forma: { [method: string]: (...args: unknown[]) => unknown } }`.",
+          'Until the script arrives, `window.forma` is a stub: calls are queued, not thrown, and replayed in order once the SDK has loaded and set itself up. A queued call returns nothing, so do not await it. Once the SDK has loaded, the stub forwards to it, so a reference kept from before then still works. In TypeScript, declare the global once, naming the methods you call rather than using an index signature, which `noUncheckedIndexedAccess` makes possibly undefined: `interface Window { forma: Record<"setUserId" | "track" | "logout", (...args: unknown[]) => unknown> }`.',
       },
       reference: {
         title: "Methods",
