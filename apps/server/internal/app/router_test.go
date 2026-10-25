@@ -175,6 +175,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"PATCH /api/app/organizations/:organizationId/api-keys/:apiKeyId":             true,
 		"POST /api/app/auth/sso/sign-in":                                              true,
 		"POST /api/app/workspaces/:workspaceId/contacts/import":                       true,
+		"POST /api/app/workspaces/:workspaceId/contacts/export":                       true,
 		"GET /api/app/workspaces/:workspaceId/contacts/:contactId":                    true,
 		"PUT /api/app/surveys/:surveyId/segment":                                      true,
 		"POST /api/app/surveys/:surveyId/segment/reset":                               true,

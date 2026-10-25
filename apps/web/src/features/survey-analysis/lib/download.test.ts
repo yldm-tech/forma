@@ -23,6 +23,9 @@ describe("exportFileName", () => {
   test("falls back to a dated name without one", () => {
     expect(exportFileName(null, "csv", new Date("2026-09-19T10:00:00Z"))).toBe("responses-2026-09-19.csv");
     expect(exportFileName("  ", "xlsx", new Date("2026-09-19T10:00:00Z"))).toBe("responses-2026-09-19.xlsx");
+    expect(exportFileName(null, "csv", new Date("2026-09-19T10:00:00Z"), "contacts")).toBe(
+      "contacts-2026-09-19.csv"
+    );
   });
 });
 

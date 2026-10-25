@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -37,6 +39,7 @@ func (h *Handler) Register(r gin.IRouter) {
 
 	g.GET("/workspaces/:workspaceId/contacts", h.list)
 	g.POST("/workspaces/:workspaceId/contacts/import", h.importCSV)
+	g.POST("/workspaces/:workspaceId/contacts/export", h.exportCSV)
 	g.GET("/workspaces/:workspaceId/contacts/:contactId", h.get)
 	g.DELETE("/contacts/:contactId", h.delete)
 	g.PUT("/contacts/:contactId/attributes", h.updateAttributes)
@@ -495,4 +498,47 @@ func (h *Handler) resetSegment(c *gin.Context) {
 	}
 	seg, err := h.svc.ResetSurveySegment(c.Request.Context(), userID(c), id)
 	respond(c, http.StatusOK, seg, err)
+}
+
+// exportRequest names the contacts to export: the contacts list's search, empty for all of them.
+type exportRequest struct {
+	Search string `json:"search"`
+}
+
+// exportCSV answers the CSV itself, named by Content-Disposition. It is written to a temporary file first, so a failure halfway is still an error envelope rather than a truncated download.
+func (h *Handler) exportCSV(c *gin.Context) {
+	ws, ok := pathID(c, "workspaceId")
+	if !ok {
+		return
+	}
+	var req exportRequest
+	if err := httpapi.BindJSON(c, &req); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	file, err := os.CreateTemp("", "forma-contacts-export-*")
+	if err != nil {
+		httpapi.Fail(c, fmt.Errorf("create contacts export file: %w", err))
+		return
+	}
+	defer func() {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+	}()
+	name, err := h.svc.Export(c.Request.Context(), userID(c), ws, req.Search, file)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	size, err := file.Seek(0, io.SeekCurrent)
+	if err != nil {
+		httpapi.Fail(c, fmt.Errorf("measure contacts export file: %w", err))
+		return
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		httpapi.Fail(c, fmt.Errorf("rewind contacts export file: %w", err))
+		return
+	}
+	c.Header("Cache-Control", "private, no-store")
+	c.DataFromReader(http.StatusOK, size, ContentTypeCSV, file, map[string]string{"Content-Disposition": `attachment; filename="` + name + `"`})
 }

@@ -9,7 +9,6 @@ import {
   type TSurveySchedulingConfig,
   browserTimeZone,
   describeScheduledMoment,
-  getSurveySchedulingTimeLabel,
 } from "../lib/scheduling-config";
 import { createSurveySchedulingDateUtils } from "../lib/scheduling-date-utils";
 import { SURVEY_PIN_PATTERN, generateSurveyPin } from "../lib/survey-pin";
@@ -18,6 +17,7 @@ import { Alert, AlertTitle } from "../../../components/ui/alert";
 import { DatePicker } from "../../../components/ui/date-picker/index";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { Select } from "../../../components/ui/select";
 import { Slider } from "../../../components/ui/slider";
 
 interface ResponseOptionsCardProps {
@@ -41,11 +41,22 @@ export const ResponseOptionsCard = ({
   const {
     toCalendarDate,
     getMinimumSurveySchedulingCalendarDate,
-    normalizeDateOnlySelectionToSurveySchedulingDateTime,
     toSurveySchedulingDateTime,
+    toSurveySchedulingDateTimeAt,
+    getSurveySchedulingTimeOfDay,
+    getSurveySchedulingTimeOptions,
+    getFirstSurveySchedulingCalendarDate,
   } = useMemo(() => createSurveySchedulingDateUtils(surveySchedulingConfig), [surveySchedulingConfig]);
-  const surveySchedulingTimeLabel = getSurveySchedulingTimeLabel(surveySchedulingConfig);
   const surveySchedulingTimeZoneLabel = surveySchedulingConfig.timeZone;
+  const timeOfDayFormat = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: surveySchedulingConfig.timeZone,
+      }),
+    [locale, surveySchedulingConfig.timeZone]
+  );
   const [open, setOpen] = useState(localSurvey.type === "link");
   const autoComplete = localSurvey.autoComplete !== null;
   const [surveyClosedMessageToggle, setSurveyClosedMessageToggle] = useState(false);
@@ -64,9 +75,15 @@ export const ResponseOptionsCard = ({
   const [recaptchaThreshold, setRecaptchaThreshold] = useState<number>(localSurvey.recaptcha?.threshold ?? 0);
   const publishOn = localSurvey.publishOn ? toCalendarDate(localSurvey.publishOn) : null;
   const closeOn = localSurvey.closeOn ? toCalendarDate(localSurvey.closeOn) : null;
-  const minimumSchedulingDate = getMinimumSurveySchedulingCalendarDate();
-  const minPublishDate = minimumSchedulingDate;
-  const minCloseDate = (() => {
+  const now = new Date();
+  const minimumSchedulingDate = getMinimumSurveySchedulingCalendarDate(now);
+  // The calendars offer every day that still has a run after now (for the close date, after the publish date); the time selects offer that day's runs.
+  const closeLowerBound =
+    localSurvey.publishOn && localSurvey.publishOn.getTime() > now.getTime() ? localSurvey.publishOn : now;
+  const minPublishDate = getFirstSurveySchedulingCalendarDate(now);
+  const minCloseDate = getFirstSurveySchedulingCalendarDate(closeLowerBound);
+  /** Where a newly enabled close date starts: the day after the publish date, or the first day the schedule runs, at the schedule's time, as before times could be picked. */
+  const defaultCloseDate = (() => {
     if (!publishOn) {
       return minimumSchedulingDate;
     }
@@ -78,9 +95,53 @@ export const ResponseOptionsCard = ({
       ? nextCalendarDay
       : minimumSchedulingDate;
   })();
-  /** The moment a picked date stands for, in the scheduling zone and, when it differs, in the browser's. */
-  const scheduledMoment = (date: Date | null) => {
-    const instant = normalizeDateOnlySelectionToSurveySchedulingDateTime(date);
+
+  /** The picked day at the time the field already has (the schedule's time when it has none), or the day's first run after `after` when that time has passed. */
+  const atKeptTime = (calendarDate: Date, current: Date | null, after: Date): Date => {
+    const { hour, minute } = current
+      ? getSurveySchedulingTimeOfDay(current)
+      : { hour: surveySchedulingConfig.localHour, minute: surveySchedulingConfig.localMinute };
+    const instant = toSurveySchedulingDateTimeAt(calendarDate, hour, minute);
+    if (instant.getTime() > after.getTime()) return instant;
+    return getSurveySchedulingTimeOptions(calendarDate, after)[0]?.instant ?? instant;
+  };
+
+  const timeValue = (instant: Date): string => {
+    const { hour, minute } = getSurveySchedulingTimeOfDay(instant);
+    return `${hour}:${minute}`;
+  };
+
+  /** The times a field offers on its day, with the time it has kept in the list even when it is no longer offered. */
+  const timeOptions = (instant: Date, after: Date): { value: string; label: string }[] => {
+    const options = getSurveySchedulingTimeOptions(toCalendarDate(instant), after).map(
+      (option) => option.instant
+    );
+    if (!options.some((option) => timeValue(option) === timeValue(instant))) options.push(instant);
+    return options
+      .sort((a, b) => a.getTime() - b.getTime())
+      .map((option) => ({ value: timeValue(option), label: timeOfDayFormat.format(option) }));
+  };
+
+  /** The field's day at the time a select picked. */
+  const atSelectedTime = (instant: Date, value: string): Date => {
+    const [hour = 0, minute = 0] = value.split(":").map(Number);
+    return toSurveySchedulingDateTimeAt(toCalendarDate(instant), hour, minute);
+  };
+
+  /** A publish date, with the close date dropped when it no longer comes after it. */
+  const setPublishOn = (nextPublishOn: Date) => {
+    setLocalSurvey((currentSurvey) => ({
+      ...currentSurvey,
+      closeOn:
+        currentSurvey.closeOn && currentSurvey.closeOn.getTime() <= nextPublishOn.getTime()
+          ? null
+          : currentSurvey.closeOn,
+      publishOn: nextPublishOn,
+    }));
+  };
+
+  /** The moment a scheduled date stands for, in the scheduling zone and, when it differs, in the browser's. */
+  const scheduledMoment = (instant: Date | null) => {
     if (!instant) return null;
     const { scheduled, browser } = describeScheduledMoment(
       instant,
@@ -223,24 +284,20 @@ export const ResponseOptionsCard = ({
     }
   }, [localSurvey, surveyClosedMessage.heading, surveyClosedMessage.subheading]);
 
+  // A survey loaded with a close date not after its publish date (the server refuses to save one) loses the close date.
+  const publishOnTime = localSurvey.publishOn?.getTime() ?? null;
+  const closeOnTime = localSurvey.closeOn?.getTime() ?? null;
   useEffect(() => {
-    if (!publishOn || !closeOn) {
-      return;
-    }
-
-    if (closeOn.getTime() > publishOn.getTime()) {
+    if (publishOnTime === null || closeOnTime === null || closeOnTime > publishOnTime) {
       return;
     }
 
     setLocalSurvey((currentSurvey) => {
-      if (!currentSurvey.closeOn || !currentSurvey.publishOn) {
-        return currentSurvey;
-      }
-
-      const currentCloseOn = toCalendarDate(currentSurvey.closeOn);
-      const currentPublishOn = toCalendarDate(currentSurvey.publishOn);
-
-      if (currentCloseOn.getTime() > currentPublishOn.getTime()) {
+      if (
+        !currentSurvey.closeOn ||
+        !currentSurvey.publishOn ||
+        currentSurvey.closeOn.getTime() > currentSurvey.publishOn.getTime()
+      ) {
         return currentSurvey;
       }
 
@@ -249,7 +306,7 @@ export const ResponseOptionsCard = ({
         closeOn: null,
       };
     });
-  }, [closeOn, publishOn, setLocalSurvey, toCalendarDate]);
+  }, [closeOnTime, publishOnTime, setLocalSurvey]);
 
   const togglePublishOnDate = () => {
     if (isPublishOnDateEnabled) {
@@ -260,18 +317,7 @@ export const ResponseOptionsCard = ({
       return;
     }
 
-    const nextPublishOn = toSurveySchedulingDateTime(minPublishDate);
-    const nextPublishCalendarDate = toCalendarDate(nextPublishOn);
-
-    setLocalSurvey((currentSurvey) => ({
-      ...currentSurvey,
-      closeOn:
-        currentSurvey.closeOn &&
-        toCalendarDate(currentSurvey.closeOn).getTime() <= nextPublishCalendarDate.getTime()
-          ? null
-          : currentSurvey.closeOn,
-      publishOn: nextPublishOn,
-    }));
+    setPublishOn(toSurveySchedulingDateTime(minimumSchedulingDate));
   };
 
   const toggleCloseOnDate = () => {
@@ -285,7 +331,7 @@ export const ResponseOptionsCard = ({
 
     setLocalSurvey((currentSurvey) => ({
       ...currentSurvey,
-      closeOn: toSurveySchedulingDateTime(minCloseDate),
+      closeOn: toSurveySchedulingDateTime(defaultCloseDate),
     }));
   };
 
@@ -383,39 +429,43 @@ export const ResponseOptionsCard = ({
             isChecked={isPublishOnDateEnabled}
             onToggle={togglePublishOnDate}
             title={t("workspace.surveys.edit.publish_survey_on_date")}
-            description={t("workspace.surveys.edit.survey_will_be_published_at_midnight_cet", {
-              time: surveySchedulingTimeLabel,
+            description={t("workspace.surveys.edit.survey_will_be_published_at_the_selected_time", {
               timeZone: surveySchedulingTimeZoneLabel,
             })}
             childBorder={true}>
             <div className="p-4">
-              <DatePicker
-                clearButtonId="clear-publish-on-date"
-                clearButtonLabel={t("workspace.surveys.edit.clear_publish_on_date")}
-                value={publishOn}
-                locale={locale}
-                minDate={minPublishDate}
-                onClear={() => {
-                  setLocalSurvey((currentSurvey) => ({
-                    ...currentSurvey,
-                    publishOn: null,
-                  }));
-                }}
-                onChange={(date) => {
-                  const nextPublishOn = toSurveySchedulingDateTime(date);
-                  const nextPublishCalendarDate = toCalendarDate(nextPublishOn);
-
-                  setLocalSurvey((currentSurvey) => ({
-                    ...currentSurvey,
-                    closeOn:
-                      currentSurvey.closeOn &&
-                      toCalendarDate(currentSurvey.closeOn).getTime() <= nextPublishCalendarDate.getTime()
-                        ? null
-                        : currentSurvey.closeOn,
-                    publishOn: nextPublishOn,
-                  }));
-                }}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <DatePicker
+                  clearButtonId="clear-publish-on-date"
+                  clearButtonLabel={t("workspace.surveys.edit.clear_publish_on_date")}
+                  value={publishOn}
+                  locale={locale}
+                  minDate={minPublishDate}
+                  onClear={() => {
+                    setLocalSurvey((currentSurvey) => ({
+                      ...currentSurvey,
+                      publishOn: null,
+                    }));
+                  }}
+                  onChange={(date) => setPublishOn(atKeptTime(date, localSurvey.publishOn, now))}
+                />
+                {localSurvey.publishOn && (
+                  <Select
+                    aria-label={t("workspace.surveys.edit.publish_time")}
+                    containerClassName="w-36 shrink-0"
+                    value={timeValue(localSurvey.publishOn)}
+                    onChange={(e) => {
+                      if (localSurvey.publishOn)
+                        setPublishOn(atSelectedTime(localSurvey.publishOn, e.target.value));
+                    }}>
+                    {timeOptions(localSurvey.publishOn, now).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </div>
               {scheduledMoment(localSurvey.publishOn)}
             </div>
           </AdvancedOptionToggle>
@@ -424,31 +474,47 @@ export const ResponseOptionsCard = ({
             isChecked={isCloseOnDateEnabled}
             onToggle={toggleCloseOnDate}
             title={t("workspace.surveys.edit.close_survey_on_date")}
-            description={t("workspace.surveys.edit.survey_will_be_closed_at_midnight_cet", {
-              time: surveySchedulingTimeLabel,
+            description={t("workspace.surveys.edit.survey_will_be_closed_at_the_selected_time", {
               timeZone: surveySchedulingTimeZoneLabel,
             })}
             childBorder={true}>
             <div className="p-4">
-              <DatePicker
-                clearButtonId="clear-close-on-date"
-                clearButtonLabel={t("workspace.surveys.edit.clear_close_on_date")}
-                value={closeOn}
-                locale={locale}
-                minDate={minCloseDate}
-                onClear={() => {
-                  setLocalSurvey((currentSurvey) => ({
-                    ...currentSurvey,
-                    closeOn: null,
-                  }));
-                }}
-                onChange={(date) => {
-                  setLocalSurvey((currentSurvey) => ({
-                    ...currentSurvey,
-                    closeOn: toSurveySchedulingDateTime(date),
-                  }));
-                }}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <DatePicker
+                  clearButtonId="clear-close-on-date"
+                  clearButtonLabel={t("workspace.surveys.edit.clear_close_on_date")}
+                  value={closeOn}
+                  locale={locale}
+                  minDate={minCloseDate}
+                  onClear={() => {
+                    setLocalSurvey((currentSurvey) => ({
+                      ...currentSurvey,
+                      closeOn: null,
+                    }));
+                  }}
+                  onChange={(date) => {
+                    const nextCloseOn = atKeptTime(date, localSurvey.closeOn, closeLowerBound);
+                    setLocalSurvey((currentSurvey) => ({ ...currentSurvey, closeOn: nextCloseOn }));
+                  }}
+                />
+                {localSurvey.closeOn && (
+                  <Select
+                    aria-label={t("workspace.surveys.edit.close_time")}
+                    containerClassName="w-36 shrink-0"
+                    value={timeValue(localSurvey.closeOn)}
+                    onChange={(e) => {
+                      if (!localSurvey.closeOn) return;
+                      const nextCloseOn = atSelectedTime(localSurvey.closeOn, e.target.value);
+                      setLocalSurvey((currentSurvey) => ({ ...currentSurvey, closeOn: nextCloseOn }));
+                    }}>
+                    {timeOptions(localSurvey.closeOn, closeLowerBound).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </div>
               {scheduledMoment(localSurvey.closeOn)}
             </div>
           </AdvancedOptionToggle>

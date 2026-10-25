@@ -8,7 +8,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ExpandIcon, RefreshCwIcon, SettingsIcon, ShrinkIcon, Trash2Icon } from "lucide-react";
+import { DownloadIcon, ExpandIcon, RefreshCwIcon, SettingsIcon, ShrinkIcon, Trash2Icon } from "lucide-react";
 import { type MouseEvent, useMemo, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -30,10 +30,16 @@ import {
 } from "../../lib/contacts";
 import { errorMessage } from "../../lib/errors";
 import { meQuery } from "../../lib/queries/auth";
-import { attributeKeysQuery, contactsQuery, useDeleteContacts } from "../../lib/queries/contacts";
+import {
+  attributeKeysQuery,
+  contactsQuery,
+  exportContacts,
+  useDeleteContacts,
+} from "../../lib/queries/contacts";
 import { readStorage, writeStorage } from "../../lib/storage";
 import { toast } from "../../lib/toast";
 import { useDebouncedValue } from "../../lib/use-debounced-value";
+import { saveExport } from "../survey-analysis/lib/download";
 import { ContactsPageLayout } from "./contacts-layout";
 import { UploadContactsButton } from "./upload-contacts";
 
@@ -237,6 +243,19 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
     toast.success(t("common.data_refreshed_successfully"));
   };
 
+  // The export takes the search the list shows, so the file holds the contacts on screen and the ones further down.
+  const [isExporting, setIsExporting] = useState(false);
+  const exportCsv = async () => {
+    setIsExporting(true);
+    try {
+      saveExport(await exportContacts(workspaceId, search), "csv", "contacts");
+    } catch {
+      toast.error(t("workspace.contacts.export_csv_failed"));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="mb-4 flex items-center justify-between gap-2">
@@ -282,6 +301,10 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
           )}
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" loading={isExporting} onClick={() => void exportCsv()}>
+            <DownloadIcon aria-hidden="true" />
+            {search.trim() ? t("workspace.contacts.export_matching_csv") : t("workspace.contacts.export_csv")}
+          </Button>
           <Button variant="ghost" size="icon" aria-label={t("common.refresh")} onClick={() => void refresh()}>
             <RefreshCwIcon className={cn("size-4", contacts.isRefetching && "animate-spin")} />
           </Button>

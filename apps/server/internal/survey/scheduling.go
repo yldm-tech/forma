@@ -16,9 +16,21 @@ import (
 // schedulingBatchSize is forma2's SURVEY_SCHEDULING_RECONCILIATION_BATCH_SIZE.
 const schedulingBatchSize = 250
 
-// normalizeDates is forma2's normalizeSurveyScheduling: both dates are snapped to the schedule of the survey's organization, s, keeping the calendar day they have in pickedIn, the schedule the client picked them in (s itself unless the editor says it showed them in another zone); a manual status change (current nil or different) to inProgress drops the publish date, to paused without a publish date drops the close date, and to completed drops both. A close date not after the publish date is refused.
-func normalizeDates(s, pickedIn scheduling.Schedule, current *string, status string, publishOn, closeOn *time.Time) (*time.Time, *time.Time, error) {
-	closeOn, publishOn = s.Resnap(pickedIn, closeOn), s.Resnap(pickedIn, publishOn)
+// scheduledDates are a survey's publish and close dates.
+type scheduledDates struct {
+	PublishOn, CloseOn *time.Time
+}
+
+// normalizeDates is forma2's normalizeSurveyScheduling: each date is placed in the schedule of the survey's organization, s, from pickedIn, the schedule the client picked it in (s itself unless the editor says it showed them in another zone), by normalizeDate; a manual status change (current nil or different) to inProgress drops the publish date, to paused without a publish date drops the close date, and to completed drops both. A close date not after the publish date is refused.
+func normalizeDates(s, pickedIn scheduling.Schedule, current *string, status string, in, stored scheduledDates, exact bool) (*time.Time, *time.Time, error) {
+	publishOn, err := normalizeDate(s, pickedIn, in.PublishOn, stored.PublishOn, exact)
+	if err != nil {
+		return nil, nil, err
+	}
+	closeOn, err := normalizeDate(s, pickedIn, in.CloseOn, stored.CloseOn, exact)
+	if err != nil {
+		return nil, nil, err
+	}
 	manual := current == nil || *current != status
 	if manual && status == StatusInProgress {
 		publishOn = nil
@@ -33,6 +45,25 @@ func normalizeDates(s, pickedIn scheduling.Schedule, current *string, status str
 		return nil, nil, apperr.InvalidInput(apperr.CodeValidation, "Close date must be after publish date")
 	}
 	return publishOn, closeOn, nil
+}
+
+// normalizeDate places one date in s. The date the survey already has is kept as it is, so a save that carries the stored dates back (any editor or v1 save that does not touch them, every v3 patch) never moves them. Otherwise, with exact (the editor, which picks a day and a time) the date keeps the day and time of day it has in pickedIn and must be a scheduler run, a whole minute on the quarter-hour grid; without it the date is a calendar day, snapped to the schedule's local time of the day it has in pickedIn, forma2's behaviour.
+func normalizeDate(s, pickedIn scheduling.Schedule, t, stored *time.Time, exact bool) (*time.Time, error) {
+	switch {
+	case t == nil:
+		return nil, nil
+	case stored != nil && t.Equal(*stored):
+		out := stored.UTC()
+		return &out, nil
+	case exact:
+		out := s.Resnap(pickedIn, t)
+		if !t.Equal(t.Truncate(time.Minute)) || !scheduling.RunsFor(s).Includes(*out) {
+			return nil, apperr.InvalidInput(apperr.CodeValidation, "Publish and close times must be on the scheduler's quarter-hour grid")
+		}
+		return out, nil
+	default:
+		return s.SnapFrom(pickedIn, t), nil
+	}
 }
 
 // pickedIn is the schedule an editor save's dates were picked in: the zone the editor showed them in, which is the organization's unless the zone changed after the editor loaded it, or the organization's schedule when the save names no zone (or one that is not a zone).

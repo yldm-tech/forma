@@ -1,4 +1,4 @@
-// Package scheduling is when scheduled surveys open and close: a publish or close date is a calendar day, snapped to the configured local time of that day (SURVEY_SCHEDULING_LOCAL_HOUR and _MINUTE) in the time zone of the survey's organization, or in SURVEY_SCHEDULING_TIME_ZONE when the organization has none. The survey module snaps the dates and runs the scheduler, the organization module re-snaps them when the zone changes, and the workspace and organization payloads tell the SPA the zone in effect.
+// Package scheduling is when scheduled surveys open and close, in the time zone of the survey's organization, or in SURVEY_SCHEDULING_TIME_ZONE when the organization has none. A publish or close date given as a calendar day (the v1 management API) is snapped to the configured local time of that day (SURVEY_SCHEDULING_LOCAL_HOUR and _MINUTE); the editor sends a day and a time on the scheduler's quarter-hour grid, which is kept. The survey module snaps the dates and runs the scheduler, the organization module moves them to the same local day and time when the zone changes, and the workspace and organization payloads tell the SPA the zone in effect.
 package scheduling
 
 import (
@@ -81,13 +81,23 @@ func (s Schedule) Snap(t *time.Time) *time.Time {
 	return &out
 }
 
-// Resnap moves a date snapped in from to the same calendar day in s: what an organization's scheduled dates become when its zone changes, so a survey still opens or closes on the day that was chosen.
-func (s Schedule) Resnap(from Schedule, t *time.Time) *time.Time {
+// SnapFrom is a date picked as a calendar day in from, the zone a client showed it in, snapped to s: that day at s's local time in s's zone.
+func (s Schedule) SnapFrom(from Schedule, t *time.Time) *time.Time {
 	if t == nil {
 		return nil
 	}
 	local := t.In(from.loc)
 	out := time.Date(local.Year(), local.Month(), local.Day(), s.hour, s.minute, 0, 0, s.loc).UTC()
+	return &out
+}
+
+// Resnap moves a date from from's zone to s's, keeping the calendar day and the time of day it has in from (to the minute): what an organization's scheduled dates become when its zone changes, so a survey still opens or closes on the day, and at the time, that was chosen. A date at the schedule's own local time stays at it; one the editor gave another time keeps that time.
+func (s Schedule) Resnap(from Schedule, t *time.Time) *time.Time {
+	if t == nil {
+		return nil
+	}
+	local := t.In(from.loc)
+	out := time.Date(local.Year(), local.Month(), local.Day(), local.Hour(), local.Minute(), 0, 0, s.loc).UTC()
 	return &out
 }
 
@@ -127,6 +137,12 @@ type Runs struct {
 // RunsFor is the run schedule of the instance's local time.
 func RunsFor(s Schedule) Runs {
 	return Runs{offset: time.Duration(s.minute%int(runInterval/time.Minute)) * time.Minute}
+}
+
+// Includes is whether a run starts at t: a whole minute on the quarter-hour grid. A publish or close time the editor picks must be one, so the survey opens or closes at that instant rather than at the next run.
+func (r Runs) Includes(t time.Time) bool {
+	t = t.UTC()
+	return t.Equal(t.Truncate(time.Minute)) && t.Sub(t.Truncate(runInterval)) == r.offset
 }
 
 func (r Runs) Next(current time.Time) time.Time {

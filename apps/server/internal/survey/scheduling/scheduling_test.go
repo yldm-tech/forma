@@ -112,6 +112,52 @@ func TestResnapKeepsTheDay(t *testing.T) {
 	}
 }
 
+// A date the editor gave its own time keeps that time of day when it moves zones, also across the date line; SnapFrom, for a date picked as a day, puts it at the schedule's time instead.
+func TestResnapKeepsTheTimeOfDay(t *testing.T) {
+	t.Parallel()
+	tokyo, berlin := New(load(t, "Asia/Tokyo"), 0, 0), New(load(t, "Europe/Berlin"), 0, 0)
+	// 18:15 on October 30 in Tokyo.
+	in := at(t, "2026-10-30T09:15:00Z")
+	if got := berlin.Resnap(tokyo, &in); !got.Equal(at(t, "2026-10-30T17:15:00Z")) {
+		t.Errorf("Resnap = %s, want 18:15 on October 30 in Berlin", got)
+	}
+	if got := berlin.SnapFrom(tokyo, &in); !got.Equal(at(t, "2026-10-29T23:00:00Z")) {
+		t.Errorf("SnapFrom = %s, want midnight of October 30 in Berlin", got)
+	}
+	// Seconds are dropped, as a time picked to the minute has none.
+	withSeconds := at(t, "2026-10-30T09:15:42Z")
+	if got := tokyo.Resnap(tokyo, &withSeconds); !got.Equal(in) {
+		t.Errorf("Resnap kept the seconds: %s", got)
+	}
+	if berlin.SnapFrom(tokyo, nil) != nil {
+		t.Error("SnapFrom(nil) is not nil")
+	}
+}
+
+// A run starts on every whole minute of the quarter-hour grid offset by the configured minute, and on nothing else.
+func TestRunsInclude(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		minute int
+		at     string
+		want   bool
+	}{
+		{0, "2026-10-30T18:00:00Z", true},
+		{0, "2026-10-30T18:45:00Z", true},
+		{0, "2026-10-30T18:10:00Z", false},
+		{0, "2026-10-30T18:15:30Z", false},
+		{20, "2026-10-30T18:05:00Z", true},
+		{20, "2026-10-30T18:20:00Z", true},
+		{20, "2026-10-30T18:15:00Z", false},
+		// Kathmandu is UTC+05:45: 18:15 there is 12:30 UTC, still on the grid.
+		{0, "2026-10-30T12:30:00Z", true},
+	} {
+		if got := RunsFor(New(time.UTC, 0, tc.minute)).Includes(at(t, tc.at)); got != tc.want {
+			t.Errorf("minute %d, %s: Includes = %v", tc.minute, tc.at, got)
+		}
+	}
+}
+
 // At UTC+12 and beyond noon UTC is already the next day, so the editor sends a picked day as that day's run time in the zone; the snap keeps it there.
 func TestSnapKeepsTheEditorsDayEastOfUTCPlus12(t *testing.T) {
 	t.Parallel()

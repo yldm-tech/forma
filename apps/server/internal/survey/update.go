@@ -63,6 +63,8 @@ type UpdateInput struct {
 	CloseOn   *time.Time `json:"closeOn"`
 	// SchedulingTimeZone is the zone the editor showed the publish and close dates in, which is not part of forma2's TSurvey. The dates keep their calendar day in it when the organization's zone has changed since the editor loaded it; without it they are read in the organization's zone.
 	SchedulingTimeZone *string `json:"schedulingTimeZone"`
+	// SchedulingExactTimes says the publish and close dates carry a time of day the editor picked, on the scheduler's quarter-hour grid, which is kept; without it each new date is a calendar day, snapped to the schedule's local time as forma2 did. Not part of forma2's TSurvey either.
+	SchedulingExactTimes bool `json:"schedulingExactTimes"`
 
 	IsVerifyEmailEnabled        bool    `json:"isVerifyEmailEnabled"`
 	IsBackButtonHidden          bool    `json:"isBackButtonHidden"`
@@ -358,7 +360,7 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		}
 		rec.Pin, rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.Pin, in.CustomHeadScripts, in.CustomHeadScriptsMode
 		storedStatus := stored.Status
-		if rec.PublishOn, rec.CloseOn, err = normalizeDates(schedule, pickedIn(schedule, in.SchedulingTimeZone), &storedStatus, in.Status, in.PublishOn, in.CloseOn); err != nil {
+		if rec.PublishOn, rec.CloseOn, err = normalizeDates(schedule, pickedIn(schedule, in.SchedulingTimeZone), &storedStatus, in.Status, scheduledDates{in.PublishOn, in.CloseOn}, scheduledDates{stored.PublishOn, stored.CloseOn}, in.SchedulingExactTimes); err != nil {
 			return err
 		}
 

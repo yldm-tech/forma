@@ -103,6 +103,65 @@ describe("survey scheduling date utils", () => {
     expect(utils.normalizeDateOnlySelectionToSurveySchedulingDateTime(sent)?.toISOString()).toBe(expected);
   });
 
+  test("places a picked day and time in the scheduling zone and reads the time back", () => {
+    const utils = createSurveySchedulingDateUtils({ timeZone: "Asia/Tokyo", localHour: 0, localMinute: 0 });
+    const instant = utils.toSurveySchedulingDateTimeAt(new Date(2026, 4, 1, 12), 18, 15);
+
+    expect(instant.toISOString()).toBe("2026-05-01T09:15:00.000Z");
+    expect(utils.getSurveySchedulingTimeOfDay(instant)).toEqual({ hour: 18, minute: 15 });
+  });
+
+  test("offers the scheduler's quarter-hour runs of a day after an instant", () => {
+    const { getSurveySchedulingTimeOptions } = createSurveySchedulingDateUtils(defaultConfig);
+    const day = new Date(2026, 6, 10, 12);
+    const all = getSurveySchedulingTimeOptions(day, new Date("2026-01-01T00:00:00.000Z"));
+
+    expect(all).toHaveLength(96);
+    expect(all[0]?.instant.toISOString()).toBe("2026-07-09T22:00:00.000Z");
+    // 18:07 in Berlin (CEST): the first time left is 18:15.
+    const later = getSurveySchedulingTimeOptions(day, new Date("2026-07-10T16:07:00.000Z"));
+    expect(later[0]).toMatchObject({ hour: 18, minute: 15 });
+    expect(later[0]?.instant.toISOString()).toBe("2026-07-10T16:15:00.000Z");
+    expect(later).toHaveLength(23);
+  });
+
+  test("leaves out the times a daylight saving change skips", () => {
+    const { getSurveySchedulingTimeOptions } = createSurveySchedulingDateUtils(defaultConfig);
+    // Berlin skips 02:00 to 02:59 on March 29, 2026.
+    const options = getSurveySchedulingTimeOptions(
+      new Date(2026, 2, 29, 12),
+      new Date("2026-01-01T00:00:00.000Z")
+    );
+
+    expect(options).toHaveLength(92);
+    expect(options.some((option) => option.hour === 2)).toBe(false);
+  });
+
+  test("keeps the runs on the configured minute's grid", () => {
+    const { getSurveySchedulingTimeOptions } = createSurveySchedulingDateUtils({
+      timeZone: "UTC",
+      localHour: 6,
+      localMinute: 20,
+    });
+    const minutes = new Set(
+      getSurveySchedulingTimeOptions(new Date(2026, 4, 1, 12), new Date("2026-01-01T00:00:00.000Z")).map(
+        (option) => option.minute
+      )
+    );
+
+    expect([...minutes].sort((a, b) => a - b)).toEqual([5, 20, 35, 50]);
+  });
+
+  test("starts the calendar on the first day with a run left", () => {
+    const { getFirstSurveySchedulingCalendarDate } = createSurveySchedulingDateUtils(defaultConfig);
+    // 23:40 in Berlin leaves 23:45 today; 23:50 leaves nothing.
+    const today = getFirstSurveySchedulingCalendarDate(new Date("2026-07-10T21:40:00.000Z"));
+    const tomorrow = getFirstSurveySchedulingCalendarDate(new Date("2026-07-10T21:50:00.000Z"));
+
+    expect([today.getMonth(), today.getDate()]).toEqual([6, 10]);
+    expect([tomorrow.getMonth(), tomorrow.getDate()]).toEqual([6, 11]);
+  });
+
   test("documents the default scheduling configuration", () => {
     expect(SURVEY_SCHEDULING_CONFIG.timeZone).toBe("Europe/Berlin");
     expect(SURVEY_SCHEDULING_CONFIG.localHour).toBe(0);

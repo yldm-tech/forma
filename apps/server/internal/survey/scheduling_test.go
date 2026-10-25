@@ -44,18 +44,61 @@ func TestNormalizeScheduling(t *testing.T) {
 		{"a draft keeps both", str(StatusDraft), StatusDraft, true, true},
 	}
 	for _, tc := range cases {
-		p, c, err := normalizeDates(s, s, tc.current, tc.status, pub, cls)
+		p, c, err := normalizeDates(s, s, tc.current, tc.status, scheduledDates{pub, cls}, scheduledDates{}, false)
 		if err != nil || (p != nil) != tc.wantPub || (c != nil) != tc.wantCls {
 			t.Errorf("%s: %v %v %v", tc.name, p, c, err)
 		}
 	}
-	if p, c, _ := normalizeDates(s, s, str(StatusInProgress), StatusPaused, nil, cls); p != nil || c != nil {
+	if p, c, _ := normalizeDates(s, s, str(StatusInProgress), StatusPaused, scheduledDates{nil, cls}, scheduledDates{}, false); p != nil || c != nil {
 		t.Error("pausing by hand without a publish date kept the close date")
 	}
-	if _, _, err := normalizeDates(s, s, nil, StatusPaused, cls, pub); err == nil {
+	if _, _, err := normalizeDates(s, s, nil, StatusPaused, scheduledDates{cls, pub}, scheduledDates{}, false); err == nil {
 		t.Error("a close date before the publish date was accepted")
 	} else if e, ok := apperr.As(err); !ok || e.Message != "Close date must be after publish date" {
 		t.Errorf("error %v", err)
+	}
+}
+
+// A date the survey already has is kept; a new one keeps its time with exact (on the run grid only) and is snapped to the schedule's time without it.
+func TestNormalizeDateTimes(t *testing.T) {
+	tokyo := scheduling.New(mustLoad(t, "Asia/Tokyo"), 0, 0)
+	// 18:15 and 18:20 on May 1 in Tokyo, and midnight of that day there.
+	quarter, offGrid, midnight := mustTime(t, "2026-05-01T09:15:00Z"), mustTime(t, "2026-05-01T09:20:00Z"), mustTime(t, "2026-04-30T15:00:00Z")
+	cases := []struct {
+		name          string
+		in, stored    *time.Time
+		exact         bool
+		want          *time.Time
+		wantValidated bool
+	}{
+		{"a day without a time snaps to the schedule's time", quarter, nil, false, midnight, false},
+		{"an exact time on the grid is kept", quarter, nil, true, quarter, false},
+		{"an exact time off the grid is refused", offGrid, nil, true, nil, true},
+		{"the stored date is kept without exact", offGrid, offGrid, false, offGrid, false},
+		{"the stored date is kept with exact, even off the grid", offGrid, offGrid, true, offGrid, false},
+		{"a changed date is snapped although another is stored", quarter, offGrid, false, midnight, false},
+		{"no date stays none", nil, quarter, true, nil, false},
+	}
+	for _, tc := range cases {
+		got, err := normalizeDate(tokyo, tokyo, tc.in, tc.stored, tc.exact)
+		if tc.wantValidated {
+			if e, ok := apperr.As(err); !ok || e.Code != apperr.CodeValidation {
+				t.Errorf("%s: error %v, want a validation error", tc.name, err)
+			}
+			continue
+		}
+		if err != nil || (got == nil) != (tc.want == nil) || (got != nil && !got.Equal(*tc.want)) {
+			t.Errorf("%s: %v %v, want %v", tc.name, got, err, tc.want)
+		}
+	}
+	// An editor that showed the dates in another zone keeps the time of day it showed: 18:15 in Berlin.
+	berlin := scheduling.New(mustLoad(t, "Europe/Berlin"), 0, 0)
+	if got, err := normalizeDate(tokyo, berlin, mustTime(t, "2026-05-01T16:15:00Z"), nil, true); err != nil || !got.Equal(*quarter) {
+		t.Errorf("picked in Berlin: %v %v, want 18:15 in Tokyo", got, err)
+	}
+	// Two times on one day: the close date only has to be later.
+	if _, _, err := normalizeDates(tokyo, tokyo, nil, StatusPaused, scheduledDates{midnight, quarter}, scheduledDates{}, true); err != nil {
+		t.Errorf("publish at midnight and close at 18:15 on the same day: %v", err)
 	}
 }
 
@@ -216,6 +259,40 @@ func TestSaveKeepsTheDayPickedInTheEditorsZone(t *testing.T) {
 		if saved.CloseOn == nil || !saved.CloseOn.Equal(tc.want) {
 			t.Errorf("picked in %v: close date %v, want %s", tc.zone, saved.CloseOn, tc.want.UTC())
 		}
+	}
+}
+
+// The editor sends a day and a time with schedulingExactTimes: the time is kept, in the organization's zone, a time off the scheduler's grid is refused, and a later save without the flag (a v1 update, an older editor) that carries the date back does not snap it to midnight.
+func TestSaveKeepsTheEditorsTime(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	e.exec(`UPDATE organizations SET survey_scheduling_time_zone = 'Asia/Tokyo' WHERE id = ?`, org)
+	tokyo := mustLoad(t, "Asia/Tokyo")
+	day := time.Now().AddDate(0, 0, 30).In(tokyo)
+	closeAt := time.Date(day.Year(), day.Month(), day.Day(), 18, 15, 0, 0, tokyo)
+	id := e.createLink(owner, ws)
+
+	sv := e.editorSurvey(owner, id)
+	sv["status"] = StatusInProgress
+	sv["closeOn"] = closeAt.Add(5 * time.Minute).UTC().Format(time.RFC3339)
+	sv["schedulingTimeZone"] = "Asia/Tokyo"
+	sv["schedulingExactTimes"] = true
+	e.fails(e.do(owner, http.MethodPut, appPath(id, ""), sv), http.StatusBadRequest, apperr.CodeValidation, "Publish and close times must be on the scheduler's quarter-hour grid")
+
+	sv["closeOn"] = closeAt.UTC().Format(time.RFC3339)
+	var saved Survey
+	e.ok(e.do(owner, http.MethodPut, appPath(id, ""), sv), http.StatusOK, &saved)
+	if saved.CloseOn == nil || !saved.CloseOn.Equal(closeAt) {
+		t.Fatalf("close date %v, want %s", saved.CloseOn, closeAt.UTC())
+	}
+
+	again := e.editorSurvey(owner, id)
+	again["name"] = "Renamed"
+	delete(again, "schedulingExactTimes")
+	e.ok(e.do(owner, http.MethodPut, appPath(id, ""), again), http.StatusOK, &saved)
+	if saved.CloseOn == nil || !saved.CloseOn.Equal(closeAt) {
+		t.Fatalf("a save without the flag moved the close date to %v", saved.CloseOn)
 	}
 }
 

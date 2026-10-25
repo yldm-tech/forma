@@ -52,6 +52,8 @@ const Harness = ({ initial }: { initial: TSurvey }) => {
         locale="en-US"
       />
       <output data-testid="stored">{String(localSurvey.isProgressSavingEnabled)}</output>
+      <output data-testid="publishOn">{localSurvey.publishOn?.toISOString() ?? ""}</output>
+      <output data-testid="closeOn">{localSurvey.closeOn?.toISOString() ?? ""}</output>
     </>
   );
 };
@@ -90,5 +92,53 @@ describe("saving respondents' progress", () => {
   test("is not offered for an app survey, which keeps no progress", () => {
     renderCard(survey({ type: "app" }));
     expect(screen.queryByRole("switch", { name: /^Save respondents' progress/ })).toBeNull();
+  });
+});
+
+describe("publish and close times", () => {
+  // Far enough ahead that every time of the day is still to come.
+  const publishOn = new Date("2031-05-01T00:00:00.000Z");
+  const closeOn = new Date("2031-05-03T00:00:00.000Z");
+
+  const publishTime = () => screen.getByRole("combobox", { name: "Publish time" }) as HTMLSelectElement;
+  const closeTime = () => screen.getByRole("combobox", { name: "Close time" }) as HTMLSelectElement;
+
+  test("a scheduled date shows its time, and picking another keeps the day", () => {
+    renderCard(survey({ status: "paused", publishOn, closeOn } as Partial<TSurvey>));
+    expect(publishTime().value).toBe("0:0");
+    expect(publishTime().options).toHaveLength(96);
+
+    fireEvent.change(publishTime(), { target: { value: "18:15" } });
+    expect(screen.getByTestId("publishOn").textContent).toBe("2031-05-01T18:15:00.000Z");
+    expect(screen.getByText(/^Scheduled for .*6:15\s?PM \(UTC\)$/)).toBeTruthy();
+
+    fireEvent.change(closeTime(), { target: { value: "9:45" } });
+    expect(screen.getByTestId("closeOn").textContent).toBe("2031-05-03T09:45:00.000Z");
+  });
+
+  test("the close date drops when the publish time moves past it", () => {
+    renderCard(
+      survey({
+        status: "paused",
+        publishOn,
+        closeOn: new Date("2031-05-01T12:00:00.000Z"),
+      } as Partial<TSurvey>)
+    );
+    // On the publish day, the close time offers only the times after the publish time.
+    expect(closeTime().options[0]?.value).toBe("0:15");
+
+    fireEvent.change(publishTime(), { target: { value: "13:0" } });
+    expect(screen.getByTestId("publishOn").textContent).toBe("2031-05-01T13:00:00.000Z");
+    expect(screen.getByTestId("closeOn").textContent).toBe("");
+  });
+
+  test("says the dates open and close at the picked time in the scheduling zone", () => {
+    renderCard(survey());
+    expect(
+      screen.getByText("The survey is published on the selected date and time in the UTC time zone")
+    ).toBeTruthy();
+    expect(
+      screen.getByText("The survey is closed on the selected date and time in the UTC time zone")
+    ).toBeTruthy();
   });
 });

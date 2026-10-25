@@ -335,7 +335,7 @@ func (s *Service) applyPatchV3(ctx context.Context, tx *Repository, current *Sur
 		return err
 	}
 	// The stored dates, which a zone change moves under the survey's lock, so the unlocked read of the zone is enough here.
-	publishOn, closeOn, err := normalizeDates(schedule, schedule, &currentStatus, d.Status, current.PublishOn, current.CloseOn)
+	publishOn, closeOn, err := normalizeDates(schedule, schedule, &currentStatus, d.Status, scheduledDates{current.PublishOn, current.CloseOn}, scheduledDates{current.PublishOn, current.CloseOn}, false)
 	if err != nil {
 		return err
 	}

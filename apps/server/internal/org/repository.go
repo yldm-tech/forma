@@ -330,7 +330,7 @@ func (r *Repository) deleteMembership(ctx context.Context, userID, organizationI
 	return nil
 }
 
-// resnapSchedules moves the publish and close dates of the organization's surveys, archived ones included, from one schedule to another, keeping each date's calendar day, and reports how many surveys changed. Surveys whose dates are the same instants in both zones (Europe/Berlin and Europe/Paris, or Asia/Calcutta and Asia/Kolkata) are left alone, so an open editor is not told the survey changed. The rows are locked first; a concurrent save that gives a survey its first dates holds the organization's row in share mode (survey.Repository.schedulingTimeZone), so it either committed before this lock and is moved here, or waits for this change and snaps in the new zone.
+// resnapSchedules moves the publish and close dates of the organization's surveys, archived ones included, from one schedule to another, keeping each date's calendar day and local time of day, and reports how many surveys changed. Surveys whose dates are the same instants in both zones (Europe/Berlin and Europe/Paris, or Asia/Calcutta and Asia/Kolkata) are left alone, so an open editor is not told the survey changed. The rows are locked first; a concurrent save that gives a survey its first dates holds the organization's row in share mode (survey.Repository.schedulingTimeZone), so it either committed before this lock and is moved here, or waits for this change and snaps in the new zone.
 func (r *Repository) resnapSchedules(ctx context.Context, organizationID uuid.UUID, from, to scheduling.Schedule) (int, error) {
 	var rows []struct {
 		ID        uuid.UUID
