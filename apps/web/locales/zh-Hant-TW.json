@@ -3176,6 +3176,12 @@
         "link_survey_description": "分享問卷頁面的連結或將其嵌入網頁或電子郵件中。",
         "list": "清單",
         "load_segment": "載入區隔",
+        "logic": {
+          "action_options": "操作選項",
+          "condition_group_options": "條件群組選項",
+          "condition_options": "條件選項",
+          "rule_options": "邏輯規則選項"
+        },
         "logic_error_warning": "變更將導致邏輯錯誤",
         "logic_error_warning_text": "變更問題類型將會從此問題中移除邏輯條件",
         "logo_settings": "標誌設定",

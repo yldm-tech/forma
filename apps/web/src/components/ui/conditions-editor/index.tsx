@@ -100,9 +100,10 @@ export function ConditionsEditor({
             {condition.conditions.length > 1 && (
               <div className="absolute top-3 right-3">
                 <DropdownMenu>
-                  <DropdownMenuTrigger>
+                  <DropdownMenuTrigger asChild>
                     <Button
                       variant="secondary"
+                      aria-label={t("workspace.surveys.edit.logic.condition_group_options")}
                       className="flex size-10 items-center justify-center rounded-md">
                       <EllipsisVerticalIcon className="size-4 text-slate-700 hover:text-slate-950" />
                     </Button>
@@ -212,6 +213,7 @@ export function ConditionsEditor({
             <DropdownMenuTrigger id={`condition-${depth}-${index}-dropdown`} asChild>
               <Button
                 variant="outline"
+                aria-label={t("workspace.surveys.edit.logic.condition_options")}
                 className="flex size-10 items-center justify-center rounded-md bg-white">
                 <EllipsisVerticalIcon className="size-4 text-slate-700 hover:text-slate-950" />
               </Button>

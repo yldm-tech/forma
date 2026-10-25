@@ -3176,6 +3176,12 @@
         "link_survey_description": "分享问卷页面链接或将其嵌入网页或电子邮件中。",
         "list": "列表",
         "load_segment": "载入细分",
+        "logic": {
+          "action_options": "操作选项",
+          "condition_group_options": "条件组选项",
+          "condition_options": "条件选项",
+          "rule_options": "逻辑规则选项"
+        },
         "logic_error_warning": "更改将导致逻辑错误",
         "logic_error_warning_text": "更改问题类型会移除此问题的逻辑条件",
         "logo_settings": "徽标设置",

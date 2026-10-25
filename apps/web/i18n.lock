@@ -3055,6 +3055,10 @@ checksums:
     workspace/surveys/edit/link_survey_description: f45569b5e6b78be6bc02bc6a46da948b
     workspace/surveys/edit/list: 94f13e7ef909a4de9db7abaa1f9f0b61
     workspace/surveys/edit/load_segment: 5341d3de37ff10f7526152e38e25e3c5
+    workspace/surveys/edit/logic/action_options: 7da2b5814b2d8785bb70160d2df3ea4a
+    workspace/surveys/edit/logic/condition_group_options: ffa8603bac82d1d2bd68cbb876d9ca5c
+    workspace/surveys/edit/logic/condition_options: a763775d9bbd8d9d53c90b28195955e7
+    workspace/surveys/edit/logic/rule_options: cfb0938047ef33e103d2edced23f0b47
     workspace/surveys/edit/logic_error_warning: 542fbb918ffdb29e6f9a4a6196ffb558
     workspace/surveys/edit/logic_error_warning_text: f2afad8852a95ed169a39959efbf592c
     workspace/surveys/edit/logo_settings: 9f54ca6684e989cc38bf177425b6d366

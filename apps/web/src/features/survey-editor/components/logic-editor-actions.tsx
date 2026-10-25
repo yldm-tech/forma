@@ -265,6 +265,7 @@ export function LogicEditorActions({
                 <DropdownMenuTrigger id={`actions-${idx}-dropdown`} asChild>
                   <Button
                     variant="outline"
+                    aria-label={t("workspace.surveys.edit.logic.action_options")}
                     className="flex size-10 items-center justify-center rounded-md bg-white">
                     <EllipsisVerticalIcon className="size-4 text-slate-700 hover:text-slate-950" />
                   </Button>
