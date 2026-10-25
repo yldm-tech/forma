@@ -72,6 +72,55 @@ func TestSurveyLanguageCodeNegotiatesAcceptLanguage(t *testing.T) {
 	}
 }
 
+// A browser tag that names none of the survey's languages outright still opens a regional variant of its language (R-09): de-AT reads de-DE, a bare "ar" reads ar-SA. Only a close match counts, so Traditional and Simplified Chinese never stand in for each other, and ?lang= stays exact.
+func TestSurveyLanguageCodeFallsBackToTheSameLanguage(t *testing.T) {
+	languages := []survey.SurveyLanguage{
+		lang("en-US", "", true, true), lang("de-DE", "", false, true), lang("de-CH", "", false, true), lang("es-MX", "", false, true),
+		lang("ar-SA", "", false, true), lang("pt-PT", "", false, true), lang("fr-CA", "", false, false), lang("zh-Hans-CN", "", false, true),
+	}
+	cases := []struct {
+		name, langParam, acceptLanguage, want string
+	}{
+		{"a regional tag the survey lacks opens another region of it", "", "de-AT", "de-DE"},
+		{"a bare language opens its only region", "", "es", "es-MX"},
+		{"Arabic without a region opens ar-SA, not the default", "", "ar", "ar-SA"},
+		{"another region of Arabic opens ar-SA", "", "ar-EG", "ar-SA"},
+		{"Portuguese opens pt-PT", "", "pt", "pt-PT"},
+		{"the preferred language's region beats an exact match for a later language", "", "de-AT,en;q=0.5", "de-DE"},
+		{"a later tag naming a region of the same language outright beats the guess", "", "de-AT,de-CH;q=0.9", "de-CH"},
+		{"the default's region is still the default", "", "en-GB,de;q=0.5", "default"},
+		{"a close match for a disabled translation does not count", "", "fr,es;q=0.5", "es-MX"},
+		{"Traditional Chinese does not take the Simplified translation", "", "zh-TW", "default"},
+		{"Hong Kong Chinese does not take the Simplified translation", "", "zh-HK,de;q=0.5", "de-DE"},
+		{"zh-Hant does not take the Simplified translation", "", "zh-Hant", "default"},
+		{"Singapore Chinese is Simplified", "", "zh-SG", "zh-Hans-CN"},
+		{"an unrelated language still opens the default", "", "ko,it;q=0.8", "default"},
+		{"a wildcard opens the default", "", "*", "default"},
+		{"?lang= does not fall back to another region", "ar", "ar-SA", "default"},
+		{"?lang= for a missing region stays the default", "de-AT", "de-DE", "default"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := surveyLanguageCode(tc.langParam, tc.acceptLanguage, languages); got != tc.want {
+				t.Errorf("surveyLanguageCode(%q, %q) = %q, want %q", tc.langParam, tc.acceptLanguage, got, tc.want)
+			}
+		})
+	}
+	// A Traditional-only survey takes Hong Kong Chinese but not Simplified.
+	hant := []survey.SurveyLanguage{lang("en-US", "", true, true), lang("zh-Hant-TW", "", false, true)}
+	if got := surveyLanguageCode("", "zh-HK", hant); got != "zh-Hant-TW" {
+		t.Errorf("zh-HK on a Traditional survey: %q", got)
+	}
+	if got := surveyLanguageCode("", "zh-CN", hant); got != "default" {
+		t.Errorf("zh-CN on a Traditional survey: %q", got)
+	}
+	// A survey whose default is not English opens its default for a close match to it.
+	jaDefault := []survey.SurveyLanguage{lang("ja-JP", "", true, true), lang("en-US", "", false, true)}
+	if got := surveyLanguageCode("", "en-GB", jaDefault); got != "en-US" {
+		t.Errorf("en-GB on a Japanese survey: %q", got)
+	}
+}
+
 // forma2's metadata-utils.test.ts language cases: code or alias, case-insensitively, without the canonical fallback.
 func TestMetadataLanguageCode(t *testing.T) {
 	languages := []survey.SurveyLanguage{lang("en", "", true, true), lang("de", "deutsch", false, true), lang("fr", "", false, false)}
