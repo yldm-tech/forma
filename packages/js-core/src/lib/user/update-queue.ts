@@ -172,7 +172,7 @@ export class UpdateQueue {
                     // At the attribute limit the server creates none of the new keys and does not say which keys were new, so none of these can be claimed as written.
                     logger.debug(
                       attributeLimitExceeded
-                        ? `Attributes sent: ${writtenKeys.join(", ")}. Only those that already existed were stored: the workspace attribute limit kept new ones from being created.`
+                        ? `Attributes sent: ${writtenKeys.join(", ")}. New keys among them were not created: attribute limit reached.`
                         : `Attributes successfully set: ${writtenKeys.join(", ")}`
                     );
                   }

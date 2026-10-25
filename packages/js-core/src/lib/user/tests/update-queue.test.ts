@@ -165,7 +165,7 @@ describe("UpdateQueue", () => {
 
     expect(mockLogger.debug).not.toHaveBeenCalledWith(expect.stringContaining("Attributes successfully set"));
     expect(mockLogger.debug).toHaveBeenCalledWith(
-      "Attributes sent: plan, brand_new. Only those that already existed were stored: the workspace attribute limit kept new ones from being created."
+      "Attributes sent: plan, brand_new. New keys among them were not created: attribute limit reached."
     );
   });
 

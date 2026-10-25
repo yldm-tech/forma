@@ -79,13 +79,12 @@ const SKIPPED_KEY_PREFIXES: { prefix: string; key: string }[] = [
   // invalid_language_ignored names the rejected value, and always concerns `language`.
   { prefix: "Ignored invalid language code ", key: "language" },
   // email_already_exists / userid_already_exists: the value belongs to another contact and was not written.
-  { prefix: "The email already exists for this workspace and was not updated", key: "email" },
-  { prefix: "The userId already exists for this workspace and was not updated", key: "userId" },
+  { prefix: "The email already exists for this workspace", key: "email" },
+  { prefix: "The userId already exists for this workspace", key: "userId" },
 ];
 
 // attribute_limit_exceeded: "Could not create {count} new attribute(s) as it would exceed the maximum limit of {limit} attribute classes. ..." The server creates none of the new keys and names none of them, so the SDK cannot tell which of the keys it sent were new.
-const ATTRIBUTE_LIMIT_PATTERN =
-  /^Could not create \d+ new attribute\(s\) as it would exceed the maximum limit/;
+const ATTRIBUTE_LIMIT_PATTERN = /^Could not create \d+ new attribute/;
 
 export const isAttributeLimitExceeded = (text: string): boolean => ATTRIBUTE_LIMIT_PATTERN.test(text);
 
