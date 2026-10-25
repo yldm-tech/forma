@@ -7,10 +7,11 @@ import { type JSX, useCallback } from "react";
 import { toast } from "../../../lib/toast";
 import { useTranslation } from "react-i18next";
 import { TI18nString } from "@forma/types/i18n";
-import type { TSurveyElement, TSurveyMatrixElement } from "@forma/types/surveys/elements";
+import { type TSurveyMatrixElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
 import { createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
+import type { TElementUpdate, TUpdateElement } from "../types/editor";
 import { ElementFormInput } from "./element-form-input/index";
 import { MatrixSortableItem } from "./matrix-sortable-item";
 import { ValidationRulesEditor } from "./validation-rules-editor";
@@ -24,7 +25,7 @@ interface MatrixElementFormProps {
   localSurvey: TSurvey;
   element: TSurveyMatrixElement;
   elementIdx: number;
-  updateElement: (elementIdx: number, updatedAttributes: Partial<TSurveyElement>) => void;
+  updateElement: TUpdateElement;
   isInvalid: boolean;
   locale: TUserLocale;
 }
@@ -45,19 +46,22 @@ export const MatrixElementForm = ({
     if (input) input.focus();
   };
 
+  // Row and column edits are computed from the element's latest rows and columns, not this render's: a label is committed 100 ms after its last keystroke, after Enter may already have added the next one.
+  const updateCurrentElement = (compute: (current: TSurveyMatrixElement) => TElementUpdate) =>
+    updateElement(elementIdx, (current) =>
+      current.type === TSurveyElementTypeEnum.Matrix ? compute(current) : {}
+    );
+
   // Function to add a new Label input field
   const handleAddLabel = (type: "row" | "column") => {
+    // Created outside the updater, which React may call more than once.
+    const newLabel = { id: createId(), label: createI18nString("", languageCodes) };
     if (type === "row") {
-      const updatedRows = [...element.rows, { id: createId(), label: createI18nString("", languageCodes) }];
-      updateElement(elementIdx, { rows: updatedRows });
-      setTimeout(() => focusItem(updatedRows.length - 1, type), 0);
+      updateCurrentElement((current) => ({ rows: [...current.rows, newLabel] }));
+      setTimeout(() => focusItem(element.rows.length, type), 0);
     } else {
-      const updatedColumns = [
-        ...element.columns,
-        { id: createId(), label: createI18nString("", languageCodes) },
-      ];
-      updateElement(elementIdx, { columns: updatedColumns });
-      setTimeout(() => focusItem(updatedColumns.length - 1, type), 0);
+      updateCurrentElement((current) => ({ columns: [...current.columns, newLabel] }));
+      setTimeout(() => focusItem(element.columns.length, type), 0);
     }
   };
 
@@ -89,29 +93,32 @@ export const MatrixElementForm = ({
       }
     }
 
-    const updatedLabels = labels.filter((_, idx) => idx !== index);
+    const labelId = labels[index]?.id;
+    if (!labelId) return;
 
     if (type === "row") {
-      updateElement(elementIdx, { rows: updatedLabels });
+      updateCurrentElement((current) => ({ rows: current.rows.filter((row) => row.id !== labelId) }));
     } else {
-      updateElement(elementIdx, { columns: updatedLabels });
+      updateCurrentElement((current) => ({
+        columns: current.columns.filter((column) => column.id !== labelId),
+      }));
     }
   };
 
   const updateMatrixLabel = (index: number, type: "row" | "column", matrixLabel: TI18nString) => {
-    const labels = type === "row" ? [...element.rows] : [...element.columns];
+    // The index is this render's; the row or column it names is found by id in the latest ones. A copy is written: the label objects belong to the editor's state.
+    const labelId = (type === "row" ? element.rows : element.columns)[index]?.id;
+    // Without a label at the index a new one is added, created outside the updater, which React may call more than once.
+    const newLabel = { id: createId(), label: matrixLabel };
+    const apply = (labels: TSurveyMatrixElement["rows"]) =>
+      labelId
+        ? labels.map((label) => (label.id === labelId ? { ...label, label: matrixLabel } : label))
+        : [...labels, newLabel];
 
-    // Update the label at the given index, or add a new label if index is undefined
-    const labelAtIndex = index === undefined ? undefined : labels[index];
-    if (labelAtIndex) {
-      labelAtIndex.label = matrixLabel;
-    } else {
-      labels.push({ id: createId(), label: matrixLabel });
-    }
     if (type === "row") {
-      updateElement(elementIdx, { rows: labels });
+      updateCurrentElement((current) => ({ rows: apply(current.rows) }));
     } else {
-      updateElement(elementIdx, { columns: labels });
+      updateCurrentElement((current) => ({ columns: apply(current.columns) }));
     }
   };
 

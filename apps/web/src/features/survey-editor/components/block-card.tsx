@@ -1,5 +1,5 @@
 import { useSortable } from "@dnd-kit/sortable";
-import type { TElementUpdate } from "../types/editor";
+import type { TUpdateElement } from "../types/editor";
 import { CSS } from "@dnd-kit/utilities";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import * as Collapsible from "@radix-ui/react-collapsible";
@@ -48,7 +48,7 @@ interface BlockCardProps {
   block: TSurveyBlock;
   blockIdx: number;
   moveElement: (elementIdx: number, up: boolean) => void;
-  updateElement: (elementIdx: number, updatedAttributes: TElementUpdate) => void;
+  updateElement: TUpdateElement;
   updateBlockLogic: (elementIdx: number, logic: TSurveyBlockLogic[]) => void;
   updateBlockLogicFallback: (elementIdx: number, logicFallback: string | undefined) => void;
   updateBlockName: (blockIdx: number, name: string) => void;

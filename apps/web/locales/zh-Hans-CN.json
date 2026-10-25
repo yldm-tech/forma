@@ -2219,6 +2219,7 @@
       "delete_segment": "删除细分",
       "desktop": "桌面",
       "device": "设备",
+      "device_filter_hint": "每次访问时判定。联系人数量不计入设备条件。",
       "devices": "设备",
       "edit_segment": "编辑细分",
       "error_resetting_filters": "重置筛选条件时出错",

@@ -141,6 +141,14 @@ describe("SegmentEditor", () => {
     expect(screen.queryAllByTestId("filter-btn-device-phone")).toHaveLength(0);
   });
 
+  test("the device filters say they are checked per visit and left out of contact counts", () => {
+    renderForm([group("g1", null, [device("a", "phone", null)])]);
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.add_filter") }));
+    expect(screen.getByTestId("device-filter-hint").textContent).toBe(
+      i18n.t("workspace.segments.device_filter_hint")
+    );
+  });
+
   test("Add filter below on a group adds the filter after the group, not inside it", async () => {
     const form = renderForm([group("g1", null, [device("a", "phone", null)]), device("b", "desktop", "and")]);
     fireEvent.keyDown(screen.getByTestId("segment-editor-group-menu-trigger"), { key: "Enter" });

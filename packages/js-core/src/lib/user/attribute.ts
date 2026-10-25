@@ -1,4 +1,5 @@
 import { UpdateQueue } from "@/lib/user/update-queue";
+import { type TAttributeValue } from "@/types/config";
 import { type NetworkError, type Result, okVoid } from "@/types/error";
 
 /**
@@ -18,7 +19,7 @@ import { type NetworkError, type Result, okVoid } from "@/types/error";
 // Not `async` (nothing to await), but keeps the Promise return type: this is public
 // SDK API and callers rely on awaiting it.
 export const setAttributes = (
-  attributes: Record<string, string | number | Date>
+  attributes: Record<string, TAttributeValue>
 ): Promise<Result<void, NetworkError>> => {
   // Normalize values: convert Date to ISO string, preserve numbers as numbers
   const normalizedAttributes: Record<string, string | number> = {};

@@ -33,7 +33,7 @@ import { getTSurveyElementTypeEnumName } from "../lib/elements";
 import { AddElementButton } from "./add-element-button";
 import { AddEndingCardButton } from "./add-ending-card-button";
 import { BlocksDroppable } from "./blocks-droppable";
-import type { TElementUpdate } from "../types/editor";
+import type { TElementUpdate, TElementUpdater } from "../types/editor";
 import { EditEndingCard } from "./edit-ending-card";
 import { EditWelcomeCard } from "./edit-welcome-card";
 import { HiddenFieldsCard } from "./hidden-fields-card";
@@ -212,7 +212,8 @@ export const ElementsView = ({
     };
   };
 
-  const updateElement = (elementIdx: number, updatedAttributes: TElementUpdate) => {
+  // An updater is called with the element as it is in prevSurvey, so a list edit computed from it keeps the edits that landed after this render.
+  const updateElement = (elementIdx: number, update: TElementUpdate | TElementUpdater) => {
     // Get element ID from current elements array (for validation)
     const element = elements[elementIdx];
     if (!element) return;
@@ -232,6 +233,12 @@ export const ElementsView = ({
       if (!blockId || blockIndex === -1) {
         return prevSurvey;
       }
+
+      const currentElement = prevSurvey.blocks[blockIndex]?.elements.find((el) => el.id === elementId);
+      if (!currentElement) {
+        return prevSurvey;
+      }
+      const updatedAttributes = typeof update === "function" ? update(currentElement) : update;
 
       let updatedSurvey = { ...prevSurvey };
 

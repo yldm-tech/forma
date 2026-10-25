@@ -2127,6 +2127,7 @@ checksums:
     workspace/segments/delete_segment: 7dd5b27c80d5748c50d17d7ad8a96113
     workspace/segments/desktop: 0a43dae170adffd6e82fc484440a2af7
     workspace/segments/device: c009f849d689c745de9e38ad17644c7a
+    workspace/segments/device_filter_hint: 09dba3652881746d08d9beaa0cd3869c
     workspace/segments/devices: 81ffaad660fc8167ff97557a53b5a565
     workspace/segments/edit_segment: ab06450c9e16f0b6ccf11e930fdf83aa
     workspace/segments/error_resetting_filters: 770c6b2886cbf779f8217478af9da75c
