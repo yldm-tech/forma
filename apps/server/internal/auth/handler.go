@@ -12,6 +12,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 )
 
 // Handler serves /api/app/auth.
@@ -230,6 +231,8 @@ type signupRequest struct {
 	InviteToken    string `json:"inviteToken"`
 	UserLocale     string `json:"userLocale"`
 	TurnstileToken string `json:"turnstileToken"`
+	// TimeZone is the browser's zone (Intl.DateTimeFormat().resolvedOptions().timeZone), which the organization an uninvited sign-up creates displays dates and schedules surveys in. It is a default, not a choice the user made, so a zone this build cannot load is dropped rather than refused, as the organization module's create does: the organization then falls back to UTC and the instance's zone, and a sign-up never fails over a browser's zone name.
+	TimeZone *string `json:"timeZone"`
 	// The mailing-list choices (the security list off Forma Cloud, the product updates list on it) are accepted and ignored: forma2 posted them to its EE server's mailing endpoints, which this server does not call.
 	SubscribeToSecurityUpdates bool `json:"subscribeToSecurityUpdates"`
 	SubscribeToProductUpdates  bool `json:"subscribeToProductUpdates"`
@@ -242,6 +245,9 @@ func (r *signupRequest) validate() error {
 	checkEmail(&errs, r.Email)
 	checkPassword(&errs, "password", r.Password)
 	checkLocale(&errs, "userLocale", r.UserLocale)
+	if r.TimeZone != nil && !scheduling.ValidZone(*r.TimeZone) {
+		r.TimeZone = nil
+	}
 	if r.turnstileRequired && r.TurnstileToken == "" {
 		errs.add("turnstileToken", "required", "")
 	}
@@ -255,7 +261,7 @@ func (h *Handler) signup(c *gin.Context) {
 	}
 	attr := readAttribution(c)
 	intent, err := h.svc.signup(c.Request.Context(), signupInput{
-		Name: req.Name, Email: req.Email, Password: req.Password, InviteToken: req.InviteToken, UserLocale: req.UserLocale, TurnstileToken: req.TurnstileToken,
+		Name: req.Name, Email: req.Email, Password: req.Password, InviteToken: req.InviteToken, UserLocale: req.UserLocale, TurnstileToken: req.TurnstileToken, TimeZone: req.TimeZone,
 	})
 	if err != nil {
 		httpapi.Fail(c, err)
