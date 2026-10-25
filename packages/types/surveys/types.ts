@@ -1003,6 +1003,10 @@ export const ZSurveyBase = z.object({
    * so reading anonymize off it would retroactively anonymize every survey that already exists.
    */
   isAnonymizeResponsesEnabled: z.boolean(),
+  /**
+   * "Save respondents' progress": a link survey keeps the answers given so far in the respondent's browser for 24 hours, so a reload or a tab the phone discarded goes on in the same response. On by default (`prefault`, like the column's default); a creator turns it off for a kiosk or a shared device.
+   */
+  isProgressSavingEnabled: z.boolean().prefault(true),
   pin: z
     .string()
     .length(4, {

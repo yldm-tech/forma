@@ -59,7 +59,7 @@ const surveyColumns = `s.id, s.created_at, s.updated_at, s.workspace_id, s.creat
 	s.workspace_overwrites, s.styling, s.single_use, s.recaptcha, s.metadata, s.display_option, s.recontact_days,
 	s.display_limit, s.display_percentage::float8 AS display_percentage, s.auto_close, s.auto_complete, s.delay, s.publish_on, s.close_on,
 	s.archived_at, s.is_verify_email_enabled, s.is_back_button_hidden, s.is_auto_progressing_enabled, s.is_capture_ip_enabled,
-	s.is_anonymize_responses_enabled, s.show_language_switch, s.pin, s.slug, s.custom_head_scripts, s.custom_head_scripts_mode`
+	s.is_anonymize_responses_enabled, s.is_progress_saving_enabled, s.show_language_switch, s.pin, s.slug, s.custom_head_scripts, s.custom_head_scripts_mode`
 
 type surveyRow struct {
 	ID                          uuid.UUID
@@ -99,6 +99,7 @@ type surveyRow struct {
 	IsAutoProgressingEnabled    bool
 	IsCaptureIPEnabled          bool `gorm:"column:is_capture_ip_enabled"`
 	IsAnonymizeResponsesEnabled bool
+	IsProgressSavingEnabled     bool
 	ShowLanguageSwitch          *bool
 	Pin                         *string
 	Slug                        *string
@@ -123,7 +124,7 @@ func (row surveyRow) survey() *Survey {
 		Styling: rawOrNull(row.Styling), ShowLanguageSwitch: row.ShowLanguageSwitch, SurveyClosedMessage: rawOrNull(row.SurveyClosedMessage),
 		SingleUse: rawOrNull(row.SingleUse), IsVerifyEmailEnabled: row.IsVerifyEmailEnabled, Recaptcha: rawOrNull(row.Recaptcha),
 		IsBackButtonHidden: row.IsBackButtonHidden, IsAutoProgressingEnabled: row.IsAutoProgressingEnabled, IsCaptureIPEnabled: row.IsCaptureIPEnabled,
-		IsAnonymizeResponsesEnabled: row.IsAnonymizeResponsesEnabled, Pin: row.Pin, DisplayPercentage: row.DisplayPercentage,
+		IsAnonymizeResponsesEnabled: row.IsAnonymizeResponsesEnabled, IsProgressSavingEnabled: row.IsProgressSavingEnabled, Pin: row.Pin, DisplayPercentage: row.DisplayPercentage,
 		Metadata: rawOrNull(row.Metadata), Slug: row.Slug, CustomHeadScripts: row.CustomHeadScripts, CustomHeadScriptsMode: row.CustomHeadScriptsMode,
 		InlineTriggers: rawOrNull(row.InlineTriggers), Triggers: []Trigger{}, FollowUps: []FollowUp{}, Languages: []SurveyLanguage{},
 		EmbeddedFields: []embeddeddata.LinkedField{},

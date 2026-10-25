@@ -66,6 +66,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	r.OPTIONS("/api/v1/client/og", h.ogOptions)
 	gates := r.Group("/s/:surveyId", httpapi.ErrorHandler(h.log), httpapi.CSRF(h.cfg))
 	gates.POST("/pin", h.validatePin)
+	gates.POST("/pin/resume", h.resumePin)
 	gates.POST("/verify-email", h.sendVerificationEmail)
 }
 
@@ -156,6 +157,26 @@ func (h *Handler) validatePin(c *gin.Context) {
 		return
 	}
 	res, err := h.svc.validatePin(c.Request.Context(), c.Param("surveyId"), *req.Pin)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.Header("Cache-Control", "no-store")
+	c.JSON(http.StatusOK, res)
+}
+
+type pinResumeRequest struct {
+	PinAuthToken string `json:"pinAuthToken" binding:"required"`
+}
+
+// resumePin opens the PIN gate again with a PIN token the page kept (Service.resumePin). Not rate limited: the token is signed, so guessing one is not cheaper here than anywhere else, and a respondent reloading the page must not spend the PIN attempts.
+func (h *Handler) resumePin(c *gin.Context) {
+	var req pinResumeRequest
+	if err := httpapi.BindJSON(c, &req); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	res, err := h.svc.resumePin(c.Request.Context(), c.Param("surveyId"), req.PinAuthToken)
 	if err != nil {
 		httpapi.Fail(c, err)
 		return

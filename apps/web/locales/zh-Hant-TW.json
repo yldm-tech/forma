@@ -3347,6 +3347,8 @@
         "row_used_in_logic_error": "此 row 用於問題 {questionIndex} 的邏輯中。請先從邏輯中移除。",
         "rows": "列",
         "save_and_close": "儲存並關閉",
+        "save_respondent_progress": "儲存受訪者的作答進度",
+        "save_respondent_progress_description": "受訪者重新整理或離開頁面後，24小時內可從中斷的地方繼續作答，答案仍寫入同一份回覆。在自助服務機或共用裝置上請關閉此項，否則下一位使用者會看到上一位的答案。",
         "scale": "比例",
         "schedule_survey": "排程問卷",
         "scheduled_moment": "排程於{moment}（{timeZone}）",

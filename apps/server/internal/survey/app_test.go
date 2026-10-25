@@ -137,6 +137,35 @@ func TestEditorSave(t *testing.T) {
 	e.fails(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusBadRequest, apperr.CodeBadRequest, "This survey is archived. Restore it before editing.")
 }
 
+// Progress saving is on for a new survey; the editor turns it off and on, and a save that does not carry it keeps what is stored.
+func TestEditorSaveProgressSaving(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	id := e.createLink(owner, ws)
+
+	sv := e.editorSurvey(owner, id)
+	if sv["isProgressSavingEnabled"] != true {
+		t.Fatalf("new survey isProgressSavingEnabled %v", sv["isProgressSavingEnabled"])
+	}
+	var saved map[string]any
+	sv["isProgressSavingEnabled"] = false
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusOK, &saved)
+	if saved["isProgressSavingEnabled"] != false {
+		t.Fatalf("turned off: %v", saved["isProgressSavingEnabled"])
+	}
+	delete(saved, "isProgressSavingEnabled")
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/draft"), saved), http.StatusOK, &saved)
+	if saved["isProgressSavingEnabled"] != false {
+		t.Fatalf("a save without the field changed it: %v", saved["isProgressSavingEnabled"])
+	}
+	saved["isProgressSavingEnabled"] = true
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/draft"), saved), http.StatusOK, &saved)
+	if saved["isProgressSavingEnabled"] != true {
+		t.Fatalf("turned on: %v", saved["isProgressSavingEnabled"])
+	}
+}
+
 // Every editor save needs a name, a full save (Publish, Save on a live survey) as much as a draft one, and a name of only spaces is no name. The stored survey keeps its name.
 func TestEditorSaveRequiresAName(t *testing.T) {
 	e := newEnv(t)

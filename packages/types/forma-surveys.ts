@@ -90,6 +90,13 @@ export interface SurveyContainerProps extends Omit<SurveyBaseProps, "onFileUploa
   isSpamProtectionEnabled?: boolean;
   recaptchaSiteKey?: string;
   getRecaptchaToken?: () => Promise<string | null>;
+  /**
+   * Keeps a link survey's progress in the browser's IndexedDB (the answers, the card, the response and display ids, and the answers not yet sent) for 24 hours, so a reload goes on in the same response. The link page passes the survey's `isProgressSavingEnabled`. Unlike `offlineSupport`, it neither holds answers back while the browser is offline nor asks before the page is left.
+   */
+  persistProgress?: boolean;
+  /**
+   * The offline mode the `?offlineSupport=true` link parameter turns on: progress is kept as with `persistProgress`, answers wait while the browser reports it is offline, and leaving a survey half answered asks for confirmation.
+   */
   offlineSupport?: boolean;
   onOfflineStatusChange?: (status: {
     isOnline: boolean;

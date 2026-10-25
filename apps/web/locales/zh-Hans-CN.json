@@ -3347,6 +3347,8 @@
         "row_used_in_logic_error": "此行在问题 {questionIndex} 的逻辑中被使用，请先从逻辑中移除。",
         "rows": "行",
         "save_and_close": "保存并关闭",
+        "save_respondent_progress": "保存受访者的作答进度",
+        "save_respondent_progress_description": "受访者刷新或离开页面后，24小时内可以从中断的地方继续作答，答案仍写入同一份回复。在自助终端或共用设备上请关闭此项，否则下一位使用者会看到上一位的答案。",
         "scale": "规模",
         "schedule_survey": "安排问卷",
         "scheduled_moment": "定时于{moment}（{timeZone}）",
