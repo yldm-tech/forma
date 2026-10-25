@@ -13,12 +13,26 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 )
 
-// Members lists the organization's members for its settings pages, which need organization.read_access: billing members are kept out of them.
+// Members lists the organization's members for its settings pages, which need organization.read_access: billing members are kept out of them. Each member's two-factor status is shown to owners and managers (organization.manage) only: to anyone else, a list of who is not protected would only name the accounts worth attacking.
 func (s *Service) Members(ctx context.Context, userID, organizationID uuid.UUID, page int) ([]Member, error) {
-	if err := s.authz.Require(ctx, authz.User(userID), authz.OrganizationReadAccess, authz.Organization(organizationID)); err != nil {
+	actor, resource := authz.User(userID), authz.Organization(organizationID)
+	if err := s.authz.Require(ctx, actor, authz.OrganizationReadAccess, resource); err != nil {
 		return nil, err
 	}
-	return s.repo.members(ctx, organizationID, page)
+	members, err := s.repo.members(ctx, organizationID, page)
+	if err != nil {
+		return nil, err
+	}
+	manages, err := s.authz.Can(ctx, actor, authz.OrganizationManage, resource)
+	if err != nil {
+		return nil, err
+	}
+	if !manages {
+		for i := range members {
+			members[i].TwoFactor = ""
+		}
+	}
+	return members, nil
 }
 
 // Messages of refused membership changes, forma2's.
