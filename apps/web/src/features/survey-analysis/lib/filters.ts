@@ -166,10 +166,13 @@ export const getFilterTargetLabel = (
   return target.label ?? "";
 };
 
+/** The type a filter row's operator and value belong to: the element type for an element row, the OptionsType group otherwise. */
+export const getFilterRowType = (row: FilterValue): TFilterRowType =>
+  row.elementType.type === OptionsType.ELEMENTS ? row.elementType.elementType : row.elementType.type;
+
 /** What one applied condition reads as on its chip: the operator and the value, shown after the target, each through its label. */
 export const describeFilterCondition = (row: FilterValue, t: TFunction): string => {
-  const rowType =
-    row.elementType.type === OptionsType.ELEMENTS ? row.elementType.elementType : row.elementType.type;
+  const rowType = getFilterRowType(row);
   const operator = row.filterType.filterValue;
   const value = row.filterType.filterComboBoxValue;
   const values = Array.isArray(value) ? value : value ? [value] : [];
@@ -251,6 +254,19 @@ const META_OP_MAP = {
 
 /** Operators that take no right-hand value; rows carrying them must survive the empty-value cleanup. */
 export const NO_VALUE_FILTER_OPERATORS = ["Is set", "Is not set"];
+
+// The score elements, whose Submitted and Skipped operators take no value: the operator alone is the condition (getFormattedFilters sends {op: "submitted"} / {op: "skipped"}).
+const SCORE_ELEMENT_TYPES = new Set<string>([
+  TSurveyElementTypeEnum.NPS,
+  TSurveyElementTypeEnum.Rating,
+  TSurveyElementTypeEnum.CSAT,
+  TSurveyElementTypeEnum.CES,
+]);
+
+/** Whether a filter row with this type and operator is complete without a value: "Is set" / "Is not set" on any field, "Submitted" / "Skipped" on a score element. The value box is disabled for these, and the popover's empty-value cleanup must keep them. */
+export const isNoValueFilterOperator = (type: TFilterRowType, operator: string | undefined): boolean =>
+  NO_VALUE_FILTER_OPERATORS.includes(operator ?? "") ||
+  (SCORE_ELEMENT_TYPES.has(type ?? "") && (operator === "Submitted" || operator === "Skipped"));
 
 // Operator menus per Embedded Data / reserved field dataType (ENG-1848) — the editor's logic-builder model: string → equality + text ops, number → comparisons, date → before/after, boolean → equality; every family can also match on absence.
 const TEXT_FIELD_OPERATORS = [...Object.keys(META_OP_MAP), ...NO_VALUE_FILTER_OPERATORS];

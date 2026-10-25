@@ -24,7 +24,7 @@ import { cn } from "../../../../lib/cn";
 import { getLocalizedValue } from "../../../../lib/survey/i18n";
 import { useClickOutside } from "../../../../lib/use-click-outside";
 import { OptionsType } from "../../lib/filter-types";
-import { getFilterOperatorLabel, getFilterValueLabel } from "../../lib/filters";
+import { getFilterOperatorLabel, getFilterValueLabel, isNoValueFilterOperator } from "../../lib/filters";
 
 const DEFAULT_LANGUAGE_CODE = "default";
 
@@ -102,23 +102,6 @@ const checkIsMultiple = (
   return isMultiSelectType || isNPSIncludesEither;
 };
 
-// The score elements, whose Submitted and Skipped operators take no value.
-const SCORE_ELEMENT_TYPES = new Set<unknown>([
-  TSurveyElementTypeEnum.NPS,
-  TSurveyElementTypeEnum.Rating,
-  TSurveyElementTypeEnum.CSAT,
-  TSurveyElementTypeEnum.CES,
-]);
-
-// Helper function to check if combo box should be disabled
-const checkIsDisabledComboBox = (
-  type: TSurveyElementTypeEnum | Omit<OptionsType, OptionsType.ELEMENTS> | undefined,
-  filterValue: string | undefined
-): boolean => {
-  const isSubmittedOrSkipped = filterValue === "Submitted" || filterValue === "Skipped";
-  return SCORE_ELEMENT_TYPES.has(type) && isSubmittedOrSkipped;
-};
-
 /** forma2's ElementFilterComboBox: a filter row's operator and value, a pick from the observed values or free text by field type. */
 export const ElementFilterComboBox = ({
   filterComboBoxOptions,
@@ -157,7 +140,8 @@ export const ElementFilterComboBox = ({
   }, [isMultiple, filterComboBoxOptions, filterComboBoxValue]);
 
   const isNoValueOperator = NO_VALUE_OPERATORS.has(filterValue ?? "");
-  const isDisabledComboBox = checkIsDisabledComboBox(type, filterValue) || isNoValueOperator;
+  // Shared with the popover's cleanup, so a row whose value box is disabled is never dropped for lacking a value.
+  const isDisabledComboBox = isNoValueFilterOperator(rowType, filterValue);
 
   const isTextInputField = checkIsFreeTextValueInput({
     type,
