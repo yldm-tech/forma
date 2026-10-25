@@ -1,7 +1,10 @@
+import type { LucideIcon } from "lucide-react";
 import { cn } from "../../lib/cn";
 
 interface BadgeProps {
   text: string;
+  /** An icon before the text, decorative: the text says what the badge means. */
+  icon?: LucideIcon;
   type: "warning" | "success" | "error" | "gray";
   size?: "tiny" | "normal" | "large";
   className?: string;
@@ -17,16 +20,17 @@ const COLORS: Record<BadgeProps["type"], string> = {
 
 const PADDING = { tiny: "px-1.5 py-0.5", normal: "px-2.5 py-0.5", large: "px-3.5 py-1" };
 
-export const Badge = ({ text, type, size = "normal", className, title }: BadgeProps) => (
+export const Badge = ({ text, icon: Icon, type, size = "normal", className, title }: BadgeProps) => (
   <span
     title={title}
     className={cn(
-      "inline-flex cursor-default items-center rounded-full border font-medium",
+      "inline-flex cursor-default items-center gap-1.5 rounded-full border font-medium",
       COLORS[type],
       PADDING[size],
       size === "large" ? "text-sm" : "text-xs",
       className
     )}>
+    {Icon && <Icon className="size-3.5 shrink-0" aria-hidden />}
     {text}
   </span>
 );

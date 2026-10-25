@@ -146,6 +146,7 @@ export const analysisKeys = {
     [...analysisKeys.all(surveyId), "responses", criteria] as const,
   responseCount: (surveyId: string, criteria: TResponseFilterCriteria) =>
     [...analysisKeys.all(surveyId), "response-count", criteria] as const,
+  liveResponseCount: (surveyId: string) => [...analysisKeys.all(surveyId), "live-response-count"] as const,
 };
 
 /** The survey the analysis views show. A cache of its own rather than the editor's, which is the editor's save baseline and must only move when the editor saves. */
@@ -222,6 +223,25 @@ export const surveyResponseCountQuery = (surveyId: string, criteria: TResponseFi
           { signal }
         )
         .then((res) => res.count),
+  });
+
+/** How often the analysis of a survey in progress asks whether responses arrived, while its tab is visible. */
+export const NEW_RESPONSES_POLL_MS = 20_000;
+
+/** The survey's unfiltered response count, read again every NEW_RESPONSES_POLL_MS except in a background tab. A cache of its own: the count the page was loaded with (surveyResponseCountQuery) stays put, so the difference is what arrived since, and a refresh of the analysis, which invalidates both, brings them level. */
+export const surveyLiveResponseCountQuery = (surveyId: string) =>
+  queryOptions({
+    queryKey: analysisKeys.liveResponseCount(surveyId),
+    queryFn: ({ signal }) =>
+      api
+        .post<{ count: number }>(
+          `${surveyPath(surveyId)}/responses/count`,
+          { filterCriteria: {} },
+          { signal }
+        )
+        .then((res) => res.count),
+    refetchInterval: NEW_RESPONSES_POLL_MS,
+    refetchIntervalInBackground: false,
   });
 
 /** Drops every cached analysis read of the survey, after a change to its responses. */

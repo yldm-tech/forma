@@ -8,9 +8,10 @@ import type { Me } from "../../../lib/queries/auth";
 import type { WorkspaceDetail } from "../../../lib/queries/workspaces";
 import { publicDomainQuery } from "../../surveys/api";
 import { surveyResponseCountQuery } from "../api";
+import { NewResponsesNotice } from "./new-responses-notice";
 import { SurveyAnalysisCTA } from "./survey-analysis-cta";
 
-/** The frame of a survey's summary and responses pages: the survey's name, its tools, and the two tabs (forma2's PageHeader with SurveyAnalysisCTA and SurveyAnalysisNavigation). */
+/** The frame of a survey's summary and responses pages: the survey's name, its tools, the two tabs (forma2's PageHeader with SurveyAnalysisCTA and SurveyAnalysisNavigation), and the notice of responses that arrived since the page was loaded. */
 export const SurveyAnalysisLayout = ({
   survey,
   workspace,
@@ -27,7 +28,7 @@ export const SurveyAnalysisLayout = ({
   const { t } = useTranslation();
   const base = `/workspaces/${workspace.id}/surveys/${survey.id}`;
   const publicDomain = useQuery(publicDomainQuery);
-  // The survey's unfiltered response count: the Responses tab shows it, and the tools read it for the edit caution and the reset confirmation.
+  // The survey's unfiltered response count: the Responses tab shows it, the tools read it for the edit caution, the reset confirmation and the example responses, and the new-responses notice counts from it.
   const responseCount = useQuery(surveyResponseCountQuery(survey.id, {}));
 
   return (
@@ -41,7 +42,7 @@ export const SurveyAnalysisLayout = ({
               workspace={workspace}
               user={user}
               publicDomain={publicDomain.data}
-              responseCount={responseCount.data ?? 0}
+              responseCount={responseCount.data}
             />
           )
         }>
@@ -62,6 +63,7 @@ export const SurveyAnalysisLayout = ({
           ]}
         />
       </PageHeader>
+      <NewResponsesNotice survey={survey} loadedCount={responseCount.data} />
       {children}
     </PageContentWrapper>
   );
