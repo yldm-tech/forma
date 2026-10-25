@@ -121,6 +121,62 @@ func TestSurveyLanguageCodeFallsBackToTheSameLanguage(t *testing.T) {
 	}
 }
 
+// The close match is another region of the visitor's own language only. CLDR also rates some cross-language fallbacks High (Afrikaans reads Dutch, Kazakh reads Russian); those must not stand in for the visitor's language, least of all over a language the visitor listed later.
+func TestSurveyLanguageCodeFallbackKeepsTheLanguageAndScript(t *testing.T) {
+	cases := []struct {
+		name           string
+		languages      []survey.SurveyLanguage
+		acceptLanguage string
+		want           string
+	}{
+		{"Afrikaans does not read Dutch over a listed English", []survey.SurveyLanguage{lang("en-US", "", true, true), lang("nl-NL", "", false, true)}, "af-ZA,af;q=0.9,en-ZA;q=0.8,en;q=0.7", "default"},
+		{"Kazakh does not read Russian over a listed English", []survey.SurveyLanguage{lang("en-US", "", true, true), lang("ru-RU", "", false, true)}, "kk-KZ,kk;q=0.9,en-US;q=0.8,en;q=0.7", "default"},
+		{"Belarusian does not read Russian", []survey.SurveyLanguage{lang("en-US", "", true, true), lang("ru-RU", "", false, true)}, "be-BY,en;q=0.9", "default"},
+		{"Basque does not read Spanish", []survey.SurveyLanguage{lang("en-US", "", true, true), lang("es-ES", "", false, true)}, "eu-ES,eu;q=0.9,en;q=0.8", "default"},
+		{"Galician alone does not read Spanish", []survey.SurveyLanguage{lang("en-US", "", true, true), lang("es-ES", "", false, true)}, "gl", "default"},
+		{"Luxembourgish does not read German", []survey.SurveyLanguage{lang("en-US", "", true, true), lang("de-DE", "", false, true)}, "lb,en;q=0.9", "default"},
+		{"Welsh does not read English over a Japanese default", []survey.SurveyLanguage{lang("ja-JP", "", true, true), lang("en-US", "", false, true)}, "cy", "default"},
+		{"Nynorsk does not read Bokmal", []survey.SurveyLanguage{lang("en-US", "", true, true), lang("nb-NO", "", false, true)}, "nn", "default"},
+		{"the Norwegian macrolanguage still reads Bokmal", []survey.SurveyLanguage{lang("en-US", "", true, true), lang("nb-NO", "", false, true)}, "no", "nb-NO"},
+		{"Tagalog still reads Filipino", []survey.SurveyLanguage{lang("en-US", "", true, true), lang("fil-PH", "", false, true)}, "tl", "fil-PH"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := surveyLanguageCode("", tc.acceptLanguage, tc.languages); got != tc.want {
+				t.Errorf("surveyLanguageCode(%q) = %q, want %q", tc.acceptLanguage, got, tc.want)
+			}
+		})
+	}
+}
+
+// A later tag of the preferred language replaces the close match only when it is the same script, and when it does, it is chosen in the preferred language's place rather than letting a language in between win.
+func TestSurveyLanguageCodeLaterTagOfThePreferredLanguage(t *testing.T) {
+	chinese := []survey.SurveyLanguage{lang("en-US", "", true, true), lang("zh-Hans-CN", "", false, true), lang("zh-Hant-TW", "", false, true)}
+	german := []survey.SurveyLanguage{lang("en-US", "", true, true), lang("de-DE", "", false, true), lang("de-CH", "", false, true)}
+	cases := []struct {
+		name           string
+		languages      []survey.SurveyLanguage
+		acceptLanguage string
+		want           string
+	}{
+		{"Hong Kong Chinese reads Traditional", chinese, "zh-HK", "zh-Hant-TW"},
+		{"a later bare zh does not turn Hong Kong Chinese Simplified", chinese, "zh-HK,zh;q=0.9", "zh-Hant-TW"},
+		{"a later bare zh and English do not turn Hong Kong Chinese Simplified", chinese, "zh-HK,zh;q=0.9,en;q=0.8", "zh-Hant-TW"},
+		{"a later zh-CN does not turn Macau Chinese Simplified", chinese, "zh-MO,zh-CN;q=0.5", "zh-Hant-TW"},
+		{"a later region of the preferred language beats a language in between", german, "de-AT,en;q=0.9,de-CH;q=0.5", "de-CH"},
+		{"a later bare tag of the preferred language beats a language in between", german, "de-AT,en;q=0.9,de;q=0.5", "de-DE"},
+		{"the close match alone still beats a later language", german, "de-AT,en;q=0.9", "de-DE"},
+		{"a wildcard is no language, so a later English does not jump ahead of German", german, "*,de;q=0.9,en;q=0.5", "de-DE"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := surveyLanguageCode("", tc.acceptLanguage, tc.languages); got != tc.want {
+				t.Errorf("surveyLanguageCode(%q) = %q, want %q", tc.acceptLanguage, got, tc.want)
+			}
+		})
+	}
+}
+
 // forma2's metadata-utils.test.ts language cases: code or alias, case-insensitively, without the canonical fallback.
 func TestMetadataLanguageCode(t *testing.T) {
 	languages := []survey.SurveyLanguage{lang("en", "", true, true), lang("de", "deutsch", false, true), lang("fr", "", false, false)}
