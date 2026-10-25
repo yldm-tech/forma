@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { type SurveyFilters, type SurveyStatus, normalizeSurveyFilters } from "./list/filters";
+import { surveyKeys } from "./list/query";
 
 // The survey endpoints the list, the templates page and the onboarding flow call: /api/v3/surveys (apps/server/internal/survey/v3ops.go) and the /api/app survey routes (apps/server/internal/survey/handler.go).
 
@@ -88,6 +89,22 @@ export const surveysApi = {
   copy: (surveyId: string, targetWorkspaceId: string) =>
     api.post<{ id: string }>(`/api/app/surveys/${surveyId}/copy`, { targetWorkspaceId }),
 };
+
+/** GET /api/app/workspaces/{id}/sdk-state: the workspace's live (in progress, not archived) app surveys against the cap of the SDK's workspace state, which lists only the `limit` newest. `excluded` names the newest of the surveys past the cap, at most 20; `excludedCount` counts them all. */
+export interface SurveySdkState {
+  limit: number;
+  liveAppSurveyCount: number;
+  excludedCount: number;
+  excluded: { id: string; name: string }[];
+}
+
+/** Under the list keys, so every change the survey list invalidates it for (a status change, an archive, a new survey) also asks again. */
+export const surveySdkStateQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: [...surveyKeys.lists(), "sdk-state", workspaceId] as const,
+    queryFn: ({ signal }) =>
+      api.get<SurveySdkState>(`/api/app/workspaces/${workspaceId}/sdk-state`, { signal }),
+  });
 
 export type TemplateSource = "catalog" | "custom" | "xm";
 

@@ -40,9 +40,23 @@ describe("public api", () => {
 
     // Queued, so the queue's setup guard turns a failed setup into a console warning instead of an
     // unhandled rejection out of Config.get() on the host page.
-    expect(mockQueue.add).toHaveBeenCalledWith(checkPageUrl, CommandType.GeneralAction);
+    expect(mockQueue.add).toHaveBeenCalledWith("page view", checkPageUrl, CommandType.GeneralAction);
     expect(vi.mocked(checkPageUrl)).not.toHaveBeenCalled();
 
     vi.useRealTimers();
+  });
+
+  test("each queued call carries what the host called, for the setup-not-complete warning", async () => {
+    const forma = (await import("@/index")).default;
+
+    await forma.track("upgrade_clicked");
+    await forma.setAttributes({ plan: "pro", seats: 3 });
+    await forma.setUserId("user_1");
+
+    expect(mockQueue.add.mock.calls.map((call) => call[0])).toEqual([
+      'track("upgrade_clicked")',
+      "setAttributes()",
+      "setUserId()",
+    ]);
   });
 });

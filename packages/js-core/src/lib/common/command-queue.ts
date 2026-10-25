@@ -15,6 +15,8 @@ export enum CommandType {
 }
 
 interface InternalQueueItem {
+  // What the host called, for messages about this call: `track("checkout")`, `setUserId()`. A string rather than `command.name`, which the bundle's minifier renames.
+  name: string;
   command: TCommand;
   type: CommandType;
   checkSetup: boolean;
@@ -34,6 +36,7 @@ export class CommandQueue {
   }
 
   public add(
+    name: string,
     command: TCommand,
     type: CommandType,
     shouldCheckSetupFlag = true,
@@ -42,6 +45,7 @@ export class CommandQueue {
     return new Promise((addResolve) => {
       try {
         const newItem: InternalQueueItem = {
+          name,
           command,
           type,
           checkSetup: shouldCheckSetupFlag,
@@ -81,7 +85,9 @@ export class CommandQueue {
       if (currentItem.checkSetup) {
         const setupResult = checkSetup();
         if (!setupResult.ok) {
-          console.warn(`🧱 Forma - Setup not complete.`);
+          console.warn(
+            `🧱 Forma - Setup not complete, ${currentItem.name} dropped. Call setup() first; if you did, it failed (see above).`
+          );
           continue;
         }
       }

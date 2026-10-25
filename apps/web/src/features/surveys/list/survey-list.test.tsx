@@ -13,7 +13,7 @@ import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
 import { toast } from "../../../lib/toast";
-import type { SurveyListItem } from "../api";
+import type { SurveyListItem, SurveySdkState } from "../api";
 import { surveyFiltersKey } from "./filters";
 import { SurveysList } from "./survey-list";
 
@@ -60,13 +60,22 @@ const survey = (n: number, overrides: Partial<SurveyListItem> = {}): SurveyListI
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
 
-/** The list endpoint answering the pages in order (by cursor), with the given counts on page one; every list request's query is recorded. */
+const SDK_STATE_WITHIN_CAP: SurveySdkState = {
+  limit: 100,
+  liveAppSurveyCount: 3,
+  excludedCount: 0,
+  excluded: [],
+};
+
+/** The list endpoint answering the pages in order (by cursor), with the given counts on page one; every list request's query is recorded. The SDK state endpoint answers sdkState. */
 const stubApi = ({
   pages,
   workspaceSurveyCount = pages.flat().length,
+  sdkState = SDK_STATE_WITHIN_CAP,
 }: {
   pages: SurveyListItem[][];
   workspaceSurveyCount?: number;
+  sdkState?: SurveySdkState;
 }) => {
   const queries: URLSearchParams[] = [];
   const mutations: string[] = [];
@@ -83,6 +92,7 @@ const stubApi = ({
       }
       if (base === "/api/app/public-domain") return json({ publicDomain: "http://localhost" });
       if (base?.endsWith("/ai")) return json({ available: false, reason: "not_enabled" });
+      if (base?.endsWith("/sdk-state")) return json(sdkState);
       if (base !== "/api/v3/surveys") throw new Error(`unexpected ${path}`);
       const params = new URLSearchParams(query);
       queries.push(params);
@@ -103,7 +113,7 @@ const stubApi = ({
   return Object.assign(queries, { mutations });
 };
 
-const renderList = (workspaceId = WORKSPACE_A) => {
+const renderList = (workspaceId = WORKSPACE_A, channel: "link" | "app" | null = null) => {
   const rootRoute = createRootRoute({ component: Outlet });
   const routeTree = rootRoute.addChildren([
     createRoute({
@@ -114,7 +124,7 @@ const renderList = (workspaceId = WORKSPACE_A) => {
           workspaceId={workspaceId}
           organizationId="org-1"
           isReadOnly={false}
-          channel={null}
+          channel={channel}
           surveyType="link"
           defaultLanguage="default"
         />
@@ -262,5 +272,63 @@ describe("SurveysList archive", () => {
         'PATCH /api/v3/surveys/survey-1 {"status":"inProgress"}',
       ])
     );
+  });
+});
+
+/** Whether the stubbed fetch has been asked for the SDK state. */
+const sdkStateRequested = () =>
+  vi.mocked(fetch).mock.calls.some(([path]) => typeof path === "string" && path.endsWith("/sdk-state"));
+
+describe("SurveysList SDK state", () => {
+  test("live app surveys past the SDK state's cap are named, linked to their summaries, and counted", async () => {
+    stubApi({
+      pages: [[survey(1)]],
+      sdkState: {
+        limit: 100,
+        liveAppSurveyCount: 103,
+        excludedCount: 3,
+        excluded: [
+          { id: "old-1", name: "Old checkout survey" },
+          { id: "old-2", name: "Old onboarding survey" },
+        ],
+      },
+    });
+    renderList();
+
+    const warning = await screen.findByTestId("sdk-state-truncated");
+    expect(warning.textContent).toContain(
+      i18n.t("workspace.surveys.list.state_truncated_title", { count: 3 })
+    );
+    expect(warning.textContent).toContain(i18n.t("workspace.surveys.list.state_truncated", { limit: 100 }));
+    expect(within(warning).getByRole("link", { name: "Old checkout survey" }).getAttribute("href")).toBe(
+      `/workspaces/${WORKSPACE_A}/surveys/old-1/summary`
+    );
+    expect(within(warning).getByRole("link", { name: "Old onboarding survey" })).toBeTruthy();
+    expect(warning.textContent).toContain(
+      i18n.t("workspace.surveys.list.state_truncated_more", { count: 1 })
+    );
+  });
+
+  test("nothing is said while every live app survey reaches the SDK, nor in a link-only workspace", async () => {
+    stubApi({ pages: [[survey(1)]] });
+    renderList();
+    await screen.findByText("Survey 1");
+    await waitFor(() => expect(sdkStateRequested()).toBe(true));
+    expect(screen.queryByTestId("sdk-state-truncated")).toBeNull();
+    cleanup();
+
+    stubApi({
+      pages: [[survey(1)]],
+      sdkState: {
+        limit: 100,
+        liveAppSurveyCount: 101,
+        excludedCount: 1,
+        excluded: [{ id: "old", name: "Old" }],
+      },
+    });
+    renderList(WORKSPACE_A, "link");
+    await screen.findByText("Survey 1");
+    expect(screen.queryByTestId("sdk-state-truncated")).toBeNull();
+    expect(sdkStateRequested()).toBe(false);
   });
 });
