@@ -334,11 +334,11 @@ const TemplateCard = ({
           aria-expanded={isActive}
           aria-describedby={descriptionId}
           onClick={onSelect}
-          className="text-left after:absolute after:inset-0 after:rounded-lg focus-visible:outline-hidden">
+          className="text-left break-words after:absolute after:inset-0 after:rounded-lg focus-visible:outline-hidden">
           {title}
         </button>
       </h3>
-      <p id={descriptionId} className="text-left text-xs text-slate-600">
+      <p id={descriptionId} className="line-clamp-3 text-left text-xs break-words text-slate-600">
         {description}
       </p>
       {children}

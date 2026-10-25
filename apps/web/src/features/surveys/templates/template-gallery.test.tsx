@@ -346,6 +346,7 @@ const ownPreset = {
   metadata: {},
   styling: { brandColor: { light: "#123456" } },
   surveyClosedMessage: null,
+  isBackButtonHidden: true,
 } as unknown as OrganizationTemplate["preset"];
 
 const ownTemplate: OrganizationTemplate = {
@@ -389,6 +390,8 @@ describe("TemplateGallery organization templates", () => {
     expect(
       screen.getByText(i18n.t("workspace.surveys.organization_templates.language_count", { count: 2 }))
     ).toBeTruthy();
+    // A description may run to 1000 characters; the card keeps to a few lines of it.
+    expect(screen.getByText("What we ask after every release.").className).toContain("line-clamp-3");
 
     await chooseTemplate("Release retro");
     const pane = screen.getByRole("complementary", {
@@ -400,6 +403,7 @@ describe("TemplateGallery organization templates", () => {
     expect(props?.survey.blocks).toEqual([ownBlock]);
     expect(props?.survey.type).toBe("app");
     expect(props?.survey.styling).toEqual({ brandColor: { light: "#123456" } });
+    expect(props?.survey.isBackButtonHidden).toBe(true);
     // Using it is open to whoever may create surveys here; managing it is not.
     expect(
       screen.queryByRole("button", {

@@ -13,9 +13,18 @@ export interface OrganizationTemplateLanguage {
   enabled: boolean;
 }
 
-/** The survey document a template creates, every translation included. */
+/** The survey document a template creates, every translation included, with the settings that change how respondents move through it. */
 export type OrganizationTemplatePreset = TemplatePreset &
-  Partial<Pick<TSurvey, "styling" | "surveyClosedMessage">>;
+  Partial<
+    Pick<
+      TSurvey,
+      | "styling"
+      | "surveyClosedMessage"
+      | "showLanguageSwitch"
+      | "isBackButtonHidden"
+      | "isAutoProgressingEnabled"
+    >
+  >;
 
 /** A template as the gallery lists it; reading one template adds its preset. Timestamps are ISO strings. */
 export interface OrganizationTemplate {

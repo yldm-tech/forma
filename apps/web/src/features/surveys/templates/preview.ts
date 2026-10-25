@@ -60,7 +60,7 @@ export const templatePreviewSurvey = (template: SurveyTemplate, type: "link" | "
   };
 };
 
-/** An organization's template as a survey the respondent runtime can render in preview mode: like a catalog template, with the styling and closed message it was saved with. */
+/** An organization's template as a survey the respondent runtime can render in preview mode: like a catalog template, with the styling, closed message and respondent settings it was saved with. */
 export const organizationTemplatePreviewSurvey = (
   template: Pick<OrganizationTemplate, "id" | "name" | "description"> & {
     preset: OrganizationTemplatePreset;
@@ -73,4 +73,7 @@ export const organizationTemplatePreviewSurvey = (
   ),
   styling: template.preset.styling ?? null,
   surveyClosedMessage: template.preset.surveyClosedMessage ?? null,
+  showLanguageSwitch: template.preset.showLanguageSwitch ?? false,
+  isBackButtonHidden: template.preset.isBackButtonHidden ?? false,
+  isAutoProgressingEnabled: template.preset.isAutoProgressingEnabled ?? false,
 });

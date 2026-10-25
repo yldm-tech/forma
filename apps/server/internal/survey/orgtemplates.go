@@ -36,16 +36,19 @@ type TemplateLanguage struct {
 	Enabled bool    `json:"enabled"`
 }
 
-// OrganizationTemplatePreset is the survey document a template creates: the parts of the survey it was saved from that respondents see, with every translation.
+// OrganizationTemplatePreset is the survey document a template creates: the parts of the survey it was saved from that respondents see, with every translation, and the settings that change how respondents move through it. The survey's other settings are not kept.
 type OrganizationTemplatePreset struct {
-	WelcomeCard         json.RawMessage `json:"welcomeCard"`
-	Blocks              json.RawMessage `json:"blocks"`
-	Endings             json.RawMessage `json:"endings"`
-	HiddenFields        json.RawMessage `json:"hiddenFields"`
-	Variables           json.RawMessage `json:"variables"`
-	Metadata            json.RawMessage `json:"metadata"`
-	Styling             json.RawMessage `json:"styling"`
-	SurveyClosedMessage json.RawMessage `json:"surveyClosedMessage"`
+	WelcomeCard              json.RawMessage `json:"welcomeCard"`
+	Blocks                   json.RawMessage `json:"blocks"`
+	Endings                  json.RawMessage `json:"endings"`
+	HiddenFields             json.RawMessage `json:"hiddenFields"`
+	Variables                json.RawMessage `json:"variables"`
+	Metadata                 json.RawMessage `json:"metadata"`
+	Styling                  json.RawMessage `json:"styling"`
+	SurveyClosedMessage      json.RawMessage `json:"surveyClosedMessage"`
+	ShowLanguageSwitch       *bool           `json:"showLanguageSwitch"`
+	IsBackButtonHidden       bool            `json:"isBackButtonHidden"`
+	IsAutoProgressingEnabled bool            `json:"isAutoProgressingEnabled"`
 }
 
 // OrganizationTemplate is a survey an organization saved as a template. The list leaves out the preset; reading one template includes it.
@@ -93,9 +96,9 @@ func (d TemplateDetails) normalized() (TemplateDetails, error) {
 	return d, nil
 }
 
-// OrganizationTemplates lists an organization's templates for anyone who can read the organization; canManage says whether the caller may also rename and delete them.
+// OrganizationTemplates lists an organization's templates for its product members; canManage says whether the caller may also rename and delete them.
 func (s *Service) OrganizationTemplates(ctx context.Context, caller Caller, organizationID uuid.UUID) (*OrganizationTemplates, error) {
-	if err := s.authz.Require(ctx, caller.Actor, authz.OrganizationRead, authz.Organization(organizationID)); err != nil {
+	if err := s.requireProductMember(ctx, caller, organizationID); err != nil {
 		return nil, err
 	}
 	canManage, err := s.authz.Can(ctx, caller.Actor, authz.OrganizationManage, authz.Organization(organizationID))
@@ -109,9 +112,38 @@ func (s *Service) OrganizationTemplates(ctx context.Context, caller Caller, orga
 	return &OrganizationTemplates{Templates: templates, CanManage: canManage}, nil
 }
 
-// OrganizationTemplate is one template with its preset, for the gallery's preview, behind organization.read.
+// OrganizationTemplate is one template with its preset, for the gallery's preview, for the organization's product members.
 func (s *Service) OrganizationTemplate(ctx context.Context, caller Caller, id uuid.UUID) (*OrganizationTemplate, error) {
-	return s.authorizedTemplate(ctx, caller, id, authz.OrganizationRead)
+	t, err := s.repo.organizationTemplate(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if t == nil {
+		return nil, apperr.NotFound("Survey template", "")
+	}
+	if err := s.requireProductMember(ctx, caller, t.OrganizationID); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+// requireProductMember refuses a caller who is not a member of the organization, or whose membership is the billing role: a template is product data (a survey's document), which the billing role is kept out of, though organization.read includes it.
+func (s *Service) requireProductMember(ctx context.Context, caller Caller, organizationID uuid.UUID) error {
+	if err := s.authz.Require(ctx, caller.Actor, authz.OrganizationRead, authz.Organization(organizationID)); err != nil {
+		return err
+	}
+	user := caller.userID()
+	if user == nil {
+		return apperr.Forbidden("Not authorized")
+	}
+	role, err := s.repo.membershipRole(ctx, *user, organizationID)
+	if err != nil {
+		return err
+	}
+	if role == "" || role == "billing" {
+		return apperr.Forbidden("Not authorized")
+	}
+	return nil
 }
 
 // authorizedTemplate loads a template and checks the caller may take the organization action on its organization.
@@ -161,6 +193,7 @@ func (s *Service) SaveAsTemplate(ctx context.Context, caller Caller, surveyID uu
 		Preset: &OrganizationTemplatePreset{
 			WelcomeCard: sv.WelcomeCard, Blocks: stripIsDraft(sv.Blocks), Endings: sv.Endings, HiddenFields: sv.HiddenFields, Variables: sv.Variables,
 			Metadata: sv.Metadata, Styling: sv.Styling, SurveyClosedMessage: sv.SurveyClosedMessage,
+			ShowLanguageSwitch: sv.ShowLanguageSwitch, IsBackButtonHidden: sv.IsBackButtonHidden, IsAutoProgressingEnabled: sv.IsAutoProgressingEnabled,
 		},
 	}
 	created, err := s.repo.insertOrganizationTemplate(ctx, t, caller.userID())
@@ -233,16 +266,13 @@ func (s *Service) CreateFromOrganizationTemplate(ctx context.Context, caller Cal
 }
 
 func (s *Service) createFromOrganizationTemplate(ctx context.Context, caller Caller, t *OrganizationTemplate, workspaceID uuid.UUID, surveyType string, organizationID uuid.UUID) (*Survey, error) {
-	links, err := s.repo.templateLanguageLinks(ctx, workspaceID, t.Languages)
-	if err != nil {
-		return nil, err
-	}
 	p := t.Preset
 	rec := defaultRecord()
 	rec.Name, rec.Type, rec.Status, rec.CreatedBy = t.Name, surveyType, StatusDraft, caller.userID()
 	rec.WelcomeCard, rec.Blocks, rec.Endings, rec.HiddenFields, rec.Variables = p.WelcomeCard, p.Blocks, p.Endings, p.HiddenFields, p.Variables
 	rec.Metadata, rec.Styling, rec.SurveyClosedMessage = p.Metadata, p.Styling, p.SurveyClosedMessage
-	return s.insertSurvey(ctx, newSurvey{WorkspaceID: workspaceID, Record: rec, Languages: links, PrivateSegmentFilters: json.RawMessage(`[]`)}, organizationID)
+	rec.ShowLanguageSwitch, rec.IsBackButtonHidden, rec.IsAutoProgressingEnabled = p.ShowLanguageSwitch, p.IsBackButtonHidden, p.IsAutoProgressingEnabled
+	return s.insertSurvey(ctx, newSurvey{WorkspaceID: workspaceID, Record: rec, TemplateLanguages: t.Languages, PrivateSegmentFilters: json.RawMessage(`[]`)}, organizationID)
 }
 
 // summary is the template without its preset, as the audit log records it.
@@ -257,26 +287,30 @@ func (t *OrganizationTemplate) summary() *OrganizationTemplate {
 const organizationTemplateColumns = `t.id, t.created_at, t.updated_at, t.organization_id, t.name, t.description, u.name AS creator_name, t.languages,
 	(SELECT count(*) FROM jsonb_array_elements(t.blocks) b, jsonb_array_elements(CASE jsonb_typeof(b->'elements') WHEN 'array' THEN b->'elements' ELSE '[]' END) e) AS question_count`
 
-const organizationTemplatePresetColumns = `, t.welcome_card, t.blocks, t.endings, t.hidden_fields, t.variables, t.metadata, t.styling, t.survey_closed_message`
+const organizationTemplatePresetColumns = `, t.welcome_card, t.blocks, t.endings, t.hidden_fields, t.variables, t.metadata, t.styling, t.survey_closed_message,
+	t.show_language_switch, t.is_back_button_hidden, t.is_auto_progressing_enabled`
 
 type organizationTemplateRow struct {
-	ID                  uuid.UUID
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	OrganizationID      uuid.UUID
-	Name                string
-	Description         string
-	CreatorName         *string
-	Languages           []byte
-	QuestionCount       int
-	WelcomeCard         []byte
-	Blocks              []byte
-	Endings             []byte
-	HiddenFields        []byte
-	Variables           []byte
-	Metadata            []byte
-	Styling             []byte
-	SurveyClosedMessage []byte
+	ID                       uuid.UUID
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	OrganizationID           uuid.UUID
+	Name                     string
+	Description              string
+	CreatorName              *string
+	Languages                []byte
+	QuestionCount            int
+	WelcomeCard              []byte
+	Blocks                   []byte
+	Endings                  []byte
+	HiddenFields             []byte
+	Variables                []byte
+	Metadata                 []byte
+	Styling                  []byte
+	SurveyClosedMessage      []byte
+	ShowLanguageSwitch       *bool
+	IsBackButtonHidden       bool
+	IsAutoProgressingEnabled bool
 }
 
 func (row organizationTemplateRow) template(withPreset bool) (*OrganizationTemplate, error) {
@@ -294,6 +328,7 @@ func (row organizationTemplateRow) template(withPreset bool) (*OrganizationTempl
 		t.Preset = &OrganizationTemplatePreset{
 			WelcomeCard: rawOrNull(row.WelcomeCard), Blocks: rawOrNull(row.Blocks), Endings: rawOrNull(row.Endings), HiddenFields: rawOrNull(row.HiddenFields),
 			Variables: rawOrNull(row.Variables), Metadata: rawOrNull(row.Metadata), Styling: rawOrNull(row.Styling), SurveyClosedMessage: rawOrNull(row.SurveyClosedMessage),
+			ShowLanguageSwitch: row.ShowLanguageSwitch, IsBackButtonHidden: row.IsBackButtonHidden, IsAutoProgressingEnabled: row.IsAutoProgressingEnabled,
 		}
 	}
 	return t, nil
@@ -348,10 +383,12 @@ func (r *Repository) insertOrganizationTemplate(ctx context.Context, t *Organiza
 		if n >= maxOrganizationTemplates {
 			return apperr.Conflict(fmt.Sprintf("An organization can keep at most %d survey templates. Delete one to save another.", maxOrganizationTemplates))
 		}
-		_, err := tx.exec(ctx, `INSERT INTO survey_templates (id, organization_id, created_by, name, description, welcome_card, blocks, endings, hidden_fields, variables, metadata, styling, survey_closed_message, languages)
-			VALUES (?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb)`,
+		_, err := tx.exec(ctx, `INSERT INTO survey_templates (id, organization_id, created_by, name, description, welcome_card, blocks, endings, hidden_fields, variables, metadata, styling, survey_closed_message,
+				show_language_switch, is_back_button_hidden, is_auto_progressing_enabled, languages)
+			VALUES (?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?::jsonb)`,
 			t.ID, t.OrganizationID, createdBy, t.Name, t.Description, jsonParam(p.WelcomeCard), jsonParam(p.Blocks), jsonParam(p.Endings), jsonParam(p.HiddenFields),
-			jsonParam(p.Variables), jsonParam(p.Metadata), jsonParam(p.Styling), jsonParam(p.SurveyClosedMessage), string(languages))
+			jsonParam(p.Variables), jsonParam(p.Metadata), jsonParam(p.Styling), jsonParam(p.SurveyClosedMessage),
+			p.ShowLanguageSwitch, p.IsBackButtonHidden, p.IsAutoProgressingEnabled, string(languages))
 		if err != nil {
 			return fmt.Errorf("create survey template: %w", err)
 		}
@@ -391,7 +428,19 @@ func (r *Repository) deleteOrganizationTemplate(ctx context.Context, id uuid.UUI
 	return n > 0, nil
 }
 
-// templateLanguageLinks resolves a template's languages in a workspace by code, creating the ones it lacks with the template's alias, as copying a survey into another workspace does.
+// membershipRole is the user's role in the organization, or "" when they are not a member.
+func (r *Repository) membershipRole(ctx context.Context, userID, organizationID uuid.UUID) (string, error) {
+	var roles []string
+	if err := r.db.WithContext(ctx).Raw(`SELECT role FROM memberships WHERE user_id = ? AND organization_id = ?`, userID, organizationID).Scan(&roles).Error; err != nil {
+		return "", fmt.Errorf("load membership: %w", err)
+	}
+	if len(roles) == 0 {
+		return "", nil
+	}
+	return roles[0], nil
+}
+
+// templateLanguageLinks resolves a template's languages in a workspace by code, creating the ones it lacks with the template's alias, as copying a survey into another workspace does. insertSurvey calls it in the survey's transaction, so a failed create leaves no languages behind.
 func (r *Repository) templateLanguageLinks(ctx context.Context, workspaceID uuid.UUID, languages []TemplateLanguage) ([]languageLink, error) {
 	links := make([]languageLink, 0, len(languages))
 	for _, l := range languages {

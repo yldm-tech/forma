@@ -37,12 +37,13 @@ type savedTemplate struct {
 // Owners and managers save a survey as a template of its organization; whoever can write a workspace of the organization creates a draft from it there, with the document, translations and declared fields of the survey as it was saved.
 func TestOrganizationTemplates(t *testing.T) {
 	e := newEnv(t)
-	owner, manager, writer, reader, outsider := e.user(), e.user(), e.user(), e.user(), e.user()
+	owner, manager, writer, reader, outsider, biller := e.user(), e.user(), e.user(), e.user(), e.user(), e.user()
 	org, ws := e.organization(owner)
 	other := e.workspace(org)
 	e.member(org, manager, "manager")
 	e.member(org, writer, "member")
 	e.member(org, reader, "member")
+	e.member(org, biller, "billing")
 	e.grant(org, ws, writer, "readWrite")
 	e.grant(org, other, writer, "readWrite")
 	e.grant(org, other, reader, "read")
@@ -79,7 +80,7 @@ func TestOrganizationTemplates(t *testing.T) {
 	// The template is a copy: later edits of the survey do not reach it.
 	e.exec(`UPDATE surveys SET blocks = '[]' WHERE id = ?`, id)
 
-	// Every member of the organization lists and reads them; only owners and managers manage them.
+	// Every member of the organization except the billing role lists and reads them; only owners and managers manage them.
 	var list OrganizationTemplates
 	e.ok(e.do(reader, http.MethodGet, "/api/app/organizations/"+org.String()+"/survey-templates", nil), http.StatusOK, &list)
 	if len(list.Templates) != 1 || list.Templates[0].ID.String() != tpl.ID || list.Templates[0].Preset != nil || list.CanManage {
@@ -90,6 +91,7 @@ func TestOrganizationTemplates(t *testing.T) {
 		t.Fatal("a manager may not manage templates")
 	}
 	e.fails(e.do(outsider, http.MethodGet, "/api/app/organizations/"+org.String()+"/survey-templates", nil), http.StatusForbidden, apperr.CodeForbidden, "")
+	e.fails(e.do(biller, http.MethodGet, "/api/app/organizations/"+org.String()+"/survey-templates", nil), http.StatusForbidden, apperr.CodeForbidden, "")
 	var foreignList OrganizationTemplates
 	e.ok(e.do(outsider, http.MethodGet, "/api/app/organizations/"+foreignOrg.String()+"/survey-templates", nil), http.StatusOK, &foreignList)
 	if len(foreignList.Templates) != 0 || !foreignList.CanManage {
@@ -107,6 +109,7 @@ func TestOrganizationTemplates(t *testing.T) {
 		t.Fatalf("headline %v", headline)
 	}
 	e.fails(e.do(outsider, http.MethodGet, templatePath(tpl.ID, ""), nil), http.StatusForbidden, apperr.CodeForbidden, "")
+	e.fails(e.do(biller, http.MethodGet, templatePath(tpl.ID, ""), nil), http.StatusForbidden, apperr.CodeForbidden, "")
 	e.fails(e.do(reader, http.MethodGet, templatePath(uuid.New(), ""), nil), http.StatusNotFound, apperr.CodeNotFound, "Survey template not found")
 
 	// Using it needs write access to the workspace the draft goes to, in the template's organization.
@@ -186,5 +189,43 @@ func TestSaveAsTemplateStripsDraftMarkers(t *testing.T) {
 	e.ok(e.do(owner, http.MethodPost, appPath(id, "/save-as-template"), map[string]any{"name": "Draft"}), http.StatusCreated, &tpl)
 	if n := e.count(`SELECT count(*) FROM survey_templates WHERE id = ? AND blocks::text LIKE '%isDraft%'`, tpl.ID); n != 0 {
 		t.Fatal("the template kept isDraft")
+	}
+}
+
+// A template keeps the settings that change how respondents move through the survey, and a draft made from it has them.
+func TestOrganizationTemplateKeepsRespondentSettings(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	id := e.createLink(owner, ws)
+	e.exec(`UPDATE surveys SET show_language_switch = true, is_back_button_hidden = true, is_auto_progressing_enabled = true WHERE id = ?`, id)
+	var tpl savedTemplate
+	e.ok(e.do(owner, http.MethodPost, appPath(id, "/save-as-template"), map[string]any{"name": "Settings"}), http.StatusCreated, &tpl)
+	var full savedTemplate
+	e.ok(e.do(owner, http.MethodGet, templatePath(tpl.ID, ""), nil), http.StatusOK, &full)
+	for _, key := range []string{"showLanguageSwitch", "isBackButtonHidden", "isAutoProgressingEnabled"} {
+		if string(full.Preset[key]) != "true" {
+			t.Errorf("preset %s = %s", key, full.Preset[key])
+		}
+	}
+	var created map[string]any
+	e.ok(e.do(owner, http.MethodPost, templatePath(tpl.ID, "/surveys"), map[string]any{"workspaceId": ws, "surveyType": "link"}), http.StatusCreated, &created)
+	if created["showLanguageSwitch"] != true || created["isBackButtonHidden"] != true || created["isAutoProgressingEnabled"] != true {
+		t.Fatalf("created showLanguageSwitch=%v isBackButtonHidden=%v isAutoProgressingEnabled=%v", created["showLanguageSwitch"], created["isBackButtonHidden"], created["isAutoProgressingEnabled"])
+	}
+}
+
+// A create from a template that fails leaves no language it would have added to the workspace.
+func TestOrganizationTemplateFailedCreateLeavesNoLanguages(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner)
+	// A variable and a hidden field share a storage key, which only the create's transaction finds.
+	tpl := e.insert(`INSERT INTO survey_templates (organization_id, name, welcome_card, blocks, endings, hidden_fields, variables, languages)
+		VALUES (?, 'Clash', '{"enabled": false}', '[]', '[]', '{"enabled": true, "fieldIds": ["dup"]}', '[{"id": "dup", "name": "dup", "type": "text", "value": ""}]',
+		'[{"code": "fr-FR", "alias": null, "default": false, "enabled": true}]') RETURNING id`, org)
+	e.fails(e.do(owner, http.MethodPost, templatePath(tpl, "/surveys"), map[string]any{"workspaceId": ws, "surveyType": "link"}), http.StatusBadRequest, apperr.CodeBadRequest, "")
+	if n := e.count(`SELECT count(*) FROM languages WHERE workspace_id = ? AND code = 'fr-FR'`, ws); n != 0 {
+		t.Fatalf("%d languages left by a failed create", n)
 	}
 }
