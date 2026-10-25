@@ -2,10 +2,13 @@ package analysis
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
+	"slices"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -83,16 +86,18 @@ func TestSummaryCountsResponsesDisplaysAndQuotas(t *testing.T) {
 		t.Errorf("open text summary %s", s.Summary[0])
 	}
 	var nps struct {
-		Total      int   `json:"total"`
-		Score      int   `json:"score"`
-		Promoters  Count `json:"promoters"`
-		Detractors Count `json:"detractors"`
-		Dismissed  Count `json:"dismissed"`
+		ResponseCount int   `json:"responseCount"`
+		Total         int   `json:"total"`
+		Answered      int   `json:"answered"`
+		Score         int   `json:"score"`
+		Promoters     Count `json:"promoters"`
+		Detractors    Count `json:"detractors"`
+		Dismissed     Count `json:"dismissed"`
 	}
 	if err := json.Unmarshal(s.Summary[1], &nps); err != nil {
 		t.Fatal(err)
 	}
-	if nps.Total != 3 || nps.Score != 0 || nps.Promoters != (Count{1, 33.33}) || nps.Detractors != (Count{1, 33.33}) || nps.Dismissed != (Count{1, 33.33}) {
+	if nps.ResponseCount != 2 || nps.Total != 3 || nps.Answered != 2 || nps.Score != 0 || nps.Promoters != (Count{1, 50}) || nps.Detractors != (Count{1, 50}) || nps.Dismissed != (Count{1, 33.33}) {
 		t.Errorf("nps summary %s", s.Summary[1])
 	}
 	var pick struct {
@@ -376,13 +381,146 @@ func TestExportXLSXHasOneSheetWithTypedCells(t *testing.T) {
 		{2, "No.", "1", excelize.CellTypeUnset},
 		{3, "Response ID", r1.String(), excelize.CellTypeInlineString},
 		{3, "Duration Seconds", "13", excelize.CellTypeUnset},
-		{3, "1. Your name", "'=SUM(A1)", excelize.CellTypeInlineString},
+		{3, "1. Your name", "=SUM(A1)", excelize.CellTypeInlineString},
 		{2, "utm", "42", excelize.CellTypeUnset},
 		{2, "3. Rate - Speed", "", excelize.CellTypeUnset},
 		{3, "Score", "7", excelize.CellTypeUnset},
 	} {
 		if v, typ := cell(c.row, c.header); v != c.value || typ != c.typ {
 			t.Errorf("row %d %s: %q (%v), want %q (%v)", c.row, c.header, v, typ, c.value, c.typ)
+		}
+	}
+	// The formula-like answer keeps its text and is quote-prefixed instead of carrying a visible apostrophe.
+	for i, h := range exportHeaders {
+		if h == "1. Your name" {
+			name, _ := excelize.CoordinatesToCellName(i+1, 3)
+			if !xlsxQuotePrefixed(t, f, name) {
+				t.Errorf("%s (%s) is not quote-prefixed", h, name)
+			}
+		}
+	}
+}
+
+// multilingualBlocks is a survey in English (the default), German and Japanese: a choice of each kind, a ranking, a matrix with a row left untranslated, an NPS and number and text inputs.
+const multilingualBlocks = `[{"id":"b1","name":"B1","elements":[
+	{"id":"best","type":"multipleChoiceSingle","headline":{"default":"Best?"},"required":false,
+		"choices":[{"id":"fast","label":{"default":"Speed","de-DE":"Geschwindigkeit","ja-JP":"速さ"}},{"id":"price","label":{"default":"Price","de-DE":"Preis","ja-JP":"価格"}},{"id":"other","label":{"default":"Other","de-DE":"Andere","ja-JP":"その他"}}]},
+	{"id":"many","type":"multipleChoiceMulti","headline":{"default":"Which?"},"required":false,
+		"choices":[{"id":"a","label":{"default":"Apps","de-DE":"Apps","ja-JP":"アプリ"}},{"id":"w","label":{"default":"Web","ja-JP":""}},{"id":"other","label":{"default":"Other","de-DE":"Andere"}}]},
+	{"id":"rank","type":"ranking","headline":{"default":"Rank"},"required":false,
+		"choices":[{"id":"x","label":{"default":"X","ja-JP":"エックス"}},{"id":"y","label":{"default":"Y","ja-JP":"ワイ"}}]},
+	{"id":"mx","type":"matrix","headline":{"default":"Rate"},"required":false,
+		"rows":[{"id":"r1","label":{"default":"Speed","de-DE":"Tempo"}},{"id":"r2","label":{"default":"Price","de-DE":"Preis"}},{"id":"r3","label":{"default":"Support","de-DE":""}}],
+		"columns":[{"id":"c1","label":{"default":"Good","de-DE":"Gut"}},{"id":"c2","label":{"default":"Bad","de-DE":"Schlecht"}}]},
+	{"id":"nps","type":"nps","headline":{"default":"Recommend?"},"required":false},
+	{"id":"seats","type":"openText","headline":{"default":"Seats"},"required":false,"inputType":"number"},
+	{"id":"note","type":"openText","headline":{"default":"Note"},"required":false,"inputType":"text"}
+]}]`
+
+// Answers given in a survey language are exported under the default-language labels, as the summary counts them, so each answer column holds one value per choice; an "Other" text stays as written. Scores are numbers; a number input is a number in the XLSX and the text as typed in the CSV; a text starting like a formula is defanged in CSV only.
+func TestExportMapsAnswersToTheDefaultLanguage(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner, nil)
+	sv := e.survey(ws, surveyOpts{name: "Multilingual", blocks: multilingualBlocks})
+	for _, l := range []struct {
+		code      string
+		isDefault bool
+	}{{"en-US", true}, {"de-DE", false}, {"ja-JP", false}} {
+		id := e.insert(`INSERT INTO languages (workspace_id, code) VALUES (?, ?) RETURNING id`, ws, l.code)
+		e.exec(`INSERT INTO survey_languages (survey_id, language_id, is_default) VALUES (?, ?, ?)`, sv, id, l.isDefault)
+	}
+	de := e.response(sv, row{at: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), finished: true, language: ptr("de-DE"),
+		data: `{"best":"Geschwindigkeit","many":["Apps","Mein eigenes"],"mx":{"Tempo":"Gut","Preis":"Schlecht","Support":"Gut"},"nps":10,"seats":"030","note":"+1 for webhooks"}`})
+	ja := e.response(sv, row{at: time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC), finished: true, language: ptr("ja-JP"),
+		data: `{"best":"価格","many":["アプリ","Web"],"rank":["ワイ","エックス"],"nps":3,"seats":"1234567890123456789","note":"-not bad"}`})
+	en := e.response(sv, row{at: time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC), finished: true,
+		data: `{"best":"Speed","mx":{"Speed":"Bad"},"nps":9,"seats":" 12.5 "}`})
+	columns := []string{"1. Best?", "1. Best? - Option ID", "2. Which?", "2. Which? - Option ID", "3. Rank", "3. Rank - Option ID",
+		"4. Rate - Speed", "4. Rate - Price", "4. Rate - Support", "5. Recommend?", "6. Seats", "7. Note"}
+	// The cells as the XLSX holds them; a number is a number cell, and a number input is also written as typed in the CSV.
+	want := map[uuid.UUID][]any{
+		de: {"Speed", "fast", "Apps; Mein eigenes", "a, other", "", "", "Good", "Bad", "Good", 10.0, numberInput{30, "030"}, "+1 for webhooks"},
+		ja: {"Price", "price", "Apps; Web", "a, w", "Y; X", "y, x", nil, nil, nil, 3.0, "1234567890123456789", "-not bad"},
+		en: {"Speed", "fast", "", "", "", "", "Bad", "", "", 9.0, numberInput{12.5, " 12.5 "}, ""},
+	}
+
+	rec := e.request(owner, http.MethodPost, "/api/app/surveys/"+sv.String()+"/responses/export", map[string]any{"format": "csv", "filterCriteria": map[string]any{}})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("csv export: %d %s", rec.Code, rec.Body)
+	}
+	records, err := csv.NewReader(strings.NewReader(strings.TrimPrefix(rec.Body.String(), "\ufeff"))).ReadAll()
+	if err != nil {
+		t.Fatalf("read csv: %v\n%s", err, rec.Body)
+	}
+	lines := strings.Split(rec.Body.String(), "\n")
+	header := records[0]
+	index := func(h string) int { return slices.Index(header, h) }
+	for i, r := range records[1:] {
+		id := uuid.MustParse(r[index("Response ID")])
+		for j, h := range columns {
+			wantText := ""
+			switch v := want[id][j].(type) {
+			case string:
+				wantText = defang(v)
+			case float64:
+				wantText = strconv.FormatFloat(v, 'f', -1, 64)
+				// A number is written bare, not as quoted text.
+				if strings.Contains(lines[i+1], `"`+wantText+`"`) {
+					t.Errorf("csv %s %s: %s is quoted text", id, h, wantText)
+				}
+			case numberInput:
+				wantText = defang(v.text)
+			}
+			if got := r[index(h)]; got != wantText {
+				t.Errorf("csv %s %s: %q, want %q", id, h, got, wantText)
+			}
+		}
+	}
+
+	rec = e.request(owner, http.MethodPost, "/api/app/surveys/"+sv.String()+"/responses/export", map[string]any{"format": "xlsx", "filterCriteria": map[string]any{}})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("xlsx export: %d %s", rec.Code, rec.Body)
+	}
+	f, err := excelize.OpenReader(bytes.NewReader(rec.Body.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	rows, err := f.GetRows("Sheet1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	header = rows[0]
+	for n := 2; n <= len(rows); n++ {
+		idCell, _ := excelize.CoordinatesToCellName(index("Response ID")+1, n)
+		idText, _ := f.GetCellValue("Sheet1", idCell)
+		id := uuid.MustParse(idText)
+		for j, h := range columns {
+			name, _ := excelize.CoordinatesToCellName(index(h)+1, n)
+			got, _ := f.GetCellValue("Sheet1", name)
+			typ, _ := f.GetCellType("Sheet1", name)
+			switch v := want[id][j].(type) {
+			case float64:
+				if got != strconv.FormatFloat(v, 'f', -1, 64) || typ != excelize.CellTypeUnset {
+					t.Errorf("xlsx %s %s: %q (%v), want the number %v", id, h, got, typ, v)
+				}
+			case numberInput:
+				if got != strconv.FormatFloat(v.value, 'f', -1, 64) || typ != excelize.CellTypeUnset {
+					t.Errorf("xlsx %s %s: %q (%v), want the number %v", id, h, got, typ, v.value)
+				}
+			case string:
+				if got != v || (v != "" && typ != excelize.CellTypeInlineString) {
+					t.Errorf("xlsx %s %s: %q (%v), want the text %q", id, h, got, typ, v)
+				}
+				if quoted := xlsxQuotePrefixed(t, f, name); quoted != (v != "" && strings.ContainsAny(v[:1], "=+-@")) {
+					t.Errorf("xlsx %s %s: quote prefix %v", id, h, quoted)
+				}
+			case nil:
+				if got != "" {
+					t.Errorf("xlsx %s %s: %q, want no cell", id, h, got)
+				}
+			}
 		}
 	}
 }

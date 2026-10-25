@@ -173,6 +173,7 @@ type (
 		Element       json.RawMessage `json:"element"`
 		ResponseCount int             `json:"responseCount"`
 		Total         int             `json:"total"`
+		Answered      int             `json:"answered"`
 		Score         float64         `json:"score"`
 		Promoters     Count           `json:"promoters"`
 		Passives      Count           `json:"passives"`
@@ -597,43 +598,6 @@ func (g *samplesAggregate) result([]DropOff) (any, bool) {
 	return SamplesSummary{Type: g.el.Type, Element: g.el.Raw, ResponseCount: g.count, Samples: samples}, true
 }
 
-// translated is forma2's checkForI18n: a choice answer given in a response language mapped back to the default-language labels. A multi-select or ranking answer becomes a list (a single string a one-element list); an answer that is neither a string nor a list, which forma2 failed on, becomes an empty list.
-func translated(el *element, answer any, lang string) any {
-	label := func(v any) any {
-		s, ok := v.(string)
-		if !ok {
-			return v
-		}
-		for _, c := range el.Choices {
-			if l, has := c.Label[lang]; has && l == s {
-				if d := c.Label.Default(); d != "" {
-					return d
-				}
-				return s
-			}
-		}
-		return s
-	}
-	switch el.Type {
-	case surveydoc.ElementMultipleChoiceMulti, surveydoc.ElementRanking:
-		var values []any
-		switch x := answer.(type) {
-		case string:
-			values = []any{x}
-		case []any:
-			values = x
-		}
-		out := make([]any, len(values))
-		for i, v := range values {
-			out[i] = label(v)
-		}
-		return out
-	case surveydoc.ElementMultipleChoiceSingle:
-		return label(answer)
-	}
-	return answer
-}
-
 // choiceAggregate is the MultipleChoiceSingle and MultipleChoiceMulti summary.
 type choiceAggregate struct {
 	sv         *surveyDoc
@@ -860,12 +824,12 @@ func (g *scaleAggregate) result([]DropOff) (any, bool) {
 	return out, true
 }
 
-// npsAggregate is the NPS summary: 9 and 10 promote, 7 and 8 are passive, the rest detract, and a dismissal counts towards the total every share is taken of.
+// npsAggregate is the NPS summary: 9 and 10 promote, 7 and 8 are passive, the rest detract. The score, the three groups' shares and the 0 to 10 distribution are taken over the responses that answered, the standard NPS; the response count is the answered responses too, as for rating, CSAT and CES, so the card header states the base of its shares. A dismissal (time spent on the element without a number) is counted apart, its share taken over everyone who reached the element, which the total is.
 type npsAggregate struct {
 	el                                         *element
 	buckets                                    *buckets
 	promoters, passives, detractors, dismissed int
-	total                                      int
+	answered, total                            int
 }
 
 func newNPSAggregate(el *element) *npsAggregate {
@@ -875,6 +839,7 @@ func newNPSAggregate(el *element) *npsAggregate {
 func (g *npsAggregate) add(r *summaryResponse) {
 	if n, ok := member(r.Data, g.el.ID).(float64); ok {
 		g.total++
+		g.answered++
 		g.buckets.add(n)
 		switch {
 		case n >= 9:
@@ -891,11 +856,12 @@ func (g *npsAggregate) add(r *summaryResponse) {
 }
 
 func (g *npsAggregate) result([]DropOff) (any, bool) {
-	total := float64(g.total)
-	share := func(n int) Count { return Count{Count: n, Percentage: percent(float64(n), total)} }
-	return NPSSummary{Type: g.el.Type, Element: g.el.Raw, ResponseCount: g.total, Total: g.total,
-		Score: percent(float64(g.promoters-g.detractors), total), Promoters: share(g.promoters), Passives: share(g.passives),
-		Detractors: share(g.detractors), Dismissed: share(g.dismissed), Choices: g.buckets.choices(total)}, true
+	answered := float64(g.answered)
+	share := func(n int) Count { return Count{Count: n, Percentage: percent(float64(n), answered)} }
+	return NPSSummary{Type: g.el.Type, Element: g.el.Raw, ResponseCount: g.answered, Total: g.total, Answered: g.answered,
+		Score: percent(float64(g.promoters-g.detractors), answered), Promoters: share(g.promoters), Passives: share(g.passives),
+		Detractors: share(g.detractors), Dismissed: Count{Count: g.dismissed, Percentage: percent(float64(g.dismissed), float64(g.total))},
+		Choices: g.buckets.choices(answered)}, true
 }
 
 // ctaAggregate is the CTA summary, kept only for a button to an external link: clicks against the element's impressions.
@@ -989,14 +955,7 @@ func (g *matrixAggregate) add(r *summaryResponse) {
 	selected, _ := answer.(map[string]any)
 	lang := g.sv.languageCode(r.Language)
 	for _, row := range g.el.Rows {
-		value := member(selected, row.Label[lang])
-		var column *surveydoc.Choice
-		for i, c := range g.el.Columns {
-			if value == c.Label[lang] {
-				column = &g.el.Columns[i]
-				break
-			}
-		}
+		_, column, _ := matrixAnswer(g.el, selected, row, lang)
 		if column == nil {
 			continue
 		}

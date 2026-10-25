@@ -222,15 +222,14 @@ func TestSheetWriters(t *testing.T) {
 	for _, p := range payloads {
 		rows = append(rows, []any{p, 0.0, nil})
 	}
+	// A number input: the CSV keeps the text as typed, the XLSX holds the number.
+	numberRow := len(rows) + 1
+	rows = append(rows, []any{numberInput{7, "007"}, numberInput{1.5, "1.50"}, numberInput{-2, "-2"}})
 
 	var csv bytes.Buffer
 	w := newCSVWriter(&csv)
 	for _, r := range rows {
-		cells := make([]any, len(r))
-		for i, v := range r {
-			cells[i] = defang(v)
-		}
-		if err := w.row(cells); err != nil {
+		if err := w.row(r); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -244,6 +243,9 @@ func TestSheetWriters(t *testing.T) {
 	if lines[4] != `"'=HYPERLINK(""https://evil.tld"",""Click"")",0,` {
 		t.Errorf("csv formula %q", lines[4])
 	}
+	if lines[numberRow-1] != `"007","1.50","'-2"` {
+		t.Errorf("csv number input %q", lines[numberRow-1])
+	}
 
 	var xlsx bytes.Buffer
 	xw, err := newXLSXWriter(&xlsx)
@@ -251,11 +253,7 @@ func TestSheetWriters(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, r := range rows {
-		cells := make([]any, len(r))
-		for i, v := range r {
-			cells[i] = defang(v)
-		}
-		if err := xw.row(cells); err != nil {
+		if err := xw.row(r); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -274,16 +272,153 @@ func TestSheetWriters(t *testing.T) {
 		}
 		return v
 	}
-	if get("A1") != "name" || get("C1") != "'=evil" || get("B2") != "30" || get("C2") != "" {
+	// XLSX keeps the text as given: no literal apostrophe, which a reader would see, but Excel's quote prefix on the cells that start like a formula.
+	if get("A1") != "name" || get("C1") != "=evil" || get("B2") != "30" || get("C2") != "" {
 		t.Errorf("xlsx header and first row: %q %q %q %q", get("A1"), get("C1"), get("B2"), get("C2"))
+	}
+	if !xlsxQuotePrefixed(t, f, "C1") || xlsxQuotePrefixed(t, f, "A1") || xlsxQuotePrefixed(t, f, "A4") || xlsxQuotePrefixed(t, f, "B2") {
+		t.Errorf("xlsx quote prefix: C1 %v, A1 %v, A4 %v, B2 %v", xlsxQuotePrefixed(t, f, "C1"), xlsxQuotePrefixed(t, f, "A1"), xlsxQuotePrefixed(t, f, "A4"), xlsxQuotePrefixed(t, f, "B2"))
 	}
 	for i, p := range payloads {
 		cell, _ := excelize.CoordinatesToCellName(1, i+5)
-		if got := get(cell); got != "'"+p {
-			t.Errorf("xlsx %s: %q, want %q", cell, got, "'"+p)
+		if got := get(cell); got != p {
+			t.Errorf("xlsx %s: %q, want %q", cell, got, p)
+		}
+		if !xlsxQuotePrefixed(t, f, cell) {
+			t.Errorf("xlsx %s is not quote-prefixed", cell)
 		}
 		if formula, _ := f.GetCellFormula("Sheet1", cell); formula != "" {
 			t.Errorf("xlsx %s is a formula: %q", cell, formula)
+		}
+	}
+	for col, want := range []string{"7", "1.5", "-2"} {
+		cell, _ := excelize.CoordinatesToCellName(col+1, numberRow)
+		typ, err := f.GetCellType("Sheet1", cell)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := get(cell); got != want || typ != excelize.CellTypeUnset || xlsxQuotePrefixed(t, f, cell) {
+			t.Errorf("xlsx number input %s: %q (%v), want the number %s", cell, got, typ, want)
+		}
+	}
+}
+
+// xlsxQuotePrefixed reports whether the cell's format carries Excel's quote prefix, which excelize's Style does not show.
+func xlsxQuotePrefixed(t *testing.T, f *excelize.File, cell string) bool {
+	t.Helper()
+	id, err := f.GetCellStyle("Sheet1", cell)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.GetStyle(id); err != nil {
+		t.Fatal(err)
+	}
+	xf := f.Styles.CellXfs.Xf[id]
+	return xf.QuotePrefix != nil && *xf.QuotePrefix
+}
+
+// An answer as its export cell: numbers stay numbers, so a spreadsheet can compute with scores; a number input keeps the text as typed beside the number it holds, unless it is not a plain decimal or has more digits than a float64 keeps.
+func TestExportAnswer(t *testing.T) {
+	number := &element{Element: surveydoc.Element{Type: surveydoc.ElementOpenText, InputType: "number"}}
+	text := &element{Element: surveydoc.Element{Type: surveydoc.ElementOpenText}}
+	nps := &element{Element: surveydoc.Element{Type: surveydoc.ElementNPS}}
+	for _, c := range []struct {
+		el     *element
+		answer any
+		want   any
+	}{
+		{nps, 10.0, 10.0},
+		{nps, 0.0, 0.0},
+		{text, 42.0, 42.0},
+		{number, "30", numberInput{30, "30"}},
+		{number, " -12.5 ", numberInput{-12.5, " -12.5 "}},
+		{number, "1e3", numberInput{1000, "1e3"}},
+		{number, "007", numberInput{7, "007"}},
+		{number, "1.50", numberInput{1.5, "1.50"}},
+		{number, "123456789012345", numberInput{123456789012345, "123456789012345"}},
+		{number, "1234567890123456789", "1234567890123456789"},
+		{number, "３０", "３０"},
+		{number, "0x10", "0x10"},
+		{number, "Inf", "Inf"},
+		{number, "", ""},
+		{text, "30", "30"},
+		{text, "+1 for webhooks", "+1 for webhooks"},
+		{text, []any{"a", "b"}, "a; b"},
+		{number, member(nil, "absent"), ""},
+	} {
+		if got := exportAnswer(c.el, c.answer); got != c.want {
+			t.Errorf("%s %#v: %#v, want %#v", c.el.OpenTextInputType(), c.answer, got, c.want)
+		}
+	}
+}
+
+// The language mapping the summary and the export share.
+func TestDefaultLanguageMapping(t *testing.T) {
+	if localized(surveydoc.I18nString{"default": "Speed", "de-DE": "Tempo"}, "de-DE") != "Tempo" ||
+		localized(surveydoc.I18nString{"default": "Speed", "de-DE": " "}, "de-DE") != "Speed" ||
+		localized(surveydoc.I18nString{"default": "Speed"}, "ja-JP") != "Speed" ||
+		localized(surveydoc.I18nString{"default": "Speed", "de-DE": "Tempo"}, "default") != "Speed" {
+		t.Error("localized does not fall back to the default label as the respondent does")
+	}
+
+	single := &element{Element: surveydoc.Element{Type: surveydoc.ElementMultipleChoiceSingle, Choices: []surveydoc.Choice{
+		{ID: "fast", Label: surveydoc.I18nString{"default": "Speed", "ja-JP": "速さ"}},
+		{ID: "other", Label: surveydoc.I18nString{"default": "Other", "ja-JP": "その他"}},
+	}}}
+	ranking := &element{Element: surveydoc.Element{Type: surveydoc.ElementRanking, Choices: []surveydoc.Choice{
+		{ID: "x", Label: surveydoc.I18nString{"default": "X", "de-DE": "Iks"}},
+		{ID: "y", Label: surveydoc.I18nString{"default": "Y", "de-DE": "Ypsilon"}},
+	}}}
+	for _, c := range []struct {
+		el     *element
+		answer any
+		lang   string
+		want   any
+	}{
+		{single, "速さ", "ja-JP", "Speed"},
+		{single, "自分の答え", "ja-JP", "自分の答え"},
+		{single, "Speed", "ja-JP", "Speed"},
+		{ranking, []any{"Ypsilon", "Iks"}, "de-DE", []any{"Y", "X"}},
+		{ranking, "Iks", "de-DE", []any{"X"}},
+		{ranking, 3.0, "de-DE", []any{}},
+	} {
+		if got := translated(c.el, c.answer, c.lang); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("translated %v in %s: %#v, want %#v", c.answer, c.lang, got, c.want)
+		}
+	}
+
+	matrix := &element{Element: surveydoc.Element{Type: surveydoc.ElementMatrix,
+		Rows: []surveydoc.Choice{
+			{ID: "r1", Label: surveydoc.I18nString{"default": "Speed", "de-DE": "Tempo"}},
+			{ID: "r2", Label: surveydoc.I18nString{"default": "Support", "de-DE": ""}},
+			{ID: "r3", Label: surveydoc.I18nString{"default": "Price", "de-DE": "Preis"}},
+		},
+		Columns: []surveydoc.Choice{
+			{ID: "c1", Label: surveydoc.I18nString{"default": "Good", "de-DE": "Gut"}},
+			{ID: "c2", Label: surveydoc.I18nString{"default": "Bad"}},
+		}}}
+	cells := map[string]any{"Tempo": "Gut", "Support": "Bad", "Preis": "Mittel", "Speed": "Bad"}
+	for _, c := range []struct {
+		row    int
+		lang   string
+		value  any
+		column string
+		ok     bool
+	}{
+		{0, "de-DE", "Gut", "c1", true},
+		// An untranslated row and column were shown, and stored, with their default labels.
+		{1, "de-DE", "Bad", "c2", true},
+		{2, "de-DE", "Mittel", "", true},
+		{0, "default", "Bad", "c2", true},
+		{2, "default", nil, "", false},
+	} {
+		value, column, ok := matrixAnswer(matrix, cells, matrix.Rows[c.row], c.lang)
+		id := ""
+		if column != nil {
+			id = column.ID
+		}
+		if value != c.value || id != c.column || ok != c.ok {
+			t.Errorf("matrix row %d in %s: %v %q %v, want %v %q %v", c.row, c.lang, value, id, ok, c.value, c.column, c.ok)
 		}
 	}
 }

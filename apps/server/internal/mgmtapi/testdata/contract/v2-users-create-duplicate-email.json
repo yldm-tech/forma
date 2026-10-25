@@ -32,7 +32,7 @@
         "details": [
           {
             "field": "email",
-            "issue": "A user with this email already exists"
+            "issue": "A new user cannot be created with this email"
           }
         ]
       }

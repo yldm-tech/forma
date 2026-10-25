@@ -71,11 +71,16 @@ func v2Write(c *gin.Context, status int, body any, cors bool) {
 	c.Abort()
 }
 
-// v2Error is forma2's handleApiError: {"error": {code, message, details}}, without details on a 401, 403 or 429, and with only the generic detail on a 500.
+// v2Error is forma2's handleApiError: {"error": {code, message, details}}, without details on a 401 or 429, without details on a 403 unless the caller names the rule that refused it, and with only the generic detail on a 500.
 func v2Error(c *gin.Context, status int, details []v2Detail) {
 	body := map[string]any{"code": status, "message": v2Messages[status]}
 	switch status {
-	case http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests:
+	case http.StatusUnauthorized, http.StatusTooManyRequests:
+	case http.StatusForbidden:
+		// forma2's 403s carried no details; the ones refused by the key creator's role now say which rule refused them, the rest stay bare.
+		if details != nil {
+			body["details"] = details
+		}
 	case http.StatusInternalServerError:
 		body["details"] = detail("error", messageInternal)
 	default:
