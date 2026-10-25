@@ -247,7 +247,7 @@ const StatusBadge = ({ row, organizationId }: { row: MemberRow; organizationId: 
 };
 
 /**
- * An account switched off with isActive: false, which only the v2 management API writes; the pages have no control that undoes it, so the badge says how to. Its explanation is a tooltip for the eye, reached by hover or focus, and hidden text for a screen reader reading the table.
+ * An account switched off with isActive: false, which only the v2 management API writes; the pages have no control that undoes it, so the badge says how to. Its explanation is a tooltip for the eye, reached by hover or focus, and hidden text beside the badge for a screen reader reading the table. The hidden text stays out of the badge's button: focusing the button opens the tooltip, which Radix announces as the button's description, and the explanation inside the button would be read a second time as its name.
  */
 const InactiveBadge = ({ organizationId, email }: { organizationId: string; email: string }) => {
   const { t } = useTranslation();
@@ -261,11 +261,11 @@ const InactiveBadge = ({ organizationId, email }: { organizationId: string; emai
             type="button"
             className="focus-visible:ring-ring inline-flex cursor-default rounded-full focus-visible:ring-2 focus-visible:outline-hidden">
             <Badge type="gray" text={t("common.inactive")} size="tiny" />
-            <span className="sr-only">{restore}</span>
           </button>
         </TooltipTrigger>
         <TooltipContent className="max-w-sm break-words">{restore}</TooltipContent>
       </Tooltip>
+      <span className="sr-only">{restore}</span>
     </TooltipProvider>
   );
 };

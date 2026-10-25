@@ -7,7 +7,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { i18n as I18n } from "i18next";
 import type { ReactNode } from "react";
 import { I18nextProvider } from "react-i18next";
@@ -189,17 +189,21 @@ describe("MembersCard", () => {
     });
 
     const row = await rowOf("Bob Member");
-    const badge = within(row).getByText(t("common.inactive"));
+    // The button is named by its badge alone, so the explanation is not read twice once the tooltip describes it.
+    const badge = within(row).getByRole("button", { name: t("common.inactive") });
     const explanation = t("organizations.members.inactive_tooltip", {
       organizationId: ORG,
       email: "bob@example.com",
     });
     expect(explanation).toContain(`PATCH /api/v2/organizations/${ORG}/users`);
     expect(explanation).toContain("bob@example.com");
-    // A screen reader reads it with the badge; the eye gets it as a tooltip on a trigger the keyboard can reach.
-    expect(within(row).getByText(explanation)).toBeTruthy();
-    expect(badge.closest("button")).not.toBeNull();
+    // A screen reader reading the table finds it beside the badge; the eye gets it as a tooltip on a trigger the keyboard can reach, which describes the focused button.
+    expect(within(row).getByText(explanation).closest("button")).toBeNull();
     expect(within(await rowOf("Ada Owner")).queryByText(explanation)).toBeNull();
+    act(() => badge.focus());
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.textContent).toBe(explanation);
+    expect(badge.getAttribute("aria-describedby")).toBe(tooltip.id);
   });
 
   test("offers a team admin neither share nor resend, which the server refuses them", async () => {
