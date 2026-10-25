@@ -29,7 +29,8 @@ const awaitSurveyScript = (scriptUrl: string): Promise<void> =>
       resolve();
       return;
     }
-    const rendered = document.querySelector<HTMLScriptElement>(`script[src="${scriptUrl}"]`);
+    // The server pins the URL it renders to the build (`?hash=`), so the tag is found by the URL it starts with.
+    const rendered = document.querySelector<HTMLScriptElement>(`script[src^="${scriptUrl}"]`);
     const element = rendered ?? document.createElement("script");
     element.addEventListener("load", () => resolve(), { once: true });
     element.addEventListener("error", () => reject(new Error("Failed to load the surveys package")), {

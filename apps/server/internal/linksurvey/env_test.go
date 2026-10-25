@@ -43,6 +43,12 @@ func TestMain(m *testing.M) {
 // testShell is a survey page shell with the markers the web build's survey.html carries.
 const testShell = `<!doctype html><html lang="en" translate="no"><head><meta charset="UTF-8"><!--forma:head--><link rel="stylesheet" href="/assets/survey.css"><script type="module" src="/assets/survey.js"></script></head><body><div id="root"></div><!--forma:state--></body></html>`
 
+// testRuntime is the survey runtime bundle of the test build; the page pins its URL to this content.
+const testRuntime = "window.formaSurveys={}"
+
+// testRuntimeSrc is the runtime's script URL on a survey page of the test build: the public domain, the path and the first 8 bytes of the content's SHA-256.
+const testRuntimeSrc = "http://localhost:3999/js/surveys.umd.js?hash=0995edb528ce1549"
+
 // env is the link survey module on a fresh database and Valkey, mounted the way the server mounts it.
 type env struct {
 	t      *testing.T
@@ -87,7 +93,14 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	e := &env{t: t, cfg: cfg, db: db, cache: cache, mail: mail, now: frozen}
 	e.svc = NewService(cfg, NewRepository(db, surveyRepo, cache, log), surveys, m, log)
 	e.svc.now = func() time.Time { return e.now }
-	web, err := webui.NewFromFS(fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}, "survey.html": {Data: []byte(testShell)}})
+	web, err := webui.NewFromFS(fstest.MapFS{
+		"index.html":        {Data: []byte("<!doctype html>")},
+		"survey.html":       {Data: []byte(testShell)},
+		"js/surveys.umd.js": {Data: []byte(testRuntime)},
+		"js/surveys-locales/de-DE.0123456789ab.json":      {Data: []byte(`{}`)},
+		"js/surveys-locales/zh-Hans-CN.0123456789ab.json": {Data: []byte(`{}`)},
+		"js/surveys-locales/zh-Hant-TW.0123456789ab.json": {Data: []byte(`{}`)},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

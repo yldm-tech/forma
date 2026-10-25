@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html"
 	"log/slog"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -31,8 +32,8 @@ const (
 	clientAllowHeaders = "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cache-Control"
 )
 
-// surveysScriptPath is the respondent runtime the survey page renders with; the app loads the .js copy because CDNs do not cache .cjs.
-const surveysScriptPath = "/js/surveys.umd.js"
+// surveysScript is the respondent runtime the survey page renders with, a file of the web build; the app loads the .js copy because CDNs do not cache .cjs.
+const surveysScript = "js/surveys.umd.js"
 
 // Handler serves the public survey pages, their gate endpoints and the OG image.
 type Handler struct {
@@ -41,10 +42,14 @@ type Handler struct {
 	limiter *ratelimit.Limiter
 	shell   shell
 	log     *slog.Logger
+	// scriptPath is the runtime's URL path pinned to the build's content, so a respondent's browser and the CDN keep it until a deploy changes it instead of revalidating it hourly (webui.VersionedPath).
+	scriptPath string
+	// localePaths are the runtime's translation files by language tag (webui.SurveyLocalePaths).
+	localePaths map[string]string
 }
 
 func NewHandler(cfg config.Config, svc *Service, limiter *ratelimit.Limiter, web *webui.Handler, log *slog.Logger) *Handler {
-	return &Handler{cfg: cfg, svc: svc, limiter: limiter, shell: newShell(web.SurveyShell()), log: log}
+	return &Handler{cfg: cfg, svc: svc, limiter: limiter, shell: newShell(web.SurveyShell()), log: log, scriptPath: web.VersionedPath(surveysScript), localePaths: web.SurveyLocalePaths()}
 }
 
 // Register mounts the pages and the OG image. The PIN and email verification endpoints live under the survey's own path, where forma2's server actions were posted, so the public domain serves them with the page.
@@ -117,8 +122,12 @@ func (h *Handler) writePage(c *gin.Context, p page, err error, viewport string) 
 	extra := ""
 	if p.State.View == viewSurvey {
 		// forma2 rendered the runtime's script tag into the document, so the browser fetches and runs it alongside the page bundle instead of after it.
-		src := html.EscapeString(p.State.Survey.PublicDomain + surveysScriptPath)
+		src := html.EscapeString(p.State.Survey.PublicDomain + h.scriptPath)
 		extra = `<link rel="preload" href="` + src + `" as="script" fetchpriority="high"><script async src="` + src + `"></script>`
+		// The runtime carries only English and fetches the survey's language once it runs; fetching it alongside the runtime saves that round trip. crossorigin matches the runtime's fetch, a CORS request with same-origin credentials, so the browser reuses this response.
+		if locale, ok := runtimeLocalePath(h.localePaths, p.RuntimeLanguage); ok {
+			extra += `<link rel="preload" href="` + html.EscapeString(p.State.Survey.PublicDomain+locale) + `" as="fetch" crossorigin="anonymous">`
+		}
 	}
 	doc, err := h.shell.render(p.State.Locale, p.Head.render()+extra, p.State)
 	if err != nil {
@@ -241,4 +250,24 @@ func writeClientJSON(c *gin.Context, status int, body any) {
 	}
 	c.Header("Cache-Control", "private, no-store")
 	c.Data(status, "application/json", b)
+}
+
+// runtimeLocalePath is the translation file the respondent runtime fetches for a survey language, chosen as i18next's getBestMatchFromCodes chooses the bundle the runtime switches to (packages/surveys/src/lib/i18n.config.ts): the bundle of that tag, case aside, else the first bundle, in tag order, of the same primary language (de-AT reads de-DE). None for English, which the runtime carries, or for a language it has no translations for.
+func runtimeLocalePath(paths map[string]string, code string) (string, bool) {
+	tags := slices.Sorted(maps.Keys(paths))
+	for _, tag := range tags {
+		if strings.EqualFold(tag, code) {
+			return paths[tag], true
+		}
+	}
+	primary, _, _ := strings.Cut(strings.ToLower(code), "-")
+	if primary == "en" {
+		return "", false
+	}
+	for _, tag := range tags {
+		if strings.HasPrefix(strings.ToLower(tag), primary+"-") {
+			return paths[tag], true
+		}
+	}
+	return "", false
 }

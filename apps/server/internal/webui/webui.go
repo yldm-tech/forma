@@ -3,9 +3,12 @@ package webui
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"path"
@@ -29,6 +32,10 @@ type Handler struct {
 	index []byte
 	// survey is the survey page bundle's HTML, which the public survey pages fill in; it is never served as a file.
 	survey []byte
+	// hashes are the content hashes of the files under js/, by name: their ETag, and the version a page can pin with versionParam.
+	hashes map[string]string
+	// surveyLocales are the survey runtime's locale files (js/surveys-locales/<tag>.<hash>.json, written by the packages/surveys build) by language tag.
+	surveyLocales map[string]string
 }
 
 // surveyShell is the survey page bundle's entry in the build (apps/web/survey.html).
@@ -110,7 +117,72 @@ func NewFromFS(files fs.FS) (*Handler, error) {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
-	return &Handler{files: files, index: index, survey: survey}, nil
+	hashes, err := hashSDKFiles(files)
+	if err != nil {
+		return nil, err
+	}
+	return &Handler{files: files, index: index, survey: survey, hashes: hashes, surveyLocales: surveyLocaleFiles(hashes)}, nil
+}
+
+// sdkDir is the folder of the SDK and survey runtime bundles, served at /js.
+const sdkDir = "js"
+
+// surveyLocaleDir holds the survey runtime's translations other than English, which the runtime fetches from beside its own script; their names carry a hash of their content (packages/surveys/vite.config.mts).
+const surveyLocaleDir = sdkDir + "/surveys-locales/"
+
+// versionParam is the query parameter that pins a URL under /js to one content hash (VersionedPath). The name is not "v", which customers may already append to the embed snippets as a cache buster.
+const versionParam = "hash"
+
+// hashSDKFiles hashes every file under js/ once, at start: the embedded build never changes while the process runs. A build without js/ has none.
+func hashSDKFiles(files fs.FS) (map[string]string, error) {
+	hashes := map[string]string{}
+	err := fs.WalkDir(files, sdkDir, func(name string, d fs.DirEntry, err error) error {
+		if errors.Is(err, fs.ErrNotExist) && name == sdkDir {
+			return fs.SkipAll
+		}
+		if err != nil || d.IsDir() {
+			return err
+		}
+		data, err := fs.ReadFile(files, name)
+		if err != nil {
+			return err
+		}
+		sum := sha256.Sum256(data)
+		hashes[name] = hex.EncodeToString(sum[:8])
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("hash %s: %w", sdkDir, err)
+	}
+	return hashes, nil
+}
+
+// surveyLocaleFiles picks the survey runtime's locale files out of the hashed names: the language tag is the file name up to its first dot.
+func surveyLocaleFiles(hashes map[string]string) map[string]string {
+	locales := map[string]string{}
+	for name := range hashes {
+		file, ok := strings.CutPrefix(name, surveyLocaleDir)
+		if !ok || strings.Contains(file, "/") || path.Ext(file) != ".json" {
+			continue
+		}
+		tag, _, _ := strings.Cut(file, ".")
+		locales[tag] = "/" + name
+	}
+	return locales
+}
+
+// VersionedPath is the root URL path of the build's file name under js/, pinned to its content: a response for it is cached as immutable, so a page that names it this way never revalidates it. A file the build does not have keeps its plain path.
+func (h *Handler) VersionedPath(name string) string {
+	hash, ok := h.hashes[name]
+	if !ok {
+		return "/" + name
+	}
+	return "/" + name + "?" + versionParam + "=" + hash
+}
+
+// SurveyLocalePaths are the root URL paths of the survey runtime's translations, by the language tag of each shipped bundle (de-DE, zh-Hant-TW). English is not among them: the runtime carries it. The map is shared; callers only read it.
+func (h *Handler) SurveyLocalePaths() map[string]string {
+	return h.surveyLocales
 }
 
 // SurveyShell is the survey page bundle's HTML, or nil when the binary was built without the web UI.
@@ -215,9 +287,18 @@ func (h *Handler) serveFile(c *gin.Context, name string) bool {
 	// Vite fingerprints everything under assets/, so those files never change under the same name.
 	case strings.HasPrefix(name, "assets/"):
 		c.Header("Cache-Control", "public, max-age=31536000, immutable")
-	// The SDK and survey runtime bundles keep fixed names because customer pages embed them, so browsers revalidate hourly while a CDN may hold them for 30 days. Same headers forma2 sent.
-	case strings.HasPrefix(name, "js/"):
-		c.Header("Cache-Control", "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400")
+	// The SDK and survey runtime bundles keep fixed names because customer pages embed them, so browsers revalidate hourly while a CDN may hold them for 30 days. Same headers forma2 sent. The ETag, a hash of the content, lets that hourly revalidation end in a 304 instead of the whole bundle; it is weak because the server gzips the body. A URL pinned to the content (VersionedPath, the public survey pages) never needs revalidating, and the survey runtime's locale files are named by their content. A pinned URL naming other content comes from a page rendered by a server with another build, during a deploy: it is answered with what this build has, never stored, so no cache keeps that content under the other version.
+	case strings.HasPrefix(name, sdkDir+"/"):
+		hash := h.hashes[name]
+		switch version, pinned := c.GetQuery(versionParam); {
+		case strings.HasPrefix(name, surveyLocaleDir), pinned && version == hash:
+			c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		case pinned:
+			c.Header("Cache-Control", "no-store")
+		default:
+			c.Header("Cache-Control", "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400")
+		}
+		c.Header("ETag", `W/"`+hash+`"`)
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Vary", "Accept-Encoding")
 		// Go has no MIME type for .cjs and would sniff text/plain, which browsers refuse to execute. The charset is spelled as forma2 sent it.

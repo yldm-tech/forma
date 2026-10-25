@@ -303,6 +303,10 @@ jobs:
           grep -iF 'content-encoding: gzip' <<<"$headers"
           grep -iF 'cache-control: public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400' <<<"$headers"
           grep -iE '^vary: .*accept-encoding' <<<"$headers"
+          # The bundle carries an ETag, so a browser that kept it past its hour revalidates it with a 304 instead of downloading the runtime again.
+          etag="$(sed -n 's/^[Ee][Tt][Aa][Gg]: *//p' <<<"$headers" | tr -d '\r')"
+          test -n "$etag"
+          test "$(curl -fsS -o /dev/null -w '%{http_code}' -H 'Accept-Encoding: gzip' -H "If-None-Match: $etag" http://localhost:3000/js/surveys.umd.js)" = 304
           page="$(curl -fsS http://localhost:3000/app/)"
           [[ "$page" =~ (/app/assets/[^\"]+\.js) ]] || { echo "No script under /app/assets/ in /app/"; exit 1; }
           asset="${BASH_REMATCH[1]}"

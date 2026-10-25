@@ -61,6 +61,8 @@ type page struct {
 	Status int
 	Head   head
 	State  pageState
+	// RuntimeLanguage is the survey language code the respondent runtime renders a survey view in (its getI18nLanguage): LanguageCode, with "default" read as the default language's code. The handler preloads the runtime's translations for it.
+	RuntimeLanguage string
 }
 
 // pageState is the document the survey page bundle reads. Locale is the locale the page's own chrome is translated in: forma2's root layout locale, negotiated from Accept-Language.
@@ -350,7 +352,20 @@ func (s *Service) render(in renderInput) (page, error) {
 		props.Locale = gate
 		state.View = viewPin
 	}
-	return page{Status: http.StatusOK, State: state}, nil
+	return page{Status: http.StatusOK, State: state, RuntimeLanguage: runtimeLanguage(languageCode, sv.Languages)}, nil
+}
+
+// runtimeLanguage is the respondent runtime's getI18nLanguage (packages/surveys/src/lib/i18n-utils.ts) for the codes a page passes it: a stored survey language code as it is, and "default" as the default language's code, or "en" when the survey has none.
+func runtimeLanguage(languageCode string, languages []survey.SurveyLanguage) string {
+	if languageCode != defaultLanguage {
+		return languageCode
+	}
+	for _, l := range languages {
+		if l.Default && l.Language.Code != "" {
+			return l.Language.Code
+		}
+	}
+	return "en"
 }
 
 // computeStyling is forma2's computeStyling: the survey's own styling when the workspace allows overrides and the survey overrides the theme, the workspace's otherwise.
