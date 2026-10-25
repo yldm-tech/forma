@@ -109,6 +109,8 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const remove = useDeleteApiKey(organizationId);
   const formatDate = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" });
+  // The v3/MCP note is about the keys created on this visit, so it goes away once none of them is listed any more, for instance after the user deletes the one they just created.
+  const createdKeyListed = keys.data?.some((key) => key.id in secrets) ?? false;
 
   const deleteKey = async () => {
     if (!deleting) return;
@@ -128,6 +130,11 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
           {t("workspace.settings.api_keys.add_api_key")}
         </Button>
       </div>
+      {createdKeyListed && (
+        <p role="status" className="px-4 pb-2 text-sm text-slate-500">
+          {t("workspace.api_keys.v3_propagation_note")}
+        </p>
+      )}
       {keys.isPending ? (
         <div className="px-4 py-4">
           <LoadingBlock />

@@ -18,11 +18,13 @@ import (
 type Service struct {
 	repo  *Repository
 	authz *authz.Authorizer
-	audit *audit.Emitter
+	// delivery projects a new key into SpiceDB before Create returns it; nil with AuthZed disabled.
+	delivery *authz.Delivery
+	audit    *audit.Emitter
 }
 
-func NewService(repo *Repository, authorizer *authz.Authorizer, emitter *audit.Emitter) *Service {
-	return &Service{repo: repo, authz: authorizer, audit: emitter}
+func NewService(repo *Repository, authorizer *authz.Authorizer, delivery *authz.Delivery, emitter *audit.Emitter) *Service {
+	return &Service{repo: repo, authz: authorizer, delivery: delivery, audit: emitter}
 }
 
 // CreateInput is a validated create request.
@@ -87,6 +89,8 @@ func (s *Service) Create(ctx context.Context, user httpapi.Actor, organizationID
 	if err != nil {
 		return nil, err
 	}
+	// The plaintext goes out only once the key's relationships are in SpiceDB, so a caller that uses it at once is not refused by /api/v3 or MCP; a failed delivery falls back to the outbox.
+	s.delivery.DeliverAPIKey(ctx, id)
 	view := View{ID: id, Label: in.Label, CreatedAt: createdAt, OrganizationAccess: in.OrganizationAccess, WorkspacePermissions: grants}
 	analytics.Capture(user.UserID.String(), "api_key_created", analytics.Properties{"api_key_id": id.String()}, analytics.Groups{OrganizationID: organizationID.String()})
 	return &Created{View: view, Key: key.Key}, nil

@@ -118,7 +118,7 @@ func newEnv(t *testing.T) *env {
 	e.repo = NewRepository(db)
 	e.evaluator = NewEvaluator(db, log)
 	e.svc = NewService(e.repo, e.authz.Authorizer, limiter, emitter, schemas, log)
-	e.apiKeys = apikey.NewService(apikey.NewRepository(db), e.authz.Authorizer, emitter)
+	e.apiKeys = apikey.NewService(apikey.NewRepository(db), e.authz.Authorizer, nil, emitter)
 
 	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())

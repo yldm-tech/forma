@@ -216,7 +216,7 @@ func newAppEnv(t *testing.T) *appEnv {
 	r := gin.New()
 	r.Use(httpapi.NewClientIPResolver(e.cfg, e.log).Middleware())
 	group := r.Group("/api/app", httpapi.ErrorHandler(e.log), httpapi.CSRF(e.cfg), authz.DecisionMemo())
-	NewHandler(NewService(e.repo, e.authorizer, audit.New(e.cfg, e.log)), sessions, schemas).Register(group)
+	NewHandler(NewService(e.repo, e.authorizer, e.delivery, audit.New(e.cfg, e.log)), sessions, schemas).Register(group)
 	e.engine = r
 	return e
 }

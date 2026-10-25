@@ -63,6 +63,36 @@ func TestClaimLeasesRevocationsFirstThenOldest(t *testing.T) {
 	}
 }
 
+func TestClaimAggregateLeasesOnlyThatAggregatesFreeEvents(t *testing.T) {
+	e := newDBEnv(t)
+	key, other := uuid.NewString(), uuid.NewString()
+	enqueue := func(targetType, primary string, secondary *string) uuid.UUID {
+		return e.insert(`INSERT INTO authz_projection_outbox (target_type, primary_id, secondary_id) VALUES (?, ?, ?) RETURNING id`, targetType, primary, secondary)
+	}
+	ws := uuid.NewString()
+	root := enqueue(targetAPIKey, key, nil)
+	grant := enqueue(targetAPIKeyWorkspace, key, &ws)
+	leased := enqueue(targetAPIKeyWorkspace, key, &ws)
+	e.exec(`UPDATE authz_projection_outbox SET lease_owner = 'worker', lease_expires_at = now() + interval '1 minute' WHERE id = ?`, leased)
+	enqueue(targetAPIKey, other, nil)
+	// Another target type with the same primary id is not part of the aggregate.
+	enqueue(targetTeam, key, nil)
+
+	events, err := claimAggregate(e.ctx, e.db, "request", aggregate{targetTypes: []string{targetAPIKey, targetAPIKeyWorkspace}, primaryID: key})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sameIDs(eventIDs(events), []uuid.UUID{root, grant}) {
+		t.Fatalf("claimAggregate = %+v, want the key and its free grant", events)
+	}
+	if n := e.countOutbox(`lease_owner = 'request'`); n != 2 {
+		t.Fatalf("%d events leased to the request, want 2", n)
+	}
+	if n := e.countOutbox(`lease_owner IS NULL`); n != 2 {
+		t.Fatalf("%d events left for the worker, want the other key's and the team's", n)
+	}
+}
+
 func TestClaimDeadLettersAnEventThatNamesNothingDeliverable(t *testing.T) {
 	e := newDBEnv(t)
 	valid := e.enqueue(targetUser, false, 0)

@@ -301,6 +301,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		database.Open,
 		authz.OpenSpiceDB,
 		authz.NewAuthorizer,
+		// The API key module delivers a new key's relationships itself, before it returns the key.
+		authz.NewDelivery,
 		platformSet,
 		authSet,
 		jsonschema.New,

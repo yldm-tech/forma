@@ -1724,6 +1724,7 @@
       "unable_to_copy_api_key": "APIキーをコピーできません",
       "unable_to_delete_api_key": "APIキーを削除できません",
       "unknown_workspace": "不明なワークスペース",
+      "v3_propagation_note": "新しいキーは API v1・v2 ではすぐに使えます。API v3 と MCP では、使えるようになるまで数秒かかることがあります。",
       "view_permissions_for": "{label}の権限を表示",
       "workspace_access": "ワークスペースアクセス",
       "workspace_access_description": "アンケートと回答データ。ワークスペースごとにアクセス権を付与します。",

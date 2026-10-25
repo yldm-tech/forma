@@ -164,6 +164,30 @@ func TestKeyLifecycle(t *testing.T) {
 	}
 }
 
+// /api/v3 and MCP authorize against SpiceDB, so a key must be projected there by the time Create hands it out, not on the worker's next tick: a script that creates a key and uses it at once was refused for up to five seconds.
+func TestCreatedKeyIsAuthorizedWhenCreateReturns(t *testing.T) {
+	e := newAppEnv(t)
+	org, owner := e.org(), e.user()
+	e.member(org, owner, "owner")
+	ws := e.workspace(org, "Growth")
+	e.drain()
+	token := e.session(owner)
+
+	res := e.do(http.MethodPost, keysPath(org), token, createBody("CI", readAccess, grant(ws, PermissionRead)))
+	if res.status != http.StatusCreated {
+		t.Fatalf("create = %d %s", res.status, res.body)
+	}
+	var created Created
+	res.decode(t, &created)
+	if n := e.count(`SELECT count(*) FROM authz_projection_outbox WHERE primary_id = ? AND processed_at IS NULL`, created.ID.String()); n != 0 {
+		t.Fatalf("%d of the key's projection events are still waiting for the worker", n)
+	}
+	key := authz.APIKey(created.ID)
+	if !e.can(key, authz.WorkspaceRead, authz.Workspace(ws)) || !e.can(key, authz.OrganizationReadAccess, authz.Organization(org)) {
+		t.Fatal("the key is not authorized in SpiceDB when Create returns it")
+	}
+}
+
 func TestOnlyOwnersAndManagersManageKeys(t *testing.T) {
 	e := newAppEnv(t)
 	org, other := e.org(), e.org()
