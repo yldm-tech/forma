@@ -17,6 +17,7 @@ import { ApiError } from "../../lib/api";
 import { initI18n } from "../../lib/i18n";
 import { NoMobileOverlay, useIsPhone } from "./no-mobile-overlay";
 import { NotFound, RootNotFound, RouteError } from "./route-states";
+import { UnsavedChangesGuard, useUnsavedChanges } from "./unsaved-changes";
 
 // forma2's app/error.tsx, app/not-found.tsx and NoMobileOverlay.
 
@@ -125,6 +126,27 @@ test("the mobile overlay is a modal dialog that names the account and lets the u
   fireEvent.click(screen.getByRole("button", { name: i18n.t("common.logout") }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/auth/login"));
   expect(signOut).toHaveBeenCalledWith("/api/app/auth/sign-out", expect.anything());
+});
+
+test("logging out of the mobile overlay with unsaved edits behind it goes straight to the sign-in page", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => json(200, {}))
+  );
+  // A page whose form holds edits; the session ends before the page changes, so there is nothing left to keep editing.
+  const DirtyForm = () => {
+    useUnsavedChanges(true);
+    return null;
+  };
+  const router = await renderInRouter(
+    <UnsavedChangesGuard>
+      <DirtyForm />
+      <NoMobileOverlay email="ada@example.com" />
+    </UnsavedChangesGuard>
+  );
+  fireEvent.click(screen.getByRole("button", { name: i18n.t("common.logout") }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/auth/login"));
+  expect(await screen.findByText("login page")).toBeTruthy();
 });
 
 test("useIsPhone follows the sm breakpoint", () => {

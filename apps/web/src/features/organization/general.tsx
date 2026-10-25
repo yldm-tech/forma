@@ -4,6 +4,7 @@ import { ShieldCheckIcon } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { CreateOrganizationModal } from "../../components/shell/create-organization-modal";
+import { useUnsavedChanges } from "../../components/shell/unsaved-changes";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
@@ -150,6 +151,7 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
     { name, displayTimeZone, surveySchedulingTimeZone },
     role
   );
+  useUnsavedChanges(changes !== null);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -359,7 +361,8 @@ const DeleteOrganization = ({
     setOpen(false);
     queryClient.removeQueries({ queryKey: organizationKeys.detail(organization.id) });
     await queryClient.invalidateQueries({ queryKey: organizationKeys.all });
-    await navigate({ to: "/" });
+    // The organization is gone, so edits still open in its other cards have nothing left to be saved to.
+    await navigate({ to: "/", ignoreBlocker: true });
   };
 
   return (

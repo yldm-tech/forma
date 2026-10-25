@@ -17,7 +17,7 @@ function TeamsSettings() {
   const { data: organization } = useSuspenseQuery(organizationQuery(organizationId));
   return (
     <PageContentWrapper>
-      <PageHeader pageTitle={t("common.teams")} />
+      <PageHeader pageTitle={t("common.members_and_teams")} />
       <MembersCard organization={organization} />
       <TeamsCard organization={organization} />
     </PageContentWrapper>

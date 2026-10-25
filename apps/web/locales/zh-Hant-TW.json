@@ -231,6 +231,7 @@
     "booked": "已預訂",
     "bottom_left": "左下",
     "bottom_right": "右下",
+    "branding_and_links": "品牌與連結",
     "cancel": "取消",
     "canceled": "已取消",
     "centered_modal": "置中彈窗",
@@ -289,6 +290,10 @@
     "disabled": "已停用",
     "disallow": "不允許",
     "discard": "捨棄",
+    "discard_changes_confirm": "捨棄變更",
+    "discard_changes_description": "此頁面有尚未儲存的變更。現在離開，這些變更將會遺失。",
+    "discard_changes_keep_editing": "繼續編輯",
+    "discard_changes_title": "捨棄變更？",
     "dismissed": "已關閉",
     "domain": "網域",
     "done": "完成",
@@ -703,6 +708,9 @@
     "landing": {
       "no_workspaces_warning_subtitle": "請聯絡您的組織擁有者以取得工作區存取權，或自行建立組織開始使用。",
       "no_workspaces_warning_title": "您的帳戶尚未有任何工作區的存取權。"
+    },
+    "members": {
+      "inactive_tooltip": "此帳戶已透過管理 API 停用。擁有者或管理者可以向 PATCH /api/v2/organizations/{organizationId}/users 傳送電子郵件 {email} 和 isActive: true 來恢復存取權限。"
     },
     "security_tip_github": "隨時掌握安全性修正：開啟<githubLink>Forma 在 GitHub 上的安全性公告</githubLink>，選擇 Watch → Custom → Releases 和 Security alerts。",
     "workspaces": {

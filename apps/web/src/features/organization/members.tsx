@@ -32,6 +32,7 @@ import {
 import { Input } from "../../components/ui/input";
 import { LoadingBlock, SettingsCard } from "../../components/ui/page";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../components/ui/tooltip";
 import { copyText } from "../../lib/clipboard";
 import { errorMessage } from "../../lib/errors";
 import { isInviteExpired } from "../../lib/invites";
@@ -203,7 +204,7 @@ const MemberTableRow = ({
         />
       </TableCell>
       <TableCell>
-        <StatusBadge row={row} />
+        <StatusBadge row={row} organizationId={organizationId} />
       </TableCell>
       {userManagementEnabled && (
         <TableCell>
@@ -226,7 +227,7 @@ const MemberTableRow = ({
   );
 };
 
-const StatusBadge = ({ row }: { row: MemberRow }) => {
+const StatusBadge = ({ row, organizationId }: { row: MemberRow; organizationId: string }) => {
   const { t, i18n } = useTranslation();
   if (row.kind === "invite") {
     if (isInviteExpired(row.invite)) return <Badge type="gray" text={t("common.expired")} size="tiny" />;
@@ -241,8 +242,32 @@ const StatusBadge = ({ row }: { row: MemberRow }) => {
       </span>
     );
   }
-  if (!row.member.isActive) return <Badge type="gray" text={t("common.inactive")} size="tiny" />;
+  if (!row.member.isActive) return <InactiveBadge organizationId={organizationId} email={row.member.email} />;
   return <Badge type="success" text={t("common.active")} size="tiny" />;
+};
+
+/**
+ * An account switched off with isActive: false, which only the v2 management API writes; the pages have no control that undoes it, so the badge says how to. Its explanation is a tooltip for the eye, reached by hover or focus, and hidden text beside the badge for a screen reader reading the table. The hidden text stays out of the badge's button: focusing the button opens the tooltip, which Radix announces as the button's description, and the explanation inside the button would be read a second time as its name.
+ */
+const InactiveBadge = ({ organizationId, email }: { organizationId: string; email: string }) => {
+  const { t } = useTranslation();
+  const restore = t("organizations.members.inactive_tooltip", { organizationId, email });
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {/* A button only so the keyboard can reach the tooltip; it does nothing when pressed. */}
+          <button
+            type="button"
+            className="focus-visible:ring-ring inline-flex cursor-default rounded-full focus-visible:ring-2 focus-visible:outline-hidden">
+            <Badge type="gray" text={t("common.inactive")} size="tiny" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-sm break-words">{restore}</TooltipContent>
+      </Tooltip>
+      <span className="sr-only">{restore}</span>
+    </TooltipProvider>
+  );
 };
 
 /** forma2's EditMembershipRole: owners and managers get a menu of the roles they may assign, everyone else sees the role. */

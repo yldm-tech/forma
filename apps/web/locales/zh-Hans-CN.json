@@ -231,6 +231,7 @@
     "booked": "已预定",
     "bottom_left": "右下",
     "bottom_right": "右下",
+    "branding_and_links": "品牌与链接",
     "cancel": "取消",
     "canceled": "已取消",
     "centered_modal": "居中弹窗",
@@ -289,6 +290,10 @@
     "disabled": "已禁用",
     "disallow": "不允许",
     "discard": "丢弃",
+    "discard_changes_confirm": "放弃更改",
+    "discard_changes_description": "此页面有未保存的更改。现在离开，这些更改将会丢失。",
+    "discard_changes_keep_editing": "继续编辑",
+    "discard_changes_title": "放弃更改？",
     "dismissed": "忽略",
     "domain": "域名",
     "done": "完成",
@@ -703,6 +708,9 @@
     "landing": {
       "no_workspaces_warning_subtitle": "请联系你的组织所有者以获取工作区访问权限，或创建自己的组织开始使用。",
       "no_workspaces_warning_title": "你的账户尚未获得任何工作区的访问权限。"
+    },
+    "members": {
+      "inactive_tooltip": "该账户已通过管理 API 停用。所有者或管理员可以向 PATCH /api/v2/organizations/{organizationId}/users 发送邮箱 {email} 和 isActive: true 来恢复访问权限。"
     },
     "security_tip_github": "及时了解安全修复：打开<githubLink>Forma 在 GitHub 上的安全公告</githubLink>，选择 Watch → Custom → Releases 和 Security alerts。",
     "workspaces": {

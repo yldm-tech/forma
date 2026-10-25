@@ -231,6 +231,7 @@
     "booked": "Booked",
     "bottom_left": "Bottom Left",
     "bottom_right": "Bottom Right",
+    "branding_and_links": "Branding & links",
     "cancel": "Cancel",
     "canceled": "Canceled",
     "centered_modal": "Centered Modal",
@@ -289,6 +290,10 @@
     "disabled": "Disabled",
     "disallow": "Do not allow",
     "discard": "Discard",
+    "discard_changes_confirm": "Discard changes",
+    "discard_changes_description": "You have unsaved changes on this page. If you leave now, they will be lost.",
+    "discard_changes_keep_editing": "Keep editing",
+    "discard_changes_title": "Discard changes?",
     "dismissed": "Dismissed",
     "domain": "Domain",
     "done": "Done",
@@ -703,6 +708,9 @@
     "landing": {
       "no_workspaces_warning_subtitle": "Reach out to your organization owner to get access to workspaces. Or create an own organization to get started.",
       "no_workspaces_warning_title": "Your account does not have access to any workspaces yet."
+    },
+    "members": {
+      "inactive_tooltip": "This account was deactivated through the management API. An owner or manager can restore access by sending PATCH /api/v2/organizations/{organizationId}/users with the email {email} and isActive: true."
     },
     "security_tip_github": "Stay informed about security fixes: open <githubLink>Forma's security advisories on GitHub</githubLink> and choose Watch → Custom → Releases and Security alerts.",
     "workspaces": {

@@ -231,6 +231,7 @@
     "booked": "予約済み",
     "bottom_left": "左下",
     "bottom_right": "右下",
+    "branding_and_links": "ブランディングとリンク",
     "cancel": "キャンセル",
     "canceled": "キャンセル済み",
     "centered_modal": "中央モーダル",
@@ -289,6 +290,10 @@
     "disabled": "無効",
     "disallow": "許可しない",
     "discard": "破棄",
+    "discard_changes_confirm": "変更を破棄",
+    "discard_changes_description": "このページには保存されていない変更があります。このまま移動すると、変更は失われます。",
+    "discard_changes_keep_editing": "編集を続ける",
+    "discard_changes_title": "変更を破棄しますか？",
     "dismissed": "非表示",
     "domain": "ドメイン",
     "done": "完了",
@@ -703,6 +708,9 @@
     "landing": {
       "no_workspaces_warning_subtitle": "ワークスペースへのアクセスを取得するには、組織のオーナーに連絡してください。または、独自の組織を作成して開始することもできます。",
       "no_workspaces_warning_title": "お使いのアカウントはまだワークスペースにアクセスできません。"
+    },
+    "members": {
+      "inactive_tooltip": "このアカウントは管理 API で無効化されています。オーナーまたはマネージャーが PATCH /api/v2/organizations/{organizationId}/users にメールアドレス {email} と isActive: true を送信すると、アクセスを復元できます。"
     },
     "security_tip_github": "セキュリティ修正の情報を受け取りましょう：<githubLink>GitHub の Forma セキュリティアドバイザリ</githubLink>を開き、Watch → Custom → Releases と Security alerts を選択してください。",
     "workspaces": {
