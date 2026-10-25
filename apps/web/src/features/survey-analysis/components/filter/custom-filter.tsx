@@ -3,7 +3,7 @@ import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey } from "@forma/types/surveys/types";
 import type { TFunction } from "i18next";
 import { Loader2 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DateRangeCalendar } from "../../../../components/ui/date-picker";
 import {
@@ -105,8 +105,8 @@ export const downloadAttachments = async (
   }
 };
 
-/** forma2's CustomFilter: the filter popover, the date range and the response download, above the summary and the response table. */
-export const CustomFilter = ({ survey }: { survey: TSurvey }) => {
+/** forma2's CustomFilter: the filter popover, the date range and the response download, above the summary and the response table. search (the response table's keyword box) sits after the controls and before the applied filter chips, so chips coming and going never move it while someone types in it. */
+export const CustomFilter = ({ survey, search }: { survey: TSurvey; search?: ReactNode }) => {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? "en-US";
   const { dateRange, setDateRange, filterCriteria } = useResponseFilter();
@@ -264,6 +264,7 @@ export const CustomFilter = ({ survey }: { survey: TSurvey }) => {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        {search}
         <AppliedFilterChips />
       </div>
       {isDatePickerOpen && (

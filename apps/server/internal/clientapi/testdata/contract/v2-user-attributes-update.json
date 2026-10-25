@@ -1,6 +1,6 @@
 {
   "case": "v2-user-attributes-update",
-  "description": "js-core setAttributes: updates an existing key (plan), the default email and language keys, and creates a number key (seats) with an informational message.",
+  "description": "js-core setAttributes: updates an existing key (plan) and the default language key, creates a number key (seats) with an informational message, and skips the email, which the SDK writes only on a verified identify (setUserId with a userHash), with an error.",
   "request": {
     "method": "POST",
     "path": "/api/v2/client/<id:workspace>/user",
@@ -38,7 +38,7 @@
       "data": {
         "state": {
           "data": {
-            "contactId": "<id:contact:user1>",
+            "contactId": "<contact-token:user1>",
             "userId": "contract-user-1",
             "segments": [
               "<id:segment:app>"
@@ -52,6 +52,9 @@
         },
         "messages": [
           "Created new attribute 'seats' with type 'number'"
+        ],
+        "errors": [
+          "Skipped attribute 'email': the SDK sets the email only on a verified identify, setUserId(userId, { userHash }). Without identity verification, set it from your server through the Management API."
         ]
       }
     }

@@ -21,6 +21,7 @@ import { hasActiveFilters } from "../../lib/filter-state";
 import { AnalysisEmptyState } from "../analysis-empty-state";
 import { CustomFilter } from "../filter/custom-filter";
 import { useResponseFilter } from "../filter/response-filter-context";
+import { ResponseKeywordSearch, hasSearchableAnswers } from "../filter/response-keyword-search";
 import { ResponseTable } from "./response-table";
 
 /**
@@ -48,6 +49,7 @@ export const ResponsePage = ({
   const tags = useQuery(tagsQuery(survey.workspaceId));
   const quotas = useQuery(quotasQuery(survey.id));
   const surveyWithRecall = useMemo(() => replaceHeadlineRecall(survey, "default"), [survey]);
+  const canSearch = useMemo(() => hasSearchableAnswers(survey), [survey]);
   const loaded = useMemo(() => responses.data?.pages.flat() ?? [], [responses.data]);
   const environmentTags = useMemo(() => (tags.data ?? []).map(toResponseTag), [tags.data]);
 
@@ -127,7 +129,7 @@ export const ResponsePage = ({
   return (
     <>
       <div className="flex min-h-9 gap-1.5">
-        <CustomFilter survey={surveyWithRecall} />
+        <CustomFilter survey={surveyWithRecall} search={canSearch && <ResponseKeywordSearch />} />
       </div>
       {responses.isError && (
         <p role="alert" className="text-sm text-red-600">

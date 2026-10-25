@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
@@ -30,6 +31,8 @@ type FilterData struct {
 	ReservedValues  map[string][]string `json:"reservedValues"`
 	VariableValues  map[string][]string `json:"variableValues"`
 	Quotas          []survey.Quota      `json:"quotas"`
+	// AttributeTypes are the data types (string, number, date) of the attribute keys Attributes lists, by key, which decide the operators the filter offers; a key the workspace no longer has is missing.
+	AttributeTypes map[string]string `json:"attributeTypes"`
 }
 
 // valueSet collects distinct values per key in the order they are first seen, up to an optional bound per key.
@@ -214,5 +217,31 @@ func (s *Service) FilterData(ctx context.Context, userID, surveyID uuid.UUID) (*
 		}
 	}
 	out.Attributes, out.Meta, out.HiddenFields, out.ReservedValues, out.VariableValues = attributes.values, meta.values, hidden.values, reserved.values, variables.values
+	if out.AttributeTypes, err = attributeTypes(ctx, s.db, sv.WorkspaceID, out.Attributes); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// attributeTypes are the data types of the workspace's attribute keys among those of attributes.
+func attributeTypes(ctx context.Context, db *gorm.DB, workspaceID uuid.UUID, attributes map[string][]string) (map[string]string, error) {
+	out := map[string]string{}
+	if len(attributes) == 0 {
+		return out, nil
+	}
+	keys := make([]string, 0, len(attributes))
+	for k := range attributes {
+		keys = append(keys, k)
+	}
+	var rows []struct {
+		Key      string
+		DataType string
+	}
+	if err := db.WithContext(ctx).Raw(`SELECT key, data_type FROM contact_attribute_keys WHERE workspace_id = ? AND key IN ?`, workspaceID, keys).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("load contact attribute types: %w", err)
+	}
+	for _, r := range rows {
+		out[r.Key] = r.DataType
+	}
 	return out, nil
 }

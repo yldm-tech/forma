@@ -12,6 +12,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 )
 
@@ -45,6 +46,9 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.POST("/password/reset", h.resetPassword)
 	g.POST("/password/change", h.sessions.Require(), h.changePassword)
 	g.POST("/password/reset-link", h.sessions.Require(), h.requestResetLink)
+	g.GET("/sessions", h.sessions.Require(), h.listSessions)
+	g.POST("/sessions/revoke-others", h.sessions.Require(), h.revokeOtherSessions)
+	g.DELETE("/sessions/:id", h.sessions.Require(), h.revokeSession)
 	g.POST("/email/change", h.sessions.Require(), h.requestEmailChange)
 	g.POST("/email/verify", h.confirmEmailChange)
 	g.POST("/account/delete", h.sessions.Require(), h.deleteAccount)
@@ -480,6 +484,71 @@ func (h *Handler) requestResetLink(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, successResponse{Success: true})
+}
+
+type sessionResponse struct {
+	ID uuid.UUID `json:"id"`
+	// Current marks the session of the request, the browser asking.
+	Current      bool      `json:"current"`
+	CreatedAt    time.Time `json:"createdAt"`
+	LastActiveAt time.Time `json:"lastActiveAt"`
+	ExpiresAt    time.Time `json:"expiresAt"`
+	// IPAddress and UserAgent are what the browser sent when it signed in; null when it sent none.
+	IPAddress *string `json:"ipAddress"`
+	UserAgent *string `json:"userAgent"`
+}
+
+type sessionsResponse struct {
+	// Sessions are the user's unexpired sessions, the current one first, then the most recently active; never null.
+	Sessions []sessionResponse `json:"sessions"`
+}
+
+func (h *Handler) listSessions(c *gin.Context) {
+	a := actor(c)
+	list, err := h.svc.listSessions(c.Request.Context(), a)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	res := sessionsResponse{Sessions: make([]sessionResponse, 0, len(list))}
+	for _, s := range list {
+		res.Sessions = append(res.Sessions, sessionResponse{
+			ID: s.ID, Current: s.ID == a.SessionID, CreatedAt: s.CreatedAt, LastActiveAt: s.LastActiveAt, ExpiresAt: s.ExpiresAt, IPAddress: s.IPAddress, UserAgent: s.UserAgent,
+		})
+	}
+	c.Header("Cache-Control", "no-store")
+	c.JSON(http.StatusOK, res)
+}
+
+// revokeSession ends one of the caller's sessions. Ending the current one also clears the browser's cookie, as sign-out does.
+func (h *Handler) revokeSession(c *gin.Context) {
+	a := actor(c)
+	id, ok := rowid.Parse(c.Param("id"))
+	if !ok {
+		httpapi.Fail(c, apperr.NotFound("Session", ""))
+		return
+	}
+	if err := h.svc.revokeSession(c.Request.Context(), a, id); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	if id == a.SessionID {
+		h.cookies.clear(c, h.cookies.session)
+	}
+	c.Status(http.StatusNoContent)
+}
+
+type revokedSessionsResponse struct {
+	Revoked int64 `json:"revoked"`
+}
+
+func (h *Handler) revokeOtherSessions(c *gin.Context) {
+	n, err := h.svc.revokeOtherSessions(c.Request.Context(), actor(c))
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, revokedSessionsResponse{Revoked: n})
 }
 
 type emailChangeRequest struct {

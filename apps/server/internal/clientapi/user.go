@@ -16,6 +16,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/langcode"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/sdkidentity"
 )
 
 const (
@@ -41,7 +42,19 @@ func segmentDevice(userAgent string) string {
 // existenceRevealingMessages are withheld from the public identify: they would tell anyone holding the public workspace id whether an address or user id is a contact there.
 var existenceRevealingMessages = map[string]bool{"email_already_exists": true, "userid_already_exists": true}
 
-// identify is forma2's client user route (v1 and v2), the SDK's setUserId and setAttributes: the contact with that userId, created on first sight, its attributes merged with the ones sent, and its state for the SDK's targeting: the segments it is in, its displays and responses, and its language in the legacy form older SDKs match.
+// Identity verification answers (sdkidentity).
+const (
+	msgIdentityNotVerified = "Identity verification failed: this workspace requires a userHash that verifies the userId"
+	msgUserHashNotString   = "userHash must be a string"
+	msgUserHashMismatch    = "The userHash does not verify this userId under the workspace's identity secret, so the user was identified without verification."
+	msgUserHashNoSecret    = "The workspace has no identity secret, so the userHash was ignored and the user was identified without verification."
+	msgEmailNotVerified    = "Skipped attribute 'email': the SDK sets the email only on a verified identify, setUserId(userId, { userHash }). Without identity verification, set it from your server through the Management API."
+	msgProtectedSkipped    = "Skipped protected attribute(s): %s. Protected attributes are set only through the Management API, a CSV import or the contact page, never by the SDK."
+)
+
+// identify is forma2's client user route (v1 and v2), the SDK's setUserId and setAttributes: the contact with that userId, created on first sight, its attributes merged with the ones sent, and its state for the SDK's targeting: the segments it is in, which app surveys it was shown and answered, and its language in the legacy form older SDKs match.
+//
+// The workspace id in the snippet is public, so the caller is trusted only as far as the workspace's identity settings allow (sdkidentity): a workspace that requires verification refuses an identify whose userHash does not verify the userId, before any contact is found or created; email is written only on a verified identify; protected attributes never. A refused attribute is dropped and reported in errors, the others are written.
 func (h *Handler) identify(c *gin.Context) {
 	ctx := c.Request.Context()
 	raw := jsTrim(c.Param("workspaceId"))
@@ -63,6 +76,15 @@ func (h *Handler) identify(c *gin.Context) {
 	if !isObject || userID == "" {
 		writeError(c, badRequest("userId is required and must be a string", nil))
 		return
+	}
+	userHash := ""
+	if v, present := obj["userHash"]; present && v != nil {
+		s, isString := v.(string)
+		if !isString {
+			writeError(c, badRequest(msgUserHashNotString, nil))
+			return
+		}
+		userHash = s
 	}
 	var attrs []jsvalue.Member
 	if a, ok := obj["attributes"]; ok && a != nil {
@@ -98,7 +120,26 @@ func (h *Handler) identify(c *gin.Context) {
 		}
 		attrs = kept
 	}
-	state, err := h.updateUser(ctx, ws.ID, userID, attrs, segmentDevice(c.Request.UserAgent()))
+	identity, err := sdkidentity.Load(ctx, h.db, h.cipher, ws.ID)
+	if err != nil {
+		h.fail(c, err, msgUserState)
+		return
+	}
+	verified := identity.Verified(userID, userHash)
+	if identity.Required && !verified {
+		writeError(c, forbidden(msgIdentityNotVerified, nil))
+		return
+	}
+	var refused []string
+	switch {
+	case userHash != "" && identity.Secret == "":
+		refused = append(refused, msgUserHashNoSecret)
+	case userHash != "" && !verified:
+		refused = append(refused, msgUserHashMismatch)
+	}
+	attrs, skipped := writableAttributes(attrs, identity, verified)
+	refused = append(refused, skipped...)
+	state, err := h.updateUser(ctx, ws.ID, userID, attrs, segmentDevice(c.Request.UserAgent()), refused, identity, verified)
 	if err != nil {
 		h.fail(c, err, msgUserState)
 		return
@@ -106,8 +147,28 @@ func (h *Handler) identify(c *gin.Context) {
 	writeData(c, state, noStore)
 }
 
-// updateUser is forma2's updateUser: it answers {state, messages?, errors?}, the state's segments evaluated for device.
-func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID string, attrs []jsvalue.Member, device string) (fields, error) {
+// writableAttributes drops the attributes the identify may not write and reports each refusal: email unless the identify is verified, and every protected key.
+func writableAttributes(attrs []jsvalue.Member, identity *sdkidentity.Settings, verified bool) ([]jsvalue.Member, []string) {
+	var refusals, protected []string
+	kept := make([]jsvalue.Member, 0, len(attrs))
+	for _, m := range attrs {
+		switch {
+		case m.Key == "email" && !verified:
+			refusals = append(refusals, msgEmailNotVerified)
+		case identity.IsProtected(m.Key):
+			protected = append(protected, m.Key)
+		default:
+			kept = append(kept, m)
+		}
+	}
+	if len(protected) > 0 {
+		refusals = append(refusals, fmt.Sprintf(msgProtectedSkipped, strings.Join(protected, ", ")))
+	}
+	return kept, refusals
+}
+
+// updateUser is forma2's updateUser: it answers {state, messages?, errors?}, the state's segments evaluated for device. refused are the errors the identify already has, reported ahead of the contact's own. identity and verified are the workspace's identity settings and whether the identify's userHash verified the userId, which the state's contact token records.
+func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID string, attrs []jsvalue.Member, device string, refused []string, identity *sdkidentity.Settings, verified bool) (fields, error) {
 	found, err := h.contacts.FindOrCreateByUserID(ctx, workspaceID, userID)
 	if err != nil {
 		return nil, err
@@ -140,7 +201,8 @@ func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID 
 		}
 	}
 
-	var messages, errs []string
+	var messages []string
+	errs := refused
 	if len(normalized) > 0 && changes(normalized, found.Attributes) {
 		in, err := attributeInputs(normalized)
 		if err != nil {
@@ -166,7 +228,7 @@ func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID 
 		messages = append(messages, contact.Message{Code: "invalid_language_ignored", Params: map[string]string{"language": *dropped}}.Text())
 	}
 
-	data, err := h.userState(ctx, workspaceID, found.ID, userID, device)
+	data, err := h.userState(ctx, workspaceID, found.ID, userID, device, identity, verified)
 	if err != nil {
 		return nil, err
 	}
@@ -269,8 +331,8 @@ func (h *Handler) workspaceLanguage(ctx context.Context, workspaceID uuid.UUID, 
 	return "", nil
 }
 
-// userState is the identified contact's targeting data: the segments it is in on device (none when they cannot be evaluated), its displays newest first, the surveys it responded to, and when it was last shown a survey.
-func (h *Handler) userState(ctx context.Context, workspaceID, contactID uuid.UUID, userID, device string) (fields, error) {
+// userState is the identified contact's targeting data: an opaque token in place of its id (sdkidentity.Settings.ContactToken), which records whether the identify was verified, the segments it is in on device (none when they cannot be evaluated), the keys of the app surveys it was shown, once per display and newest first, and of those it responded to (sdkidentity.SurveyKey), and when it was last shown any survey. Surveys of other types are left out, as the SDK never shows them, and no survey is named by its id: anyone holding the public workspace id can call identify.
+func (h *Handler) userState(ctx context.Context, workspaceID, contactID uuid.UUID, userID, device string, identity *sdkidentity.Settings, verified bool) (fields, error) {
 	db := h.db.WithContext(ctx)
 	var displays []contact.DisplayRow
 	if err := db.Raw(`SELECT survey_id, created_at FROM displays WHERE contact_id = ? ORDER BY created_at DESC, id DESC`, contactID).Scan(&displays).Error; err != nil {
@@ -285,20 +347,55 @@ func (h *Handler) userState(ctx context.Context, workspaceID, contactID uuid.UUI
 		h.log.WarnContext(ctx, "Failed to get person segment IDs, returning empty array", "workspaceId", workspaceID, "contactId", contactID, "err", err)
 		segments = []uuid.UUID{}
 	}
-	displayRefs := make([]any, len(displays))
-	for i, d := range displays {
-		displayRefs[i] = fields{{"surveyId", d.SurveyID}, {"createdAt", jsvalue.ISOString(d.CreatedAt)}}
+	appSurveys, err := h.appSurveys(ctx, workspaceID, displays, responses)
+	if err != nil {
+		return nil, err
 	}
-	responded := make([]uuid.UUID, len(responses))
-	for i, r := range responses {
-		responded[i] = r.SurveyID
+	displayKeys := []string{}
+	for _, d := range displays {
+		if appSurveys[d.SurveyID] {
+			displayKeys = append(displayKeys, sdkidentity.SurveyKey(userID, d.SurveyID.String()))
+		}
+	}
+	responseKeys := []string{}
+	for _, r := range responses {
+		if appSurveys[r.SurveyID] {
+			responseKeys = append(responseKeys, sdkidentity.SurveyKey(userID, r.SurveyID.String()))
+		}
 	}
 	var lastDisplayAt any
 	if len(displays) > 0 {
 		lastDisplayAt = jsvalue.ISOString(displays[0].CreatedAt)
 	}
+	token, err := identity.ContactToken(h.cfg, workspaceID, contactID, verified)
+	if err != nil {
+		return nil, err
+	}
 	return fields{
-		{"contactId", contactID}, {"userId", userID}, {"segments", segments}, {"displays", displayRefs},
-		{"responses", responded}, {"lastDisplayAt", lastDisplayAt},
+		{"contactId", token}, {"userId", userID}, {"segments", segments}, {"displays", displayKeys},
+		{"responses", responseKeys}, {"lastDisplayAt", lastDisplayAt},
 	}, nil
+}
+
+// appSurveys is which of the surveys a contact was shown or answered are the workspace's app surveys.
+func (h *Handler) appSurveys(ctx context.Context, workspaceID uuid.UUID, displays []contact.DisplayRow, responses []contact.ResponseRow) (map[uuid.UUID]bool, error) {
+	var ids []uuid.UUID
+	for _, d := range displays {
+		ids = append(ids, d.SurveyID)
+	}
+	for _, r := range responses {
+		ids = append(ids, r.SurveyID)
+	}
+	out := map[uuid.UUID]bool{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	var app []uuid.UUID
+	if err := h.db.WithContext(ctx).Raw(`SELECT id FROM surveys WHERE workspace_id = ? AND type = 'app' AND id IN ?`, workspaceID, ids).Scan(&app).Error; err != nil {
+		return nil, fmt.Errorf("load app surveys: %w", err)
+	}
+	for _, id := range app {
+		out[id] = true
+	}
+	return out, nil
 }

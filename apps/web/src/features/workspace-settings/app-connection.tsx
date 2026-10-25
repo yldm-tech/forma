@@ -4,7 +4,6 @@ import {
   AlertTriangleIcon,
   CheckIcon,
   ChevronDownIcon,
-  CopyIcon,
   ExternalLinkIcon,
   GlobeIcon,
   RotateCcwIcon,
@@ -19,12 +18,13 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { IdBadge } from "../../components/ui/id-badge";
 import { LoadingBlock, PageContentWrapper, PageHeader, SettingsCard } from "../../components/ui/page";
-import { copyText } from "../../lib/clipboard";
 import { cn } from "../../lib/cn";
 import { errorMessage } from "../../lib/errors";
 import { organizationSettingsPath } from "../../lib/navigation";
 import { type AppConnection, type WorkspaceDetail, appConnectionQuery } from "../../lib/queries/workspaces";
 import { sdkReferenceUrl, sdkSnippets } from "../../lib/sdk-snippets";
+import { CodeBlock } from "./code-block";
+import { SdkIdentityCard } from "./sdk-identity";
 
 /** forma2's app connection page: whether the SDK has reached the workspace, the ids it is set up with, and how to install it. */
 export const AppConnectionPage = ({ workspace }: { workspace: WorkspaceDetail }) => {
@@ -62,7 +62,10 @@ export const AppConnectionPage = ({ workspace }: { workspace: WorkspaceDetail })
             </Button>
           </div>
         ) : (
-          <ConnectionCards connection={connection.data} onRecheck={() => void connection.refetch()} />
+          <>
+            <ConnectionCards connection={connection.data} onRecheck={() => void connection.refetch()} />
+            <SdkIdentityCard workspace={workspace} />
+          </>
         )}
       </div>
     </PageContentWrapper>
@@ -149,25 +152,6 @@ const WidgetStatusIndicator = ({
           {t("workspace.app-connection.recheck")}
         </Button>
       )}
-    </div>
-  );
-};
-
-const CodeBlock = ({ children }: { children: string }) => {
-  const { t } = useTranslation();
-  return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-2 right-2"
-        aria-label={t("common.copy")}
-        onClick={() => void copyText(children, t)}>
-        <CopyIcon className="size-4" />
-      </Button>
-      <pre className="overflow-x-auto rounded-md border border-slate-200 bg-white p-4 pr-12 font-mono text-xs text-slate-800">
-        <code>{children}</code>
-      </pre>
     </div>
   );
 };

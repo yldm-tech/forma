@@ -165,6 +165,8 @@ func TestFilterDataOffersTheValuesOfTheNewestResponses(t *testing.T) {
 			contactAttributes: ptr(fmt.Sprintf(`{"email":"u%d@example.com","seats":3}`, i%2))})
 	}
 	e.response(sv, row{at: at(100), data: `{"utm":42}`, meta: `{"url":5}`})
+	// Types are listed for the keys the responses hold (email is one of the keys every workspace starts with), not renewal, which none holds.
+	e.exec(`INSERT INTO contact_attribute_keys (workspace_id, key, data_type) VALUES (?, 'seats', 'number'), (?, 'renewal', 'date')`, ws, ws)
 
 	var got FilterData
 	decode(t, e.request(owner, http.MethodGet, "/api/app/surveys/"+sv.String()+"/filter-data", nil), &got)
@@ -173,6 +175,9 @@ func TestFilterDataOffersTheValuesOfTheNewestResponses(t *testing.T) {
 	}
 	if want := map[string][]string{"email": {"u1@example.com", "u0@example.com"}, "seats": {"3"}}; !reflect.DeepEqual(got.Attributes, want) {
 		t.Errorf("attributes %v", got.Attributes)
+	}
+	if want := map[string]string{"email": "string", "seats": "number"}; !reflect.DeepEqual(got.AttributeTypes, want) {
+		t.Errorf("attribute types %v", got.AttributeTypes)
 	}
 	if got.Meta["url"] == nil || len(got.Meta["url"]) != 0 || !reflect.DeepEqual(got.Meta["browser"], []string{"Chrome"}) || !reflect.DeepEqual(got.Meta["country"], []string{"DE"}) {
 		t.Errorf("meta %v", got.Meta)

@@ -17,12 +17,13 @@ import {
   filterSurveys,
   getAnonymousSamplingId,
   getLanguageCode,
+  getSurveyKey,
   shouldDisplayBasedOnPercentage,
 } from "@/lib/common/utils";
 import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
 import { mockSurvey } from "@/lib/survey/tests/__mocks__/widget.mock";
 import * as widget from "@/lib/survey/widget";
-import { type TWorkspaceStateSurvey } from "@/types/config";
+import { type TConfigUpdateInput, type TWorkspaceStateSurvey } from "@/types/config";
 
 vi.mock("@/lib/common/config", () => ({
   Config: {
@@ -142,15 +143,15 @@ describe("widget-file", () => {
     }).not.toThrow();
   });
 
-  const mockUserConfig = (contactId: string | null): void => {
+  const mockUserConfig = (userId: string | null): void => {
     getInstanceConfigMock.mockReturnValue({
-      get: vi.fn().mockReturnValue({ user: { data: { contactId } } }),
+      get: vi.fn().mockReturnValue({ user: { data: { userId, contactId: userId ? "ct1.token" : null } } }),
     } as unknown as Config);
   };
 
   test("triggerSurvey skips if shouldDisplayBasedOnPercentage returns false", async () => {
     getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
-    mockUserConfig("contact_1");
+    mockUserConfig("user_1");
     (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(false);
 
     await widget.triggerSurvey(mockSurvey);
@@ -160,13 +161,14 @@ describe("widget-file", () => {
     );
   });
 
-  test("triggerSurvey samples an identified user by contact id", async () => {
-    mockUserConfig("contact_1");
+  // Not by the contact token, which is sealed under the server's encryption key and changes when it rotates or when the user is first verified: that would move the user in or out of running samples.
+  test("triggerSurvey samples an identified user by userId", async () => {
+    mockUserConfig("user_1");
     (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(false);
 
     await widget.triggerSurvey({ ...mockSurvey, displayPercentage: 10 });
 
-    expect(shouldDisplayBasedOnPercentage).toHaveBeenCalledWith(10, "contact_1", mockSurvey.id);
+    expect(shouldDisplayBasedOnPercentage).toHaveBeenCalledWith(10, "user_1", mockSurvey.id);
     expect(getAnonymousSamplingId).not.toHaveBeenCalled();
   });
 
@@ -182,7 +184,7 @@ describe("widget-file", () => {
 
   test("triggerSurvey short-circuits via renderWidget when a survey is already running", async () => {
     widget.setIsSurveyRunning(true);
-    mockUserConfig("contact_1");
+    mockUserConfig("user_1");
     (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(true);
 
     await widget.triggerSurvey(mockSurvey);
@@ -1009,6 +1011,24 @@ describe("widget-file", () => {
         onFinished: (responseId?: string) => void;
       };
     };
+
+    test("records the display and the response by survey key, never by survey id", async () => {
+      const callbacks = await renderAndGetEventCallbacks();
+      const config = Config.getInstance() as unknown as { update: Mock };
+
+      callbacks.onDisplayCreated();
+      callbacks.onResponseCreated("resp_123");
+
+      const key = getSurveyKey(null, mockSurvey.id);
+      const updates = config.update.mock.calls.map(([update]) => update as TConfigUpdateInput);
+      expect(updates.some((u) => u.user.data.displays.length === 1 && u.user.data.displays[0] === key)).toBe(
+        true
+      );
+      expect(
+        updates.some((u) => u.user.data.responses.length === 1 && u.user.data.responses[0] === key)
+      ).toBe(true);
+      expect(JSON.stringify(updates.map((u) => u.user.data))).not.toContain(mockSurvey.id);
+    });
 
     test("survey_shown on render; response_submitted with the acked responseId on create and finish", async () => {
       delete (window as { dataLayer?: unknown }).dataLayer;

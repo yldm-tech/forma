@@ -72,8 +72,9 @@ export const getSurveyExclusionReason = (
   userState: TUserState
 ): string | null => {
   const { displays, responses, lastDisplayAt, segments, userId } = userState.data;
-  const shown = displays.filter((display) => display.surveyId === survey.id).length;
-  const responded = responses.includes(survey.id);
+  const key = getSurveyKey(userId, survey.id);
+  const shown = displays.filter((display) => display === key).length;
+  const responded = responses.includes(key);
 
   switch (survey.displayOption) {
     case "respondMultiple":
@@ -193,6 +194,29 @@ export const hashString = (value: string): number => {
   hash = Math.imul(hash, 0xc2b2ae35);
   hash ^= hash >>> 16;
   return hash >>> 0;
+};
+
+/**
+ * How the user state names a survey for one user: `hashString("<userId>:<surveyId>")` as eight hex digits, an anonymous visitor's with an empty userId. The server computes the same key (apps/server/internal/sdkidentity SurveyKey), so the state it sends says which surveys the user saw and answered without listing survey ids, which anyone holding the public workspace id could otherwise read for any userId.
+ */
+export const getSurveyKey = (userId: string | null, surveyId: string): string =>
+  hashString(`${userId ?? ""}:${surveyId}`)
+    .toString(16)
+    .padStart(8, "0");
+
+const SURVEY_KEY_PATTERN = /^[0-9a-f]{8}$/;
+
+/**
+ * A stored user state's history as survey keys. An SDK from before the keys stored `displays` as `{ surveyId, createdAt }` and `responses` as survey ids; each becomes its key, so a survey the user already saw or answered stays left out until the next identify replaces the state. Entries that are neither are dropped.
+ */
+export const toSurveyKeys = (userId: string | null, entries: unknown): string[] => {
+  if (!Array.isArray(entries)) return [];
+  return entries.flatMap((entry: unknown) => {
+    if (typeof entry === "string")
+      return [SURVEY_KEY_PATTERN.test(entry) ? entry : getSurveyKey(userId, entry)];
+    const surveyId = (entry as { surveyId?: unknown } | null)?.surveyId;
+    return typeof surveyId === "string" ? [getSurveyKey(userId, surveyId)] : [];
+  });
 };
 
 /** The user's sampling bucket for one survey, in [0, 9999]. The survey id is part of the key so that a 10% survey and another 10% survey do not reach the exact same 10% of users. */

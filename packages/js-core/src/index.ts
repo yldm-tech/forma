@@ -12,7 +12,12 @@ import { EmbeddedDataStore, type TEmbeddedDataInput } from "@/lib/survey/embedde
 import { checkPageUrl } from "@/lib/survey/no-code-action";
 import * as Attribute from "@/lib/user/attribute";
 import * as User from "@/lib/user/user";
-import { type TAttributeValue, type TConfigInput, type TLegacyConfigInput } from "@/types/config";
+import {
+  type TAttributeValue,
+  type TConfigInput,
+  type TLegacyConfigInput,
+  type TSetUserIdOptions,
+} from "@/types/config";
 import { type TTrackProperties } from "@/types/survey";
 
 const queue = CommandQueue.getInstance();
@@ -51,10 +56,16 @@ const setup = async (setupConfig: TConfigInput): Promise<void> => {
   }, 0);
 };
 
-const setUserId = async (userId: string): Promise<void> => {
-  await queue.add("setUserId()", User.setUserId, CommandType.UserAction, true, userId);
+/**
+ * Identify the visitor as the contact with this userId.
+ * @param userId - Your user's id, up to 255 characters
+ * @param options - `userHash`: the HMAC-SHA256 of userId under the workspace's identity secret, in hex, computed by your server. A workspace that requires verified identities refuses an identify without it, and only a verified identify may set the email.
+ */
+const setUserId = async (userId: string, options?: TSetUserIdOptions): Promise<void> => {
+  await queue.add("setUserId()", User.setUserId, CommandType.UserAction, true, userId, options);
 };
 
+/** Set the user's email. The server writes it only for a user identified with a valid userHash. */
 const setEmail = async (email: string): Promise<void> => {
   await queue.add("setEmail()", Attribute.setAttributes, CommandType.UserAction, true, { email });
 };
@@ -198,6 +209,6 @@ const forma = {
 
 type TForma = typeof forma;
 export type { TForma };
-export type { TAttributeValue } from "@/types/config";
+export type { TAttributeValue, TSetUserIdOptions } from "@/types/config";
 export type { TFormaEventName, TFormaEventPayloads, TSetupFailureCode } from "@/lib/common/events";
 export default forma;

@@ -89,7 +89,8 @@ func TestTwoFactorEnrolment(t *testing.T) {
 		t.Fatal("the secret or a backup code is stored in the clear")
 	}
 	// Until it is confirmed, the password alone still signs in.
-	e.browser().signIn("ada@example.com", strongPassword)
+	before := e.browser()
+	before.signIn("ada@example.com", strongPassword)
 
 	expectStatus(t, b.post("/auth/two-factor/enable", map[string]string{"code": "000000"}), http.StatusBadRequest, CodeInvalidCode)
 	r := b.post("/auth/two-factor/enable", map[string]string{"code": e.codeFor(secret, 0)})
@@ -97,8 +98,9 @@ func TestTwoFactorEnrolment(t *testing.T) {
 	if r.json()["message"] != "Two factor authentication enabled" || !e.twoFactorEnabled(id) || b.get("/auth/me").json()["twoFactorEnabled"] != true {
 		t.Fatalf("enable: %s", r.Body.String())
 	}
-	// Enabling keeps the current session, as in forma2.
+	// Enabling keeps the current session, as in forma2, and signs out every other one: a session opened with the password alone does not outlive the second factor.
 	expectStatus(t, b.post("/test/protected", nil), http.StatusOK, "")
+	expectStatus(t, before.post("/test/protected", nil), http.StatusUnauthorized, apperr.CodeNotAuthenticated)
 
 	other := e.browser()
 	other.signInPending()
