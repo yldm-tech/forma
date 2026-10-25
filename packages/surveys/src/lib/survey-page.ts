@@ -102,10 +102,10 @@ export const getSurveyRespondentName = (
 /**
  * Whether the survey has instructions worth exposing on every page.
  *
- * The welcome card's subheader is the only instructions text a survey has — there is no
- * `survey.description` — and today it disappears the moment the respondent advances past the
- * welcome card. Checks every localization rather than just `default`, because a survey may leave
- * the default empty and fill only its translations.
+ * The welcome card's subheader is the only instructions text a survey has (there is no `survey.description`), and it disappears the moment the respondent advances past the welcome card. Checks every localization rather than just `default`, because a survey may leave the default empty and fill only its translations.
+ *
+ * Only an enabled welcome card has instructions. Every template ships a default subheader, so a disabled card still carries text its creator never sees (onboarding mode does not even show the card to edit), and announcing it on every page put words in the creator's mouth.
  */
 export const hasSurveyInstructions = (survey: TJsWorkspaceStateSurvey): boolean =>
+  survey.welcomeCard.enabled &&
   Object.values(survey.welcomeCard.subheader ?? {}).some((value) => value.trim().length > 0);
