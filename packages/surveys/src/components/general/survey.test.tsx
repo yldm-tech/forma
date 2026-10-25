@@ -406,6 +406,141 @@ describe("Survey offline restore", () => {
   });
 });
 
+// F1 (R-03): a link survey that saves progress goes on where the respondent left off after a reload, without the offline mode's prompts.
+describe("Survey progress persistence", () => {
+  const renderWith = (props: Partial<Parameters<typeof Survey>[0]> = {}) =>
+    render(
+      <Survey
+        appUrl="http://localhost:3000"
+        workspaceId="ws1234567890123456789012"
+        survey={baseSurvey}
+        styling={{} as any}
+        isBrandingEnabled={false}
+        languageCode="en"
+        isSpamProtectionEnabled={false}
+        getSetIsResponseSendingFinished={() => {}}
+        {...props}
+      />
+    );
+
+  const leavePage = () => {
+    const event = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    offlineStorageMocks.addPendingResponse.mockResolvedValue(1);
+    offlineStorageMocks.countPendingResponses.mockResolvedValue(0);
+    offlineStorageMocks.getPendingResponses.mockResolvedValue([]);
+    offlineStorageMocks.removePendingResponse.mockResolvedValue(undefined);
+    offlineStorageMocks.clearSurveyProgress.mockResolvedValue(undefined);
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(undefined);
+    offlineStorageMocks.patchSurveyProgressSnapshot.mockResolvedValue(undefined);
+    offlineStorageMocks.saveSurveyProgress.mockResolvedValue(undefined);
+    apiClientMocks.createDisplay.mockResolvedValue({ ok: true, data: { id: "display-created" } });
+    apiClientMocks.createResponse.mockResolvedValue({ ok: true, data: { id: "response-created" } });
+    apiClientMocks.updateResponse.mockResolvedValue({ ok: true, data: { quotaFull: false } });
+    apiClientMocks.getResponseIdByDisplayId.mockResolvedValue({ ok: true, data: { responseId: null } });
+    window.parent.postMessage = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  test("goes on in the same response and display after a reload, and never asks before the page is left", async () => {
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({
+        surveyStateSnapshot: { ...makeProgress().surveyStateSnapshot, responseId: "response-saved" },
+      })
+    );
+
+    renderWith({ persistProgress: true });
+
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "response-saved", data: { q2: "block-2-answer" } })
+      )
+    );
+    expect(apiClientMocks.createDisplay).not.toHaveBeenCalled();
+    expect(apiClientMocks.createResponse).not.toHaveBeenCalled();
+    expect(leavePage()).toBe(false);
+  });
+
+  test("offline mode still asks before a survey half answered is left", async () => {
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(makeProgress());
+
+    renderWith({ persistProgress: true, offlineSupport: true });
+
+    await screen.findByTestId("submit-block-2");
+    await waitFor(() => expect(leavePage()).toBe(true));
+  });
+
+  test("keeps nothing in the browser when the survey does not save progress", async () => {
+    renderWith({ persistProgress: false });
+
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalled());
+
+    expect(offlineStorageMocks.getSurveyProgress).not.toHaveBeenCalled();
+    expect(offlineStorageMocks.saveSurveyProgress).not.toHaveBeenCalled();
+    expect(offlineStorageMocks.addPendingResponse).not.toHaveBeenCalled();
+  });
+
+  test("starts afresh when the stored progress belongs to another single-use link", async () => {
+    offlineStorageMocks.getSurveyProgress.mockResolvedValue(
+      makeProgress({
+        surveyStateSnapshot: {
+          ...makeProgress().surveyStateSnapshot,
+          responseId: "someone-elses-response",
+          singleUseId: "single-use-1",
+        },
+      })
+    );
+
+    renderWith({ persistProgress: true, mode: "inline", singleUseId: "single-use-2" });
+
+    await waitFor(() => expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id));
+    await waitFor(() => expect(apiClientMocks.createDisplay).toHaveBeenCalled());
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ singleUseId: "single-use-2", data: { q1: "block-1-answer" } })
+      )
+    );
+    expect(apiClientMocks.updateResponse).not.toHaveBeenCalled();
+  });
+
+  test("forgets the stored progress once the server has the final answer", async () => {
+    renderWith({ persistProgress: true });
+
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalled());
+    expect(offlineStorageMocks.clearSurveyProgress).not.toHaveBeenCalled();
+    expect(offlineStorageMocks.saveSurveyProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ surveyId: baseSurvey.id, blockId: "block-2" })
+    );
+
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(expect.objectContaining({ finished: true }))
+    );
+    await waitFor(() => expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id));
+  });
+
+  test("keeps no progress for a survey shown on a customer's site", async () => {
+    renderWith({ persistProgress: true, survey: { ...baseSurvey, type: "app" } as TJsWorkspaceStateSurvey });
+
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalled());
+    expect(offlineStorageMocks.getSurveyProgress).not.toHaveBeenCalled();
+    expect(offlineStorageMocks.saveSurveyProgress).not.toHaveBeenCalled();
+  });
+});
+
 // R-01 and R-02: the answers a respondent gives reach the server even when the host re-renders the survey or the connection drops for a while.
 describe("Survey response delivery", () => {
   const serverError = {

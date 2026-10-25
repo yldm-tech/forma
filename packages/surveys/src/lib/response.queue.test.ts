@@ -501,16 +501,39 @@ describe("ResponseQueue", () => {
     expect(offlineQueue["pendingDbIds"].has(responseUpdate)).toBe(false);
   });
 
-  test("processQueue returns false when offline and persistOffline is enabled", async () => {
+  test("processQueue holds the answers back while offline in offline mode", async () => {
+    const offlineQueue = new ResponseQueue(
+      getConfig({ persistOffline: true, holdWhileOffline: true, surveyId: "s1" }),
+      getSurveyState()
+    );
+    offlineQueue.queue.push(responseUpdate);
+    const sendSpy = vi.spyOn(offlineQueue, "sendResponse");
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    try {
+      const result = await offlineQueue.processQueue();
+      expect(result.success).toBe(false);
+      expect(sendSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    }
+  });
+
+  // Progress persistence alone (a link survey that saves progress, F1) stores the answers but sends them as a survey without it does, so a final answer that cannot be sent is reported rather than waiting silently.
+  test("processQueue still sends while offline when answers are only persisted", async () => {
     const offlineQueue = new ResponseQueue(
       getConfig({ persistOffline: true, surveyId: "s1" }),
       getSurveyState()
     );
     offlineQueue.queue.push(responseUpdate);
+    const sendSpy = vi.spyOn(offlineQueue, "sendResponse").mockResolvedValue(ok(true));
     Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
-    const result = await offlineQueue.processQueue();
-    expect(result.success).toBe(false);
-    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    try {
+      const result = await offlineQueue.processQueue();
+      expect(result.success).toBe(true);
+      expect(sendSpy).toHaveBeenCalledWith(responseUpdate);
+    } finally {
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    }
   });
 
   test("processQueue returns false when isSyncing is true", async () => {
@@ -524,7 +547,8 @@ describe("ResponseQueue", () => {
     expect(result.success).toBe(false);
   });
 
-  test("processQueue bails out when counting IndexedDB entries rejects", async () => {
+  // An IndexedDB that cannot be read (storage blocked in a frame, a browser without it) must not stop the answers: with progress saving on by default, that would be every answer on such a browser.
+  test("processQueue sends from memory when counting IndexedDB entries rejects", async () => {
     const { countPendingResponsesStrict } = await import("./offline-storage");
     const error = new Error("count failed");
     vi.mocked(countPendingResponsesStrict).mockRejectedValueOnce(error);
@@ -538,8 +562,9 @@ describe("ResponseQueue", () => {
 
     const result = await offlineQueue.processQueue();
 
-    expect(result.success).toBe(false);
-    expect(sendSpy).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+    expect(sendSpy).toHaveBeenCalledWith(responseUpdate);
+    expect(offlineQueue.queue).toHaveLength(0);
     expect(console.error).toHaveBeenCalledWith(
       "Forma: Failed to count pending responses in IndexedDB",
       expect.objectContaining({ error, surveyId: "s1" })

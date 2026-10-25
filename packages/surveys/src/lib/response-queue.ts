@@ -18,7 +18,10 @@ interface QueueConfig {
   appUrl: string;
   workspaceId: string;
   retryAttempts: number;
+  /** Stores every answer in IndexedDB until the server has it, so answers a closed or reloaded page could not send are sent on the next visit (syncPersistedResponses). */
   persistOffline?: boolean;
+  /** The survey's offline mode: while the browser reports it is offline, answers wait in IndexedDB without a send being attempted, and a failed send is not reported. Only takes effect with persistOffline. */
+  holdWhileOffline?: boolean;
   surveyId?: string;
   onResponseCreated?: (responseId: string) => void;
   onResponseSendingFailed?: (responseUpdate: TResponseUpdate, errorCode?: TResponseErrorCodesEnum) => void;
@@ -277,8 +280,8 @@ export class ResponseQueue {
       return { success: false };
     }
 
-    // If offline and persistence is enabled, don't attempt to send — data is safe in IndexedDB.
-    if (this.config.persistOffline && typeof navigator !== "undefined" && !navigator.onLine) {
+    // In offline mode, don't attempt to send while offline — data is safe in IndexedDB.
+    if (this.isHoldingWhileOffline()) {
       return { success: false };
     }
 
@@ -297,7 +300,8 @@ export class ResponseQueue {
         await this.retryProcessedDbIdCleanup();
         pendingCount = await this.countPersistedResponses();
       } catch {
-        return { success: false };
+        // IndexedDB cannot be read (storage blocked in this frame, a browser without it): it cannot hand the answers to syncPersistedResponses either, so the queue in memory is sent as it is rather than not at all.
+        pendingCount = 0;
       }
 
       // Re-check after await — another processQueue/sync may have started during the yield
@@ -327,8 +331,8 @@ export class ResponseQueue {
       this.handleSuccessfulResponse(responseUpdate, result.quotaFullResponse);
       return { success: true };
     } else {
-      // If offline persistence is enabled and we're now offline, don't treat it as a failure
-      if (this.config.persistOffline && typeof navigator !== "undefined" && !navigator.onLine) {
+      // In offline mode, a send that failed because the browser went offline is not a failure
+      if (this.isHoldingWhileOffline()) {
         this.isRequestInProgress = false;
         this.startRecovery();
         return { success: false };
@@ -362,6 +366,14 @@ export class ResponseQueue {
       this.handleFailedResponse(responseUpdate, result.isRecaptchaError, result.errorCode);
       return { success: false };
     }
+  }
+
+  private isHoldingWhileOffline(): boolean {
+    return (
+      Boolean(this.config.persistOffline && this.config.holdWhileOffline) &&
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    );
   }
 
   private setDelayed(isDelayed: boolean) {

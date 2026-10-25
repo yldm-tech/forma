@@ -86,6 +86,26 @@ const restoreSurveyStateFromSnapshot = (
   };
 };
 
+// How long a respondent's progress is kept in the browser.
+const PROGRESS_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+// An id that is absent, null or empty is no id.
+const sameId = (a: string | null | undefined, b: string | null | undefined): boolean =>
+  (a === undefined || a === "" ? null : a) === (b === undefined || b === "" ? null : b);
+
+/** Whether stored progress was left by the respondent this page is for: the same single-use link, personal (contact) link and user id. */
+const isSameRespondent = (
+  snapshot: SerializedSurveyState | undefined,
+  surveyState: SurveyState | null
+): boolean => {
+  if (!snapshot || !surveyState) return true;
+  return (
+    sameId(snapshot.singleUseId, surveyState.singleUseId) &&
+    sameId(snapshot.contactId, surveyState.contactId) &&
+    sameId(snapshot.userId, surveyState.userId)
+  );
+};
+
 interface VariableStackEntry {
   questionId: string;
   variables: TResponseVariables;
@@ -139,6 +159,7 @@ export function Survey({
   onLanguageChange,
   onPageChange,
   placement,
+  persistProgress = false,
   offlineSupport = false,
   onOfflineStatusChange,
   showCardlessPreviewLogoSlot = false,
@@ -183,15 +204,25 @@ export function Survey({
   const [currentVariables, setCurrentVariables] = useState<TResponseVariables>({});
 
   const isLinkSurvey = survey.type === "link";
-  const offlinePersistEnabled = offlineSupport && isLinkSurvey && !isPreviewMode && !!appUrl && !!workspaceId;
+  // A link survey keeps the respondent's progress in IndexedDB when it saves progress (persistProgress, the survey's isProgressSavingEnabled) and in offline mode, which needs it too.
+  const progressPersistEnabled =
+    (persistProgress || offlineSupport) && isLinkSurvey && !isPreviewMode && !!appUrl && !!workspaceId;
+  // Offline mode adds to it what a respondent who just reloads does not need: answers wait while the browser is offline, the ending shows while answers are still stored, and leaving a survey half answered asks first.
+  const offlineModeEnabled = offlineSupport && progressPersistEnabled;
 
   const persistSurveyStateSnapshot = useCallback(
     async (snapshotPatch: Partial<SerializedSurveyState>) => {
-      if (!offlinePersistEnabled) return;
+      if (!progressPersistEnabled) return;
       await patchSurveyProgressSnapshot(survey.id, snapshotPatch);
     },
-    [offlinePersistEnabled, survey.id]
+    [progressPersistEnabled, survey.id]
   );
+
+  // Once the server has the final answer, the progress kept in the browser is no longer needed, and on a shared device it should not outlive the response.
+  const clearSavedProgress = useCallback(() => {
+    if (!progressPersistEnabled) return;
+    void clearSurveyProgress(survey.id);
+  }, [progressPersistEnabled, survey.id]);
 
   // `onResponseCreateOrUpdate` runs on every question submit, but a response is only *created* on the
   // first submit — later submits update it. `onResponseCreated` must therefore fire once, not per
@@ -216,12 +247,14 @@ export function Survey({
     getSetIsError,
     getSetIsResponseSendingFinished,
     persistSurveyStateSnapshot,
+    clearSavedProgress,
     triggerResponseCreatedOnce,
   });
   queueCallbacksRef.current = {
     getSetIsError,
     getSetIsResponseSendingFinished,
     persistSurveyStateSnapshot,
+    clearSavedProgress,
     triggerResponseCreatedOnce,
   };
 
@@ -235,7 +268,8 @@ export function Survey({
           appUrl,
           workspaceId,
           retryAttempts: 4,
-          persistOffline: offlinePersistEnabled,
+          persistOffline: progressPersistEnabled,
+          holdWhileOffline: offlineModeEnabled,
           surveyId: survey.id,
           onResponseSendingFailed: (_, errorCode?: TResponseErrorCodesEnum) => {
             setShowError(true);
@@ -247,6 +281,7 @@ export function Survey({
             setIsResponseSendingFinished(true);
             setShowError(false);
             setErrorType(undefined);
+            queueCallbacksRef.current.clearSavedProgress();
 
             queueCallbacksRef.current.getSetIsResponseSendingFinished?.((_prev) => {});
           },
@@ -258,6 +293,7 @@ export function Survey({
               setIsResponseSendingFinished(true);
               setIsSurveyFinished(true);
               setBlockId(quotaInfo.endingCardId);
+              queueCallbacksRef.current.clearSavedProgress();
             }
           },
           onResponseCreated: (responseId) => {
@@ -402,7 +438,7 @@ export function Survey({
   const isOnline = useOnlineStatus();
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
-  const [progressRestored, setProgressRestored] = useState(!offlinePersistEnabled);
+  const [progressRestored, setProgressRestored] = useState(!progressPersistEnabled);
 
   // Notify parent of offline status changes (for rendering alert in the React layer)
   useEffect(() => {
@@ -516,10 +552,10 @@ export function Survey({
   const displayCreatedRef = useRef(false);
 
   useEffect(() => {
-    if (offlinePersistEnabled && !progressRestored) return;
+    if (progressPersistEnabled && !progressRestored) return;
 
     // If we restored a session that already has a displayId, skip creating a new one.
-    if (offlinePersistEnabled && surveyState?.displayId) {
+    if (progressPersistEnabled && surveyState?.displayId) {
       displayCreatedRef.current = true;
       return;
     }
@@ -594,9 +630,9 @@ export function Survey({
     });
   }, [blockId, localSurvey, onPageChange, t]);
 
-  // --- Offline support: restore progress from IndexedDB on mount ---
+  // --- Progress persistence: restore progress from IndexedDB on mount ---
   useEffect(() => {
-    if (!offlinePersistEnabled) return;
+    if (!progressPersistEnabled) return;
 
     let cancelled = false;
 
@@ -608,9 +644,11 @@ export function Survey({
         return;
       }
 
-      // Discard stale progress (older than 24 hours)
-      const MAX_AGE_MS = 24 * 60 * 60 * 1000;
-      if (Date.now() - progress.updatedAt > MAX_AGE_MS) {
+      // Discard stale progress (older than 24 hours), and progress another respondent left in this browser: a different single-use link, personal link or user id for the same survey starts afresh instead of going on in someone else's response.
+      if (
+        Date.now() - progress.updatedAt > PROGRESS_MAX_AGE_MS ||
+        !isSameRespondent(progress.surveyStateSnapshot, surveyState)
+      ) {
         await clearSurveyProgress(survey.id);
         setProgressRestored(true);
         return;
@@ -722,13 +760,13 @@ export function Survey({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- should only run on mount
   }, []);
 
-  // --- Offline support: save progress to IndexedDB on submit (see onSubmit) ---
+  // --- Progress persistence: save progress to IndexedDB on submit (see onSubmit) ---
 
-  // --- Offline support: sync pending responses when coming back online ---
+  // --- Progress persistence: send the answers stored by an earlier visit, and in offline mode those stored while offline, once online ---
   const isSyncingRef = useRef(false);
 
   useEffect(() => {
-    if (!offlinePersistEnabled || !responseQueue || !progressRestored) return;
+    if (!progressPersistEnabled || !responseQueue || !progressRestored) return;
 
     // Reset the guard when going offline so a new sync can start next time we're online
     if (!isOnline) {
@@ -775,29 +813,26 @@ export function Survey({
     };
 
     void syncPending();
-  }, [isOnline, offlinePersistEnabled, responseQueue, progressRestored, survey.id]);
+  }, [isOnline, progressPersistEnabled, responseQueue, progressRestored, survey.id]);
 
-  // --- Warn before leaving mid-survey or with unsent offline responses ---
+  // --- Offline mode: warn before leaving mid-survey or with unsent offline responses ---
+  // Not for progress persistence alone: a respondent who leaves can come back to where they were, so stopping every one of them with the browser's dialog would cost more than it saves.
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       // Warn if user has started answering but hasn't finished the survey (only when offline support is active)
-      if (offlinePersistEnabled && history.length > 0 && !isSurveyFinished) {
+      if (offlineModeEnabled && history.length > 0 && !isSurveyFinished) {
         e.preventDefault();
         return;
       }
       // Warn if there are unsent offline responses
-      if (
-        offlinePersistEnabled &&
-        responseQueue &&
-        (responseQueue.queue.length > 0 || pendingSyncCount > 0)
-      ) {
+      if (offlineModeEnabled && responseQueue && (responseQueue.queue.length > 0 || pendingSyncCount > 0)) {
         e.preventDefault();
       }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [history.length, isSurveyFinished, offlinePersistEnabled, responseQueue, pendingSyncCount]);
+  }, [history.length, isSurveyFinished, offlineModeEnabled, responseQueue, pendingSyncCount]);
 
   const onChange = (responseDataUpdate: TResponseData) => {
     const updatedResponseData = { ...responseData, ...responseDataUpdate };
@@ -1171,10 +1206,10 @@ export function Survey({
   // When offline with persistence, the response is safely stored in IndexedDB.
   // Mark it as "sending finished" for the UI (ending card) without triggering cleanup.
   useEffect(() => {
-    if (offlinePersistEnabled && !isOnline && isSurveyFinished && !isResponseSendingFinished) {
+    if (offlineModeEnabled && !isOnline && isSurveyFinished && !isResponseSendingFinished) {
       setIsResponseSendingFinished(true);
     }
-  }, [offlinePersistEnabled, isOnline, isSurveyFinished, isResponseSendingFinished]);
+  }, [offlineModeEnabled, isOnline, isSurveyFinished, isResponseSendingFinished]);
 
   useEffect(() => {
     if (isResponseSendingFinished && isSurveyFinished) {
@@ -1269,8 +1304,8 @@ export function Survey({
     const newHistory = [...history, blockId];
     setHistory(newHistory);
 
-    // --- Offline support: save progress on each submit ---
-    if (offlinePersistEnabled) {
+    // --- Progress persistence: save progress on each submit ---
+    if (progressPersistEnabled) {
       const newBlockId = finished ? endingId || localSurvey.endings[0]?.id || "end" : nextBlockId || blockId;
 
       void saveSurveyProgress({
@@ -1433,7 +1468,7 @@ export function Survey({
               fullSizeCards={fullSizeCards}
               cardMaxHeight={cardMaxHeight}
               isCardless={isCardless}
-              isOfflineWithPending={offlinePersistEnabled && !isOnline && isSurveyFinished}
+              isOfflineWithPending={offlineModeEnabled && !isOnline && isSurveyFinished}
             />
           );
         }
