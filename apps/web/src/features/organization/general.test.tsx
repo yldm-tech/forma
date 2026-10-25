@@ -168,6 +168,19 @@ describe("OrganizationGeneralPage", () => {
     }
   );
 
+  // An organization takes its creator's browser zone, which another engine may list under another name or not at all: the menu shows that zone, not "UTC (default)".
+  test("the display zone menu shows a stored zone the browser does not list", async () => {
+    const listed = Intl.supportedValuesOf("timeZone");
+    const unlisted = ["Asia/Kolkata", "Europe/Kyiv", "Asia/Calcutta"].find((zone) => !listed.includes(zone));
+    if (!unlisted) throw new Error("the browser lists every zone this test tries");
+    renderPage({ storageConfigured: true, isFormaCloud: true, overrides: { displayTimeZone: unlisted } });
+    const menu = (await screen.findByLabelText(
+      t("workspace.settings.general.display_time_zone")
+    )) as HTMLSelectElement;
+    expect(menu.value).toBe(unlisted);
+    expect(menu.selectedOptions[0]?.textContent).toBe(unlisted);
+  });
+
   test("the scheduling zone menu shows a stored zone the browser does not list, and is described by its explanation", async () => {
     const listed = Intl.supportedValuesOf("timeZone");
     const unlisted = ["Asia/Kolkata", "Europe/Kyiv", "Asia/Calcutta"].find((zone) => !listed.includes(zone));

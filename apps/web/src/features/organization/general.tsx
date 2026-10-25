@@ -129,7 +129,8 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
   const [nameError, setNameError] = useState<string | null>(null);
   const update = useUpdateOrganization(organization.id);
   const queryClient = useQueryClient();
-  const zones = useMemo(() => ianaTimeZones(), []);
+  const storedDisplayTimeZone = organization.displayTimeZone;
+  const zones = useMemo(() => ianaTimeZones(storedDisplayTimeZone), [storedDisplayTimeZone]);
   const { instanceTimeZone } = organization.surveyScheduling;
   const storedSchedulingTimeZone = organization.surveySchedulingTimeZone;
   const schedulingZoneOptions = useMemo(

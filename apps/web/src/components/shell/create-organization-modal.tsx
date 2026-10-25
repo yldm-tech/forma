@@ -15,7 +15,7 @@ import { Label } from "../ui/label";
 /**
  * forma2's CreateOrganizationModal, opened from the organization switcher and from organization settings. Any signed-in user may create an organization.
  *
- * A submission stays in progress from the click until the browser is on the new organization: after the POST returns, the creator's permissions take a few seconds to arrive (untilAuthorized) and the navigation follows, and a button that came back during that wait could create a second organization, as names are not unique. The ref ignores a second submit in the same tick, before the disabled button has rendered; the dialog cannot be dismissed meanwhile, since the navigation would follow anyway.
+ * A submission stays in progress from the click until the browser is on the new organization: after the POST returns, the creator's permissions take a few seconds to arrive (untilAuthorized) and the navigation follows, and a button that came back during that wait could create a second organization, as names are not unique. The ref ignores a second submit in the same tick, before the disabled button has rendered; a dismissal meanwhile is held back, since the navigation would follow anyway, and takes effect if the create fails.
  */
 export const CreateOrganizationModal = ({
   open,
@@ -30,6 +30,7 @@ export const CreateOrganizationModal = ({
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitting = useRef(false);
+  const closeRequested = useRef(false);
   const create = useCreateOrganization();
 
   const close = () => {
@@ -41,6 +42,7 @@ export const CreateOrganizationModal = ({
     e.preventDefault();
     if (submitting.current || name.trim() === "") return;
     submitting.current = true;
+    closeRequested.current = false;
     setIsSubmitting(true);
     try {
       const organization = await create.mutateAsync(name.trim());
@@ -50,6 +52,8 @@ export const CreateOrganizationModal = ({
       await navigate({ href: `/organizations/${organization.id}/` });
       close();
     } catch (error) {
+      // A dismissal held back while the create ran takes effect once it has failed. Chrome closes the native dialog on a repeated Escape however the cancel event is handled, and an open state left true then would keep the dialog from ever opening again.
+      if (closeRequested.current) close();
       toast.error(errorMessage(t, error));
     } finally {
       submitting.current = false;
@@ -62,7 +66,8 @@ export const CreateOrganizationModal = ({
       open={open}
       onOpenChange={(next) => {
         if (next) setOpen(true);
-        else if (!submitting.current) close();
+        else if (submitting.current) closeRequested.current = true;
+        else close();
       }}
       disableCloseOnOutsideClick>
       <DialogHeader>

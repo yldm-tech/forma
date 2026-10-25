@@ -17,7 +17,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { MultiSelect } from "../ui/multi-select";
 
-/** forma2's CreateWorkspaceModal: a name, and optionally the teams that get access to the new workspace. A submission stays in progress from the click until the browser is on the new workspace, through the few seconds its permissions take to arrive after the POST (untilAuthorized); a button that came back during that wait sent a second POST. The ref ignores a second submit in the same tick, before the disabled button has rendered, and the dialog cannot be dismissed meanwhile, since the navigation would follow anyway. */
+/** forma2's CreateWorkspaceModal: a name, and optionally the teams that get access to the new workspace. A submission stays in progress from the click until the browser is on the new workspace, through the few seconds its permissions take to arrive after the POST (untilAuthorized); a button that came back during that wait sent a second POST. The ref ignores a second submit in the same tick, before the disabled button has rendered, and a dismissal meanwhile is held back, since the navigation would follow anyway, and takes effect if the create fails. */
 export const CreateWorkspaceModal = ({
   open,
   setOpen,
@@ -35,6 +35,7 @@ export const CreateWorkspaceModal = ({
   const [nameError, setNameError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitting = useRef(false);
+  const closeRequested = useRef(false);
   const teams = useQuery({ ...teamsQuery(organizationId), enabled: open });
   const create = useCreateWorkspace(organizationId);
 
@@ -59,6 +60,7 @@ export const CreateWorkspaceModal = ({
       return;
     }
     submitting.current = true;
+    closeRequested.current = false;
     setIsSubmitting(true);
     try {
       const workspace = await create.mutateAsync({ name: name.trim(), teamIds });
@@ -68,6 +70,8 @@ export const CreateWorkspaceModal = ({
       await navigate({ href: workspaceHomePath(workspace.id) });
       close();
     } catch (error) {
+      // A dismissal held back while the create ran takes effect once it has failed. Chrome closes the native dialog on a repeated Escape however the cancel event is handled, and an open state left true then would keep the dialog from ever opening again.
+      if (closeRequested.current) close();
       toast.error(errorMessage(t, error));
     } finally {
       submitting.current = false;
@@ -80,7 +84,8 @@ export const CreateWorkspaceModal = ({
       open={open}
       onOpenChange={(next) => {
         if (next) setOpen(true);
-        else if (!submitting.current) close();
+        else if (submitting.current) closeRequested.current = true;
+        else close();
       }}>
       <DialogHeader>
         <DialogTitle>{t("common.create_workspace")}</DialogTitle>
