@@ -151,3 +151,40 @@ describe("encodeResponseFilter / decodeResponseFilter", () => {
     expect(decodeResponseFilter({ s: "unknown" })).toBeNull();
   });
 });
+
+describe("keyword search and typed attributes", () => {
+  const typedFilter: SelectedFilterValue = {
+    filter: [
+      {
+        elementType: { id: "seats", label: "seats", type: OptionsType.ATTRIBUTES, dataType: "number" },
+        filterType: { filterValue: "Is greater than", filterComboBoxValue: "20" },
+      },
+    ],
+    responseStatus: "all",
+    keyword: "onboarding",
+  };
+
+  test("a keyword alone makes the state non-default and survives the link", () => {
+    const searched: SelectedFilterValue = { ...defaultFilter, keyword: "onboarding" };
+    expect(isDefaultResponseFilterState(searched, defaultDateRange)).toBe(false);
+    expect(isDefaultResponseFilterState({ ...defaultFilter, keyword: " " }, defaultDateRange)).toBe(true);
+    expect(encodeResponseFilter(searched, defaultDateRange)).toEqual({ k: "onboarding" });
+    expect(decodeResponseFilterParam(encodeResponseFilterParam(searched, defaultDateRange) ?? "")).toEqual({
+      selectedFilter: searched,
+    });
+  });
+
+  test("an attribute row keeps its type through the link", () => {
+    const param = encodeResponseFilterParam(typedFilter, defaultDateRange);
+    expect(decodeResponseFilterParam(param ?? "")?.selectedFilter).toEqual(typedFilter);
+  });
+
+  test("an unknown type is dropped, so the row filters as text", () => {
+    const decoded = decodeResponseFilter({ f: [{ i: "seats", l: "seats", t: "Attributes", y: "money" }] });
+    expect(decoded?.selectedFilter.filter[0]?.elementType).toEqual({
+      id: "seats",
+      label: "seats",
+      type: "Attributes",
+    });
+  });
+});

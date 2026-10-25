@@ -325,13 +325,15 @@ func TestCreateResponseMeta(t *testing.T) {
 	}
 }
 
-// v2's contactId attaches the response only to a contact of the workspace; v1's userId only to an existing contact.
+// v2's contactId, the token an identify answered or a contact id, attaches the response only to a contact of the workspace; v1's userId only to an existing contact.
 func TestCreateResponseContacts(t *testing.T) {
 	e := newEnv(t)
 	ws, other := e.workspace(), e.workspace()
 	sv := e.survey(ws)
-	mine := stateData(t, e.identify(t, ws, map[string]any{"userId": "mine"}))["contactId"]
-	theirs := stateData(t, e.identify(t, other, map[string]any{"userId": "theirs"}))["contactId"]
+	mineState := stateData(t, e.identify(t, ws, map[string]any{"userId": "mine"}))
+	mineToken, mine := mineState["contactId"], e.contactOf(t, ws, mineState).String()
+	theirsState := stateData(t, e.identify(t, other, map[string]any{"userId": "theirs"}))
+	theirsToken, theirs := theirsState["contactId"], e.contactOf(t, other, theirsState).String()
 	contactOf := func(r result) any {
 		var c *string
 		_ = e.db.Raw(`SELECT contact_id::text FROM responses WHERE id = ?`, r.data(t)["id"]).Row().Scan(&c)
@@ -340,11 +342,15 @@ func TestCreateResponseContacts(t *testing.T) {
 		}
 		return *c
 	}
-	if got := contactOf(e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}, "contactId": mine})); got != mine {
-		t.Fatalf("own contact: %v", got)
+	for _, ref := range []any{mineToken, mine} {
+		if got := contactOf(e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}, "contactId": ref})); got != mine {
+			t.Fatalf("own contact by %v: %v", ref, got)
+		}
 	}
-	if got := contactOf(e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}, "contactId": theirs})); got != nil {
-		t.Fatalf("another workspace's contact: %v", got)
+	for _, ref := range []any{theirsToken, theirs, "ct1.not-a-token"} {
+		if got := contactOf(e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}, "contactId": ref})); got != nil {
+			t.Fatalf("another workspace's contact by %v: %v", ref, got)
+		}
 	}
 	if got := contactOf(e.post(t, respond(ws, "v1"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}, "userId": "mine"})); got != mine {
 		t.Fatalf("v1 userId: %v", got)

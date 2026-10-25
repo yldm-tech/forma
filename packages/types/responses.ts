@@ -239,6 +239,36 @@ const ZTypedFieldFilterCondition = z.union([
   ZResponseFilterCriteriaIsNotSet,
 ]);
 
+/** A date contact attribute compared by its day (YYYY-MM-DD, UTC): before, after or on it. */
+const ZContactAttributeDateCondition = z.object({
+  op: z.enum(["isBefore", "isAfter", "isSameDay"]),
+  value: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+/**
+ * Condition grammar for the contact attribute snapshot a response holds. The attribute's type picks the subset the UI offers: a string attribute takes equality with a string value and the text ops, a number attribute equality and the comparisons with a number value (compared as numbers even though the snapshot stores them as text), a date attribute the day ops above; every type can also match on presence.
+ */
+const ZContactAttributeFilterCondition = z.union([
+  ZResponseFilterCriteriaDataEquals,
+  ZResponseFilterCriteriaDataNotEquals,
+  ZResponseFilterCriteriaContains,
+  ZResponseFilterCriteriaDoesNotContain,
+  ZResponseFilterCriteriaStartsWith,
+  ZResponseFilterCriteriaDoesNotStartWith,
+  ZResponseFilterCriteriaEndsWith,
+  ZResponseFilterCriteriaDoesNotEndWith,
+  ZResponseFilterCriteriaDataLessThan,
+  ZResponseFilterCriteriaDataLessEqual,
+  ZResponseFilterCriteriaDataGreaterEqual,
+  ZResponseFilterCriteriaDataGreaterThan,
+  ZResponseFilterCriteriaIsSet,
+  ZResponseFilterCriteriaIsNotSet,
+  ZContactAttributeDateCondition,
+]);
+
+/** One condition on a key, or several that must all hold, which is how a range on one field (a rating above 2 and below 8) is sent. */
+const oneOrMany = <T extends z.ZodType>(condition: T) => z.union([condition, z.array(condition).min(1)]);
+
 const ZQuotasFilterCriteriaScreenedIn = z.object({
   op: z.literal("screenedIn"),
 });
@@ -261,49 +291,42 @@ export const ZResponseFilterCriteria = z.object({
     })
     .optional(),
 
-  contactAttributes: z
-    .record(
-      z.string(),
-      z.object({
-        op: z.enum(["equals", "notEquals"]),
-        value: z.union([z.string(), z.number()]),
-      })
-    )
-    .optional(),
+  contactAttributes: z.record(z.string(), oneOrMany(ZContactAttributeFilterCondition)).optional(),
 
   data: z
     .record(
       z.string(),
-      z.union([
-        ZResponseFilterCriteriaDataLessThan,
-        ZResponseFilterCriteriaDataLessEqual,
-        ZResponseFilterCriteriaDataGreaterEqual,
-        ZResponseFilterCriteriaDataGreaterThan,
-        ZResponseFilterCriteriaDataIncludesOne,
-        ZResponseFilterCriteriaDataIncludesAll,
-        ZResponseFilterCriteriaDataEquals,
-        ZResponseFilterCriteriaDataNotEquals,
-        ZResponseFilterCriteriaDataAccepted,
-        ZResponseFilterCriteriaDataClicked,
-        ZResponseFilterCriteriaDataSubmitted,
-        ZResponseFilterCriteriaDataSkipped,
-        ZResponseFilterCriteriaDataUploaded,
-        ZResponseFilterCriteriaDataNotUploaded,
-        ZResponseFilterCriteriaDataBooked,
-        ZResponseFilterCriteriaMatrix,
-        ZResponseFilterCriteriaIsEmpty,
-        ZResponseFilterCriteriaIsNotEmpty,
-        ZResponseFilterCriteriaIsAnyOf,
-        ZResponseFilterCriteriaFilledOut,
-        // Text ops for string-typed ingested Embedded Data fields, which filter through `data`
-        // under their storage key (ENG-1848).
-        ZResponseFilterCriteriaContains,
-        ZResponseFilterCriteriaDoesNotContain,
-        ZResponseFilterCriteriaStartsWith,
-        ZResponseFilterCriteriaDoesNotStartWith,
-        ZResponseFilterCriteriaEndsWith,
-        ZResponseFilterCriteriaDoesNotEndWith,
-      ])
+      oneOrMany(
+        z.union([
+          ZResponseFilterCriteriaDataLessThan,
+          ZResponseFilterCriteriaDataLessEqual,
+          ZResponseFilterCriteriaDataGreaterEqual,
+          ZResponseFilterCriteriaDataGreaterThan,
+          ZResponseFilterCriteriaDataIncludesOne,
+          ZResponseFilterCriteriaDataIncludesAll,
+          ZResponseFilterCriteriaDataEquals,
+          ZResponseFilterCriteriaDataNotEquals,
+          ZResponseFilterCriteriaDataAccepted,
+          ZResponseFilterCriteriaDataClicked,
+          ZResponseFilterCriteriaDataSubmitted,
+          ZResponseFilterCriteriaDataSkipped,
+          ZResponseFilterCriteriaDataUploaded,
+          ZResponseFilterCriteriaDataNotUploaded,
+          ZResponseFilterCriteriaDataBooked,
+          ZResponseFilterCriteriaMatrix,
+          ZResponseFilterCriteriaIsEmpty,
+          ZResponseFilterCriteriaIsNotEmpty,
+          ZResponseFilterCriteriaIsAnyOf,
+          ZResponseFilterCriteriaFilledOut,
+          // Text ops for open text answers and for string-typed ingested Embedded Data fields, which filter through `data` under their storage key (ENG-1848). They ignore case.
+          ZResponseFilterCriteriaContains,
+          ZResponseFilterCriteriaDoesNotContain,
+          ZResponseFilterCriteriaStartsWith,
+          ZResponseFilterCriteriaDoesNotStartWith,
+          ZResponseFilterCriteriaEndsWith,
+          ZResponseFilterCriteriaDoesNotEndWith,
+        ])
+      )
     )
     .optional(),
 
@@ -314,8 +337,8 @@ export const ZResponseFilterCriteria = z.object({
    *   The name→storage-path mapping is owned by `buildWhereClause`, which also drops names the
    *   survey's declared fields shadow — filters fail closed, consistent with recall/logic.
    */
-  variables: z.record(z.string(), ZTypedFieldFilterCondition).optional(),
-  reserved: z.record(z.string(), ZTypedFieldFilterCondition).optional(),
+  variables: z.record(z.string(), oneOrMany(ZTypedFieldFilterCondition)).optional(),
+  reserved: z.record(z.string(), oneOrMany(ZTypedFieldFilterCondition)).optional(),
 
   tags: z
     .object({
@@ -327,39 +350,48 @@ export const ZResponseFilterCriteria = z.object({
   others: z
     .record(
       z.string(),
-      z.object({
-        op: z.enum(["equals", "notEquals"]),
-        value: z.union([z.string(), z.number()]),
-      })
+      oneOrMany(
+        z.object({
+          op: z.enum(["equals", "notEquals"]),
+          value: z.union([z.string(), z.number()]),
+        })
+      )
     )
     .optional(),
 
   meta: z
     .record(
       z.string(),
-      z.union([
-        ZResponseFilterCriteriaDataEquals,
-        ZResponseFilterCriteriaDataNotEquals,
-        ZResponseFilterCriteriaContains,
-        ZResponseFilterCriteriaDoesNotContain,
-        ZResponseFilterCriteriaStartsWith,
-        ZResponseFilterCriteriaDoesNotStartWith,
-        ZResponseFilterCriteriaEndsWith,
-        ZResponseFilterCriteriaDoesNotEndWith,
-      ])
+      oneOrMany(
+        z.union([
+          ZResponseFilterCriteriaDataEquals,
+          ZResponseFilterCriteriaDataNotEquals,
+          ZResponseFilterCriteriaContains,
+          ZResponseFilterCriteriaDoesNotContain,
+          ZResponseFilterCriteriaStartsWith,
+          ZResponseFilterCriteriaDoesNotStartWith,
+          ZResponseFilterCriteriaEndsWith,
+          ZResponseFilterCriteriaDoesNotEndWith,
+        ])
+      )
     )
     .optional(),
 
   quotas: z
     .record(
       ZId,
-      z.union([
-        ZQuotasFilterCriteriaScreenedIn,
-        ZQuotasFilterCriteriaScreenedOut,
-        ZQuotasFilterCriteriaScreenedOutNotInQuota,
-      ])
+      oneOrMany(
+        z.union([
+          ZQuotasFilterCriteriaScreenedIn,
+          ZQuotasFilterCriteriaScreenedOut,
+          ZQuotasFilterCriteriaScreenedOutNotInQuota,
+        ])
+      )
     )
     .optional(),
+
+  /** A keyword one of the response's free-text answers (open text, address, contact info) contains, ignoring case. */
+  search: z.string().optional(),
 });
 
 export const ZResponseContact = z.object({

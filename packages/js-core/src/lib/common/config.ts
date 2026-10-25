@@ -1,5 +1,5 @@
 import { JS_LOCAL_STORAGE_KEY } from "@/lib/common/constants";
-import { wrapThrows } from "@/lib/common/utils";
+import { toSurveyKeys, wrapThrows } from "@/lib/common/utils";
 import type { TConfig, TConfigUpdateInput } from "@/types/config";
 import { type Result, err, ok } from "@/types/error";
 
@@ -48,6 +48,12 @@ export class Config {
         // This is a hack to get around the fact that we don't have a proper
         // way to validate the config yet.
         const parsedConfig = JSON.parse(savedConfig) as TConfig;
+        // A user state an older SDK stored names surveys by id; read it as survey keys.
+        const userData = parsedConfig.user?.data as TConfig["user"]["data"] | undefined;
+        if (userData) {
+          userData.displays = toSurveyKeys(userData.userId, userData.displays);
+          userData.responses = toSurveyKeys(userData.userId, userData.responses);
+        }
         return ok(parsedConfig);
       }
     }

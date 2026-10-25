@@ -17,12 +17,17 @@ export enum OptionsType {
   QUOTAS = "Quotas",
 }
 
+/** A contact attribute key's data type (contact_attribute_keys.data_type). */
+export type TContactAttributeDataType = "string" | "number" | "date";
+
 /** One thing a filter row can filter on: an element, a tag, an attribute, a field or a quota. */
 export interface ElementOption {
   label: string;
   elementType?: TSurveyElementTypeEnum;
   type: OptionsType;
   id: string;
+  /** A contact attribute's type, which decides its operators and how its value is sent. Carried in the row (and in ?filter=), since the criteria are built without the filter data. */
+  dataType?: TContactAttributeDataType;
 }
 
 export interface ElementOptions {
@@ -63,6 +68,8 @@ export type TResponseStatus = "all" | "complete" | "partial";
 export interface SelectedFilterValue {
   filter: FilterValue[];
   responseStatus: TResponseStatus;
+  /** The keyword search over the response table: a word one of the response's free-text answers holds. Absent or empty when there is none. */
+  keyword?: string;
 }
 
 export interface DateRange {

@@ -42,6 +42,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
 	surveyv3 "github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/sdkidentity"
 	"github.com/yldm-tech/forma/apps/server/internal/storage"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/emailembed"
@@ -126,7 +127,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 	r := httpserver.NewEngine(cfg, log)
 	v3 := v3api.NewMiddleware(cfg, nil, nil)
 	actionClasses, tags := actionclass.NewHandler(nil, sessions, v3), tag.NewHandler(nil, sessions, v3, nil)
-	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil), surveys, contact.NewHandler(nil, sessions), actionClasses, tags, ai.NewHandler(nil, nil, sessions), workflows, billing.NewHandler(nil, sessions), plain.NewHandler(cfg, nil, sessions))
+	mountAppAPI(r, p, auth.NewHandler(cfg, nil, sessions, nil), sso, org.NewHandler(nil, sessions), workspace.NewHandler(nil, sessions), team.NewHandler(nil, sessions), invite.NewHandler(nil, sessions), apikey.NewHandler(nil, sessions, nil), surveys, contact.NewHandler(nil, sessions), actionClasses, tags, ai.NewHandler(nil, nil, sessions), workflows, billing.NewHandler(nil, sessions), plain.NewHandler(cfg, nil, sessions), sdkidentity.NewHandler(nil, sessions))
 	billing.NewWebhookHandler(nil, log).Register(r)
 	surveys.RegisterV3(r)
 	workflows.RegisterV3(r)
@@ -138,7 +139,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		t.Fatal(err)
 	}
 	linksurvey.NewHandler(cfg, nil, nil, web, log).Register(r)
-	clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, log).Register(r)
+	clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, log).Register(r)
 
 	want := map[string]bool{
 		"GET /s/:surveyId":                                                            true,
@@ -189,6 +190,8 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"POST /api/app/workspaces/:workspaceId/tags":                                  true,
 		"DELETE /api/app/workspaces/:workspaceId/languages/:languageId":               true,
 		"GET /api/app/workspaces/:workspaceId/app-connection":                         true,
+		"PATCH /api/app/workspaces/:workspaceId/sdk-identity":                         true,
+		"POST /api/app/workspaces/:workspaceId/sdk-identity/secret":                   true,
 		"GET /api/v3/action-classes":                                                  true,
 		"GET /api/v3/tags":                                                            true,
 		"POST /api/v3/tags/:tagId/merge":                                              true,
@@ -321,7 +324,7 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		ai.NewHandler(nil, nil, sessions),
 		storage.NewHandler(cfg, nil, nil, sessions, nil, nil, nil, nil, log),
 		linksurvey.NewHandler(cfg, nil, nil, web, log),
-		clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, log),
+		clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, log),
 		webhook.NewHandler(nil, sessions),
 		webhook.NewV1Handler(nil, v1, log),
 		mgmtapi.NewHandler(cfg, nil, nil, v1, nil, nil, nil, nil, nil, sessions, nil, nil, nil, nil, nil, nil, log),
@@ -341,5 +344,6 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		contactsurvey.NewHandler(nil, sessions),
 		emailembed.NewHandler(nil, sessions),
 		plain.NewHandler(cfg, nil, sessions),
+		sdkidentity.NewHandler(nil, sessions),
 	)
 }
