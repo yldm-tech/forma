@@ -156,7 +156,7 @@ func textValues(attrs map[string]attributeRow) map[string]string {
 
 // updateAttributes is forma2's updateAttributes (apps/web/modules/contacts/lib/attributes.ts). With deleteRemoved, the contact editor's full form, a stored value whose key the update leaves out is deleted unless it is one of the default keys; without it, the SDK's identify, the update is merged over what is stored.
 //
-// email and userId stay unique within the workspace: a value another contact holds is not written. A contact keeps at least one of them: when the update would leave both empty, the current values are kept. Values for existing keys must match the key's type strictly; a mismatch skips that value only. New keys must be safe, unreserved identifiers, are typed from their value, and are created only while the workspace stays within MaxAttributeKeys.
+// email and userId stay unique within the workspace: a value another contact holds is not written. A contact keeps at least one of them: when the update would leave both empty, the current values are kept. Values for existing keys must match the key's type strictly; a mismatch skips that value only and is reported as an error. New keys must be safe, unreserved identifiers, are typed from their value, and are created only while the workspace stays within MaxAttributeKeys.
 func (s *Service) updateAttributes(ctx context.Context, workspaceID, contactID uuid.UUID, in []AttributeInput, keys []Key, deleteRemoved bool) (messages, errs []Message, err error) {
 	submitted := map[string]Value{}
 	for _, a := range in {
@@ -243,7 +243,8 @@ func (s *Service) updateAttributes(ctx context.Context, workspaceID, contactID u
 		}
 		cols, typeErr := validateValue(a.Value, k.DataType, a.Key)
 		if typeErr != nil {
-			messages = append(messages, Message{Code: "attribute_type_validation_error", Params: map[string]string{"key": a.Key, "dataType": k.DataType, "error": typeErr.Message}})
+			// An error, not a message: the value was not written, and the SDK prints messages only in debug mode while it always reports errors. forma2 reported it as a message, so a string sent for a number key was dropped without a word.
+			errs = append(errs, Message{Code: "attribute_type_validation_error", Params: map[string]string{"key": a.Key, "dataType": k.DataType, "error": typeErr.Message}})
 			continue
 		}
 		existing = append(existing, keyedColumns{keyID: k.ID, columns: cols})
