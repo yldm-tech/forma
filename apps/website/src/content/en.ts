@@ -312,9 +312,14 @@ export const en: SiteContent = {
               term: "API keys",
               body: "Organization owners and managers create keys in the app under Organization Settings → API Keys → Add API key. Grant read, write or manage access one workspace at a time, then copy the key: it is shown only once. A key stops working for good when the person who created it leaves the organization, is removed from it, deletes their account or is given a role below Manager; the API Keys page shows which keys were disabled and why.",
             },
+            {
+              term: "OpenAPI",
+              body: "`/api/v3/openapi.json` describes every operation an API key can call, in OpenAPI 3.1. Load it into an API client or a code generator; it needs no key.",
+            },
           ],
           resourcesTitle: "Main resources",
           resources: [
+            "`/api/v3/me`: the organization a key belongs to and the workspaces it may use, with its permission in each. Start here to find a `workspaceId`.",
             "`/api/v3/surveys`: list, create, validate, read, update, archive, restore and delete surveys.",
             "`/api/v3/workflows`: create and edit workflows, enable, disable or test them, and list their runs.",
             "`/api/v3/action-classes` and `/api/v3/contact-attribute-keys`: the actions and attributes in-app surveys target, read-only.",

@@ -65,6 +65,7 @@ Everything runs from the repository root. The TypeScript side uses [Vite+](https
 ## API contracts
 
 - Paths and payloads that something outside this repository calls are frozen: the client API used by `packages/js-core` and `packages/surveys` (`/api/v1/client/*`, `/api/v2/client/*`), `/js/*`, the v3 management API, MCP, OAuth and webhook callback URLs, and `/health`, `/health/ready`. Keep their behaviour byte for byte and prove it with a contract test: the exchanges in `apps/server/internal/clientapi/testdata/contract` and `apps/server/internal/mgmtapi/testdata/contract` are replayed against the server, and a change to one is a change to the published API.
+- Every `/api/v3` operation an API key can call is described in the OpenAPI document served at `/api/v3/openapi.json`. Each module declares its operations in its `V3OpenAPI` next to its handlers, with the response schemas inferred from the Go types it serializes; `TestOpenAPIDocumentCoversV3Routes` in `internal/app` fails on a mounted route the document misses (or a session-only route it is not told about), and the modules' tests check their real answers against the document with `internal/v3api/openapi/openapitest`.
 - `/api/v3` is the forward API. Endpoints only the admin UI needs live under `/api/app/*`: session-authenticated, errors as `{code, message, details}`, and every mutation must come from `WEBAPP_URL` or `PUBLIC_URL` (`Origin`) with an `X-Requested-With` header, which `apps/web/src/lib/api.ts` always sends.
 
 ## TypeScript workspace
