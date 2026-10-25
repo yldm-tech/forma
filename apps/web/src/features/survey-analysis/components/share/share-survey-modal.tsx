@@ -233,7 +233,8 @@ export const ShareSurveyModal = ({
       open={open}
       onOpenChange={handleOpenChange}
       width={survey.type === "link" ? "wide" : "default"}
-      className="lg:h-[700px]">
+      // The dialog's content scroller inherits the dialog's max-height, not its height; capping both at the frame keeps every view of the modal (start, share, app) inside it, so tall content scrolls instead of spilling over the backdrop.
+      className="lg:h-[700px] lg:max-h-[min(700px,90dvh)]">
       <DialogTitle className="sr-only">{t("workspace.surveys.summary.share_survey")}</DialogTitle>
       {renderContent()}
     </Dialog>
