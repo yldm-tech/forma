@@ -698,6 +698,7 @@
       "no_workspaces_warning_subtitle": "請聯絡您的組織擁有者以取得工作區存取權，或自行建立組織開始使用。",
       "no_workspaces_warning_title": "您的帳戶尚未有任何工作區的存取權。"
     },
+    "security_tip_github": "隨時掌握安全性修正：開啟<githubLink>Forma 在 GitHub 上的安全性公告</githubLink>，選擇 Watch → Custom → Releases 和 Security alerts。",
     "workspaces": {
       "new": {
         "skip_for_now": "暫時略過",

@@ -1,19 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { PlusCircleIcon, ShieldCheckIcon } from "lucide-react";
+import { ShieldCheckIcon } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
+import { CreateOrganizationModal } from "../../components/shell/create-organization-modal";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
-import {
-  Dialog,
-  DialogBody,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
 import { FormError } from "../../components/ui/form-error";
 import { IdBadge } from "../../components/ui/id-badge";
 import { Input } from "../../components/ui/input";
@@ -22,15 +15,13 @@ import { Label } from "../../components/ui/label";
 import { PageContentWrapper, PageHeader, SettingsCard } from "../../components/ui/page";
 import { Select } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
-import { untilAuthorized } from "../../lib/consistency";
+import { TransLink } from "../../components/ui/trans-link";
 import { errorMessage } from "../../lib/errors";
 import { billingSummaryQuery } from "../../lib/queries/billing";
 import { instanceQuery } from "../../lib/queries/instance";
 import {
   type OrganizationDetail,
   organizationKeys,
-  organizationQuery,
-  useCreateOrganization,
   useDeleteOrganization,
   useUpdateOrganization,
 } from "../../lib/queries/organizations";
@@ -49,31 +40,36 @@ import { getSurveySchedulingTimeLabel } from "../survey-editor/lib/scheduling-co
 import { organizationNameError } from "../../lib/validation";
 import { EmailCustomizationCard } from "./whitelabel/email-customization-card";
 
-/** forma2's SecurityListTip, shown self-hosted: an invitation to the security announcements list. */
-const SecurityListTip = () => {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center gap-x-3 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 shadow-xs">
-      <ShieldCheckIcon className="size-5 shrink-0 text-blue-400" />
-      <p className="text-sm">
-        {t("workspace.settings.general.security_list_tip")}{" "}
-        <a
-          href="https://forma.yldm.ai/security?utm_source=forma-app&utm_medium=webapp&utm_campaign=security_tip#stay-informed-with-forma-security-updates"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-blue-700">
-          {t("workspace.settings.general.security_list_tip_link")}
-        </a>
-      </p>
-    </div>
-  );
-};
+/** The GitHub page where Forma publishes its security advisories; its Watch menu subscribes to them and to the releases that ship the fixes. */
+const SECURITY_ADVISORIES_URL = "https://github.com/yldm-tech/forma/security/advisories";
 
-/** forma2's organization general settings page: on top a warning without file storage and, self-hosted, the security list tip; at the foot the organization's id and the Forma version. A member or billing user, who can change nothing here, is told so once at the top rather than in every card. */
+/** forma2's SecurityListTip, shown self-hosted to owners, who run the instance and decide when it is upgraded: how to be told about security fixes. forma2 pointed at a mailing list that Forma does not have; the fixes are announced as GitHub security advisories and releases instead. */
+const SecurityListTip = () => (
+  <div className="flex items-center gap-x-3 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 shadow-xs">
+    <ShieldCheckIcon className="size-5 shrink-0 text-blue-400" />
+    <p className="text-sm">
+      <Trans
+        i18nKey="organizations.security_tip_github"
+        components={{
+          githubLink: (
+            <TransLink
+              href={SECURITY_ADVISORIES_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-blue-700"
+            />
+          ),
+        }}
+      />
+    </p>
+  </div>
+);
+
+/** forma2's organization general settings page: on top a warning without file storage and, self-hosted and for owners, the security list tip; at the foot the organization's id and the Forma version. A member or billing user, who can change nothing here, is told so once at the top rather than in every card. */
 export const OrganizationGeneralPage = ({ organization }: { organization: OrganizationDetail }) => {
   const { t } = useTranslation();
   const role = organization.membership.role;
-  const { isOwnerOrManager } = accessFlags(role);
+  const { isOwner, isOwnerOrManager } = accessFlags(role);
   const { data: instance } = useQuery(instanceQuery);
   const { data: billing } = useQuery(billingSummaryQuery(organization.id));
   return (
@@ -89,7 +85,7 @@ export const OrganizationGeneralPage = ({ organization }: { organization: Organi
           <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>
         </Alert>
       )}
-      {billing?.isFormaCloud === false && <SecurityListTip />}
+      {isOwner && billing?.isFormaCloud === false && <SecurityListTip />}
       <SettingsCard
         width="full"
         title={t("workspace.settings.general.organization_settings")}
@@ -133,7 +129,8 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
   const [nameError, setNameError] = useState<string | null>(null);
   const update = useUpdateOrganization(organization.id);
   const queryClient = useQueryClient();
-  const zones = useMemo(() => ianaTimeZones(), []);
+  const storedDisplayTimeZone = organization.displayTimeZone;
+  const zones = useMemo(() => ianaTimeZones(storedDisplayTimeZone), [storedDisplayTimeZone]);
   const { instanceTimeZone } = organization.surveyScheduling;
   const storedSchedulingTimeZone = organization.surveySchedulingTimeZone;
   const schedulingZoneOptions = useMemo(
@@ -424,72 +421,5 @@ const CreateOrganizationCard = () => {
       </div>
       <CreateOrganizationModal open={open} setOpen={setOpen} />
     </SettingsCard>
-  );
-};
-
-export const CreateOrganizationModal = ({
-  open,
-  setOpen,
-}: {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}) => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-  const create = useCreateOrganization();
-
-  const close = () => {
-    setOpen(false);
-    setName("");
-  };
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (name.trim() === "") return;
-    try {
-      const organization = await create.mutateAsync(name.trim());
-      await untilAuthorized(() => queryClient.fetchQuery(organizationQuery(organization.id)));
-      await queryClient.invalidateQueries({ queryKey: organizationKeys.all });
-      toast.success(t("workspace.settings.general.organization_created_successfully"));
-      close();
-      await navigate({ href: `/organizations/${organization.id}/` });
-    } catch (error) {
-      toast.error(errorMessage(t, error));
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} disableCloseOnOutsideClick>
-      <DialogHeader>
-        <PlusCircleIcon />
-        <DialogTitle>{t("workspace.settings.general.create_new_organization")}</DialogTitle>
-        <DialogDescription>
-          {t("workspace.settings.general.create_new_organization_description")}
-        </DialogDescription>
-      </DialogHeader>
-      <form onSubmit={submit} className="space-y-4">
-        <DialogBody>
-          <div className="grid w-full gap-y-2">
-            <Label htmlFor="new-organization-name">{t("workspace.settings.general.organization_name")}</Label>
-            <Input
-              id="new-organization-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("workspace.settings.general.organization_name_placeholder")}
-            />
-          </div>
-        </DialogBody>
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={close}>
-            {t("common.cancel")}
-          </Button>
-          <Button type="submit" loading={create.isPending} disabled={name.trim() === ""}>
-            {t("workspace.settings.general.create_new_organization")}
-          </Button>
-        </DialogFooter>
-      </form>
-    </Dialog>
   );
 };

@@ -119,11 +119,16 @@ func (h *Handler) list(c *gin.Context) {
 
 type createRequest struct {
 	Name string `json:"name"`
+	// TimeZone is the creator's browser zone (Intl.DateTimeFormat().resolvedOptions().timeZone), which the new organization displays dates and schedules surveys in. It is a default, not a choice the creator made, so a zone this build cannot load is dropped rather than refused: the organization then falls back to UTC and the instance's zone as before, and creating it never fails over a browser's zone name.
+	TimeZone *string `json:"timeZone"`
 }
 
 func (r *createRequest) validate() error {
 	name, err := checkName(r.Name)
 	r.Name = name
+	if r.TimeZone != nil && !ValidTimeZone(*r.TimeZone) {
+		r.TimeZone = nil
+	}
 	return err
 }
 
@@ -132,7 +137,7 @@ func (h *Handler) create(c *gin.Context) {
 	if !bind(c, req) {
 		return
 	}
-	res, err := h.svc.Create(c.Request.Context(), userID(c), req.Name)
+	res, err := h.svc.Create(c.Request.Context(), userID(c), req.Name, req.TimeZone)
 	if err != nil {
 		httpapi.Fail(c, err)
 		return

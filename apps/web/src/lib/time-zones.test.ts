@@ -7,6 +7,16 @@ test("ianaTimeZones lists the browser's zones without UTC, which is the default 
   expect(zones).not.toContain("UTC");
 });
 
+test("ianaTimeZones offers a stored display zone the browser does not list, and UTC only as the default entry", () => {
+  const listed = ianaTimeZones();
+  const unlisted = ["Asia/Kolkata", "Europe/Kyiv", "Asia/Calcutta"].find((zone) => !listed.includes(zone));
+  if (!unlisted) throw new Error("the browser lists every zone this test tries");
+  expect(ianaTimeZones(unlisted)).toEqual([...listed, unlisted]);
+  expect(ianaTimeZones("Asia/Tokyo")).toEqual(listed);
+  expect(ianaTimeZones("UTC")).toEqual(listed);
+  expect(ianaTimeZones(null)).toEqual(listed);
+});
+
 test("schedulingTimeZones lists the browser's zones with UTC, since the default entry is the instance's zone", () => {
   const zones = schedulingTimeZones();
   expect(zones).toContain("Asia/Tokyo");

@@ -657,6 +657,7 @@ checksums:
     emails/verified_link_survey_email_subject: 23449a8b573295a42031a09613c7fb10
     organizations/landing/no_workspaces_warning_subtitle: 305578d27209f1c4f706fccd53559f52
     organizations/landing/no_workspaces_warning_title: ba051776860ec4d73c7d177b1379bbda
+    organizations/security_tip_github: 0c3949dce92da2ab10e070c6033f98b4
     organizations/workspaces/new/skip_for_now: b8bf7f2b6e67a523dc4ff5ce009cdb72
     organizations/workspaces/new/survey/create_with_ai_description: c343fffd7f274733b5513fa5aa3dae2c
     organizations/workspaces/new/survey/start_from_scratch: 6fc756927ca9ea22c26368cccd64a67e
