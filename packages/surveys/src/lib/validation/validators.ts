@@ -222,7 +222,7 @@ export const validators: Record<TValidationRuleType, TValidator> = {
       return { valid: validatePhone(value) };
     },
     getDefaultMessage: (_params: TValidationRuleParams, _element: TSurveyElement, t: TFunction): string => {
-      return t("errors.please_enter_a_valid_phone_number");
+      return t("errors.invalid_phone_with_example");
     },
   },
 

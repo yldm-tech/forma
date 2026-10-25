@@ -404,6 +404,52 @@ describe("validateElementResponse", () => {
     });
   });
 
+  describe("required message by element type", () => {
+    const required = (type: TSurveyElementTypeEnum, extra: Record<string, unknown> = {}) =>
+      ({
+        id: "q",
+        type,
+        headline: { default: "Question" },
+        required: true,
+        ...extra,
+      }) as unknown as TSurveyElement;
+    const choices = { choices: [{ id: "a", label: { default: "A" } }] };
+    const messageFor = (element: TSurveyElement, value: TResponseData[string]) =>
+      validateElementResponse(element, value, "en").errors[0]?.message;
+
+    test.each([
+      [TSurveyElementTypeEnum.MultipleChoiceSingle, choices, "errors.select_an_option"],
+      [TSurveyElementTypeEnum.MultipleChoiceMulti, choices, "errors.select_an_option"],
+      [TSurveyElementTypeEnum.PictureSelection, choices, "errors.select_an_option"],
+      [TSurveyElementTypeEnum.Rating, {}, "errors.choose_a_rating"],
+      [TSurveyElementTypeEnum.NPS, {}, "errors.choose_a_rating"],
+      [TSurveyElementTypeEnum.CSAT, {}, "errors.choose_a_rating"],
+      [TSurveyElementTypeEnum.CES, {}, "errors.choose_a_rating"],
+      [TSurveyElementTypeEnum.Ranking, choices, "errors.rank_at_least_one_option"],
+      [TSurveyElementTypeEnum.Matrix, { rows: [], columns: [] }, "errors.answer_at_least_one_row"],
+      [TSurveyElementTypeEnum.Consent, {}, "errors.accept_to_continue"],
+      [TSurveyElementTypeEnum.FileUpload, {}, "errors.upload_a_file"],
+      [TSurveyElementTypeEnum.Date, {}, "errors.select_a_date"],
+      [TSurveyElementTypeEnum.OpenText, { inputType: "text" }, "errors.please_fill_out_this_field"],
+      [TSurveyElementTypeEnum.Cal, {}, "errors.please_fill_out_this_field"],
+    ])("%s unanswered", (type, extra, message) => {
+      expect(messageFor(required(type, extra), undefined)).toBe(message);
+    });
+
+    test("a matrix with only empty rows asks for a row", () => {
+      expect(messageFor(required(TSurveyElementTypeEnum.Matrix, { rows: [] }), { r1: "" })).toBe(
+        "errors.answer_at_least_one_row"
+      );
+    });
+
+    test('a single select with "Other" picked and no text asks for the text', () => {
+      const element = required(TSurveyElementTypeEnum.MultipleChoiceSingle, {
+        choices: [...choices.choices, { id: "other", label: { default: "Other" } }],
+      });
+      expect(messageFor(element, "")).toBe("errors.please_fill_out_this_field");
+    });
+  });
+
   describe("validation rules - AND logic", () => {
     test("should return valid when all rules pass", () => {
       const element: TSurveyElement = {
@@ -642,6 +688,49 @@ describe("validateElementResponse", () => {
       const result = validateElementResponse(element, "test@example.com", "en");
       expect(result.valid).toBe(true);
       expect(result.errors.some((e) => e.ruleId === "__implicit_email__")).toBe(false);
+    });
+  });
+
+  // The minimum used to be a native minLength attribute, enforced by the browser's own tooltip in the browser's language.
+  describe("character limit minimum", () => {
+    const openText = (charLimit: unknown, inputType = "text") =>
+      ({
+        id: "text1",
+        type: TSurveyElementTypeEnum.OpenText,
+        headline: { default: "Question" },
+        inputType,
+        required: false,
+        charLimit,
+      }) as unknown as TSurveyOpenTextElement;
+
+    test("an answer shorter than the enabled minimum fails with the inline min-length message", () => {
+      const result = validateElementResponse(openText({ enabled: true, min: 2 }), "a", "en");
+      expect(result.valid).toBe(false);
+      expect(result.errors).toEqual([
+        { ruleId: "__implicit_char_limit_min__", ruleType: "minLength", message: "errors.min_length" },
+      ]);
+    });
+
+    test("an answer at the minimum passes", () => {
+      expect(validateElementResponse(openText({ enabled: true, min: 2 }), "ab", "en").valid).toBe(true);
+    });
+
+    test("an empty optional answer is left to the required check", () => {
+      expect(validateElementResponse(openText({ enabled: true, min: 2 }), "", "en").valid).toBe(true);
+    });
+
+    test("a disabled limit does not apply", () => {
+      expect(validateElementResponse(openText({ enabled: false, min: 2 }), "a", "en").valid).toBe(true);
+    });
+
+    test("only text inputs carry the limit, as in the rendered element", () => {
+      expect(
+        validateElementResponse(openText({ enabled: true, min: 20 }, "email"), "a@b.co", "en").valid
+      ).toBe(true);
+    });
+
+    test("a maximum alone adds no rule", () => {
+      expect(validateElementResponse(openText({ enabled: true, max: 5 }), "a", "en").valid).toBe(true);
     });
   });
 
@@ -1010,7 +1099,7 @@ describe("getFormFieldErrors", () => {
     expect(getFormFieldErrors(contactInfo(), ["A", "", "abc", "xyz", ""], "en")).toEqual({
       lastName: "errors.please_fill_out_this_field",
       email: "errors.please_enter_a_valid_email_address",
-      phone: "errors.please_enter_a_valid_phone_number",
+      phone: "errors.invalid_phone_with_example",
     });
   });
 

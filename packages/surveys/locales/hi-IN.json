@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "आपकी प्रतिक्रिया अटक गई है :("
   },
   "errors": {
+    "accept_to_continue": "जारी रखने के लिए कृपया स्वीकार करें",
     "all_options_must_be_ranked": "कृपया सभी विकल्पों को रैंक करें",
     "all_rows_must_be_answered": "कृपया सभी पंक्तियों का उत्तर दें",
+    "answer_at_least_one_row": "कृपया कम से कम एक पंक्ति का उत्तर दें",
+    "choose_a_rating": "कृपया एक रेटिंग चुनें",
     "file_extension_must_be": "फ़ाइल एक्सटेंशन {extension} होना चाहिए",
     "file_extension_must_not_be": "फ़ाइल एक्सटेंशन {extension} नहीं होना चाहिए",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "यह डिवाइस स्पैम सुरक्षा का समर्थन नहीं करता है।"
     },
     "invalid_format": "कृपया एक मान्य प्रारूप दर्ज करें",
+    "invalid_phone_with_example": "कृपया एक वैध फोन नंबर दर्ज करें, जैसे +91 98765 43210",
     "is_between": "कृपया {startDate} और {endDate} के बीच की तारीख चुनें",
     "is_earlier_than": "कृपया {date} से पहले की तारीख चुनें",
     "is_greater_than": "कृपया {min} से अधिक मान दर्ज करें",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "कृपया एक वैध फोन नंबर दर्ज करें",
     "please_enter_a_valid_url": "कृपया एक वैध URL दर्ज करें",
     "please_fill_out_this_field": "कृपया इस फील्ड को भरें",
+    "rank_at_least_one_option": "कृपया कम से कम एक विकल्प को रैंक करें",
     "recaptcha_error": {
       "message": "आपका प्रतिसाद जमा नहीं किया जा सका क्योंकि इसे स्वचालित गतिविधि के रूप में चिह्नित किया गया था। यदि आप सांस लेते हैं, तो कृपया पुनः प्रयास करें।",
       "title": "हम यह सत्यापित नहीं कर सके कि आप मानव हैं।"
@@ -111,10 +116,19 @@
       "message": "आपकी प्रतिक्रिया सबमिट नहीं की जा सकी और इसे दोबारा प्रयास नहीं किया जा सकता। अगर यह समस्या बनी रहती है तो कृपया सर्वेक्षण के मालिक से संपर्क करें।",
       "title": "आपकी प्रतिक्रिया सबमिट नहीं की जा सकी।"
     },
+    "select_a_date": "कृपया एक तारीख चुनें",
+    "select_an_option": "कृपया एक विकल्प चुनें",
+    "upload_a_file": "कृपया एक फ़ाइल अपलोड करें",
     "value_must_contain": "मान में {value} होना चाहिए",
     "value_must_equal": "मान {value} के बराबर होना चाहिए",
     "value_must_not_contain": "मान में {value} नहीं होना चाहिए",
     "value_must_not_equal": "मान {value} के बराबर नहीं होना चाहिए",
     "x_questions_need_an_answer": "{count, plural, one {{count} प्रश्न का उत्तर देना आवश्यक है} other {{count} प्रश्नों का उत्तर देना आवश्यक है}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · अधिकतम {maxSizeInMB} MB",
+    "invalid_type": "इस प्रकार की फ़ाइल की अनुमति नहीं है। अनुमत फ़ॉर्मेट: {formats}",
+    "max_size_hint": "अधिकतम {maxSizeInMB} MB",
+    "tap_to_upload": "फ़ाइलें अपलोड करने के लिए टैप करें"
   }
 }

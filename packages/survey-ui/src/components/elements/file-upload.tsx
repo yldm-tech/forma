@@ -55,6 +55,8 @@ interface FileUploadProps {
   imageAltText?: string;
   /** Placeholder text for the file upload */
   placeholderText?: string;
+  /** What the upload accepts, shown under the placeholder of the upload area, e.g. "PNG, JPG, PDF · up to 10 MB" */
+  hintText?: string;
   /** Text to display while uploading */
   uploadingText?: string;
   /**
@@ -149,6 +151,7 @@ interface UploadAreaProps {
   inputId: string;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   placeholderText: string;
+  hintText?: string;
   allowMultiple: boolean;
   acceptAttribute?: string;
   disabled: boolean;
@@ -165,6 +168,7 @@ function UploadArea({
   inputId,
   fileInputRef,
   placeholderText,
+  hintText,
   allowMultiple,
   acceptAttribute,
   disabled,
@@ -208,6 +212,7 @@ function UploadArea({
         id={`${inputId}-label`}>
         {placeholderText}
       </span>
+      {hintText ? <span className="text-input-text text-center text-xs">{hintText}</span> : null}
       <input
         ref={fileInputRef}
         type="file"
@@ -245,6 +250,7 @@ function FileUpload({
   videoUrl,
   imageAltText,
   placeholderText = "Click or drag to upload files",
+  hintText,
   uploadingText = "Uploading...",
   deleteFileLabel = (fileName) => `Delete ${fileName}`,
 }: Readonly<FileUploadProps>): React.JSX.Element {
@@ -337,6 +343,7 @@ function FileUpload({
               inputId={inputId}
               fileInputRef={fileInputRef}
               placeholderText={placeholderText}
+              hintText={hintText}
               allowMultiple={allowMultiple}
               acceptAttribute={acceptAttribute}
               disabled={disabled}

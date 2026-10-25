@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Phản hồi của bạn bị kẹt :("
   },
   "errors": {
+    "accept_to_continue": "Vui lòng đồng ý để tiếp tục",
     "all_options_must_be_ranked": "Vui lòng xếp hạng tất cả các tùy chọn",
     "all_rows_must_be_answered": "Vui lòng trả lời tất cả các hàng",
+    "answer_at_least_one_row": "Vui lòng trả lời ít nhất một hàng",
+    "choose_a_rating": "Vui lòng chọn một mức đánh giá",
     "file_extension_must_be": "Phần mở rộng tệp phải là {extension}",
     "file_extension_must_not_be": "Phần mở rộng tệp không được là {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Thiết bị này không hỗ trợ tính năng chống spam."
     },
     "invalid_format": "Vui lòng nhập đúng định dạng",
+    "invalid_phone_with_example": "Vui lòng nhập số điện thoại hợp lệ, ví dụ 091 234 5678",
     "is_between": "Vui lòng chọn ngày trong khoảng từ {startDate} đến {endDate}",
     "is_earlier_than": "Vui lòng chọn ngày trước {date}",
     "is_greater_than": "Vui lòng nhập giá trị lớn hơn {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Vui lòng nhập số điện thoại hợp lệ",
     "please_enter_a_valid_url": "Vui lòng nhập URL hợp lệ",
     "please_fill_out_this_field": "Vui lòng điền vào trường này",
+    "rank_at_least_one_option": "Vui lòng xếp hạng ít nhất một tùy chọn",
     "recaptcha_error": {
       "message": "Phản hồi của bạn không thể được gửi vì bị đánh dấu là hoạt động tự động. Nếu bạn là người thật, vui lòng thử lại.",
       "title": "Chúng tôi không thể xác minh bạn là người thật."
@@ -111,10 +116,19 @@
       "message": "Phản hồi của bạn không thể được gửi đi và không thể thử lại. Vui lòng liên hệ với chủ sở hữu khảo sát nếu vấn đề này tiếp tục xảy ra.",
       "title": "Phản hồi của bạn không thể được gửi đi."
     },
+    "select_a_date": "Vui lòng chọn một ngày",
+    "select_an_option": "Vui lòng chọn một tùy chọn",
+    "upload_a_file": "Vui lòng tải lên một tệp",
     "value_must_contain": "Giá trị phải chứa {value}",
     "value_must_equal": "Giá trị phải bằng {value}",
     "value_must_not_contain": "Giá trị không được chứa {value}",
     "value_must_not_equal": "Giá trị không được bằng {value}",
     "x_questions_need_an_answer": "{count, plural, other {{count} câu hỏi cần được trả lời}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · tối đa {maxSizeInMB} MB",
+    "invalid_type": "Loại tệp này không được phép. Định dạng được phép: {formats}",
+    "max_size_hint": "Tối đa {maxSizeInMB} MB",
+    "tap_to_upload": "Chạm để tải lên tệp"
   }
 }

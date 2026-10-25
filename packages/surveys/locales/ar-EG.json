@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "تعليقك عالق :("
   },
   "errors": {
+    "accept_to_continue": "يرجى الموافقة للمتابعة",
     "all_options_must_be_ranked": "يرجى ترتيب جميع الخيارات",
     "all_rows_must_be_answered": "يرجى الإجابة على جميع الصفوف",
+    "answer_at_least_one_row": "يرجى الإجابة على صف واحد على الأقل",
+    "choose_a_rating": "يرجى اختيار تقييم",
     "file_extension_must_be": "يجب أن يكون امتداد الملف {extension}",
     "file_extension_must_not_be": "يجب ألا يكون امتداد الملف {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "هذا الجهاز لا يدعم الحماية من الرسائل المزعجة."
     },
     "invalid_format": "يرجى إدخال تنسيق صالح",
+    "invalid_phone_with_example": "يرجى إدخال رقم هاتف صحيح، مثل +20 10 1234 5678",
     "is_between": "يرجى اختيار تاريخ بين {startDate} و {endDate}",
     "is_earlier_than": "يرجى اختيار تاريخ أقدم من {date}",
     "is_greater_than": "يرجى إدخال قيمة أكبر من {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "يرجى إدخال رقم هاتف صحيح",
     "please_enter_a_valid_url": "الرجاء إدخال عنوان URL صالح",
     "please_fill_out_this_field": "يرجى ملء هذا الحقل",
+    "rank_at_least_one_option": "يرجى ترتيب خيار واحد على الأقل",
     "recaptcha_error": {
       "message": "تعذر إرسال ردك لأنه تم تصنيفه كنشاط آلي. إذا كنت تتنفس، يرجى المحاولة مرة أخرى.",
       "title": "لم نتمكن من التحقق من أنك إنسان."
@@ -111,10 +116,19 @@
       "message": "تعذّر إرسال ردك ولا يمكن إعادة المحاولة. يُرجى التواصل مع مالك الاستطلاع إذا استمرت هذه المشكلة.",
       "title": "تعذّر إرسال ردك."
     },
+    "select_a_date": "يرجى اختيار تاريخ",
+    "select_an_option": "يرجى اختيار خيار",
+    "upload_a_file": "يرجى رفع ملف",
     "value_must_contain": "يجب أن تحتوي القيمة على {value}",
     "value_must_equal": "يجب أن تساوي القيمة {value}",
     "value_must_not_contain": "يجب ألا تحتوي القيمة على {value}",
     "value_must_not_equal": "يجب ألا تساوي القيمة {value}",
     "x_questions_need_an_answer": "{count, plural, zero {لا توجد أسئلة تحتاج إلى إجابة} one {سؤال واحد يحتاج إلى إجابة} two {سؤالان يحتاجان إلى إجابة} few {{count} أسئلة تحتاج إلى إجابة} many {{count} سؤالًا يحتاج إلى إجابة} other {{count} سؤال يحتاج إلى إجابة}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · حتى {maxSizeInMB} ميجابايت",
+    "invalid_type": "نوع الملف هذا غير مسموح به. الصيغ المسموح بها: {formats}",
+    "max_size_hint": "حتى {maxSizeInMB} ميجابايت",
+    "tap_to_upload": "اضغط لرفع الملفات"
   }
 }

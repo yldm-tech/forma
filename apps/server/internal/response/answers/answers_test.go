@@ -2,6 +2,7 @@ package answers
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -168,12 +169,15 @@ func TestRuleLogic(t *testing.T) {
 func TestImplicitRules(t *testing.T) {
 	expectMessages(t, `{"id":"q","type":"openText","inputType":"email"}`, `{"q":"nope"}`, "Please enter a valid email address")
 	expectMessages(t, `{"id":"q","type":"openText","inputType":"url"}`, `{"q":"nope"}`, "Please enter a valid URL")
-	expectMessages(t, `{"id":"q","type":"openText","inputType":"phone"}`, `{"q":"call me"}`, "Please enter a valid phone number")
+	expectMessages(t, `{"id":"q","type":"openText","inputType":"phone"}`, `{"q":"call me"}`, "Please enter a valid phone number, for example +1 555 123 4567")
 	// An explicit rule of the same type replaces the implicit one.
 	expectMessages(t, `{"id":"q","type":"openText","inputType":"email"`+withRules("", `{"id":"e","type":"email","params":{}}`)+`}`, `{"q":"nope"}`, "Please enter a valid email address")
 	contact := `{"id":"q","type":"contactInfo","required":false,"firstName":{"show":true,"required":false,"placeholder":{"default":"First name"}},"lastName":{"show":true,"required":false,"placeholder":{"default":"Last name"}},"email":{"show":true,"required":false,"placeholder":{"default":"Email"}},"phone":{"show":true,"required":false,"placeholder":{"default":"Phone"}},"company":{"show":false,"required":false,"placeholder":{"default":"Company"}}}`
-	expectMessages(t, contact, `{"q":["Ada","Lovelace","nope","abc",""]}`, "Email: Please enter a valid email address", "Phone: Please enter a valid phone number")
+	expectMessages(t, contact, `{"q":["Ada","Lovelace","nope","abc",""]}`, "Email: Please enter a valid email address", "Phone: Please enter a valid phone number, for example +1 555 123 4567")
 	expectValid(t, contact, `{"q":["Ada","Lovelace","ada@example.com","+44 20 7946 0958",""]}`)
+	// A Japanese IME types full-width digits; the answer is accepted as typed.
+	expectValid(t, contact, `{"q":["Ada","Lovelace","ada@example.com","０９０-１２３４-５６７８",""]}`)
+	expectMessages(t, contact, `{"q":["Ada","Lovelace","ada@example.com","1-1",""]}`, "Phone: Please enter a valid phone number, for example +1 555 123 4567")
 }
 
 func TestFieldRules(t *testing.T) {
@@ -205,7 +209,7 @@ func TestTextRules(t *testing.T) {
 		{`{"id":"r","type":"url","params":{}}`, `"https://"`, []string{"Please enter a valid URL"}},
 		{`{"id":"r","type":"url","params":{}}`, `"example.com"`, []string{"Please enter a valid URL"}},
 		{`{"id":"r","type":"phone","params":{}}`, `"+1 555-0100"`, nil},
-		{`{"id":"r","type":"phone","params":{}}`, `"555-"`, []string{"Please enter a valid phone number"}},
+		{`{"id":"r","type":"phone","params":{}}`, `"555-"`, []string{"Please enter a valid phone number, for example +1 555 123 4567"}},
 		{`{"id":"r","type":"equals","params":{"value":"yes"}}`, `"no"`, []string{"Value must equal yes"}},
 		{`{"id":"r","type":"doesNotEqual","params":{"value":"yes"}}`, `"yes"`, []string{"Value must not equal yes"}},
 		{`{"id":"r","type":"contains","params":{"value":"@"}}`, `"ab"`, []string{"Value must contain @"}},
@@ -330,5 +334,29 @@ func TestV1Details(t *testing.T) {
 	want := []Detail{{"response.data.a", required}, {"response.data.b", "Please enter at least 3 characters; Value must contain @"}}
 	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("details %v, want %v", got, want)
+	}
+}
+
+// testdata/phone.json is shared with the runtime's validation-utils.test.ts, so the browser and the server accept the same numbers.
+func TestPhoneMatchesRuntime(t *testing.T) {
+	raw, err := os.ReadFile("testdata/phone.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Name  string `json:"name"`
+		Input string `json:"input"`
+		Valid bool   `json:"valid"`
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) == 0 {
+		t.Fatal("no phone cases")
+	}
+	for _, c := range cases {
+		if got := isValidPhone(c.Input); got != c.Valid {
+			t.Errorf("%s: isValidPhone(%q) = %v, want %v", c.Name, c.Input, got, c.Valid)
+		}
 	}
 }

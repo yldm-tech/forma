@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "A visszajelzése elakadt :("
   },
   "errors": {
+    "accept_to_continue": "A folytatáshoz fogadja el",
     "all_options_must_be_ranked": "Rangsorolja az összes lehetőséget",
     "all_rows_must_be_answered": "Válaszoljon az összes sorra",
+    "answer_at_least_one_row": "Válaszoljon legalább egy sorra",
+    "choose_a_rating": "Válasszon értékelést",
     "file_extension_must_be": "A fájlkiterjesztés csak {extension} lehet",
     "file_extension_must_not_be": "A fájlkiterjesztés nem lehet {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Ez az eszköz nem támogatja a szemét elleni védekezést."
     },
     "invalid_format": "Adjon meg egy érvényes formátumot",
+    "invalid_phone_with_example": "Adjon meg egy érvényes telefonszámot, például +36 30 123 4567",
     "is_between": "Válasszon egy dátumot {startDate} és {endDate} között",
     "is_earlier_than": "Válasszon korábbi dátumot mint {date}",
     "is_greater_than": "Adjon meg nagyobb értéket mint {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Adjon meg egy érvényes telefonszámot",
     "please_enter_a_valid_url": "Adjon meg egy érvényes URL-t",
     "please_fill_out_this_field": "Töltse ki ezt a mezőt",
+    "rank_at_least_one_option": "Rangsoroljon legalább egy lehetőséget",
     "recaptcha_error": {
       "message": "A válaszát nem sikerült elküldeni, mert automatizált tevékenységként lett megjelölve. Ha lélegzik, akkor próbálja meg újra.",
       "title": "Nem tudtuk ellenőrizni, hogy Ön ember-e."
@@ -111,10 +116,19 @@
       "message": "A válaszát nem sikerült elküldeni, és nem lehet újra megpróbálni. Vegye fel a kapcsolatot a kérdőív tulajdonosával, ha folyamatosan ez történik.",
       "title": "A válaszát nem sikerült elküldeni."
     },
+    "select_a_date": "Válasszon dátumot",
+    "select_an_option": "Válasszon egy lehetőséget",
+    "upload_a_file": "Töltsön fel egy fájlt",
     "value_must_contain": "Az értéknek tartalmaznia kell ezt: {value}",
     "value_must_equal": "Az értéknek egyenlőnek kell lennie ezzel: {value}",
     "value_must_not_contain": "Az érték nem tartalmazhatja ezt: {value}",
     "value_must_not_equal": "Az érték nem lehet egyenlő ezzel: {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} kérdésre válaszolni kell} other {{count} kérdésre válaszolni kell}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · legfeljebb {maxSizeInMB} MB",
+    "invalid_type": "Ez a fájltípus nem engedélyezett. Engedélyezett formátumok: {formats}",
+    "max_size_hint": "Legfeljebb {maxSizeInMB} MB",
+    "tap_to_upload": "Koppintson a fájlok feltöltéséhez"
   }
 }

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vite-plus/test";
 import { z } from "zod";
 // Used for parity check in tests only
@@ -56,23 +57,25 @@ describe("Validation Logic Parity", () => {
     });
   });
 
-  // Note: Phone validation in the component used a custom regex, not Zod's default.
-  // The original component code had: const phoneRegex = /^[0-9+][0-9+\- ]*[0-9]$/;
-  // So we just test that function directly.
+  // The server's isValidPhone runs the same check on the same cases; the table lives with the Go test so neither side can drift alone.
   describe("Phone Validation", () => {
-    const testCases = [
-      { input: "+1234567890", expected: true },
-      { input: "123-456-7890", expected: true },
-      { input: "123 456 7890", expected: true },
-      { input: "invalid", expected: false },
-      { input: "123-", expected: false }, // ends with separator
-      { input: "-123", expected: false }, // starts with separator
-      { input: "+", expected: false },
-    ];
+    const cases = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../../../../../apps/server/internal/response/answers/testdata/phone.json",
+          import.meta.url
+        ),
+        "utf8"
+      )
+    ) as { name: string; input: string; valid: boolean }[];
 
-    testCases.forEach(({ input, expected }) => {
-      test(`should validate phone "${input}" as ${expected}`, () => {
-        expect(validatePhone(input)).toBe(expected);
+    test("the shared table is not empty", () => {
+      expect(cases.length).toBeGreaterThan(0);
+    });
+
+    cases.forEach(({ name, input, valid }) => {
+      test(`${name}: "${input}" is ${valid ? "valid" : "invalid"}`, () => {
+        expect(validatePhone(input)).toBe(valid);
       });
     });
   });

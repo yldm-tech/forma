@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Ihr Feedback steckt fest :("
   },
   "errors": {
+    "accept_to_continue": "Bitte stimmen Sie zu, um fortzufahren",
     "all_options_must_be_ranked": "Bitte ordnen Sie alle Optionen ein",
     "all_rows_must_be_answered": "Bitte beantworten Sie alle Zeilen",
+    "answer_at_least_one_row": "Bitte beantworten Sie mindestens eine Zeile",
+    "choose_a_rating": "Bitte wählen Sie eine Bewertung aus",
     "file_extension_must_be": "Die Dateierweiterung muss {extension} sein",
     "file_extension_must_not_be": "Die Dateierweiterung darf nicht {extension} sein",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Dieses Gerät unterstützt keinen Spam-Schutz."
     },
     "invalid_format": "Bitte geben Sie ein gültiges Format ein",
+    "invalid_phone_with_example": "Bitte geben Sie eine gültige Telefonnummer ein, z. B. +49 30 1234567",
     "is_between": "Bitte wählen Sie ein Datum zwischen {startDate} und {endDate}",
     "is_earlier_than": "Bitte wählen Sie ein Datum vor dem {date}",
     "is_greater_than": "Bitte geben Sie einen Wert größer als {min} ein",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Bitte geben Sie eine gültige Telefonnummer ein",
     "please_enter_a_valid_url": "Bitte geben Sie eine gültige URL ein",
     "please_fill_out_this_field": "Bitte füllen Sie dieses Feld aus",
+    "rank_at_least_one_option": "Bitte ordnen Sie mindestens eine Option ein",
     "recaptcha_error": {
       "message": "Ihre Antwort konnte nicht übermittelt werden, da sie als automatisierte Aktivität eingestuft wurde. Wenn Sie atmen, versuchen Sie es bitte erneut.",
       "title": "Wir konnten nicht verifizieren, dass du ein Mensch bist."
@@ -111,10 +116,19 @@
       "message": "Deine Antwort konnte nicht übermittelt werden und kann nicht erneut versucht werden. Bitte kontaktiere den Umfrage-Ersteller, falls das weiterhin passiert.",
       "title": "Deine Antwort konnte nicht übermittelt werden."
     },
+    "select_a_date": "Bitte wählen Sie ein Datum aus",
+    "select_an_option": "Bitte wählen Sie eine Option aus",
+    "upload_a_file": "Bitte laden Sie eine Datei hoch",
     "value_must_contain": "Wert muss {value} enthalten",
     "value_must_equal": "Wert muss {value} entsprechen",
     "value_must_not_contain": "Wert darf {value} nicht enthalten",
     "value_must_not_equal": "Wert darf nicht {value} entsprechen",
     "x_questions_need_an_answer": "{count, plural, one {{count} Frage muss beantwortet werden} other {{count} Fragen müssen beantwortet werden}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · bis zu {maxSizeInMB} MB",
+    "invalid_type": "Dieser Dateityp ist nicht erlaubt. Erlaubte Formate: {formats}",
+    "max_size_hint": "Bis zu {maxSizeInMB} MB",
+    "tap_to_upload": "Tippen, um Dateien hochzuladen"
   }
 }

@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Sinu tagasiside on kinni jäänud :("
   },
   "errors": {
+    "accept_to_continue": "Jätkamiseks palun nõustu",
     "all_options_must_be_ranked": "Palun järjesta kõik variandid",
     "all_rows_must_be_answered": "Palun vasta kõikidele ridadele",
+    "answer_at_least_one_row": "Palun vasta vähemalt ühele reale",
+    "choose_a_rating": "Palun vali hinnang",
     "file_extension_must_be": "Faililaiend peab olema {extension}",
     "file_extension_must_not_be": "Faililaiend ei tohi olla {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "See seade ei toeta rämpsposti kaitset."
     },
     "invalid_format": "Palun sisesta kehtiv vorming",
+    "invalid_phone_with_example": "Palun sisesta kehtiv telefoninumber, näiteks +372 5123 4567",
     "is_between": "Palun vali kuupäev vahemikus {startDate} kuni {endDate}",
     "is_earlier_than": "Palun vali kuupäev enne {date}",
     "is_greater_than": "Palun sisesta väärtus, mis on suurem kui {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Palun sisesta kehtiv telefoninumber",
     "please_enter_a_valid_url": "Palun sisesta kehtiv URL",
     "please_fill_out_this_field": "Palun täida see väli",
+    "rank_at_least_one_option": "Palun järjesta vähemalt üks variant",
     "recaptcha_error": {
       "message": "Sinu vastust ei saanud esitada, kuna see märgiti automatiseeritud tegevuseks. Kui sa hingad, palun proovi uuesti.",
       "title": "Me ei suutnud kinnitada, et sa oled inimene."
@@ -111,10 +116,19 @@
       "message": "Teie vastust ei saanud esitada ja seda ei saa uuesti proovida. Palun võtke küsitluse omanikuga ühendust, kui see jätkub.",
       "title": "Teie vastust ei saanud esitada."
     },
+    "select_a_date": "Palun vali kuupäev",
+    "select_an_option": "Palun vali variant",
+    "upload_a_file": "Palun laadi üles fail",
     "value_must_contain": "Väärtus peab sisaldama {value}",
     "value_must_equal": "Väärtus peab võrduma {value}",
     "value_must_not_contain": "Väärtus ei tohi sisaldada {value}",
     "value_must_not_equal": "Väärtus ei tohi võrduda {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} küsimus vajab vastust} other {{count} küsimust vajavad vastust}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · kuni {maxSizeInMB} MB",
+    "invalid_type": "See failitüüp pole lubatud. Lubatud vormingud: {formats}",
+    "max_size_hint": "Kuni {maxSizeInMB} MB",
+    "tap_to_upload": "Puuduta failide üleslaadimiseks"
   }
 }

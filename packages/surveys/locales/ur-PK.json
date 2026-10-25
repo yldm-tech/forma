@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "آپ کی رائے پھنس گئی ہے :("
   },
   "errors": {
+    "accept_to_continue": "جاری رکھنے کے لیے براہ کرم قبول کریں",
     "all_options_must_be_ranked": "براہ کرم تمام اختیارات کو درجہ بندی کریں",
     "all_rows_must_be_answered": "براہ کرم تمام قطاروں کے جوابات دیں",
+    "answer_at_least_one_row": "براہ کرم کم از کم ایک قطار کا جواب دیں",
+    "choose_a_rating": "براہ کرم ایک درجہ بندی منتخب کریں",
     "file_extension_must_be": "فائل کی توسیع {extension} ہونی چاہیے",
     "file_extension_must_not_be": "فائل کی توسیع {extension} نہیں ہونی چاہیے",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "یہ ڈیوائس سپام تحفظ کو سپورٹ نہیں کرتی۔"
     },
     "invalid_format": "براہ کرم ایک درست فارمیٹ درج کریں",
+    "invalid_phone_with_example": "براہ کرم درست فون نمبر درج کریں، مثلاً 0300 1234567",
     "is_between": "براہ کرم {startDate} اور {endDate} کے درمیان تاریخ منتخب کریں",
     "is_earlier_than": "براہ کرم {date} سے پہلے کی تاریخ منتخب کریں",
     "is_greater_than": "براہ کرم {min} سے زیادہ قدر درج کریں",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "براہ کرم درست فون نمبر درج کریں",
     "please_enter_a_valid_url": "براہ کرم درست URL درج کریں",
     "please_fill_out_this_field": "براہ کرم یہ خانہ پُر کریں",
+    "rank_at_least_one_option": "براہ کرم کم از کم ایک اختیار کی درجہ بندی کریں",
     "recaptcha_error": {
       "message": "آپ کا جواب جمع نہیں کیا جا سکا کیونکہ اسے خودکار سرگرمی کے طور پر نشان زد کیا گیا تھا۔ اگر آپ سانس لیتے ہیں تو براہ کرم دوبارہ کوشش کریں۔",
       "title": "ہم تصدیق نہیں کر سکے کہ آپ انسان ہیں۔"
@@ -111,10 +116,19 @@
       "message": "آپ کا جواب جمع نہیں ہو سکا اور دوبارہ کوشش نہیں کی جا سکتی۔ اگر یہ مسئلہ جاری رہے تو براہ کرم سروے کے مالک سے رابطہ کریں۔",
       "title": "آپ کا جواب جمع نہیں ہو سکا۔"
     },
+    "select_a_date": "براہ کرم ایک تاریخ منتخب کریں",
+    "select_an_option": "براہ کرم ایک اختیار منتخب کریں",
+    "upload_a_file": "براہ کرم ایک فائل اپ لوڈ کریں",
     "value_must_contain": "قدر میں {value} ہونا ضروری ہے",
     "value_must_equal": "قدر {value} کے برابر ہونی چاہیے",
     "value_must_not_contain": "قدر میں {value} نہیں ہونی چاہیے",
     "value_must_not_equal": "قدر {value} کے برابر نہیں ہونی چاہیے",
     "x_questions_need_an_answer": "{count, plural, one {{count} سوال کا جواب درکار ہے} other {{count} سوالات کے جواب درکار ہیں}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · زیادہ سے زیادہ {maxSizeInMB} MB",
+    "invalid_type": "اس قسم کی فائل کی اجازت نہیں ہے۔ اجازت شدہ فارمیٹس: {formats}",
+    "max_size_hint": "زیادہ سے زیادہ {maxSizeInMB} MB",
+    "tap_to_upload": "فائلیں اپ لوڈ کرنے کے لیے ٹیپ کریں"
   }
 }

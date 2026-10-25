@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Votre feedback est bloqué :("
   },
   "errors": {
+    "accept_to_continue": "Veuillez accepter pour continuer",
     "all_options_must_be_ranked": "Veuillez classer toutes les options",
     "all_rows_must_be_answered": "Veuillez répondre à toutes les lignes",
+    "answer_at_least_one_row": "Veuillez répondre à au moins une ligne",
+    "choose_a_rating": "Veuillez choisir une note",
     "file_extension_must_be": "L'extension du fichier doit être {extension}",
     "file_extension_must_not_be": "L'extension du fichier ne doit pas être {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Cet appareil ne prend pas en charge la protection anti-spam."
     },
     "invalid_format": "Veuillez saisir un format valide",
+    "invalid_phone_with_example": "Veuillez saisir un numéro de téléphone valide, par exemple 06 12 34 56 78",
     "is_between": "Veuillez sélectionner une date entre le {startDate} et le {endDate}",
     "is_earlier_than": "Veuillez sélectionner une date antérieure au {date}",
     "is_greater_than": "Veuillez saisir une valeur supérieure à {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Veuillez saisir un numéro de téléphone valide",
     "please_enter_a_valid_url": "Veuillez saisir une URL valide",
     "please_fill_out_this_field": "Veuillez remplir ce champ",
+    "rank_at_least_one_option": "Veuillez classer au moins une option",
     "recaptcha_error": {
       "message": "Votre réponse n'a pas pu être soumise car elle a été signalée comme une activité automatisée. Si vous respirez, veuillez réessayer.",
       "title": "Nous n'avons pas pu vérifier que tu es humain."
@@ -111,10 +116,19 @@
       "message": "Votre réponse n'a pas pu être envoyée et ne peut pas être retentée. Contacte le propriétaire de l'enquête si cela continue.",
       "title": "Votre réponse n'a pas pu être envoyée."
     },
+    "select_a_date": "Veuillez sélectionner une date",
+    "select_an_option": "Veuillez sélectionner une option",
+    "upload_a_file": "Veuillez importer un fichier",
     "value_must_contain": "La valeur doit contenir {value}",
     "value_must_equal": "La valeur doit être égale à {value}",
     "value_must_not_contain": "La valeur ne doit pas contenir {value}",
     "value_must_not_equal": "La valeur ne doit pas être égale à {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} question nécessite une réponse} other {{count} questions nécessitent une réponse}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · jusqu'à {maxSizeInMB} Mo",
+    "invalid_type": "Ce type de fichier n'est pas autorisé. Formats autorisés : {formats}",
+    "max_size_hint": "Jusqu'à {maxSizeInMB} Mo",
+    "tap_to_upload": "Touchez pour importer des fichiers"
   }
 }

@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "您的反馈卡住了 :("
   },
   "errors": {
+    "accept_to_continue": "请同意后继续",
     "all_options_must_be_ranked": "请对所有选项进行排序",
     "all_rows_must_be_answered": "请回答所有行",
+    "answer_at_least_one_row": "请至少回答一行",
+    "choose_a_rating": "请选择一个评分",
     "file_extension_must_be": "文件扩展名必须为{extension}",
     "file_extension_must_not_be": "文件扩展名不能为{extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "此设备不支持垃圾信息防护。"
     },
     "invalid_format": "请输入有效的格式",
+    "invalid_phone_with_example": "请输入有效的电话号码，例如 138 0013 8000",
     "is_between": "请选择{startDate}到{endDate}之间的日期",
     "is_earlier_than": "请选择早于{date}的日期",
     "is_greater_than": "请输入大于{min}的值",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "请输入有效的电话号码",
     "please_enter_a_valid_url": "请输入有效的URL",
     "please_fill_out_this_field": "请填写此字段",
+    "rank_at_least_one_option": "请至少为一个选项排序",
     "recaptcha_error": {
       "message": "您的响应未能提交，因为它被标记为自动活动。如果您是人类，请重试。",
       "title": "我们无法验证你是人类。"
@@ -111,10 +116,19 @@
       "message": "你的回复无法提交且无法重试。如果此问题持续发生,请联系调查问卷的创建者。",
       "title": "你的回复无法提交。"
     },
+    "select_a_date": "请选择日期",
+    "select_an_option": "请选择一个选项",
+    "upload_a_file": "请上传文件",
     "value_must_contain": "值必须包含{value}",
     "value_must_equal": "值必须等于{value}",
     "value_must_not_contain": "值不能包含{value}",
     "value_must_not_equal": "值不能等于{value}",
     "x_questions_need_an_answer": "{count, plural, other {{count}个问题需要回答}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · 最大 {maxSizeInMB} MB",
+    "invalid_type": "不支持此文件类型。允许的格式：{formats}",
+    "max_size_hint": "最大 {maxSizeInMB} MB",
+    "tap_to_upload": "点按上传文件"
   }
 }

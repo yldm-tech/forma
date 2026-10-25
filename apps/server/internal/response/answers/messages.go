@@ -16,9 +16,9 @@ var messagesJSON []byte
 // messageKeys are the runtime's errors keys the checks use.
 var messageKeys = []string{
 	"all_options_must_be_ranked", "all_rows_must_be_answered", "file_extension_must_be", "file_extension_must_not_be", "invalid_format",
-	"is_between", "is_earlier_than", "is_greater_than", "is_later_than", "is_less_than", "is_not_between", "max_length", "max_selections",
-	"max_value", "min_length", "min_selections", "min_value", "minimum_options_ranked", "minimum_rows_answered",
-	"please_enter_a_valid_email_address", "please_enter_a_valid_phone_number", "please_enter_a_valid_url", "please_fill_out_this_field",
+	"invalid_phone_with_example", "is_between", "is_earlier_than", "is_greater_than", "is_later_than", "is_less_than", "is_not_between",
+	"max_length", "max_selections", "max_value", "min_length", "min_selections", "min_value", "minimum_options_ranked", "minimum_rows_answered",
+	"please_enter_a_valid_email_address", "please_enter_a_valid_url", "please_fill_out_this_field",
 	"value_must_contain", "value_must_equal", "value_must_not_contain", "value_must_not_equal",
 }
 

@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Je feedback blijft hangen :("
   },
   "errors": {
+    "accept_to_continue": "Ga akkoord om door te gaan",
     "all_options_must_be_ranked": "Rangschik alle opties",
     "all_rows_must_be_answered": "Beantwoord alle rijen",
+    "answer_at_least_one_row": "Beantwoord ten minste één rij",
+    "choose_a_rating": "Kies een beoordeling",
     "file_extension_must_be": "Bestandsextensie moet {extension} zijn",
     "file_extension_must_not_be": "Bestandsextensie mag niet {extension} zijn",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Dit apparaat ondersteunt geen spambescherming."
     },
     "invalid_format": "Voer een geldig formaat in",
+    "invalid_phone_with_example": "Voer een geldig telefoonnummer in, bijvoorbeeld 06 12345678",
     "is_between": "Selecteer een datum tussen {startDate} en {endDate}",
     "is_earlier_than": "Selecteer een datum vóór {date}",
     "is_greater_than": "Voer een waarde in die groter is dan {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Voer een geldig telefoonnummer in",
     "please_enter_a_valid_url": "Voer een geldige URL in",
     "please_fill_out_this_field": "Vul dit veld in",
+    "rank_at_least_one_option": "Rangschik ten minste één optie",
     "recaptcha_error": {
       "message": "Uw reactie kan niet worden verzonden omdat deze is gemarkeerd als geautomatiseerde activiteit. Als u ademhaalt, probeer het dan opnieuw.",
       "title": "We konden niet verifiëren dat je een mens bent."
@@ -111,10 +116,19 @@
       "message": "Je reactie kon niet worden verzonden en kan niet opnieuw worden geprobeerd. Neem contact op met de eigenaar van de enquête als dit blijft gebeuren.",
       "title": "Je reactie kon niet worden verzonden."
     },
+    "select_a_date": "Selecteer een datum",
+    "select_an_option": "Selecteer een optie",
+    "upload_a_file": "Upload een bestand",
     "value_must_contain": "Waarde moet {value} bevatten",
     "value_must_equal": "Waarde moet gelijk zijn aan {value}",
     "value_must_not_contain": "Waarde mag {value} niet bevatten",
     "value_must_not_equal": "Waarde mag niet gelijk zijn aan {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} vraag moet nog worden beantwoord} other {{count} vragen moeten nog worden beantwoord}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · max. {maxSizeInMB} MB",
+    "invalid_type": "Dit bestandstype is niet toegestaan. Toegestane formaten: {formats}",
+    "max_size_hint": "Max. {maxSizeInMB} MB",
+    "tap_to_upload": "Tik om bestanden te uploaden"
   }
 }

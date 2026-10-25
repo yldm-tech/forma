@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -162,7 +163,7 @@ func (h *Handler) checkNewResponseV1(ctx context.Context, sv *response.Survey, w
 	if !h.validClientFileUploads(ingest.Data, elements, workspaceID, sv.ID) {
 		return nil, nil, badRequest("Invalid file upload response", nil)
 	}
-	if err := h.validateAnswers(sv, ingest.Data, in.Language); err != nil {
+	if err := h.validateAnswers(sv, ingest.Data, in.Language, nil); err != nil {
 		return nil, nil, err
 	}
 	return ingest.Data, ingest.Flags, nil
@@ -230,7 +231,7 @@ func (h *Handler) checkNewResponseV2(ctx context.Context, sv *response.Survey, w
 	if id := otherOptionTooLong(ingest.Data, memberKeys(in.Data), elements, in.Language); id != "" {
 		return nil, nil, badRequest("Response exceeds character limit", fields{{"questionId", id}})
 	}
-	if err := h.validateAnswers(sv, ingest.Data, in.Language); err != nil {
+	if err := h.validateAnswers(sv, ingest.Data, in.Language, nil); err != nil {
 		return nil, nil, err
 	}
 	return ingest.Data, ingest.Flags, nil
@@ -299,8 +300,8 @@ func (h *Handler) verifiedEmailGate(sv *response.Survey, data map[string]any, me
 	return nil
 }
 
-// validateAnswers is forma2's validateResponseData with the v1 error format: 400 "Validation failed" with each failing element's messages.
-func (h *Handler) validateAnswers(sv *response.Survey, data map[string]any, language *string) error {
+// validateAnswers is forma2's validateResponseData with the v1 error format: 400 "Validation failed" with each failing element's messages. When reported is not nil, only the elements it carries can fail: an update checks the answers merged over the stored ones but refuses only for the answers it sends, so a stored answer that a later, stricter rule no longer accepts (the phone check narrowed to 7 to 15 digits) does not make every further update of an unfinished response fail.
+func (h *Handler) validateAnswers(sv *response.Survey, data map[string]any, language *string, reported map[string]any) error {
 	lang := "en"
 	if language != nil {
 		lang = *language
@@ -308,6 +309,12 @@ func (h *Handler) validateAnswers(sv *response.Survey, data map[string]any, lang
 	errs, err := answers.Validate(sv.Blocks, data, lang, sv.DefaultLanguage, h.now())
 	if err != nil {
 		return err
+	}
+	if reported != nil {
+		errs = slices.DeleteFunc(errs, func(e answers.ElementErrors) bool {
+			_, sent := reported[e.ElementID]
+			return !sent
+		})
 	}
 	if len(errs) == 0 {
 		return nil
@@ -394,7 +401,12 @@ func (h *Handler) updateResponse(c *gin.Context) {
 	if language == nil {
 		language = existing.Language
 	}
-	if err := h.validateAnswers(sv, merged, language); err != nil {
+	// Only the answers this update sends can refuse it; an update without data refuses for none.
+	sent := update.Data
+	if sent == nil {
+		sent = map[string]any{}
+	}
+	if err := h.validateAnswers(sv, merged, language, sent); err != nil {
 		h.fail(c, err, msgGeneric)
 		return
 	}

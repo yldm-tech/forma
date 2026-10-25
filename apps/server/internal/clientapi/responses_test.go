@@ -399,6 +399,37 @@ func TestUpdateResponse(t *testing.T) {
 	e.do("PUT", "/api/v2/client/"+ws.String()+"/responses/"+pid.String(), map[string]any{"finished": true}).expectError(t, 403, "forbidden", "Survey is protected by a PIN")
 }
 
+// An unfinished response stored before the phone check narrowed to 7 to 15 digits keeps an answer that check now refuses. Updates that send other answers still go through; sending that answer again is refused.
+func TestUpdateResponseStoredAnswers(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws, "blocks", `[{"id":"b1","name":"Main","elements":[
+		{"id":"phone","type":"openText","headline":{"default":"Phone"},"required":false,"inputType":"phone"},
+		{"id":"contact","type":"contactInfo","headline":{"default":"Contact"},"required":false,"firstName":{"show":true},"lastName":{"show":true},"email":{"show":true},"phone":{"show":true},"company":{"show":true}},
+		{"id":"q2","type":"openText","headline":{"default":"Q2"},"required":false,"inputType":"email"}]}]`)
+	id := e.insert(`INSERT INTO responses (survey_id, data) VALUES (?, '{"phone":"123-45","contact":["Ann","Lee","a@b.co","123-45",""]}'::jsonb) RETURNING id`, sv)
+	put := func(body any) result {
+		e.clock.nextWindow()
+		return e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+id.String(), body)
+	}
+	if r := put(map[string]any{"data": map[string]any{"q2": "a@b.co"}}); r.Status != 200 {
+		t.Fatalf("update of another answer: %d %s", r.Status, r.Body)
+	}
+	if r := put(map[string]any{"ttc": map[string]any{"q2": 1200}}); r.Status != 200 {
+		t.Fatalf("update without data: %d %s", r.Status, r.Body)
+	}
+	details := put(map[string]any{"data": map[string]any{"phone": "123-45", "q2": "not an address"}}).expectError(t, 400, "bad_request", "Validation failed")
+	if details["response.data.phone"] == nil || details["response.data.q2"] == nil || details["response.data.contact"] != nil {
+		t.Fatalf("details %v", details)
+	}
+	if r := put(map[string]any{"data": map[string]any{"phone": "+1 555 123 4567"}, "finished": true}); r.Status != 200 {
+		t.Fatalf("corrected answer: %d %s", r.Status, r.Body)
+	}
+	if d := e.responseData(t, id); d["phone"] != "+1 555 123 4567" || d["q2"] != "a@b.co" {
+		t.Fatalf("data %v", d)
+	}
+}
+
 // forma2's sendToPipeline resolved the respondent's locale from Accept-Language (findMatchingLocale, the best of the shipped locales) and queued it with the job, so follow-up emails are localized; without the header it is the default locale.
 func TestResponsePipelineLocale(t *testing.T) {
 	e := newEnv(t)
