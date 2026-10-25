@@ -64,7 +64,7 @@ export const DomainSettingsPage = ({
   const { data: instance } = useQuery(instanceQuery);
   return (
     <PageContentWrapper>
-      <PageHeader pageTitle={t("common.domain")} />
+      <PageHeader pageTitle={t("common.branding_and_links")} />
       {instance?.storageConfigured === false && (
         <Alert variant="warning" role="status">
           <AlertDescription>{t("common.storage_not_configured")}</AlertDescription>

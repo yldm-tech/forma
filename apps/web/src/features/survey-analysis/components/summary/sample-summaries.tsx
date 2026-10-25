@@ -22,9 +22,10 @@ import { formatStoredDateForDisplay } from "../../../../lib/survey/date-display"
 import { timeSince } from "../../../../lib/time";
 import { renderHyperlinkedContent } from "../../lib/response-display";
 import { getContactIdentifier } from "../../lib/responses";
+import { defaultBreakdownView } from "../../lib/summary";
 import { ArrayResponse } from "../response-values/response-values";
 import { ResponseSampleModal } from "./response-sample-modal";
-import { ElementSummaryHeader, SampleTruncationNotice } from "./summary-parts";
+import { BreakdownBars, ElementSummaryHeader, SampleTruncationNotice, ViewToggle } from "./summary-parts";
 
 const PAGE = 10;
 
@@ -187,7 +188,7 @@ export const ArraySamplesSummary = ({
       responseCount={elementSummary.responseCount}
       workspaceId={survey.workspaceId}
       locale={locale}
-      paged={false}
+      paged
       sampleKey={(sample) => sample.id}
       renderValue={(sample) => (
         <div className="ph-no-capture col-span-2 pl-6 font-semibold">
@@ -285,7 +286,7 @@ export const FileUploadSummary = ({
   );
 };
 
-/** forma2's HiddenFieldsSummary: the values one ingested field took. */
+/** forma2's HiddenFieldsSummary: the values one ingested field took, grouped into bars (the most frequent first) or listed one response at a time. */
 export const HiddenFieldsSummary = ({
   elementSummary,
   workspaceId,
@@ -296,6 +297,7 @@ export const HiddenFieldsSummary = ({
   locale: string;
 }) => {
   const { t } = useTranslation();
+  const [view, setView] = useState(() => defaultBreakdownView(elementSummary.breakdown));
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-xs">
       <div className="space-y-2 px-4 pt-6 pb-5 md:px-6">
@@ -313,20 +315,30 @@ export const HiddenFieldsSummary = ({
           </div>
         </div>
       </div>
+      {elementSummary.responseCount > 0 && <ViewToggle value={view} onChange={setView} />}
       <div className="rounded-b-lg bg-white">
-        <SampleGrid
-          samples={elementSummary.samples}
-          responseCount={elementSummary.responseCount}
-          workspaceId={workspaceId}
-          locale={locale}
-          paged
-          sampleKey={(sample, index) => `${sample.value}-${index}`}
-          renderValue={(sample) => (
-            <div className="ph-no-capture col-span-2 pl-6 font-semibold whitespace-pre-wrap">
-              {sample.value}
-            </div>
-          )}
-        />
+        {view === "aggregated" && elementSummary.responseCount > 0 ? (
+          <div className="px-4 pt-4 pb-6 text-sm md:px-6 md:text-base">
+            <BreakdownBars
+              breakdown={elementSummary.breakdown}
+              countLabel={(count) => t("common.count_responses", { count })}
+            />
+          </div>
+        ) : (
+          <SampleGrid
+            samples={elementSummary.samples}
+            responseCount={elementSummary.responseCount}
+            workspaceId={workspaceId}
+            locale={locale}
+            paged
+            sampleKey={(sample, index) => `${sample.value}-${index}`}
+            renderValue={(sample) => (
+              <div className="ph-no-capture col-span-2 pl-6 font-semibold whitespace-pre-wrap">
+                {sample.value}
+              </div>
+            )}
+          />
+        )}
       </div>
     </div>
   );

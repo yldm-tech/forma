@@ -231,6 +231,7 @@
     "booked": "已预定",
     "bottom_left": "右下",
     "bottom_right": "右下",
+    "branding_and_links": "品牌与链接",
     "cancel": "取消",
     "canceled": "已取消",
     "centered_modal": "居中弹窗",
@@ -289,6 +290,10 @@
     "disabled": "已禁用",
     "disallow": "不允许",
     "discard": "丢弃",
+    "discard_changes_confirm": "放弃更改",
+    "discard_changes_description": "此页面有未保存的更改。现在离开，这些更改将会丢失。",
+    "discard_changes_keep_editing": "继续编辑",
+    "discard_changes_title": "放弃更改？",
     "dismissed": "忽略",
     "domain": "域名",
     "done": "完成",
@@ -703,6 +708,9 @@
     "landing": {
       "no_workspaces_warning_subtitle": "请联系你的组织所有者以获取工作区访问权限，或创建自己的组织开始使用。",
       "no_workspaces_warning_title": "你的账户尚未获得任何工作区的访问权限。"
+    },
+    "members": {
+      "inactive_tooltip": "该账户已通过管理 API 停用。所有者或管理员可以向 PATCH /api/v2/organizations/{organizationId}/users 发送邮箱 {email} 和 isActive: true 来恢复访问权限。"
     },
     "security_tip_github": "及时了解安全修复：打开<githubLink>Forma 在 GitHub 上的安全公告</githubLink>，选择 Watch → Custom → Releases 和 Security alerts。",
     "workspaces": {
@@ -1681,6 +1689,7 @@
       "your_survey_would_not_be_shown": "你的问卷不会显示。"
     },
     "analysis": {
+      "breakdown_rest": "其他所有值",
       "filter_op": {
         "applied": "已添加",
         "clicked": "已点击",
@@ -1706,7 +1715,9 @@
         "starts_with": "开头是",
         "submitted": "已作答"
       },
-      "nps_formula_tooltip": "NPS = 推荐者（9–10 分）占比 − 贬损者（0–6 分）占比，以作答的 {count} 位受访者为基数，不计跳过的回答。"
+      "new_responses_pill": "{count, plural, other {{count} 条新回复}}",
+      "nps_formula_tooltip": "NPS = 推荐者（9–10 分）占比 − 贬损者（0–6 分）占比，以作答的 {count} 位受访者为基数，不计跳过的回答。",
+      "refresh": "刷新结果"
     },
     "api_keys": {
       "access": "访问权限",
@@ -3013,6 +3024,7 @@
         "convert_to_single_choice": "转换为单选",
         "cooldown_period_across_surveys": "冷却期（跨问卷）",
         "cooldown_period_across_surveys_description": "为防止问卷疲劳，请选择此问卷如何与工作区范围的冷却期互动。",
+        "cooldown_reset_warning": "此问卷忽略冷却期，并在每次页面浏览时触发，因此会反复显示。每次显示都会重新开始工作区的冷却期，设置为“使用冷却期”的问卷可能永远没有机会显示。请将页面浏览触发器限定到特定页面，或为此问卷设置冷却期。",
         "country": "国家",
         "create_group": "创建群组",
         "create_your_own_survey": "创建你的问卷",
@@ -3529,6 +3541,11 @@
         "partial_responses": "部分回复"
       },
       "filter_selected_count": "已选 {count} 项",
+      "list": {
+        "state_truncated": "SDK 只加载工作区中最新的 {limit} 份进行中的应用程序问卷，更早的问卷不会出现在你的网站或应用中。请完成或暂停不再需要的应用程序问卷：",
+        "state_truncated_more": "{count, plural, other {另有 {count} 份}}",
+        "state_truncated_title": "{count, plural, other {有 {count} 份进行中的应用程序问卷永远不会显示}}"
+      },
       "new_survey": "新问卷",
       "no_other_workspaces_available": "没有其他可用的工作区来复制此问卷。",
       "no_surveys_match_filters": "没有符合这些筛选条件的问卷。",

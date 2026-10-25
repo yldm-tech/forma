@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { PlainChat } from "./plain-chat";
+import { UnsavedChangesGuard } from "./unsaved-changes";
 
 /** The id of the shell's <main>, the skip link's target. */
 export const MAIN_CONTENT_ID = "main-content";
@@ -21,7 +22,7 @@ const SkipToContent = () => {
   );
 };
 
-/** forma2's workspace and settings shell: a sidebar, and beside it the top bar over the scrolling page. A banner (the limits notice) floats over both. The Plain support chat is mounted here, as forma2's app layout did, and loads only where the server configured it. */
+/** forma2's workspace and settings shell: a sidebar, and beside it the top bar over the scrolling page. A banner (the limits notice) floats over both. The Plain support chat is mounted here, as forma2's app layout did, and loads only where the server configured it. Every page in it can hold back a navigation while a form has unsaved edits (UnsavedChangesGuard). */
 export const AppShell = ({
   sidebar,
   topBar,
@@ -42,7 +43,7 @@ export const AppShell = ({
       <div id="mainContent" className="flex flex-1 flex-col overflow-hidden bg-slate-50">
         {topBar}
         <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 overflow-y-auto outline-hidden">
-          {children}
+          <UnsavedChangesGuard>{children}</UnsavedChangesGuard>
         </main>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, RotateCcwIcon, SparklesIcon } from "lucide-react";
 import { type ChangeEvent, type FormEvent, type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useUnsavedChanges } from "../../components/shell/unsaved-changes";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -29,6 +30,7 @@ import {
   parseDimension,
   themeFormValues,
 } from "../../lib/styling";
+import { isDeepEqual } from "../../lib/survey/object";
 import { toast } from "../../lib/toast";
 import { handleFileUpload, showFileUploadErrorToast } from "../../lib/upload";
 import { instanceQuery } from "../../lib/queries/instance";
@@ -103,6 +105,10 @@ export const WorkspaceLookPage = ({ workspace }: { workspace: WorkspaceDetail })
 };
 
 type StylingSetter = (update: (styling: TWorkspaceStyling) => TWorkspaceStyling) => void;
+
+/** Whether two theme forms hold the same values; a key set to undefined (a cleared color) is the same as a missing one, as in the JSON that is saved. */
+const sameStyling = (left: TWorkspaceStyling, right: TWorkspaceStyling) =>
+  isDeepEqual(JSON.parse(JSON.stringify(left)), JSON.parse(JSON.stringify(right)));
 
 type ColorKey = {
   [K in keyof TWorkspaceStyling]-?: NonNullable<TWorkspaceStyling[K]> extends { light: string } ? K : never;
@@ -272,6 +278,7 @@ const ThemeStyling = ({ workspace }: { workspace: Workspace }) => {
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmSuggest, setConfirmSuggest] = useState(false);
   const setStyling: StylingSetter = (change) => setStylingState((current) => change(current));
+  useUnsavedChanges(!sameStyling(styling, themeFormValues(workspace.styling)));
   const headline = (key: string) => t(`workspace.look.advanced_styling_field_${key}`);
 
   const save = async (next: TWorkspaceStyling, message: string) => {
@@ -948,6 +955,10 @@ const EditLogo = ({ workspace, isReadOnly }: { workspace: Workspace; isReadOnly:
   const [bgColor, setBgColor] = useState(workspace.logo?.bgColor);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // An uploaded file is only the workspace's logo once saved.
+  useUnsavedChanges(
+    isEditing && (url !== (workspace.logo?.url || undefined) || bgColor !== workspace.logo?.bgColor)
+  );
 
   const replace = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1104,6 +1115,11 @@ const EditPlacement = ({ workspace, isReadOnly }: { workspace: Workspace; isRead
   const [placement, setPlacement] = useState(workspace.placement);
   const [overlay, setOverlay] = useState(workspace.overlay);
   const [clickOutsideClose, setClickOutsideClose] = useState(workspace.clickOutsideClose);
+  useUnsavedChanges(
+    placement !== workspace.placement ||
+      overlay !== workspace.overlay ||
+      clickOutsideClose !== workspace.clickOutsideClose
+  );
   const placements: { value: Workspace["placement"]; label: string }[] = [
     { value: "bottomRight", label: t("common.bottom_right") },
     { value: "topRight", label: t("common.top_right") },

@@ -52,7 +52,9 @@ const stubServer = (ai: unknown, generation: () => Promise<Response>) => {
   return posts;
 };
 
-const renderAction = (props: { responseCount?: number; isReadOnly?: boolean; archived?: boolean } = {}) => {
+const renderAction = (
+  props: { responseCount?: number | undefined; isReadOnly?: boolean; archived?: boolean } = {}
+) => {
   const onGenerated = vi.fn(async () => {});
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -65,7 +67,7 @@ const renderAction = (props: { responseCount?: number; isReadOnly?: boolean; arc
       useExampleResponsesAction({
         survey: survey(props.archived),
         workspaceId: WORKSPACE_ID,
-        responseCount: props.responseCount ?? 0,
+        responseCount: "responseCount" in props ? props.responseCount : 0,
         isReadOnly: props.isReadOnly ?? false,
         onGenerated,
       }),
@@ -85,15 +87,11 @@ describe("useExampleResponsesAction", () => {
     expect(renderAction({ archived: true }).result.current.isVisible).toBe(false);
   });
 
-  test("is disabled once the survey has responses", async () => {
+  test("leaves the toolbar once the survey has responses, and waits for the count", () => {
     stubServer({ available: true }, async () => json(200, { createdCount: 20 }));
-    const { result } = renderAction({ responseCount: 3 });
-    await waitFor(() =>
-      expect(result.current.tooltip).toBe(
-        "You can only generate example responses for surveys without responses. Reset survey to try."
-      )
-    );
-    expect(result.current.disabled).toBe(true);
+    expect(renderAction({ responseCount: 3 }).result.current.isVisible).toBe(false);
+    // Offered while the count loads, it would flash in and out on every survey with responses.
+    expect(renderAction({ responseCount: undefined }).result.current.isVisible).toBe(false);
   });
 
   test("is disabled while AI is unavailable, saying why", async () => {

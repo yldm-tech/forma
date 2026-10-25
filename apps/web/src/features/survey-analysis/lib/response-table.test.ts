@@ -366,6 +366,7 @@ describe("mapResponsesToTableData", () => {
     const t = ((key: string) => key) as unknown as TFunction;
     const [row] = mapResponsesToTableData([response], survey, t);
     expect(row).toMatchObject({
+      finished: true,
       status: "workspace.surveys.responses.completed",
       responseId: "r1",
       singleUseId: "su1",
@@ -374,6 +375,9 @@ describe("mapResponsesToTableData", () => {
       quotas: ["Quota A"],
     });
     const [unfinished] = mapResponsesToTableData([{ ...response, finished: false }], survey, t);
-    expect(unfinished?.status).toBe("workspace.surveys.responses.not_completed");
+    expect(unfinished).toMatchObject({
+      finished: false,
+      status: "workspace.surveys.responses.not_completed",
+    });
   });
 });

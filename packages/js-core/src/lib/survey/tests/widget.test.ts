@@ -156,7 +156,7 @@ describe("widget-file", () => {
     await widget.triggerSurvey(mockSurvey);
 
     expect(mockLogger.debug).toHaveBeenCalledWith(
-      `Survey display of "${mockSurvey.id}" skipped based on displayPercentage.`
+      `Survey ${mockSurvey.id} left out: user outside its ${String(mockSurvey.displayPercentage)}% sample`
     );
   });
 
@@ -187,7 +187,9 @@ describe("widget-file", () => {
 
     await widget.triggerSurvey(mockSurvey);
 
-    expect(mockLogger.debug).toHaveBeenCalledWith("A survey is already running. Skipping.");
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      `Survey ${mockSurvey.id} left out: another survey is showing`
+    );
   });
 
   test("renderWidget sets isSurveyRunning, handles delay, loads formaSurveys, and calls .renderSurvey", async () => {
@@ -250,7 +252,9 @@ describe("widget-file", () => {
   test("renderWidget short-circuits if isSurveyRunning is already true", async () => {
     widget.setIsSurveyRunning(true);
     await widget.renderWidget(mockSurvey);
-    expect(mockLogger.debug).toHaveBeenCalledWith("A survey is already running. Skipping.");
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      `Survey ${mockSurvey.id} left out: another survey is showing`
+    );
   });
 
   test("renderWidget handles multi-language and skip if no matching language", async () => {
@@ -295,7 +299,7 @@ describe("widget-file", () => {
     await widget.renderWidget(mockSurveyNoDelay as unknown as TWorkspaceStateSurvey);
 
     expect(mockLogger.debug).toHaveBeenCalledWith(
-      `Survey "${mockSurvey.id}" is not available in specified language.`
+      `Survey ${mockSurvey.id} left out: no translation for "hi"`
     );
   });
 

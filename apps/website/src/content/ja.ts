@@ -427,7 +427,7 @@ export const ja: SiteContent = {
           facts: [
             {
               term: "?formaDebug=true",
-              body: "ページの URL に付けると、SDK は各ステップを `🧱 Forma` の接頭辞付きでコンソールに記録し、キャッシュを使わずにワークスペースの状態を取り直し、保存されたエラー状態を無視します。",
+              body: "ページの URL に付けると、SDK は各ステップを `🧱 Forma` の接頭辞付きでコンソールに記録し、キャッシュを使わずにワークスペースの状態を取り直し、保存されたエラー状態を無視します。現在のユーザーに表示できないフォームはすべて、`Survey <id> left out: workspace cooldown 7d, last survey shown 2d ago` のように理由とともに記録されます。トラッキングしたアクションがトリガーなのに表示できないフォームも同様です。",
             },
             {
               term: "setNonce(nonce)",
