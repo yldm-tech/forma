@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Seu feedback está preso :("
   },
   "errors": {
+    "accept_to_continue": "Por favor, aceite para continuar",
     "all_options_must_be_ranked": "Por favor, classifique todas as opções",
     "all_rows_must_be_answered": "Por favor, responda todas as linhas",
+    "answer_at_least_one_row": "Por favor, responda pelo menos uma linha",
+    "choose_a_rating": "Por favor, escolha uma avaliação",
     "file_extension_must_be": "A extensão do arquivo deve ser {extension}",
     "file_extension_must_not_be": "A extensão do arquivo não deve ser {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Este dispositivo não suporta proteção contra spam."
     },
     "invalid_format": "Por favor, insira um formato válido",
+    "invalid_phone_with_example": "Por favor, insira um número de telefone válido, por exemplo (11) 91234-5678",
     "is_between": "Por favor, selecione uma data entre {startDate} e {endDate}",
     "is_earlier_than": "Por favor, selecione uma data anterior a {date}",
     "is_greater_than": "Por favor, insira um valor superior a {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Por favor, insira um número de telefone válido",
     "please_enter_a_valid_url": "Por favor, insira uma URL válida",
     "please_fill_out_this_field": "Por favor, preencha este campo",
+    "rank_at_least_one_option": "Por favor, classifique pelo menos uma opção",
     "recaptcha_error": {
       "message": "Sua resposta não pôde ser enviada porque foi sinalizada como atividade automatizada. Se você respira, por favor tente novamente.",
       "title": "Não foi possível verificar que você é humano."
@@ -111,10 +116,19 @@
       "message": "A sua resposta não pôde ser enviada e não pode ser retentada. Por favor, contacte o responsável pelo questionário se isto continuar a acontecer.",
       "title": "A sua resposta não pôde ser enviada."
     },
+    "select_a_date": "Por favor, selecione uma data",
+    "select_an_option": "Por favor, selecione uma opção",
+    "upload_a_file": "Por favor, envie um arquivo",
     "value_must_contain": "O valor deve conter {value}",
     "value_must_equal": "O valor deve ser igual a {value}",
     "value_must_not_contain": "O valor não deve conter {value}",
     "value_must_not_equal": "O valor não deve ser igual a {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} pergunta precisa de resposta} other {{count} perguntas precisam de resposta}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · até {maxSizeInMB} MB",
+    "invalid_type": "Este tipo de arquivo não é permitido. Formatos permitidos: {formats}",
+    "max_size_hint": "Até {maxSizeInMB} MB",
+    "tap_to_upload": "Toque para enviar arquivos"
   }
 }

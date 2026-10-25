@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Sizning fikr-mulohazangiz qotib qoldi :("
   },
   "errors": {
+    "accept_to_continue": "Davom etish uchun rozilik bering",
     "all_options_must_be_ranked": "Iltimos, barcha variantlarni tartiblang",
     "all_rows_must_be_answered": "Iltimos, barcha qatorlarga javob bering",
+    "answer_at_least_one_row": "Iltimos, kamida bitta qatorga javob bering",
+    "choose_a_rating": "Iltimos, bahoni tanlang",
     "file_extension_must_be": "Fayl kengaytmasi {extension} bo‘lishi kerak",
     "file_extension_must_not_be": "Fayl kengaytmasi {extension} bo‘lmasligi kerak",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Bu qurilmada spamdan himoya qilish qo‘llab-quvvatlanmaydi."
     },
     "invalid_format": "Iltimos, to‘g‘ri formatda kiriting",
+    "invalid_phone_with_example": "Iltimos, to'g'ri telefon raqamini kiriting, masalan +998 90 123 45 67",
     "is_between": "Iltimos, {startDate} va {endDate} oralig‘idagi sanani tanlang",
     "is_earlier_than": "Iltimos, {date} dan oldingi sanani tanlang",
     "is_greater_than": "Iltimos, {min} dan katta qiymat kiriting",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Iltimos, to'g'ri telefon raqamini kiriting",
     "please_enter_a_valid_url": "Iltimos, toʻgʻri URL manzilini kiriting",
     "please_fill_out_this_field": "Iltimos, ushbu maydonni to'ldiring",
+    "rank_at_least_one_option": "Iltimos, kamida bitta variantni tartiblang",
     "recaptcha_error": {
       "message": "Sizning javobingiz avtomatlashtirilgan faoliyat sifatida belgilanganligi sababli yuborilmadi. Agar siz nafas olayotgan bo'lsangiz, qayta urinib ko'ring.",
       "title": "Sizning inson ekanligingizni tasdiqlay olmadik."
@@ -111,10 +116,19 @@
       "message": "Javobingizni yuborib bo'lmadi va qayta urinib bo'lmaydi. Agar bu holat takrorlansa, so'rovnoma egasi bilan bog'laning.",
       "title": "Javobingizni yuborib bo'lmadi."
     },
+    "select_a_date": "Iltimos, sanani tanlang",
+    "select_an_option": "Iltimos, variantni tanlang",
+    "upload_a_file": "Iltimos, fayl yuklang",
     "value_must_contain": "Qiymatda {value} bo‘lishi kerak",
     "value_must_equal": "Qiymat {value} ga teng bo‘lishi kerak",
     "value_must_not_contain": "Qiymatda {value} bo‘lmasligi kerak",
     "value_must_not_equal": "Qiymat {value} ga teng bo‘lmasligi kerak",
     "x_questions_need_an_answer": "{count, plural, one {{count} ta savolga javob berish kerak} other {{count} ta savolga javob berish kerak}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · {maxSizeInMB} MB gacha",
+    "invalid_type": "Bu fayl turiga ruxsat berilmagan. Ruxsat etilgan formatlar: {formats}",
+    "max_size_hint": "{maxSizeInMB} MB gacha",
+    "tap_to_upload": "Fayllarni yuklash uchun bosing"
   }
 }

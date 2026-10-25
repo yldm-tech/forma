@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "您的意見回饋卡住了 :("
   },
   "errors": {
+    "accept_to_continue": "請同意後繼續",
     "all_options_must_be_ranked": "請為所有選項排序",
     "all_rows_must_be_answered": "請回答所有列",
+    "answer_at_least_one_row": "請至少回答一列",
+    "choose_a_rating": "請選擇一個評分",
     "file_extension_must_be": "檔案副檔名必須為 {extension}",
     "file_extension_must_not_be": "檔案副檔名不得為 {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "此裝置不支援垃圾訊息防護。"
     },
     "invalid_format": "請輸入有效格式",
+    "invalid_phone_with_example": "請輸入有效的電話號碼，例如 0912-345-678",
     "is_between": "請選擇介於 {startDate} 和 {endDate} 之間的日期",
     "is_earlier_than": "請選擇早於 {date} 的日期",
     "is_greater_than": "請輸入大於 {min} 的值",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "請輸入有效的電話號碼",
     "please_enter_a_valid_url": "請輸入有效的網址",
     "please_fill_out_this_field": "請填寫此欄位",
+    "rank_at_least_one_option": "請至少為一個選項排序",
     "recaptcha_error": {
       "message": "您的回應無法提交，因為它被標記為自動化活動。如果您是真人，請再試一次。",
       "title": "我們無法驗證您是真人。"
@@ -111,10 +116,19 @@
       "message": "您的回覆無法提交且無法重試。如果問題持續發生，請聯絡問卷擁有者。",
       "title": "您的回覆無法提交。"
     },
+    "select_a_date": "請選擇日期",
+    "select_an_option": "請選擇一個選項",
+    "upload_a_file": "請上傳檔案",
     "value_must_contain": "值必須包含 {value}",
     "value_must_equal": "值必須等於 {value}",
     "value_must_not_contain": "值不得包含 {value}",
     "value_must_not_equal": "值不得等於 {value}",
     "x_questions_need_an_answer": "{count, plural, other {{count}個問題需要回答}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · 最大 {maxSizeInMB} MB",
+    "invalid_type": "不允許此檔案類型。允許的格式：{formats}",
+    "max_size_hint": "最大 {maxSizeInMB} MB",
+    "tap_to_upload": "輕觸以上傳檔案"
   }
 }

@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Your feedback is stuck :("
   },
   "errors": {
+    "accept_to_continue": "Please accept to continue",
     "all_options_must_be_ranked": "Please rank all options",
     "all_rows_must_be_answered": "Please answer all rows",
+    "answer_at_least_one_row": "Please answer at least one row",
+    "choose_a_rating": "Please choose a rating",
     "file_extension_must_be": "File extension must be {extension}",
     "file_extension_must_not_be": "File extension must not be {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "This device does not support spam protection."
     },
     "invalid_format": "Please enter a valid format",
+    "invalid_phone_with_example": "Please enter a valid phone number, for example +1 555 123 4567",
     "is_between": "Please select a date between {startDate} and {endDate}",
     "is_earlier_than": "Please select a date earlier than {date}",
     "is_greater_than": "Please enter a value greater than {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Please enter a valid phone number",
     "please_enter_a_valid_url": "Please enter a valid URL",
     "please_fill_out_this_field": "Please fill out this field",
+    "rank_at_least_one_option": "Please rank at least one option",
     "recaptcha_error": {
       "message": "Your response could not be submitted because it was flagged as automated activity. If you breathe, please try again.",
       "title": "We could not verify that you are human."
@@ -111,10 +116,19 @@
       "message": "Your response could not be submitted and cannot be retried. Please contact the survey owner if this keeps happening.",
       "title": "Your response could not be submitted."
     },
+    "select_a_date": "Please select a date",
+    "select_an_option": "Please select an option",
+    "upload_a_file": "Please upload a file",
     "value_must_contain": "Value must contain {value}",
     "value_must_equal": "Value must equal {value}",
     "value_must_not_contain": "Value must not contain {value}",
     "value_must_not_equal": "Value must not equal {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} question needs an answer} other {{count} questions need an answer}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · up to {maxSizeInMB} MB",
+    "invalid_type": "This file type isn't allowed. Allowed formats: {formats}",
+    "max_size_hint": "Up to {maxSizeInMB} MB",
+    "tap_to_upload": "Tap to upload files"
   }
 }

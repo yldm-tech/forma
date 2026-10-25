@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Din feedback fastnade :("
   },
   "errors": {
+    "accept_to_continue": "Vänligen godkänn för att fortsätta",
     "all_options_must_be_ranked": "Vänligen rangordna alla alternativ",
     "all_rows_must_be_answered": "Vänligen besvara alla rader",
+    "answer_at_least_one_row": "Vänligen besvara minst en rad",
+    "choose_a_rating": "Vänligen välj ett betyg",
     "file_extension_must_be": "Filändelsen måste vara {extension}",
     "file_extension_must_not_be": "Filändelsen får inte vara {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Den här enheten stöder inte skräppostskydd."
     },
     "invalid_format": "Ange ett giltigt format",
+    "invalid_phone_with_example": "Vänligen ange ett giltigt telefonnummer, till exempel 070-123 45 67",
     "is_between": "Välj ett datum mellan {startDate} och {endDate}",
     "is_earlier_than": "Välj ett datum före {date}",
     "is_greater_than": "Ange ett värde som är större än {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Vänligen ange ett giltigt telefonnummer",
     "please_enter_a_valid_url": "Vänligen ange en giltig URL",
     "please_fill_out_this_field": "Vänligen fyll i detta fält",
+    "rank_at_least_one_option": "Vänligen rangordna minst ett alternativ",
     "recaptcha_error": {
       "message": "Ditt svar kunde inte skickas eftersom det flaggades som automatiserad aktivitet. Om du andas, försök igen.",
       "title": "Vi kunde inte verifiera att du är en människa."
@@ -111,10 +116,19 @@
       "message": "Ditt svar kunde inte skickas in och kan inte försökas igen. Vänligen kontakta undersökningens ägare om detta fortsätter att hända.",
       "title": "Ditt svar kunde inte skickas in."
     },
+    "select_a_date": "Vänligen välj ett datum",
+    "select_an_option": "Vänligen välj ett alternativ",
+    "upload_a_file": "Vänligen ladda upp en fil",
     "value_must_contain": "Värdet måste innehålla {value}",
     "value_must_equal": "Värdet måste vara {value}",
     "value_must_not_contain": "Värdet får inte innehålla {value}",
     "value_must_not_equal": "Värdet får inte vara {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} fråga behöver besvaras} other {{count} frågor behöver besvaras}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · upp till {maxSizeInMB} MB",
+    "invalid_type": "Den här filtypen är inte tillåten. Tillåtna format: {formats}",
+    "max_size_hint": "Upp till {maxSizeInMB} MB",
+    "tap_to_upload": "Tryck för att ladda upp filer"
   }
 }

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"unicode/utf16"
 
+	"golang.org/x/text/unicode/norm"
+
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 )
 
@@ -102,8 +104,23 @@ func countSelections(arr []any) int {
 
 var (
 	emailPattern = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	phonePattern = regexp.MustCompile(`^[0-9+][0-9+\- ]*[0-9]$`)
+	// phoneDigits is what a phone number must be once its separators are gone: an optional leading + and 7 to 15 digits of any script (E.164 allows at most 15).
+	phoneDigits = regexp.MustCompile(`^\+?\p{Nd}{7,15}$`)
 )
+
+// phoneSeparators are the characters people write between the digits of a phone number, after NFKC (which already folds full-width forms and the ideographic space): space, - . ( ) /, the Unicode hyphens and dashes U+2010 to U+2015, the minus sign, and the katakana prolonged sound mark a Japanese IME types for a hyphen. The runtime's validatePhone (packages/surveys/src/lib/validation/validators/validation-utils.ts) strips the same set.
+const phoneSeparators = " -.()/\u2010\u2011\u2012\u2013\u2014\u2015\u2212\u30fc"
+
+// isValidPhone is the runtime's validatePhone: NFKC-normalized, separators dropped, then an optional + and 7 to 15 digits. The answer itself is stored as typed. testdata/phone.json holds the cases both sides must agree on.
+func isValidPhone(s string) bool {
+	digits := strings.Map(func(r rune) rune {
+		if strings.ContainsRune(phoneSeparators, r) {
+			return -1
+		}
+		return r
+	}, norm.NFKC.String(s))
+	return phoneDigits.MatchString(digits)
+}
 
 // maxPatternLength and maxPatternInputLength are the runtime's ReDoS guards: a longer pattern or value fails the rule.
 const (
@@ -226,10 +243,10 @@ var validators = map[string]validator{
 	"phone": {
 		check: func(_ checker, v any, _ map[string]any, _ *element) bool {
 			s, ok := nonEmptyString(v)
-			return !ok || phonePattern.MatchString(s)
+			return !ok || isValidPhone(s)
 		},
 		message: func(c checker, _ map[string]any, _ *element) string {
-			return c.t("please_enter_a_valid_phone_number", nil)
+			return c.t("invalid_phone_with_example", nil)
 		},
 	},
 	"minValue":      numberRule("min_value", "min", func(n, bound float64) bool { return n >= bound }),

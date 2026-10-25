@@ -18,6 +18,7 @@ interface OpenTextProps {
   requiredLabel?: string;
   longAnswer?: boolean;
   inputType?: "text" | "email" | "url" | "phone" | "number";
+  /** max caps the input and drives the counter. min is not set on the input: a native minLength makes the browser show its own tooltip, in the browser's language, so the survey runtime checks it with its other validation rules and passes the message in errorMessage. */
   charLimit?: {
     min?: number;
     max?: number;
@@ -106,7 +107,6 @@ function OpenText({
               rows={rows}
               disabled={disabled}
               errorMessage={errorMessage}
-              minLength={charLimit?.min}
               maxLength={charLimit?.max}
             />
           ) : (
@@ -123,7 +123,6 @@ function OpenText({
               dir={dir}
               disabled={disabled}
               errorMessage={errorMessage}
-              minLength={charLimit?.min}
               maxLength={charLimit?.max}
             />
           )}

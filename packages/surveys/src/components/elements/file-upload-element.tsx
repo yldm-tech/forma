@@ -24,6 +24,12 @@ interface FileUploadElementProps {
 
 const FILE_LIMIT = 25;
 
+// A touch screen has nothing to drag files from, so the upload area asks for a tap there instead of "click or drag".
+const isCoarsePointer = (): boolean =>
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(pointer: coarse)").matches;
+
 export function FileUploadElement({
   element,
   value,
@@ -48,6 +54,19 @@ export function FileUploadElement({
 
   // Use centralized error message for required validation, file-specific errors for upload issues
   const errorMessage = centralizedErrorMessage || fileErrorMessage;
+
+  // The allowed formats as respondents know them ("PNG, JPG, PDF"), empty when any file type is allowed.
+  const allowedFormats = (element.allowedFileExtensions ?? []).map((ext) => ext.toUpperCase()).join(", ");
+
+  // What the upload accepts, shown before anything is picked rather than only in the error after a rejected file.
+  const getHintText = (): string | undefined => {
+    if (allowedFormats && element.maxSizeInMB) {
+      return t("file_upload.allowed_hint", { formats: allowedFormats, maxSizeInMB: element.maxSizeInMB });
+    }
+    if (allowedFormats) return allowedFormats;
+    if (element.maxSizeInMB) return t("file_upload.max_size_hint", { maxSizeInMB: element.maxSizeInMB });
+    return undefined;
+  };
 
   // Convert string[] to UploadedFile[] for survey-ui component
   const convertToUploadedFiles = (urls: string[]): UploadedFile[] => {
@@ -211,7 +230,8 @@ export function FileUploadElement({
     async (files: File[]): Promise<{ filesToUpload: File[]; sizeRejectedFiles: string[] }> => {
       const validFiles = files.filter((file) => validateFileExtension(file));
       if (validFiles.length === 0) {
-        setFileErrorMessage(t("errors.file_input.no_valid_file_types_selected"));
+        // Only reachable with allowed extensions configured, so the message can name them.
+        setFileErrorMessage(t("file_upload.invalid_type", { formats: allowedFormats }));
         return { filesToUpload: [], sizeRejectedFiles: [] };
       }
 
@@ -236,7 +256,7 @@ export function FileUploadElement({
 
       return { filesToUpload, sizeRejectedFiles };
     },
-    [validateFileExtension, validateFileSize, element.maxSizeInMB, t]
+    [validateFileExtension, validateFileSize, element.maxSizeInMB, allowedFormats, t]
   );
 
   /**
@@ -365,7 +385,10 @@ export function FileUploadElement({
         imageUrl={element.imageUrl}
         videoUrl={element.videoUrl}
         deleteFileLabel={(fileName) => t("common.delete_file_x", { fileName })}
-        placeholderText={t("errors.file_input.placeholder_text")}
+        placeholderText={
+          isCoarsePointer() ? t("file_upload.tap_to_upload") : t("errors.file_input.placeholder_text")
+        }
+        hintText={getHintText()}
         uploadingText={t("errors.file_input.uploading")}
       />
     </form>

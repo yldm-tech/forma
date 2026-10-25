@@ -77,6 +77,9 @@ export const SURVEYS_TARGET: ScanTarget = {
   sourceDirs: [SURVEYS_PKG_DIR],
   localesDir: path.join(SURVEYS_PKG_DIR, "locales"),
   defaultLocale: "en-US",
+  knownUnusedKeys: JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "surveys-unused-keys.json"), "utf-8")
+  ) as string[],
 };
 
 // Patterns to match translation keys
@@ -650,7 +653,9 @@ function displayResults(results: ScanResults, packageName: string, defaultLocale
     console.log(
       `\n❌ RECORDED UNUSED KEYS THAT ARE USED OR GONE (${results.staleKnownUnusedKeys.length.toString()}):\n`
     );
-    console.log("   Delete these entries from packages/i18n-utils/web-unused-keys.json:\n");
+    console.log(
+      "   Delete these entries from the list of recorded unused keys (packages/i18n-utils/web-unused-keys.json or surveys-unused-keys.json):\n"
+    );
     results.staleKnownUnusedKeys.forEach((key) => {
       console.log(`   • ${key}`);
     });

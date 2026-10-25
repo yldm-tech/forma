@@ -27,13 +27,42 @@ const isEmpty = (value: TResponseDataValue): boolean => {
 };
 
 /**
- * Create a required field error
+ * The message for a required element left unanswered, worded for what the respondent has to do with that element type ("select an option", "choose a rating"). Text inputs, and the text parts of other elements (an "Other" option's text, an address or contact field), keep "Please fill out this field".
  */
-const createRequiredError = (t: TFunction): TValidationError => {
+const getRequiredMessage = (t: TFunction, elementType?: TSurveyElementTypeEnum): string => {
+  switch (elementType) {
+    case TSurveyElementTypeEnum.MultipleChoiceSingle:
+    case TSurveyElementTypeEnum.MultipleChoiceMulti:
+    case TSurveyElementTypeEnum.PictureSelection:
+      return t("errors.select_an_option");
+    case TSurveyElementTypeEnum.Rating:
+    case TSurveyElementTypeEnum.NPS:
+    case TSurveyElementTypeEnum.CSAT:
+    case TSurveyElementTypeEnum.CES:
+      return t("errors.choose_a_rating");
+    case TSurveyElementTypeEnum.Ranking:
+      return t("errors.rank_at_least_one_option");
+    case TSurveyElementTypeEnum.Matrix:
+      return t("errors.answer_at_least_one_row");
+    case TSurveyElementTypeEnum.Consent:
+      return t("errors.accept_to_continue");
+    case TSurveyElementTypeEnum.FileUpload:
+      return t("errors.upload_a_file");
+    case TSurveyElementTypeEnum.Date:
+      return t("errors.select_a_date");
+    default:
+      return t("errors.please_fill_out_this_field");
+  }
+};
+
+/**
+ * Create a required field error. Without an element type it is the text-field message.
+ */
+const createRequiredError = (t: TFunction, elementType?: TSurveyElementTypeEnum): TValidationError => {
   return {
     ruleId: "required",
     ruleType: "minLength", // Structural field only - required is not a validation rule
-    message: t("errors.please_fill_out_this_field"),
+    message: getRequiredMessage(t, elementType),
   } as TValidationError;
 };
 
@@ -109,7 +138,7 @@ const validateRequiredRanking = (value: TResponseDataValue, t: TFunction): TVali
   const isValueArray = Array.isArray(value);
   const atLeastOneRanked = isValueArray && value.length >= 1;
   if (isEmpty(value) || !atLeastOneRanked) {
-    return createRequiredError(t);
+    return createRequiredError(t, TSurveyElementTypeEnum.Ranking);
   }
   return null;
 };
@@ -124,13 +153,13 @@ const validateRequiredMatrix = (
   t: TFunction
 ): TValidationError | null => {
   if (isEmpty(value)) {
-    return createRequiredError(t);
+    return createRequiredError(t, TSurveyElementTypeEnum.Matrix);
   }
   if (typeof value === "object" && !Array.isArray(value) && value !== null && "rows" in element) {
     const answeredRows = Object.values(value).filter((v) => v !== "" && v !== null && v !== undefined).length;
     // Required means at least 1 row must be answered
     if (answeredRows === 0) {
-      return createRequiredError(t);
+      return createRequiredError(t, TSurveyElementTypeEnum.Matrix);
     }
   }
   return null;
@@ -278,8 +307,18 @@ const checkRequiredField = (
     return validateRequiredMatrix(value, element, t);
   }
 
-  if (isEmpty(value)) {
+  // A single select stores "" while its "Other" option is picked and the text is still empty: what is missing is that text.
+  if (
+    element.type === TSurveyElementTypeEnum.MultipleChoiceSingle &&
+    value === "" &&
+    "choices" in element &&
+    element.choices.some((choice) => choice.id === "other")
+  ) {
     return createRequiredError(t);
+  }
+
+  if (isEmpty(value)) {
+    return createRequiredError(t, element.type);
   }
 
   return null;
@@ -313,6 +352,16 @@ const addImplicitOpenTextRules = (element: TSurveyElement, rules: TValidationRul
       id: "__implicit_phone__",
       type: "phone",
       params: {},
+    } as TValidationRule);
+  }
+
+  // The character limit's minimum. The input used to carry it as a minLength attribute, which the browser enforced with its own tooltip, in the browser's language and outside the survey's error styling; as a rule it gets the localized inline message every other check shows. The runtime only applies the limit to text inputs (OpenTextElement passes charLimit for inputType "text" alone), and only while it is enabled.
+  const charLimit = "charLimit" in element ? element.charLimit : undefined;
+  if (inputType === "text" && charLimit?.enabled && typeof charLimit.min === "number" && charLimit.min > 0) {
+    rules.push({
+      id: "__implicit_char_limit_min__",
+      type: "minLength",
+      params: { min: charLimit.min },
     } as TValidationRule);
   }
 

@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Tu feedback está atascado :("
   },
   "errors": {
+    "accept_to_continue": "Por favor, acepte para continuar",
     "all_options_must_be_ranked": "Por favor, clasifica todas las opciones",
     "all_rows_must_be_answered": "Por favor, responde todas las filas",
+    "answer_at_least_one_row": "Por favor, responda al menos una fila",
+    "choose_a_rating": "Por favor, elija una valoración",
     "file_extension_must_be": "La extensión del archivo debe ser {extension}",
     "file_extension_must_not_be": "La extensión del archivo no debe ser {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Este dispositivo no admite protección contra spam."
     },
     "invalid_format": "Por favor, introduce un formato válido",
+    "invalid_phone_with_example": "Por favor, introduzca un número de teléfono válido, por ejemplo +34 612 345 678",
     "is_between": "Por favor, selecciona una fecha entre {startDate} y {endDate}",
     "is_earlier_than": "Por favor, selecciona una fecha anterior a {date}",
     "is_greater_than": "Por favor, introduce un valor mayor que {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Por favor, introduzca un número de teléfono válido",
     "please_enter_a_valid_url": "Por favor, introduce una URL válida",
     "please_fill_out_this_field": "Por favor, complete este campo",
+    "rank_at_least_one_option": "Por favor, clasifique al menos una opción",
     "recaptcha_error": {
       "message": "Su respuesta no pudo ser enviada porque fue marcada como actividad automatizada. Si respira, por favor inténtelo de nuevo.",
       "title": "No pudimos verificar que eres humano."
@@ -111,10 +116,19 @@
       "message": "Tu respuesta no pudo enviarse y no se puede reintentar. Por favor, contacta al creador de la encuesta si esto sigue ocurriendo.",
       "title": "Tu respuesta no pudo enviarse."
     },
+    "select_a_date": "Por favor, seleccione una fecha",
+    "select_an_option": "Por favor, seleccione una opción",
+    "upload_a_file": "Por favor, suba un archivo",
     "value_must_contain": "El valor debe contener {value}",
     "value_must_equal": "El valor debe ser igual a {value}",
     "value_must_not_contain": "El valor no debe contener {value}",
     "value_must_not_equal": "El valor no debe ser igual a {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} pregunta necesita una respuesta} other {{count} preguntas necesitan una respuesta}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · hasta {maxSizeInMB} MB",
+    "invalid_type": "Este tipo de archivo no está permitido. Formatos permitidos: {formats}",
+    "max_size_hint": "Hasta {maxSizeInMB} MB",
+    "tap_to_upload": "Toque para subir archivos"
   }
 }

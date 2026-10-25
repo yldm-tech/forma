@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "មតិកែលម្អរបស់អ្នកជាប់គាំង :("
   },
   "errors": {
+    "accept_to_continue": "សូមយល់ព្រមដើម្បីបន្ត",
     "all_options_must_be_ranked": "សូមចាត់ថ្នាក់ជម្រើសទាំងអស់",
     "all_rows_must_be_answered": "សូមឆ្លើយជួរដេកទាំងអស់",
+    "answer_at_least_one_row": "សូមឆ្លើយយ៉ាងហោចណាស់មួយជួរ",
+    "choose_a_rating": "សូមជ្រើសរើសការវាយតម្លៃ",
     "file_extension_must_be": "កន្ទុយឯកសារត្រូវតែជា {extension}",
     "file_extension_must_not_be": "កន្ទុយឯកសារមិនត្រូវជា {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "ឧបករណ៍នេះមិនគាំទ្រការការពារស្ប៉ាមទេ។"
     },
     "invalid_format": "សូមបញ្ចូលទម្រង់ត្រឹមត្រូវ",
+    "invalid_phone_with_example": "សូមបញ្ចូលលេខទូរសព្ទត្រឹមត្រូវ ឧទាហរណ៍ 012 345 678",
     "is_between": "សូមជ្រើសរើសកាលបរិច្ឆេទរវាង {startDate} និង {endDate}",
     "is_earlier_than": "សូមជ្រើសរើសកាលបរិច្ឆេទមុន {date}",
     "is_greater_than": "សូមបញ្ចូលតម្លៃធំជាង {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "សូមបញ្ចូលលេខទូរសព្ទត្រឹមត្រូវ",
     "please_enter_a_valid_url": "សូមបញ្ចូល URL ត្រឹមត្រូវ",
     "please_fill_out_this_field": "សូមបំពេញប្រអប់នេះ",
+    "rank_at_least_one_option": "សូមចាត់ថ្នាក់យ៉ាងហោចណាស់ជម្រើសមួយ",
     "recaptcha_error": {
       "message": "មិនអាចដាក់ស្នើការឆ្លើយតបរបស់អ្នកបានទេ ព្រោះវាត្រូវបានកំណត់អត្តសញ្ញាណថាជាសកម្មភាពស្វ័យប្រវត្តិ។ ប្រសិនបើអ្នកដកដង្ហើម សូមព្យាយាមម្តងទៀត។",
       "title": "យើងមិនអាចផ្ទៀងផ្ទាត់ថាអ្នកជាមនុស្សបានទេ។"
@@ -111,10 +116,19 @@
       "message": "មិនអាចដាក់ស្នើការឆ្លើយតបរបស់អ្នកបានទេ ហើយមិនអាចព្យាយាមម្តងទៀតបានទេ។ សូមទាក់ទងម្ចាស់ការស្ទង់មតិ ប្រសិនបើបញ្ហានេះនៅតែកើតមានឡើង។",
       "title": "មិនអាចដាក់ស្នើការឆ្លើយតបរបស់អ្នកបានទេ។"
     },
+    "select_a_date": "សូមជ្រើសរើសកាលបរិច្ឆេទ",
+    "select_an_option": "សូមជ្រើសរើសជម្រើសមួយ",
+    "upload_a_file": "សូមផ្ទុកឡើងឯកសារមួយ",
     "value_must_contain": "តម្លៃត្រូវតែមាន {value}",
     "value_must_equal": "តម្លៃត្រូវតែស្មើ {value}",
     "value_must_not_contain": "តម្លៃមិនត្រូវមាន {value}",
     "value_must_not_equal": "តម្លៃមិនត្រូវស្មើ {value}",
     "x_questions_need_an_answer": "{count, plural, other {សំណួរ {count} ត្រូវការចម្លើយ}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · រហូតដល់ {maxSizeInMB} MB",
+    "invalid_type": "មិនអនុញ្ញាតប្រភេទឯកសារនេះទេ។ ទម្រង់ដែលអនុញ្ញាត៖ {formats}",
+    "max_size_hint": "រហូតដល់ {maxSizeInMB} MB",
+    "tap_to_upload": "ប៉ះដើម្បីផ្ទុកឡើងឯកសារ"
   }
 }

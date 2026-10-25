@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Feedback-ul tău este blocat :("
   },
   "errors": {
+    "accept_to_continue": "Vă rugăm să acceptați pentru a continua",
     "all_options_must_be_ranked": "Vă rugăm să ordonați toate opțiunile",
     "all_rows_must_be_answered": "Vă rugăm să răspundeți la toate rândurile",
+    "answer_at_least_one_row": "Vă rugăm să răspundeți la cel puțin un rând",
+    "choose_a_rating": "Vă rugăm să alegeți o evaluare",
     "file_extension_must_be": "Extensia fișierului trebuie să fie {extension}",
     "file_extension_must_not_be": "Extensia fișierului nu trebuie să fie {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Acest dispozitiv nu suportă protecția împotriva spamului."
     },
     "invalid_format": "Vă rugăm să introduceți un format valid",
+    "invalid_phone_with_example": "Vă rugăm să introduceți un număr de telefon valid, de exemplu 0712 345 678",
     "is_between": "Vă rugăm să selectați o dată între {startDate} și {endDate}",
     "is_earlier_than": "Vă rugăm să selectați o dată anterioară datei {date}",
     "is_greater_than": "Vă rugăm să introduceți o valoare mai mare decât {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Vă rugăm să introduceți un număr de telefon valid",
     "please_enter_a_valid_url": "Vă rugăm să introduceți un URL valid",
     "please_fill_out_this_field": "Vă rugăm să completați acest câmp",
+    "rank_at_least_one_option": "Vă rugăm să clasați cel puțin o opțiune",
     "recaptcha_error": {
       "message": "Răspunsul dumneavoastră nu a putut fi trimis deoarece a fost marcat ca activitate automată. Dacă respirați, încercați din nou.",
       "title": "Nu am putut verifica dacă ești om."
@@ -111,10 +116,19 @@
       "message": "Răspunsul tău nu a putut fi trimis și nu poate fi reîncercat. Te rugăm să contactezi proprietarul sondajului dacă problema persistă.",
       "title": "Răspunsul tău nu a putut fi trimis."
     },
+    "select_a_date": "Vă rugăm să selectați o dată",
+    "select_an_option": "Vă rugăm să selectați o opțiune",
+    "upload_a_file": "Vă rugăm să încărcați un fișier",
     "value_must_contain": "Valoarea trebuie să conțină {value}",
     "value_must_equal": "Valoarea trebuie să fie egală cu {value}",
     "value_must_not_contain": "Valoarea nu trebuie să conțină {value}",
     "value_must_not_equal": "Valoarea nu trebuie să fie egală cu {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} întrebare necesită un răspuns} few {{count} întrebări necesită un răspuns} other {{count} de întrebări necesită un răspuns}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · până la {maxSizeInMB} MB",
+    "invalid_type": "Acest tip de fișier nu este permis. Formate permise: {formats}",
+    "max_size_hint": "Până la {maxSizeInMB} MB",
+    "tap_to_upload": "Atingeți pentru a încărca fișiere"
   }
 }

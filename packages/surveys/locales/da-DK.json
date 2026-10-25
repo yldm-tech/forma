@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Din feedback sidder fast :("
   },
   "errors": {
+    "accept_to_continue": "Accepter for at fortsætte",
     "all_options_must_be_ranked": "Vurder venligst alle muligheder",
     "all_rows_must_be_answered": "Svar venligst på alle rækker",
+    "answer_at_least_one_row": "Besvar mindst én række",
+    "choose_a_rating": "Vælg en bedømmelse",
     "file_extension_must_be": "Filtypen skal være {extension}",
     "file_extension_must_not_be": "Filtypen må ikke være {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Denne enhed understøtter ikke spam-beskyttelse."
     },
     "invalid_format": "Indtast venligst et gyldigt format",
+    "invalid_phone_with_example": "Indtast et gyldigt telefonnummer, f.eks. +45 12 34 56 78",
     "is_between": "Vælg venligst en dato mellem {startDate} og {endDate}",
     "is_earlier_than": "Vælg venligst en dato før {date}",
     "is_greater_than": "Indtast venligst en værdi større end {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Indtast et gyldigt telefonnummer",
     "please_enter_a_valid_url": "Indtast en gyldig URL",
     "please_fill_out_this_field": "Udfyld venligst dette felt",
+    "rank_at_least_one_option": "Rangér mindst én mulighed",
     "recaptcha_error": {
       "message": "Dit svar kunne ikke sendes, fordi det blev markeret som automatiseret aktivitet. Hvis du trækker vejret, så prøv igen.",
       "title": "Vi kunne ikke bekræfte, at du er et menneske."
@@ -111,10 +116,19 @@
       "message": "Dit svar kunne ikke indsendes og kan ikke forsøges igen. Kontakt venligst ejeren af undersøgelsen, hvis dette fortsætter.",
       "title": "Dit svar kunne ikke indsendes."
     },
+    "select_a_date": "Vælg en dato",
+    "select_an_option": "Vælg en mulighed",
+    "upload_a_file": "Upload en fil",
     "value_must_contain": "Værdien skal indeholde {value}",
     "value_must_equal": "Værdien skal være lig med {value}",
     "value_must_not_contain": "Værdien må ikke indeholde {value}",
     "value_must_not_equal": "Værdien må ikke være lig med {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} spørgsmål mangler et svar} other {{count} spørgsmål mangler et svar}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · op til {maxSizeInMB} MB",
+    "invalid_type": "Denne filtype er ikke tilladt. Tilladte formater: {formats}",
+    "max_size_hint": "Op til {maxSizeInMB} MB",
+    "tap_to_upload": "Tryk for at uploade filer"
   }
 }

@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Il tuo feedback è bloccato :("
   },
   "errors": {
+    "accept_to_continue": "Accetta per continuare",
     "all_options_must_be_ranked": "Classifica tutte le opzioni",
     "all_rows_must_be_answered": "Rispondi a tutte le righe",
+    "answer_at_least_one_row": "Rispondi ad almeno una riga",
+    "choose_a_rating": "Scegli una valutazione",
     "file_extension_must_be": "L'estensione del file deve essere {extension}",
     "file_extension_must_not_be": "L'estensione del file non deve essere {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Questo dispositivo non supporta la protezione anti-spam."
     },
     "invalid_format": "Inserisci un formato valido",
+    "invalid_phone_with_example": "Inserisci un numero di telefono valido, ad esempio +39 312 345 6789",
     "is_between": "Seleziona una data compresa tra {startDate} e {endDate}",
     "is_earlier_than": "Seleziona una data precedente a {date}",
     "is_greater_than": "Inserisci un valore maggiore di {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Inserisci un numero di telefono valido",
     "please_enter_a_valid_url": "Inserisci un URL valido",
     "please_fill_out_this_field": "Compila questo campo",
+    "rank_at_least_one_option": "Classifica almeno un'opzione",
     "recaptcha_error": {
       "message": "La tua risposta non può essere inviata perché è stata segnalata come attività automatizzata. Se respiri, riprova.",
       "title": "Non siamo riusciti a verificare che sei umano."
@@ -111,10 +116,19 @@
       "message": "La tua risposta non può essere inviata e non è possibile riprovare. Contatta il proprietario del sondaggio se il problema persiste.",
       "title": "La tua risposta non può essere inviata."
     },
+    "select_a_date": "Seleziona una data",
+    "select_an_option": "Seleziona un'opzione",
+    "upload_a_file": "Carica un file",
     "value_must_contain": "Il valore deve contenere {value}",
     "value_must_equal": "Il valore deve essere uguale a {value}",
     "value_must_not_contain": "Il valore non deve contenere {value}",
     "value_must_not_equal": "Il valore non deve essere uguale a {value}",
     "x_questions_need_an_answer": "{count, plural, one {{count} domanda richiede una risposta} other {{count} domande richiedono una risposta}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · fino a {maxSizeInMB} MB",
+    "invalid_type": "Questo tipo di file non è consentito. Formati consentiti: {formats}",
+    "max_size_hint": "Fino a {maxSizeInMB} MB",
+    "tap_to_upload": "Tocca per caricare i file"
   }
 }

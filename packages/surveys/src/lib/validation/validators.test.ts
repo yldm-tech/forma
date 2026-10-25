@@ -193,7 +193,7 @@ describe("validators", () => {
 
     test("should return correct error message", () => {
       const message = validators.phone.getDefaultMessage({}, {} as TSurveyElement, mockT);
-      expect(message).toBe("errors.please_enter_a_valid_phone_number");
+      expect(message).toBe("errors.invalid_phone_with_example");
     });
   });
 

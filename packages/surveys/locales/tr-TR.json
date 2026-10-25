@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Geri bildiriminiz takıldı :("
   },
   "errors": {
+    "accept_to_continue": "Devam etmek için lütfen onaylayın",
     "all_options_must_be_ranked": "Lütfen tüm seçenekleri sıralayın",
     "all_rows_must_be_answered": "Lütfen tüm satırları yanıtlayın",
+    "answer_at_least_one_row": "Lütfen en az bir satırı yanıtlayın",
+    "choose_a_rating": "Lütfen bir puan seçin",
     "file_extension_must_be": "Dosya uzantısı {extension} olmalıdır",
     "file_extension_must_not_be": "Dosya uzantısı {extension} olmamalıdır",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Bu cihaz spam korumasını desteklemiyor."
     },
     "invalid_format": "Lütfen geçerli bir biçim girin",
+    "invalid_phone_with_example": "Lütfen geçerli bir telefon numarası girin, örneğin 0532 123 45 67",
     "is_between": "Lütfen {startDate} ile {endDate} arasında bir tarih seçin",
     "is_earlier_than": "Lütfen {date} tarihinden önceki bir tarih seçin",
     "is_greater_than": "Lütfen {min} değerinden büyük bir değer girin",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Lütfen geçerli bir telefon numarası girin",
     "please_enter_a_valid_url": "Lütfen geçerli bir URL girin",
     "please_fill_out_this_field": "Lütfen bu alanı doldurun",
+    "rank_at_least_one_option": "Lütfen en az bir seçeneği sıralayın",
     "recaptcha_error": {
       "message": "Yanıtınız otomatik etkinlik olarak işaretlendiği için gönderilemedi. Bir insansanız, lütfen tekrar deneyin.",
       "title": "İnsan olduğunuzu doğrulayamadık."
@@ -111,10 +116,19 @@
       "message": "Yanıtınız gönderilemedi ve yeniden denenemez. Bu sorun devam ederse lütfen anket sahibiyle iletişime geçin.",
       "title": "Yanıtınız gönderilemedi."
     },
+    "select_a_date": "Lütfen bir tarih seçin",
+    "select_an_option": "Lütfen bir seçenek seçin",
+    "upload_a_file": "Lütfen bir dosya yükleyin",
     "value_must_contain": "Değer {value} içermelidir",
     "value_must_equal": "Değer {value} olmalıdır",
     "value_must_not_contain": "Değer {value} içermemelidir",
     "value_must_not_equal": "Değer {value} olmamalıdır",
     "x_questions_need_an_answer": "{count, plural, one {{count} sorunun yanıtlanması gerekiyor} other {{count} sorunun yanıtlanması gerekiyor}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · en fazla {maxSizeInMB} MB",
+    "invalid_type": "Bu dosya türüne izin verilmiyor. İzin verilen biçimler: {formats}",
+    "max_size_hint": "En fazla {maxSizeInMB} MB",
+    "tap_to_upload": "Dosya yüklemek için dokunun"
   }
 }

@@ -4,6 +4,7 @@ import * as path from "node:path";
 import objectHash from "object-hash";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import {
+  SURVEYS_TARGET,
   type ScanTarget,
   WEB_TARGET,
   checkExtraTranslations,
@@ -204,6 +205,13 @@ describe("WEB_TARGET", () => {
 
   test("keeps the recorded unused keys sorted and unique, so a diff of the list reads as what changed", () => {
     const known = WEB_TARGET.knownUnusedKeys ?? [];
+    expect(known).toEqual([...new Set(known)].sort());
+  });
+});
+
+describe("SURVEYS_TARGET", () => {
+  test("keeps the recorded unused keys sorted and unique, so a diff of the list reads as what changed", () => {
+    const known = SURVEYS_TARGET.knownUnusedKeys ?? [];
     expect(known).toEqual([...new Set(known)].sort());
   });
 });

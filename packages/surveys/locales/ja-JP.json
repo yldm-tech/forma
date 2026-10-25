@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "フィードバックが送信できません :("
   },
   "errors": {
+    "accept_to_continue": "続行するには同意してください",
     "all_options_must_be_ranked": "すべてのオプションをランク付けしてください",
     "all_rows_must_be_answered": "すべての行に回答してください",
+    "answer_at_least_one_row": "1行以上回答してください",
+    "choose_a_rating": "評価を選んでください",
     "file_extension_must_be": "ファイル拡張子は{extension}である必要があります",
     "file_extension_must_not_be": "ファイル拡張子は{extension}であってはなりません",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "このデバイスはスパム保護に対応していません。"
     },
     "invalid_format": "有効な形式を入力してください",
+    "invalid_phone_with_example": "有効な電話番号を入力してください（例：090-1234-5678）",
     "is_between": "{startDate}から{endDate}の間の日付を選択してください",
     "is_earlier_than": "{date}より前の日付を選択してください",
     "is_greater_than": "{min}より大きい値を入力してください",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "有効な電話番号を入力してください",
     "please_enter_a_valid_url": "有効なURLを入力してください",
     "please_fill_out_this_field": "このフィールドに入力してください",
+    "rank_at_least_one_option": "1つ以上の項目を順位付けしてください",
     "recaptcha_error": {
       "message": "自動化された活動としてフラグが立てられたため、回答を送信できませんでした。人間の方は、もう一度お試しください。",
       "title": "あなたが人間であることを確認できませんでした。"
@@ -111,10 +116,19 @@
       "message": "回答を送信できませんでした。再試行することもできません。この問題が続く場合は、アンケート管理者にお問い合わせください。",
       "title": "回答を送信できませんでした。"
     },
+    "select_a_date": "日付を選択してください",
+    "select_an_option": "選択肢を1つ選んでください",
+    "upload_a_file": "ファイルをアップロードしてください",
     "value_must_contain": "値に{value}を含める必要があります",
     "value_must_equal": "値は{value}と等しい必要があります",
     "value_must_not_contain": "値に{value}を含めることはできません",
     "value_must_not_equal": "値は{value}と等しくない必要があります",
     "x_questions_need_an_answer": "{count, plural, other {{count}件の質問に回答が必要です}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats}・最大{maxSizeInMB}MB",
+    "invalid_type": "このファイル形式は使用できません。使用できる形式：{formats}",
+    "max_size_hint": "最大{maxSizeInMB}MB",
+    "tap_to_upload": "タップしてファイルをアップロード"
   }
 }

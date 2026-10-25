@@ -59,8 +59,11 @@
     "your_feedback_is_stuck": "Umpan balikmu macet :("
   },
   "errors": {
+    "accept_to_continue": "Silakan setujui untuk melanjutkan",
     "all_options_must_be_ranked": "Harap urutkan semua opsi",
     "all_rows_must_be_answered": "Harap jawab semua baris",
+    "answer_at_least_one_row": "Silakan jawab setidaknya satu baris",
+    "choose_a_rating": "Silakan pilih penilaian",
     "file_extension_must_be": "Ekstensi file harus {extension}",
     "file_extension_must_not_be": "Ekstensi file tidak boleh {extension}",
     "file_input": {
@@ -81,6 +84,7 @@
       "title": "Perangkat ini tidak mendukung perlindungan spam."
     },
     "invalid_format": "Silakan masukkan format yang valid",
+    "invalid_phone_with_example": "Silakan masukkan nomor telepon yang valid, misalnya 0812-3456-7890",
     "is_between": "Silakan pilih tanggal antara {startDate} dan {endDate}",
     "is_earlier_than": "Silakan pilih tanggal sebelum {date}",
     "is_greater_than": "Silakan masukkan nilai lebih besar dari {min}",
@@ -99,6 +103,7 @@
     "please_enter_a_valid_phone_number": "Silakan masukkan nomor telepon yang valid",
     "please_enter_a_valid_url": "Silakan masukkan URL yang valid",
     "please_fill_out_this_field": "Silakan isi kolom ini",
+    "rank_at_least_one_option": "Silakan urutkan setidaknya satu opsi",
     "recaptcha_error": {
       "message": "Responsmu tidak dapat dikirim karena ditandai sebagai aktivitas otomatis. Jika kamu manusia, silakan coba lagi.",
       "title": "Kami tidak dapat memverifikasi bahwa kamu adalah manusia."
@@ -111,10 +116,19 @@
       "message": "Responsmu tidak dapat dikirim dan tidak dapat dicoba lagi. Silakan hubungi pemilik survei jika masalah ini terus berlanjut.",
       "title": "Responsmu tidak dapat dikirim."
     },
+    "select_a_date": "Silakan pilih tanggal",
+    "select_an_option": "Silakan pilih salah satu opsi",
+    "upload_a_file": "Silakan unggah file",
     "value_must_contain": "Nilai harus mengandung {value}",
     "value_must_equal": "Nilai harus sama dengan {value}",
     "value_must_not_contain": "Nilai tidak boleh mengandung {value}",
     "value_must_not_equal": "Nilai tidak boleh sama dengan {value}",
     "x_questions_need_an_answer": "{count, plural, other {{count} pertanyaan perlu dijawab}}"
+  },
+  "file_upload": {
+    "allowed_hint": "{formats} · maksimal {maxSizeInMB} MB",
+    "invalid_type": "Jenis file ini tidak diizinkan. Format yang diizinkan: {formats}",
+    "max_size_hint": "Maksimal {maxSizeInMB} MB",
+    "tap_to_upload": "Ketuk untuk mengunggah file"
   }
 }
