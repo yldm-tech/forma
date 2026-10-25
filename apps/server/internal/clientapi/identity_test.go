@@ -132,3 +132,72 @@ func TestV1RoutesRequireVerifiedUserID(t *testing.T) {
 		t.Fatalf("a verified response's contact %v, want %s", contact, created)
 	}
 }
+
+// Under required verification the v2 routes, which name the respondent by contactId, attach a contact only by a token a verified identify got under the current identity secret, or a personal link page's token for its own survey. A contact id, which identify answered to anyone before it answered tokens, a token an unverified identify got before verification was required, and a verified token from before the secret was regenerated all record the display or response without a contact.
+func TestV2RoutesRequireVerifiedTokens(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv, otherSurvey := e.survey(ws, "type", "app"), e.survey(ws, "type", "app")
+	e.identitySettings(ws, false)
+	unverified := stateData(t, e.identify(t, ws, map[string]any{"userId": "victim"}))
+	victim := e.contactOf(t, ws, unverified)
+	verified := stateData(t, e.identify(t, ws, map[string]any{"userId": "victim", "userHash": sdkidentity.UserHash(testIdentitySecret, "victim")}))
+	if verified["contactId"] == unverified["contactId"] || e.contactOf(t, ws, verified) != victim {
+		t.Fatalf("a verified identify's token %v, an unverified one's %v", verified["contactId"], unverified["contactId"])
+	}
+	link, err := sdkidentity.LinkContactToken(e.cfg, ws, victim, sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherLink, _ := sdkidentity.LinkContactToken(e.cfg, ws, victim, otherSurvey)
+
+	// displayContact and responseContact are the contact a v2 display or response of sv by ref is attached to, "" for none.
+	displayContact := func(ref any) string {
+		d := e.post(t, "/api/v2/client/"+ws.String()+"/displays", map[string]any{"surveyId": sv.String(), "contactId": ref}).data(t)
+		var c *string
+		_ = e.db.Raw(`SELECT contact_id::text FROM displays WHERE id = ?`, d["id"]).Row().Scan(&c)
+		if (c == nil) != (d["contactId"] == nil) {
+			t.Fatalf("display %v stored contact %v", d, c)
+		}
+		if c == nil {
+			return ""
+		}
+		return *c
+	}
+	responseContact := func(ref any) string {
+		r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}, "contactId": ref})
+		var c *string
+		_ = e.db.Raw(`SELECT contact_id::text FROM responses WHERE id = ?`, r.data(t)["id"]).Row().Scan(&c)
+		if c == nil {
+			return ""
+		}
+		return *c
+	}
+	expect := func(when string, refs map[string]any, want string) {
+		t.Helper()
+		for name, ref := range refs {
+			if got := displayContact(ref); got != want {
+				t.Errorf("%s, display by %s: contact %q, want %q", when, name, got, want)
+			}
+			if got := responseContact(ref); got != want {
+				t.Errorf("%s, response by %s: contact %q, want %q", when, name, got, want)
+			}
+		}
+	}
+
+	all := map[string]any{"contact id": victim.String(), "unverified token": unverified["contactId"], "verified token": verified["contactId"], "link token": link, "another survey's link token": otherLink}
+	expect("not required", all, victim.String())
+
+	e.identitySettings(ws, true)
+	expect("required", map[string]any{"verified token": verified["contactId"], "link token": link}, victim.String())
+	expect("required", map[string]any{"contact id": victim.String(), "unverified token": unverified["contactId"], "another survey's link token": otherLink}, "")
+
+	// Regenerating the secret retires the verified tokens handed out under the old one; the personal link's still attaches.
+	sealed, err := e.cipher.Seal([]byte("regenerated-secret"), []byte("workspace-sdk-identity-secret:"+ws.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.exec(`UPDATE workspaces SET sdk_identity_secret = ? WHERE id = ?`, sealed, ws)
+	expect("regenerated", map[string]any{"verified token": verified["contactId"]}, "")
+	expect("regenerated", map[string]any{"link token": link}, victim.String())
+}

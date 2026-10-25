@@ -30,11 +30,11 @@ func stateData(t *testing.T, r result) map[string]any {
 func (e *env) contactOf(t *testing.T, ws uuid.UUID, d map[string]any) uuid.UUID {
 	t.Helper()
 	token, _ := d["contactId"].(string)
-	id, ok := sdkidentity.ParseContactToken(e.cfg, ws, token)
+	ref, ok := sdkidentity.ParseContactToken(e.cfg, ws, token)
 	if !ok {
 		t.Fatalf("contactId %v is not a contact token of the workspace", d["contactId"])
 	}
-	return id
+	return ref.ID
 }
 
 // testIdentitySecret is the identity secret identitySettings gives a workspace.

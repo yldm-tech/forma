@@ -14,13 +14,12 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/linksurvey"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/response/answers"
 	"github.com/yldm-tech/forma/apps/server/internal/sdkidentity"
 )
 
-// responseInput is ZResponseInput (v1) or ZResponseInputV2 as validated: v1 names the respondent by userId, with the userHash that verifies it in a workspace that requires verified identities, v2 by contactId, a contact id or the token the SDK was given in its place (sdkidentity.ContactToken). createdAt and updatedAt are validated but never stored.
+// responseInput is ZResponseInput (v1) or ZResponseInputV2 as validated: v1 names the respondent by userId, with the userHash that verifies it in a workspace that requires verified identities, v2 by contactId, a contact id or the token the SDK or a personal link page was given in its place (sdkidentity.Settings.ContactToken, sdkidentity.LinkContactToken), which attaches a contact only as attachedContact allows. createdAt and updatedAt are validated but never stored.
 type responseInput struct {
 	SurveyID       string
 	UserID         *string
@@ -126,7 +125,7 @@ func (h *Handler) createResponseV1(c *gin.Context) {
 		writeError(c, badRequest(msgInvalidFields, is.details))
 		return
 	}
-	if in.UserID, err = h.verifiedUserID(ctx, ws.ID, in.UserID, in.UserHash); err != nil {
+	if in.UserID, _, _, err = h.verifiedUserID(ctx, ws.ID, in.UserID, in.UserHash); err != nil {
 		h.fail(c, err, msgGeneric)
 		return
 	}
@@ -258,15 +257,12 @@ func (h *Handler) writeNewResponse(c *gin.Context, sv *response.Survey, workspac
 		Locale: mailer.MatchLocale(c.GetHeader("Accept-Language")),
 	}
 	if in.ContactID != nil {
-		if sdkidentity.IsContactToken(*in.ContactID) {
-			// A token that names no contact of this workspace records the response without one, as an unknown contact id does.
-			if id, ok := sdkidentity.ParseContactToken(h.cfg, workspaceID, *in.ContactID); ok {
-				create.ContactID = &id
-			}
-		} else {
-			id, _ := rowid.Parse(*in.ContactID)
-			create.ContactID = &id
+		contactID, _, err := h.attachedContact(ctx, workspaceID, sv.ID, *in.ContactID)
+		if err != nil {
+			h.fail(c, err, msgGeneric)
+			return
 		}
+		create.ContactID = contactID
 	}
 	result, err := h.responses.Create(ctx, sv, create)
 	if err != nil {

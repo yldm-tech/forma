@@ -2,8 +2,8 @@
 //
 //   - A workspace may hold an identity secret. The customer's own server computes the userHash, the HMAC-SHA256 of the userId under that secret in hex, and the SDK sends it with setUserId; an identify whose userHash matches is verified.
 //   - Email is written only on a verified identify, and the attributes the workspace's managers mark as protected never through the client API: those come from the Management API, a CSV import or the contact page.
-//   - A workspace that requires verification refuses an identify without a valid userHash, and the v1 display and response routes do not attach a userId that comes without one.
-//   - The state an identify answers names the contact by an opaque token (ContactToken) instead of its id, and the surveys the contact was shown or answered by a key (SurveyKey) instead of their ids.
+//   - A workspace that requires verification refuses an identify without a valid userHash, the v1 display and response routes do not attach a userId that comes without one, and the v2 routes attach a contact only by a token a verified identify or a personal link page was given, never by a contact id.
+//   - The state an identify answers names the contact by an opaque token (Settings.ContactToken) instead of its id, and the surveys the contact was shown or answered by a key (SurveyKey) instead of their ids.
 package sdkidentity
 
 import (
@@ -141,6 +141,26 @@ func SurveyKey(userID, surveyID string) string {
 // contactTokenPrefix starts every contact token, so the client API tells one from a contact id.
 const contactTokenPrefix = "ct1."
 
+// What a contact token was issued for. It decides whether the token still attaches displays and responses to its contact once the workspace requires verified identities (Settings.Attaches).
+const (
+	// tokenUnverified is a token answered to an identify, or a display create, whose userId no userHash verified. Its scope is empty.
+	tokenUnverified byte = 0
+	// tokenVerified is a token answered to an identify, or a display create, whose userHash verified the userId. Its scope is the generation of the identity secret that verified it (Settings.generation).
+	tokenVerified byte = 1
+	// tokenLink is a token a personal link's survey page hands the survey runtime. Its scope is the id of the link's survey.
+	tokenLink byte = 2
+)
+
+// generationSize is the length of a verified token's scope.
+const generationSize = 8
+
+// ContactRef is what a contact token says: the contact it names and what it was issued for.
+type ContactRef struct {
+	ID    uuid.UUID
+	kind  byte
+	scope []byte
+}
+
 // IsContactToken reports whether s has the shape of a contact token, valid or not.
 func IsContactToken(s string) bool {
 	return strings.HasPrefix(s, contactTokenPrefix)
@@ -164,30 +184,53 @@ func tokenAEAD(key []byte) (cipher.AEAD, []byte, error) {
 	return aead, derive("forma.sdk-contact-token.nonce.v1"), nil
 }
 
-// ContactToken is the opaque name the client API gives a contact in place of its id: "ct1." and the contact id sealed with AES-256-GCM under a key derived from ENCRYPTION_KEY, bound to its workspace, in unpadded base64url. The nonce is an HMAC of the workspace and contact ids, so a contact always gets the same token: the SDK keeps it across identifies and the survey runtime compares it when it restores a response. The display and response routes accept it wherever they accept a contact id.
-func ContactToken(cfg config.Config, workspaceID, contactID uuid.UUID) (string, error) {
+// generation names the workspace's identity secret without revealing it. A verified token carries the generation it was issued under, so regenerating the secret retires every verified token along with every userHash: a token handed out before a leaked secret was replaced attaches nothing under required verification.
+func (s *Settings) generation() []byte {
+	mac := hmac.New(sha256.New, []byte(s.Secret))
+	mac.Write([]byte("forma.sdk-contact-token.generation.v1"))
+	return mac.Sum(nil)[:generationSize]
+}
+
+// ContactToken is the opaque name the client API gives a contact in place of its id when it answers an identify or a display create: verified says whether a userHash verified the userId it was found by. The display and response routes accept the token wherever they accept a contact id; whether it attaches anything under required verification is Attaches. The same contact, verification and identity secret always give the same token: the SDK keeps it across identifies and the survey runtime compares it when it restores a response.
+func (s *Settings) ContactToken(cfg config.Config, workspaceID, contactID uuid.UUID, verified bool) (string, error) {
+	if verified {
+		return sealContactToken(cfg, workspaceID, contactID, tokenVerified, s.generation())
+	}
+	return sealContactToken(cfg, workspaceID, contactID, tokenUnverified, nil)
+}
+
+// LinkContactToken is the token a personal link's survey page hands the survey runtime in place of the link's contact id. The signed link already proves the contact, so the token attaches that contact's displays and responses to the link's survey even when the workspace requires verified identities, and to no other survey.
+func LinkContactToken(cfg config.Config, workspaceID, contactID, surveyID uuid.UUID) (string, error) {
+	return sealContactToken(cfg, workspaceID, contactID, tokenLink, surveyID[:])
+}
+
+// sealContactToken is "ct1." and the contact id, the token's kind and its scope sealed with AES-256-GCM under a key derived from ENCRYPTION_KEY, bound to the workspace, in unpadded base64url. The nonce is an HMAC of the workspace id and the whole plaintext, which makes the token deterministic while two different plaintexts never share a nonce.
+func sealContactToken(cfg config.Config, workspaceID, contactID uuid.UUID, kind byte, scope []byte) (string, error) {
 	aead, nonceKey, err := tokenAEAD(cfg.EncryptionKey)
 	if err != nil {
 		return "", err
 	}
+	plain := make([]byte, 0, len(contactID)+1+len(scope))
+	plain = append(plain, contactID[:]...)
+	plain = append(plain, kind)
+	plain = append(plain, scope...)
 	mac := hmac.New(sha256.New, nonceKey)
 	mac.Write(workspaceID[:])
-	mac.Write(contactID[:])
-	nonce := make([]byte, aead.NonceSize())
-	copy(nonce, mac.Sum(nil))
-	sealed := aead.Seal(append([]byte(nil), nonce...), nonce, contactID[:], workspaceID[:])
+	mac.Write(plain)
+	nonce := mac.Sum(nil)[:aead.NonceSize()]
+	sealed := aead.Seal(append([]byte(nil), nonce...), nonce, plain, workspaceID[:])
 	return contactTokenPrefix + base64.RawURLEncoding.EncodeToString(sealed), nil
 }
 
-// ParseContactToken is the contact a token names in workspaceID, false for a token this server did not issue for that workspace. Tokens sealed under a retired encryption key still open while the key is kept in ENCRYPTION_PREVIOUS_KEYS.
-func ParseContactToken(cfg config.Config, workspaceID uuid.UUID, token string) (uuid.UUID, bool) {
+// ParseContactToken is what a token says in workspaceID, false for a token this server did not issue for that workspace. Tokens sealed under a retired encryption key still open while the key is kept in ENCRYPTION_PREVIOUS_KEYS.
+func ParseContactToken(cfg config.Config, workspaceID uuid.UUID, token string) (ContactRef, bool) {
 	raw, ok := strings.CutPrefix(token, contactTokenPrefix)
 	if !ok {
-		return uuid.Nil, false
+		return ContactRef{}, false
 	}
 	b, err := base64.RawURLEncoding.DecodeString(raw)
 	if err != nil {
-		return uuid.Nil, false
+		return ContactRef{}, false
 	}
 	keys := [][]byte{cfg.EncryptionKey}
 	for _, k := range cfg.EncryptionPreviousKeys {
@@ -202,9 +245,47 @@ func ParseContactToken(cfg config.Config, workspaceID uuid.UUID, token string) (
 		if err != nil {
 			continue
 		}
-		if id, err := uuid.FromBytes(plain); err == nil {
-			return id, true
+		if ref, ok := decodeContactRef(plain); ok {
+			return ref, true
 		}
 	}
-	return uuid.Nil, false
+	return ContactRef{}, false
+}
+
+// decodeContactRef reads a token's plaintext, false when its scope does not fit its kind.
+func decodeContactRef(plain []byte) (ContactRef, bool) {
+	if len(plain) < len(uuid.UUID{})+1 {
+		return ContactRef{}, false
+	}
+	id, err := uuid.FromBytes(plain[:16])
+	if err != nil {
+		return ContactRef{}, false
+	}
+	ref := ContactRef{ID: id, kind: plain[16], scope: plain[17:]}
+	switch {
+	case ref.kind == tokenUnverified && len(ref.scope) == 0,
+		ref.kind == tokenVerified && len(ref.scope) == generationSize,
+		ref.kind == tokenLink && len(ref.scope) == len(uuid.UUID{}):
+		return ref, true
+	}
+	return ContactRef{}, false
+}
+
+// Attaches reports whether ref may attach a display or response of surveyID to its contact. Without required verification every token does. With it, only a token a verified identify got under the current identity secret, or a personal link's token for this survey: a token handed to an unverified identify before verification was required, or before the secret was regenerated, attaches nothing.
+func (s *Settings) Attaches(ref ContactRef, surveyID uuid.UUID) bool {
+	if !s.Required {
+		return true
+	}
+	switch ref.kind {
+	case tokenVerified:
+		return s.Secret != "" && hmac.Equal(ref.scope, s.generation())
+	case tokenLink:
+		return hmac.Equal(ref.scope, surveyID[:])
+	}
+	return false
+}
+
+// AttachesContactID reports whether a display or response may name its contact by the contact's id. Only without required verification: identify answered contact ids to anyone who knew a userId until it answered tokens instead, so under required verification an id proves nothing.
+func (s *Settings) AttachesContactID() bool {
+	return !s.Required
 }

@@ -139,7 +139,7 @@ func (h *Handler) identify(c *gin.Context) {
 	}
 	attrs, skipped := writableAttributes(attrs, identity, verified)
 	refused = append(refused, skipped...)
-	state, err := h.updateUser(ctx, ws.ID, userID, attrs, segmentDevice(c.Request.UserAgent()), refused)
+	state, err := h.updateUser(ctx, ws.ID, userID, attrs, segmentDevice(c.Request.UserAgent()), refused, identity, verified)
 	if err != nil {
 		h.fail(c, err, msgUserState)
 		return
@@ -167,8 +167,8 @@ func writableAttributes(attrs []jsvalue.Member, identity *sdkidentity.Settings, 
 	return kept, refusals
 }
 
-// updateUser is forma2's updateUser: it answers {state, messages?, errors?}, the state's segments evaluated for device. refused are the errors the identify already has, reported ahead of the contact's own.
-func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID string, attrs []jsvalue.Member, device string, refused []string) (fields, error) {
+// updateUser is forma2's updateUser: it answers {state, messages?, errors?}, the state's segments evaluated for device. refused are the errors the identify already has, reported ahead of the contact's own. identity and verified are the workspace's identity settings and whether the identify's userHash verified the userId, which the state's contact token records.
+func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID string, attrs []jsvalue.Member, device string, refused []string, identity *sdkidentity.Settings, verified bool) (fields, error) {
 	found, err := h.contacts.FindOrCreateByUserID(ctx, workspaceID, userID)
 	if err != nil {
 		return nil, err
@@ -228,7 +228,7 @@ func (h *Handler) updateUser(ctx context.Context, workspaceID uuid.UUID, userID 
 		messages = append(messages, contact.Message{Code: "invalid_language_ignored", Params: map[string]string{"language": *dropped}}.Text())
 	}
 
-	data, err := h.userState(ctx, workspaceID, found.ID, userID, device)
+	data, err := h.userState(ctx, workspaceID, found.ID, userID, device, identity, verified)
 	if err != nil {
 		return nil, err
 	}
@@ -331,8 +331,8 @@ func (h *Handler) workspaceLanguage(ctx context.Context, workspaceID uuid.UUID, 
 	return "", nil
 }
 
-// userState is the identified contact's targeting data: an opaque token in place of its id (sdkidentity.ContactToken), the segments it is in on device (none when they cannot be evaluated), the keys of the app surveys it was shown, once per display and newest first, and of those it responded to (sdkidentity.SurveyKey), and when it was last shown any survey. Surveys of other types are left out, as the SDK never shows them, and no survey is named by its id: anyone holding the public workspace id can call identify.
-func (h *Handler) userState(ctx context.Context, workspaceID, contactID uuid.UUID, userID, device string) (fields, error) {
+// userState is the identified contact's targeting data: an opaque token in place of its id (sdkidentity.Settings.ContactToken), which records whether the identify was verified, the segments it is in on device (none when they cannot be evaluated), the keys of the app surveys it was shown, once per display and newest first, and of those it responded to (sdkidentity.SurveyKey), and when it was last shown any survey. Surveys of other types are left out, as the SDK never shows them, and no survey is named by its id: anyone holding the public workspace id can call identify.
+func (h *Handler) userState(ctx context.Context, workspaceID, contactID uuid.UUID, userID, device string, identity *sdkidentity.Settings, verified bool) (fields, error) {
 	db := h.db.WithContext(ctx)
 	var displays []contact.DisplayRow
 	if err := db.Raw(`SELECT survey_id, created_at FROM displays WHERE contact_id = ? ORDER BY created_at DESC, id DESC`, contactID).Scan(&displays).Error; err != nil {
@@ -367,7 +367,7 @@ func (h *Handler) userState(ctx context.Context, workspaceID, contactID uuid.UUI
 	if len(displays) > 0 {
 		lastDisplayAt = jsvalue.ISOString(displays[0].CreatedAt)
 	}
-	token, err := sdkidentity.ContactToken(h.cfg, workspaceID, contactID)
+	token, err := identity.ContactToken(h.cfg, workspaceID, contactID, verified)
 	if err != nil {
 		return nil, err
 	}

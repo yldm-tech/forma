@@ -42,7 +42,7 @@ func (h *Handler) createDisplayV1(c *gin.Context) {
 		writeError(c, badRequest(msgInvalidFields, is.details))
 		return
 	}
-	userID, err = h.verifiedUserID(c.Request.Context(), ws.ID, userID, userHash)
+	userID, identity, verified, err := h.verifiedUserID(c.Request.Context(), ws.ID, userID, userHash)
 	if err != nil {
 		h.fail(c, err, msgGeneric)
 		return
@@ -52,10 +52,12 @@ func (h *Handler) createDisplayV1(c *gin.Context) {
 		h.fail(c, err, msgGeneric)
 		return
 	}
-	h.writeDisplay(c, ws.ID, d)
+	h.writeDisplay(c, d, func(contactID uuid.UUID) (string, error) {
+		return identity.ContactToken(h.cfg, ws.ID, contactID, verified)
+	})
 }
 
-// createDisplayV2 is forma2's v2 display create, which the survey runtime calls for an anonymous respondent or a known contact: the workspace, then the body (ZDisplayCreateInputV2), then the display, attached to the contact only when it is one of the workspace's.
+// createDisplayV2 is forma2's v2 display create, which the survey runtime calls for an anonymous respondent or a known contact: the workspace, then the body (ZDisplayCreateInputV2), then the display, attached to the contact only when it is one of the workspace's and the reference to it may attach it (attachedContact).
 func (h *Handler) createDisplayV2(c *gin.Context) {
 	ws, ok := h.workspace(c, c.Param("workspaceId"), msgGeneric)
 	if !ok {
@@ -70,9 +72,15 @@ func (h *Handler) createDisplayV2(c *gin.Context) {
 	var is issues
 	surveyID, _ := is.id("surveyId", in.get("surveyId"), required)
 	is.id("responseId", in.get("responseId"), optional)
-	contactID := h.contactRef(&is, ws.ID, in.get("contactId"), optional)
+	ref := contactRef(&is, in.get("contactId"), optional)
 	if is.failed() {
 		writeError(c, badRequest(msgInvalidFields, is.details))
+		return
+	}
+	survey, _ := rowid.Parse(surveyID)
+	contactID, token, err := h.attachedContact(c.Request.Context(), ws.ID, survey, ref)
+	if err != nil {
+		h.fail(c, err, msgGeneric)
 		return
 	}
 	d, err := h.responses.CreateDisplay(c.Request.Context(), response.DisplayInput{WorkspaceID: ws.ID, SurveyID: surveyID, ContactID: contactID})
@@ -80,14 +88,14 @@ func (h *Handler) createDisplayV2(c *gin.Context) {
 		h.fail(c, err, msgGeneric)
 		return
 	}
-	h.writeDisplay(c, ws.ID, d)
+	h.writeDisplay(c, d, func(uuid.UUID) (string, error) { return token, nil })
 }
 
-// writeDisplay answers a created display, {id, contactId, surveyId}, naming its contact by token (sdkidentity.ContactToken) rather than by id, so that a userId sent to the v1 route does not reveal the contact's id.
-func (h *Handler) writeDisplay(c *gin.Context, workspaceID uuid.UUID, d *response.Display) {
+// writeDisplay answers a created display, {id, contactId, surveyId}, naming its contact by the token name gives it rather than by id, so that a userId sent to the v1 route does not reveal the contact's id.
+func (h *Handler) writeDisplay(c *gin.Context, d *response.Display, name func(contactID uuid.UUID) (string, error)) {
 	var contactRef any
 	if d.ContactID != nil {
-		token, err := sdkidentity.ContactToken(h.cfg, workspaceID, *d.ContactID)
+		token, err := name(*d.ContactID)
 		if err != nil {
 			h.fail(c, err, msgGeneric)
 			return
@@ -97,39 +105,60 @@ func (h *Handler) writeDisplay(c *gin.Context, workspaceID uuid.UUID, d *respons
 	writeData(c, fields{{"id", d.ID}, {"contactId", contactRef}, {"surveyId", d.SurveyID}}, noStore)
 }
 
-// contactRef reads a v2 body's contactId: a contact id, or the token an identify or a display create answered in its place. A token that does not name a contact of this workspace (issued under a key since retired, or for another workspace) is no contact, as an unknown contact id is: the display or response is still recorded, without one.
-func (h *Handler) contactRef(is *issues, workspaceID uuid.UUID, v any, p presence) *uuid.UUID {
+// contactRef reads a v2 body's contactId: a contact token, or a contact id, which must have an id's shape. "" when there is none.
+func contactRef(is *issues, v any, p presence) string {
 	if s, ok := v.(string); ok && sdkidentity.IsContactToken(s) {
-		if id, ok := sdkidentity.ParseContactToken(h.cfg, workspaceID, s); ok {
-			return &id
-		}
-		return nil
+		return s
 	}
-	raw, ok := is.id("contactId", v, p)
-	if !ok {
-		return nil
-	}
-	id, _ := rowid.Parse(raw)
-	return &id
+	raw, _ := is.id("contactId", v, p)
+	return raw
 }
 
-// verifiedUserID is the userId a v1 display or response may attach: the one sent, unless the workspace requires verified identities and userHash does not verify it, in which case none, and the display or response is recorded without a contact rather than refused, so no answer is lost.
-func (h *Handler) verifiedUserID(ctx context.Context, workspaceID uuid.UUID, userID, userHash *string) (*string, error) {
-	if userID == nil || *userID == "" {
-		return userID, nil
+// attachedContact is the contact a v2 display or response of surveyID is attached to by the contactId ref it names, a contact id or a contact token, and the token the answer names it by. None ("" ref, a token that does not name a contact of this workspace because it was issued under a key since retired or for another workspace, or a reference the workspace's identity settings do not let attach a contact, sdkidentity.Settings.Attaches and AttachesContactID) is no error: the display or response is recorded without a contact, as for an unknown contact id. Under required verification that keeps a contact id, which identify answered to anyone before it answered tokens, or a token an unverified identify got, from attaching answers to someone else's contact.
+func (h *Handler) attachedContact(ctx context.Context, workspaceID, surveyID uuid.UUID, ref string) (*uuid.UUID, string, error) {
+	if ref == "" {
+		return nil, "", nil
 	}
 	identity, err := sdkidentity.Load(ctx, h.db, h.cipher, workspaceID)
 	if err != nil {
-		return nil, err
+		return nil, "", err
+	}
+	if sdkidentity.IsContactToken(ref) {
+		parsed, ok := sdkidentity.ParseContactToken(h.cfg, workspaceID, ref)
+		if !ok || !identity.Attaches(parsed, surveyID) {
+			return nil, "", nil
+		}
+		return &parsed.ID, ref, nil
+	}
+	if !identity.AttachesContactID() {
+		return nil, "", nil
+	}
+	id, _ := rowid.Parse(ref)
+	token, err := identity.ContactToken(h.cfg, workspaceID, id, false)
+	if err != nil {
+		return nil, "", err
+	}
+	return &id, token, nil
+}
+
+// verifiedUserID is the userId a v1 display or response may attach, with the workspace's identity settings and whether userHash verified it: the userId sent, unless the workspace requires verified identities and userHash does not verify it, in which case none, and the display or response is recorded without a contact rather than refused, so no answer is lost.
+func (h *Handler) verifiedUserID(ctx context.Context, workspaceID uuid.UUID, userID, userHash *string) (*string, *sdkidentity.Settings, bool, error) {
+	identity, err := sdkidentity.Load(ctx, h.db, h.cipher, workspaceID)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	if userID == nil || *userID == "" {
+		return userID, identity, false, nil
 	}
 	hash := ""
 	if userHash != nil {
 		hash = *userHash
 	}
-	if identity.Required && !identity.Verified(*userID, hash) {
-		return nil, nil
+	verified := identity.Verified(*userID, hash)
+	if identity.Required && !verified {
+		return nil, identity, false, nil
 	}
-	return userID, nil
+	return userID, identity, verified, nil
 }
 
 // displayResponse is forma2's display-response lookup, how the survey runtime recovers the response of a display after an offline restore: {"responseId": id or null}, 404 Display when the display is not one of the workspace's.

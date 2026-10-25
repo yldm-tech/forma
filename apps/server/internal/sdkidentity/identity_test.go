@@ -55,20 +55,21 @@ func TestVerified(t *testing.T) {
 func TestContactToken(t *testing.T) {
 	cfg := config.Config{EncryptionKey: bytes.Repeat([]byte{7}, 32)}
 	ws, other, contact := uuid.New(), uuid.New(), uuid.New()
+	s := &Settings{Secret: "s3cret"}
 
-	token, err := ContactToken(cfg, ws, contact)
+	token, err := s.ContactToken(cfg, ws, contact, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !IsContactToken(token) || strings.Contains(token, contact.String()) || strings.Contains(token, strings.ReplaceAll(contact.String(), "-", "")) {
 		t.Fatalf("token %q", token)
 	}
-	again, _ := ContactToken(cfg, ws, contact)
+	again, _ := s.ContactToken(cfg, ws, contact, false)
 	if again != token {
 		t.Fatal("a contact's token changed between two identifies")
 	}
-	if got, ok := ParseContactToken(cfg, ws, token); !ok || got != contact {
-		t.Fatalf("ParseContactToken = %s %v, want %s", got, ok, contact)
+	if ref, ok := ParseContactToken(cfg, ws, token); !ok || ref.ID != contact {
+		t.Fatalf("ParseContactToken = %v %v, want %s", ref, ok, contact)
 	}
 	if _, ok := ParseContactToken(cfg, other, token); ok {
 		t.Fatal("a token opened in another workspace")
@@ -84,12 +85,78 @@ func TestContactToken(t *testing.T) {
 		}
 	}
 
+	// The tokens of one contact differ by what they were issued for, and never share a nonce.
+	verified, _ := s.ContactToken(cfg, ws, contact, true)
+	survey := uuid.New()
+	link, _ := LinkContactToken(cfg, ws, contact, survey)
+	nonces := map[string]bool{}
+	for _, tok := range []string{token, verified, link} {
+		b, _ := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(tok, "ct1."))
+		nonces[string(b[:12])] = true
+		if ref, ok := ParseContactToken(cfg, ws, tok); !ok || ref.ID != contact {
+			t.Fatalf("%q does not name the contact", tok)
+		}
+	}
+	if len(nonces) != 3 {
+		t.Fatal("two tokens of one contact share a nonce")
+	}
+
 	// After a key rotation, a token issued under the retired key still opens while the key is kept.
 	rotated := config.Config{EncryptionKey: bytes.Repeat([]byte{9}, 32), EncryptionPreviousKeys: config.EncryptionKeyring{1: bytes.Repeat([]byte{7}, 32)}}
-	if got, ok := ParseContactToken(rotated, ws, token); !ok || got != contact {
+	if ref, ok := ParseContactToken(rotated, ws, token); !ok || ref.ID != contact {
 		t.Fatal("a token under a retired key did not open")
 	}
 	if _, ok := ParseContactToken(config.Config{EncryptionKey: bytes.Repeat([]byte{9}, 32)}, ws, token); ok {
 		t.Fatal("a token opened under a key it was not sealed with")
+	}
+}
+
+// Without required verification every token and contact id attaches. With it, only a verified identify's token under the current secret, or a personal link's token for its own survey: not an unverified identify's token, not one issued before the secret was regenerated, and not a contact id.
+func TestAttaches(t *testing.T) {
+	cfg := config.Config{EncryptionKey: bytes.Repeat([]byte{7}, 32)}
+	ws, contact, survey := uuid.New(), uuid.New(), uuid.New()
+	before := &Settings{Secret: "s3cret"}
+	ref := func(token string, _ error) ContactRef {
+		r, ok := ParseContactToken(cfg, ws, token)
+		if !ok {
+			t.Fatalf("%q did not open", token)
+		}
+		return r
+	}
+	unverified := ref(before.ContactToken(cfg, ws, contact, false))
+	verified := ref(before.ContactToken(cfg, ws, contact, true))
+	link := ref(LinkContactToken(cfg, ws, contact, survey))
+
+	for _, r := range []ContactRef{unverified, verified, link} {
+		if !before.Attaches(r, uuid.New()) {
+			t.Fatal("a token did not attach without required verification")
+		}
+	}
+	if !before.AttachesContactID() {
+		t.Fatal("a contact id did not attach without required verification")
+	}
+
+	required := &Settings{Secret: "s3cret", Required: true}
+	for _, tc := range []struct {
+		name   string
+		s      *Settings
+		ref    ContactRef
+		survey uuid.UUID
+		want   bool
+	}{
+		{"verified", required, verified, survey, true},
+		{"unverified", required, unverified, survey, false},
+		{"verified under a regenerated secret", &Settings{Secret: "n3w", Required: true}, verified, survey, false},
+		{"verified once the secret is removed", &Settings{Required: true}, verified, survey, false},
+		{"link for its survey", required, link, survey, true},
+		{"link for another survey", required, link, uuid.New(), false},
+		{"link without a secret", &Settings{Required: true}, link, survey, true},
+	} {
+		if got := tc.s.Attaches(tc.ref, tc.survey); got != tc.want {
+			t.Errorf("%s: Attaches = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+	if required.AttachesContactID() {
+		t.Fatal("a contact id attached under required verification")
 	}
 }

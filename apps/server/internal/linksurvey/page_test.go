@@ -16,6 +16,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/sdkidentity"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
@@ -447,6 +448,16 @@ func contactToken(t *testing.T, cfg config.Config, contactID, surveyID string, e
 	return token
 }
 
+// linkContactToken is the token the personal link page hands the runtime for contact, in place of its id.
+func linkContactToken(t *testing.T, cfg config.Config, ws, contact, surveyID uuid.UUID) string {
+	t.Helper()
+	token, err := sdkidentity.LinkContactToken(cfg, ws, contact, surveyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return token
+}
+
 // forma2's ContactSurveyPage.
 func TestContactPage(t *testing.T) {
 	e := newEnv(t)
@@ -456,7 +467,7 @@ func TestContactPage(t *testing.T) {
 	token := contactToken(t, e.cfg, contact.String(), id.String(), nil)
 
 	p := e.page("/c/"+token, "Accept-Language", "zh-TW")
-	if p.Status != http.StatusOK || p.view() != viewSurvey || p.sub("survey")["contactId"] != contact.String() || p.State["locale"] != "zh-Hant-TW" {
+	if p.Status != http.StatusOK || p.view() != viewSurvey || p.sub("survey")["contactId"] != linkContactToken(t, e.cfg, ws, contact, id) || p.State["locale"] != "zh-Hant-TW" {
 		t.Fatalf("status %d view %q survey %v", p.Status, p.view(), p.sub("survey"))
 	}
 	// The personal page has the survey's metadata without the canonical link or robots directives, and Next's default viewport.
@@ -513,7 +524,7 @@ func TestContactPageSingleUse(t *testing.T) {
 		}
 	}
 	p := e.page("/c/" + token + "?suId=su-1&suToken=" + signature)
-	if p.view() != viewSurvey || p.sub("survey")["singleUseId"] != "su-1" || p.sub("survey")["contactId"] != contact.String() {
+	if p.view() != viewSurvey || p.sub("survey")["singleUseId"] != "su-1" || p.sub("survey")["contactId"] != linkContactToken(t, e.cfg, ws, contact, id) {
 		t.Fatalf("valid link: view %q survey %v", p.view(), p.sub("survey"))
 	}
 }
