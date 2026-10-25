@@ -9,7 +9,7 @@
 -- goose runs this migration in one transaction; SET LOCAL bounds only it. Adding nullable columns without a default is a catalog change, but the ACCESS EXCLUSIVE lock it needs waits behind any open reader of api_keys (every API request reads it), and a migration should fail fast rather than queue every later request behind it.
 SET LOCAL lock_timeout = '1s';
 
--- The reason's own check is a column constraint, which a new, all-null column satisfies; the check that the two columns are set together is a table constraint, added NOT VALID so that adding it takes no scan, and validated by 00013 in a transaction of its own. It holds for every write from here on either way.
+-- The reason's own check is a column constraint, which a new, all-null column satisfies; the check that the two columns are set together is a table constraint, added NOT VALID so that adding it takes no scan, and validated by 00016 in a transaction of its own. It holds for every write from here on either way.
 ALTER TABLE api_keys
     ADD COLUMN disabled_at timestamptz,
     ADD COLUMN disabled_reason text
