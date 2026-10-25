@@ -668,6 +668,41 @@ checksums:
     organizations/landing/no_workspaces_warning_title: ba051776860ec4d73c7d177b1379bbda
     organizations/members/inactive_tooltip: b8d97773412ccd96f3e87643638aa6ff
     organizations/security_tip_github: 0c3949dce92da2ab10e070c6033f98b4
+    organizations/two_factor/card_description: 9a969b8d3408c69ea5bee254f635b998
+    organizations/two_factor/card_title: bc68ddd9c3c82225ef641f097e0940db
+    organizations/two_factor/column: 63d68e16d3d1783870c9881afef158bd
+    organizations/two_factor/column_description: bc68ddd9c3c82225ef641f097e0940db
+    organizations/two_factor/disable_warning: 1ca60b8433014ebd01cd45b8c106c46a
+    organizations/two_factor/enable_own_first: 9887e850e953ad8fc1588797e8bfa501
+    organizations/two_factor/grace_period_days: 3c68d1559239ec9ce06702a80955da0e
+    organizations/two_factor/grace_period_description: 3b839b0dd37a366df4b45100630baf4b
+    organizations/two_factor/grace_period_label: 87ec6201faab97a4cd5b527dc0cadcb3
+    organizations/two_factor/grace_period_none: 436b8d41be628f9d28618291854d5229
+    organizations/two_factor/missing_count: 421894d05d30270bf51dc9d83eeef7ed
+    organizations/two_factor/open_profile: ee570996695ec619ac055fbe4f9d4c88
+    organizations/two_factor/optional_status: 3d9e55d67766a1c6ffba80ab7847e3d7
+    organizations/two_factor/owner_only: 18133653b1971caebbe2f675f80b5877
+    organizations/two_factor/page_blocked: 3cd3e94baf1cb67442bae49ee15b0fe1
+    organizations/two_factor/page_continue: fbeb2410478168f98c569839958482b4
+    organizations/two_factor/page_done: d42bc253ebc65f0f92663fd0191487d2
+    organizations/two_factor/page_grace: d6e5c39de78212ada1e6e82f930090a4
+    organizations/two_factor/page_later: a12f38fb4352c31ca0d43c05303b7257
+    organizations/two_factor/page_other_organizations: a64613d14a36ea061ff09d876fbc3de7
+    organizations/two_factor/page_setup: 561ab299a4a7560489caa04e4ef983a1
+    organizations/two_factor/page_title: b81e86fb4bb3cb385ca9ab7b59a227c3
+    organizations/two_factor/reminder_action: 6508eb67d01b9beea11ed6b7fe4db257
+    organizations/two_factor/reminder_body: b52bbc32cfcd936994b45e855733ba99
+    organizations/two_factor/reminder_title: 8188bcf05addf329bcacf669d383466f
+    organizations/two_factor/require_button: 603964c49677616087d4f53b040c02dd
+    organizations/two_factor/required_status_enforced: 39b0bd5de6cc373dfe5b7c0601d50c5a
+    organizations/two_factor/required_status_grace: 393d1130933a880b5cf70e4eb71ce606
+    organizations/two_factor/requirement_removed: dd1435cb3ff4746da84cab5caf670356
+    organizations/two_factor/requirement_saved: c312e6b4fca132c7088e087cf0b5f7fa
+    organizations/two_factor/status_disabled: 7e33a70258401abe652c9f1b595fabda
+    organizations/two_factor/status_enabled: 1929bcf2fba8003c043b446a851bcb4f
+    organizations/two_factor/status_sso: 003f7f93d44b0f5c2e40bf24e7af3bd7
+    organizations/two_factor/status_sso_hint: 2df11647ac1f1969a52c33ffc3c9f6d5
+    organizations/two_factor/stop_button: 72fc44d112adc5384e14e13a358eb177
     organizations/workspaces/new/skip_for_now: b8bf7f2b6e67a523dc4ff5ce009cdb72
     organizations/workspaces/new/survey/create_with_ai_description: c343fffd7f274733b5513fa5aa3dae2c
     organizations/workspaces/new/survey/start_from_scratch: 6fc756927ca9ea22c26368cccd64a67e

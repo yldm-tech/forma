@@ -69,6 +69,7 @@ import {
 import { forgetWorkspace } from "../../lib/storage";
 import { toast } from "../../lib/toast";
 import { InviteMemberModal } from "./invite-member-modal";
+import { TwoFactorStatusBadge } from "./two-factor-requirement";
 
 /** A row of the members table: an accepted membership or a pending invite. */
 type MemberRow = { kind: "member"; member: Member } | { kind: "invite"; invite: Invite };
@@ -93,6 +94,8 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
     ...(invites.data ?? []).map((invite) => ({ kind: "invite" as const, invite })),
   ];
   const doesOrgHaveMoreThanOneOwner = hasMoreThanOneActiveOwner(members.data ?? []);
+  // The server sends each member's two-factor status to owners and managers only.
+  const showTwoFactor = accessFlags(role).isOwnerOrManager;
   // A table missing its members, its invites or the caller's permissions would look complete and silently lose rows or actions, so any failure replaces it.
   const state = combinedQueryState([members, invites, access]);
   const retry = () => {
@@ -134,6 +137,13 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
               <TableHead className="w-[25%]">{t("common.email")}</TableHead>
               <TableHead className="w-[17%]">{t("common.role")}</TableHead>
               <TableHead className="w-[17%]">{t("common.status")}</TableHead>
+              {showTwoFactor && (
+                <TableHead className="w-[10%]">
+                  <abbr title={t("organizations.two_factor.column_description")} className="no-underline">
+                    {t("organizations.two_factor.column")}
+                  </abbr>
+                </TableHead>
+              )}
               {userManagementEnabled && (
                 <TableHead className="w-[24%] text-right">{t("common.actions")}</TableHead>
               )}
@@ -151,6 +161,7 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
                 billingRoleAllowed={access.data?.billingRoleAllowed ?? false}
                 doesOrgHaveMoreThanOneOwner={doesOrgHaveMoreThanOneOwner}
                 emailConfigured={emailConfigured}
+                showTwoFactor={showTwoFactor}
               />
             ))}
           </TableBody>
@@ -169,6 +180,7 @@ const MemberTableRow = ({
   billingRoleAllowed,
   doesOrgHaveMoreThanOneOwner,
   emailConfigured,
+  showTwoFactor,
 }: {
   row: MemberRow;
   organizationId: string;
@@ -178,6 +190,7 @@ const MemberTableRow = ({
   billingRoleAllowed: boolean;
   doesOrgHaveMoreThanOneOwner: boolean;
   emailConfigured: boolean;
+  showTwoFactor: boolean;
 }) => {
   const name = row.kind === "member" ? row.member.name : (row.invite.name ?? "");
   const email = row.kind === "member" ? row.member.email : row.invite.email;
@@ -206,6 +219,15 @@ const MemberTableRow = ({
       <TableCell>
         <StatusBadge row={row} organizationId={organizationId} />
       </TableCell>
+      {showTwoFactor && (
+        <TableCell>
+          {row.kind === "member" && row.member.twoFactor ? (
+            <TwoFactorStatusBadge status={row.member.twoFactor} />
+          ) : (
+            <span className="text-slate-400">—</span>
+          )}
+        </TableCell>
+      )}
       {userManagementEnabled && (
         <TableCell>
           <MemberActions
