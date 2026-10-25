@@ -110,6 +110,20 @@ describe("saveSurvey", () => {
     expect(JSON.parse(init.body as string)).toMatchObject({ updatedAt: "2026-10-02T09:30:00.123Z" });
   });
 
+  test("tells the server the publish and close dates carry the times picked in the editor", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(json(200, wireSurvey()));
+    vi.stubGlobal("fetch", fetchMock);
+    const publishOn = new Date("2026-11-02T09:15:00.000Z");
+
+    await saveSurvey({ ...parseSurvey(wireSurvey()), publishOn, status: "paused" }, false);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      publishOn: "2026-11-02T09:15:00.000Z",
+      schedulingExactTimes: true,
+    });
+  });
+
   test("sends a full save to the survey and surfaces the server's conflict marker", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       json(403, {

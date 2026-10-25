@@ -93,9 +93,14 @@ export type SurveySaveInput = Omit<TSurvey, "updatedAt"> & {
   schedulingTimeZone?: string;
 };
 
-/** The editor's full save (forma2's updateSurveyAction) and, with draft, its draft save (updateSurveyDraftAction), which the server refuses with survey_modified_elsewhere:<iso> when the stored survey is newer than updatedAt. */
+/** The editor's full save (forma2's updateSurveyAction) and, with draft, its draft save (updateSurveyDraftAction), which the server refuses with survey_modified_elsewhere:<iso> when the stored survey is newer than updatedAt. schedulingExactTimes tells the server the publish and close dates carry the time of day picked in the editor, which it keeps, instead of calendar days it snaps to the schedule's time. */
 export const saveSurvey = (input: SurveySaveInput, draft: boolean): Promise<TSurvey> =>
-  api.put<SurveyWire>(`/api/app/surveys/${input.id}${draft ? "/draft" : ""}`, input).then(parseSurvey);
+  api
+    .put<SurveyWire>(`/api/app/surveys/${input.id}${draft ? "/draft" : ""}`, {
+      ...input,
+      schedulingExactTimes: true,
+    })
+    .then(parseSurvey);
 
 /** forma2's response counts of the survey (all, and finished ones), read from its row in the workspace's survey list. */
 export interface ResponseCounts {

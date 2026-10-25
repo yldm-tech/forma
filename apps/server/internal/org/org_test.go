@@ -159,7 +159,7 @@ func TestGetOrganization(t *testing.T) {
 	e.fails(e.do(owner, http.MethodGet, "/api/app/organizations/not-a-uuid", nil), http.StatusBadRequest, apperr.CodeValidation, "")
 }
 
-// The survey scheduling time zone is the owner's and the manager's to change; the organization reads back the zone in effect, and its scheduled dates move to the same calendar days in the new zone.
+// The survey scheduling time zone is the owner's and the manager's to change; the organization reads back the zone in effect, and its scheduled dates move to the same calendar days and times of day in the new zone.
 func TestSurveySchedulingTimeZone(t *testing.T) {
 	e := newEnv(t)
 	owner, manager, member := e.user(), e.user(), e.user()
@@ -179,6 +179,8 @@ func TestSurveySchedulingTimeZone(t *testing.T) {
 	ws := c.WorkspaceID
 	scheduled := e.insert(`INSERT INTO surveys (workspace_id, name, status, publish_on, close_on) VALUES (?, 'S', 'paused', '2030-05-01T00:00:00Z', '2030-05-02T00:00:00Z') RETURNING id`, ws)
 	closing := e.insert(`INSERT INTO surveys (workspace_id, name, status, close_on) VALUES (?, 'C', 'inProgress', '2030-06-01T00:00:00Z') RETURNING id`, ws)
+	// And one the editor gave a time of day: 18:15 on July 1 in UTC.
+	timed := e.insert(`INSERT INTO surveys (workspace_id, name, status, close_on) VALUES (?, 'T', 'inProgress', '2030-07-01T18:15:00Z') RETURNING id`, ws)
 	e.survey(ws)
 	dates := func() (publishOn, closeOn string) {
 		e.scalar(&publishOn, `SELECT to_char(publish_on AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI') FROM surveys WHERE id = ?`, scheduled)
@@ -194,6 +196,12 @@ func TestSurveySchedulingTimeZone(t *testing.T) {
 	// Los Angeles is behind UTC: the same days at midnight there, not the evening before.
 	if p, cl := dates(); p != "2030-05-01T07:00" || cl != "2030-05-02T07:00" {
 		t.Fatalf("moved to Los Angeles: %s %s", p, cl)
+	}
+	// A date with its own time keeps that time of day: 18:15 on July 1 in Los Angeles.
+	var timedCloseOn string
+	e.scalar(&timedCloseOn, `SELECT to_char(close_on AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI') FROM surveys WHERE id = ?`, timed)
+	if timedCloseOn != "2030-07-02T01:15" {
+		t.Fatalf("the timed survey moved to Los Angeles: %s", timedCloseOn)
 	}
 	e.ok(e.do(owner, http.MethodGet, path, nil), http.StatusOK, &d)
 	if d.SurveyScheduling.TimeZone != "America/Los_Angeles" || d.SurveyScheduling.InstanceTimeZone != "UTC" {

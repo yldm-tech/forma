@@ -3,6 +3,16 @@ import type { TSurveySchedulingConfig } from "./scheduling-config";
 const DATE_ONLY_SELECTION_UTC_HOUR = 12;
 const LOCAL_CALENDAR_NOON_HOUR = 12;
 
+/** Minutes between two runs of the server's scheduler (apps/server/internal/survey/scheduling, Runs): the publish and close times the editor offers. */
+export const SURVEY_SCHEDULING_STEP_MINUTES = 15;
+
+/** A time of day a scheduled survey can open or close at on a given day, in the scheduling zone, and the instant it is. */
+export interface TSurveySchedulingTimeOption {
+  hour: number;
+  minute: number;
+  instant: Date;
+}
+
 interface TimeZoneDateParts {
   day: number;
   hour: number;
@@ -96,7 +106,9 @@ export const createSurveySchedulingDateUtils = (config: TSurveySchedulingConfig)
     date: Date,
     year: number,
     month: number,
-    day: number
+    day: number,
+    hour: number,
+    minute: number
   ): boolean => {
     const parts = getTimeZoneDateParts(date);
 
@@ -104,25 +116,88 @@ export const createSurveySchedulingDateUtils = (config: TSurveySchedulingConfig)
       parts.year === year &&
       parts.month === month + 1 &&
       parts.day === day &&
-      parts.hour === config.localHour &&
-      parts.minute === config.localMinute
+      parts.hour === hour &&
+      parts.minute === minute
     );
   };
 
-  const createSurveySchedulingDateTime = (year: number, month: number, day: number): Date => {
-    const utcGuessMs = Date.UTC(year, month, day, config.localHour, config.localMinute, 0, 0);
+  /** The instant the scheduling zone's clock reads hour:minute (the schedule's own time by default) on a day; a time a daylight saving change skips comes out at the nearest instant there is. */
+  const createSurveySchedulingDateTime = (
+    year: number,
+    month: number,
+    day: number,
+    hour: number = config.localHour,
+    minute: number = config.localMinute
+  ): Date => {
+    const utcGuessMs = Date.UTC(year, month, day, hour, minute, 0, 0);
     let candidate = new Date(utcGuessMs);
 
     for (let attempt = 0; attempt < 3; attempt++) {
       candidate = new Date(utcGuessMs - getTimeZoneOffsetMs(candidate));
 
-      if (matchesSurveySchedulingLocalTime(candidate, year, month, day)) {
+      if (matchesSurveySchedulingLocalTime(candidate, year, month, day, hour, minute)) {
         return candidate;
       }
     }
 
     return candidate;
   };
+
+  /** The scheduler runs every quarter hour at the configured minute, the same instants in every zone (every UTC offset in use is whole quarter hours); a publish or close time is one of them, so the survey opens or closes when it says. */
+  const gridOffsetMinutes = config.localMinute % SURVEY_SCHEDULING_STEP_MINUTES;
+  const stepMs = SURVEY_SCHEDULING_STEP_MINUTES * 60 * 1000;
+
+  /** The first run strictly after an instant. */
+  const nextSurveySchedulingRun = (after: Date): Date => {
+    const offsetMs = gridOffsetMinutes * 60 * 1000;
+    return new Date(Math.floor((after.getTime() - offsetMs) / stepMs) * stepMs + offsetMs + stepMs);
+  };
+
+  /** The time of day an instant has in the scheduling zone. */
+  const getSurveySchedulingTimeOfDay = (instant: Date): { hour: number; minute: number } => {
+    const { hour, minute } = getTimeZoneDateParts(instant);
+    return { hour, minute };
+  };
+
+  /** A day picked in the calendar (a browser-local date) at hour:minute in the scheduling zone. */
+  const toSurveySchedulingDateTimeAt = (calendarDate: Date, hour: number, minute: number): Date =>
+    createSurveySchedulingDateTime(
+      calendarDate.getFullYear(),
+      calendarDate.getMonth(),
+      calendarDate.getDate(),
+      hour,
+      minute
+    );
+
+  /** The runs on a picked day that come after an instant (now, or the publish date for the close date), as the times the editor offers; a time the day does not have (a daylight saving gap) is left out. */
+  const getSurveySchedulingTimeOptions = (calendarDate: Date, after: Date): TSurveySchedulingTimeOption[] => {
+    const options: TSurveySchedulingTimeOption[] = [];
+    for (
+      let minuteOfDay = gridOffsetMinutes;
+      minuteOfDay < 24 * 60;
+      minuteOfDay += SURVEY_SCHEDULING_STEP_MINUTES
+    ) {
+      const hour = Math.floor(minuteOfDay / 60);
+      const minute = minuteOfDay % 60;
+      const instant = toSurveySchedulingDateTimeAt(calendarDate, hour, minute);
+      const exists = matchesSurveySchedulingLocalTime(
+        instant,
+        calendarDate.getFullYear(),
+        calendarDate.getMonth(),
+        calendarDate.getDate(),
+        hour,
+        minute
+      );
+      if (exists && instant.getTime() > after.getTime()) {
+        options.push({ hour, minute, instant });
+      }
+    }
+    return options;
+  };
+
+  /** The first day, as a calendar date, with a run after an instant: the earliest day the calendar offers. */
+  const getFirstSurveySchedulingCalendarDate = (after: Date): Date =>
+    createLocalCalendarDate(getTimeZoneDateParts(nextSurveySchedulingRun(after)));
 
   const toCalendarDate = (date: Date): Date => {
     return createLocalCalendarDate(getTimeZoneDateParts(date));
@@ -169,5 +244,9 @@ export const createSurveySchedulingDateUtils = (config: TSurveySchedulingConfig)
     getMinimumSurveySchedulingCalendarDate,
     normalizeDateOnlySelectionToSurveySchedulingDateTime,
     toSurveySchedulingDateTime,
+    toSurveySchedulingDateTimeAt,
+    getSurveySchedulingTimeOfDay,
+    getSurveySchedulingTimeOptions,
+    getFirstSurveySchedulingCalendarDate,
   };
 };
