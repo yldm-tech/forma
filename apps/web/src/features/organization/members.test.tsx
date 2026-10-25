@@ -129,13 +129,15 @@ const renderMembers = ({
   role,
   access,
   smtpConfigured,
+  memberList = members,
 }: {
   role: OrganizationRole;
   access: UserManagementAccess;
   smtpConfigured: boolean;
+  memberList?: Member[];
 }) => {
   stubServer({
-    [`GET ${API}/members`]: { members },
+    [`GET ${API}/members`]: { members: memberList },
     [`GET ${API}/invites`]: invites,
     [`GET ${API}/user-management`]: access,
     "GET /api/app/auth/me": { id: "u1", name: "Ada Owner" },
@@ -175,6 +177,29 @@ describe("MembersCard", () => {
     const invite = await rowOf("Cy Invitee");
     await waitFor(() => expect(within(invite).queryByRole("button", { name: resend() })).toBeNull());
     expect(within(invite).getByRole("button", { name: share() })).toBeTruthy();
+  });
+
+  // Only the v2 management API deactivates an account, and no page can undo it; the badge tells the admin how.
+  test("explains an inactive member's badge with the management API call that restores access", async () => {
+    renderMembers({
+      role: "owner",
+      access: ownerAccess,
+      smtpConfigured: true,
+      memberList: members.map((member) => (member.userId === "u2" ? { ...member, isActive: false } : member)),
+    });
+
+    const row = await rowOf("Bob Member");
+    const badge = within(row).getByText(t("common.inactive"));
+    const explanation = t("organizations.members.inactive_tooltip", {
+      organizationId: ORG,
+      email: "bob@example.com",
+    });
+    expect(explanation).toContain(`PATCH /api/v2/organizations/${ORG}/users`);
+    expect(explanation).toContain("bob@example.com");
+    // A screen reader reads it with the badge; the eye gets it as a tooltip on a trigger the keyboard can reach.
+    expect(within(row).getByText(explanation)).toBeTruthy();
+    expect(badge.closest("button")).not.toBeNull();
+    expect(within(await rowOf("Ada Owner")).queryByText(explanation)).toBeNull();
   });
 
   test("offers a team admin neither share nor resend, which the server refuses them", async () => {

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RepeatIcon, Trash2Icon } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useUnsavedChanges } from "../../../components/shell/unsaved-changes";
 import { Button } from "../../../components/ui/button";
 import { Uploader, useIsStorageConfigured } from "../../../components/ui/file-input/components/uploader";
 import { Wordmark } from "../../../components/ui/logo";
@@ -38,6 +39,8 @@ export const EmailCustomizationCard = ({ organization }: { organization: Organiz
   const [logoUrl, setLogoUrl] = useState<string | null>(savedLogoUrl);
   const [isSaving, setIsSaving] = useState(false);
   const isDefaultLogo = logoUrl === null;
+  // A picked file is uploaded only by Save.
+  useUnsavedChanges(logoFile !== null);
 
   const replacePreview = (next: string | null) => {
     if (logoUrl?.startsWith("blob:")) URL.revokeObjectURL(logoUrl);

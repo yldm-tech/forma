@@ -196,6 +196,7 @@ checksums:
     common/booked: 77603a7aca80b8b333023c5cf39fec4d
     common/bottom_left: af9c28e07d6a12af1f18bce2f580d93d
     common/bottom_right: aaef9a70ef795affc806c6d1853d8373
+    common/branding_and_links: 2db241c6de6042eeca024b09dcfa4364
     common/cancel: 2e2a849c2223911717de8caa2c71bade
     common/canceled: 342a409089d71ce45725add1c62b0ade
     common/centered_modal: 982ff411cb7e91e30300c2ed56b7e507
@@ -254,6 +255,10 @@ checksums:
     common/disabled: 0889a3dfd914a7ef638611796b17bf72
     common/disallow: 01c8ed3ce545ed836d3ccffc562c8a0c
     common/discard: de83a114a79d086e372c43dbfe9f47b4
+    common/discard_changes_confirm: 389863172fe772f45b47fc8ca7b09f17
+    common/discard_changes_description: 4ab2b35e1cdc92813cc89e4229db71e7
+    common/discard_changes_keep_editing: 9778ce7d47a83d1d43b204fc177d2c4a
+    common/discard_changes_title: b2fa2b53238c88e898d92b026b0ffdc2
     common/dismissed: f0e21b3fe28726c577a7238a63cc29c2
     common/domain: 402d46965eacc3af4c5df92e53e95712
     common/done: ffd408fa29d5bc9039ef8ea1b9b699bb
@@ -661,6 +666,7 @@ checksums:
     onboarding/product_name_placeholder: 5ec6ce1b5ac5c32e07c8c107bc6b3b68
     organizations/landing/no_workspaces_warning_subtitle: 305578d27209f1c4f706fccd53559f52
     organizations/landing/no_workspaces_warning_title: ba051776860ec4d73c7d177b1379bbda
+    organizations/members/inactive_tooltip: b8d97773412ccd96f3e87643638aa6ff
     organizations/security_tip_github: 0c3949dce92da2ab10e070c6033f98b4
     organizations/workspaces/new/skip_for_now: b8bf7f2b6e67a523dc4ff5ce009cdb72
     organizations/workspaces/new/survey/create_with_ai_description: c343fffd7f274733b5513fa5aa3dae2c

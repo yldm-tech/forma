@@ -122,7 +122,7 @@ export const SettingsNavigation = ({
       : [
           {
             id: "domain",
-            label: t("common.domain"),
+            label: t("common.branding_and_links"),
             href: organizationSettingsPath(organizationId, "domain"),
             icon: <GlobeIcon className={iconClassName} />,
             disabledReason: undefined,
