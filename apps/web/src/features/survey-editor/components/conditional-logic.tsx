@@ -186,64 +186,65 @@ export function ConditionalLogic({
                   id={logicRuleDomId(logicItem.id)}
                   className={cn(
                     // scroll-mt clears the fixed tabs bar when a rule issue scrolls here
-                    "relative flex w-full grow scroll-mt-16 items-start gap-2 rounded-lg border bg-slate-50 p-3",
+                    "flex w-full grow scroll-mt-16 items-start gap-2 rounded-lg border bg-slate-50 p-3",
                     invalidElements?.includes(logicItem.id) ? "border-red-400" : "border-slate-200"
                   )}>
-                  <LogicEditor
-                    localSurvey={transformedSurvey}
-                    logicItem={logicItem}
-                    updateBlockLogic={updateBlockLogic}
-                    updateBlockLogicFallback={updateBlockLogicFallback}
-                    block={block}
-                    blockIdx={blockIdx}
-                    logicIdx={logicItemIdx}
-                    isLast={logicItemIdx === blockLogic.length - 1}
-                  />
+                  <div className="min-w-0 flex-1">
+                    <LogicEditor
+                      localSurvey={transformedSurvey}
+                      logicItem={logicItem}
+                      updateBlockLogic={updateBlockLogic}
+                      updateBlockLogicFallback={updateBlockLogicFallback}
+                      block={block}
+                      blockIdx={blockIdx}
+                      logicIdx={logicItemIdx}
+                      isLast={logicItemIdx === blockLogic.length - 1}
+                    />
+                  </div>
 
-                  {logicItem.conditions.conditions.length > 1 && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger id={`logic-item-${logicItem.id}-dropdown`} asChild>
-                        <Button
-                          variant="secondary"
-                          aria-label="More options"
-                          className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-md">
-                          <EllipsisVerticalIcon className="size-4 text-slate-700 hover:text-slate-950" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="mt-10">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            duplicateLogic(logicItemIdx);
-                          }}
-                          icon={<CopyIcon className="size-4" />}>
-                          {t("common.duplicate")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={logicItemIdx === 0}
-                          onClick={() => {
-                            moveLogic(logicItemIdx, logicItemIdx - 1);
-                          }}
-                          icon={<ArrowUpIcon className="size-4" />}>
-                          {t("common.move_up")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={logicItemIdx === blockLogic.length - 1}
-                          onClick={() => {
-                            moveLogic(logicItemIdx, logicItemIdx + 1);
-                          }}
-                          icon={<ArrowDownIcon className="size-4" />}>
-                          {t("common.move_down")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            handleRemoveLogic(logicItemIdx);
-                          }}
-                          icon={<TrashIcon className="size-4" />}>
-                          {t("common.remove")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                  {/* Every rule has its own menu, beside the rule rather than over its first row, so a rule with a single condition can be moved, duplicated and removed too. */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger id={`logic-item-${logicItem.id}-dropdown`} asChild>
+                      <Button
+                        variant="secondary"
+                        aria-label={t("workspace.surveys.edit.logic.rule_options")}
+                        className="flex size-10 shrink-0 items-center justify-center rounded-md">
+                        <EllipsisVerticalIcon className="size-4 text-slate-700 hover:text-slate-950" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="mt-10">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          duplicateLogic(logicItemIdx);
+                        }}
+                        icon={<CopyIcon className="size-4" />}>
+                        {t("common.duplicate")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={logicItemIdx === 0}
+                        onClick={() => {
+                          moveLogic(logicItemIdx, logicItemIdx - 1);
+                        }}
+                        icon={<ArrowUpIcon className="size-4" />}>
+                        {t("common.move_up")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={logicItemIdx === blockLogic.length - 1}
+                        onClick={() => {
+                          moveLogic(logicItemIdx, logicItemIdx + 1);
+                        }}
+                        icon={<ArrowDownIcon className="size-4" />}>
+                        {t("common.move_down")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          handleRemoveLogic(logicItemIdx);
+                        }}
+                        icon={<TrashIcon className="size-4" />}>
+                        {t("common.remove")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ))}
             </div>

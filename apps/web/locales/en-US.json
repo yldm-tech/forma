@@ -3169,6 +3169,12 @@
         "link_survey_description": "Share a link to a survey page or embed it in a web page or email.",
         "list": "List",
         "load_segment": "Load segment",
+        "logic": {
+          "action_options": "Action options",
+          "condition_group_options": "Condition group options",
+          "condition_options": "Condition options",
+          "rule_options": "Logic rule options"
+        },
         "logic_error_warning": "Changing will cause logic errors",
         "logic_error_warning_text": "Changing the question type will remove the logic conditions from this question",
         "logo_settings": "Logo settings",

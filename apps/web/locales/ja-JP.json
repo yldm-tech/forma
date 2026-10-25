@@ -3169,6 +3169,12 @@
         "link_survey_description": "フォームページへのリンクを共有するか、ウェブページやメールに埋め込みます。",
         "list": "リスト",
         "load_segment": "セグメントを読み込み",
+        "logic": {
+          "action_options": "アクションのオプション",
+          "condition_group_options": "条件グループのオプション",
+          "condition_options": "条件のオプション",
+          "rule_options": "ロジックルールのオプション"
+        },
         "logic_error_warning": "変更するとロジックエラーが発生します",
         "logic_error_warning_text": "質問の種類を変更すると、この質問のロジック条件が削除されます",
         "logo_settings": "ロゴ設定",
