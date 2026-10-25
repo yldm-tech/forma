@@ -426,7 +426,7 @@ export const en: SiteContent = {
           facts: [
             {
               term: "?formaDebug=true",
-              body: "Add it to the page's URL: the SDK logs each step to the console with the `🧱 Forma` prefix, fetches the workspace state again instead of using its cache, and ignores a stored error state.",
+              body: "Add it to the page's URL: the SDK logs each step to the console with the `🧱 Forma` prefix, fetches the workspace state again instead of using its cache, and ignores a stored error state. Every survey the user cannot be shown is logged with the reason, as `Survey <id> left out: workspace cooldown 7d, last survey shown 2d ago`, and so is each survey a tracked action triggers but cannot show.",
             },
             {
               term: "setNonce(nonce)",

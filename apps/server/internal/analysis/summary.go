@@ -1,12 +1,14 @@
 package analysis
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,6 +23,15 @@ import (
 
 // valuesLimit is forma2's VALUES_LIMIT: how many samples a text-like element or an Other option lists. Counts are never truncated.
 const valuesLimit = 50
+
+// breakdownTop is how many of a free-text field's most frequent values its breakdown lists; the rest are added up in one remainder.
+const breakdownTop = 10
+
+// breakdownTracked bounds the distinct values a breakdown counts, so a field holding a different value in every response (an id, a timestamp) does not keep a map entry per response. A value first met after the bound is added to the remainder: responses are read newest first, so a value only older responses hold can then be missing from the top, which a field with that many distinct values cannot be read by anyway.
+const breakdownTracked = 10000
+
+// breakdownTrackedBytes bounds the bytes of the distinct values a breakdown keeps, since breakdownTracked alone lets long free text (an Other answer, a hidden field set through the client API) hold up to a request body per value. A value that would take its counter past the bound is added to the remainder like one met after breakdownTracked; a value that long, or that many, is not read as a bar.
+const breakdownTrackedBytes = 1 << 20
 
 // summaryBatchSize is how many responses one read of the summary takes, forma2's batchSize.
 const summaryBatchSize = 5000
@@ -101,6 +112,20 @@ type Other struct {
 	ContactAttributes json.RawMessage   `json:"contactAttributes"`
 }
 
+// ValueCount is one value of a breakdown: how many answers gave it, and their share of the answers the breakdown counts.
+type ValueCount struct {
+	Value      string  `json:"value"`
+	Count      int     `json:"count"`
+	Percentage float64 `json:"percentage"`
+}
+
+// Breakdown is a free-text field's answers grouped by value: the breakdownTop most frequent values, most frequent first and ties in value order, and how many answers gave any other value, with their share.
+type Breakdown struct {
+	Values         []ValueCount `json:"values"`
+	RestCount      int          `json:"restCount"`
+	RestPercentage float64      `json:"restPercentage"`
+}
+
 // Count is a count with its share.
 type Count struct {
 	Count      int     `json:"count"`
@@ -126,6 +151,8 @@ type (
 		Count      int      `json:"count"`
 		Percentage float64  `json:"percentage"`
 		Others     *[]Other `json:"others,omitempty"`
+		// OthersBreakdown groups every value given through the Other option, of which Others lists only the newest valuesLimit; it comes with Others.
+		OthersBreakdown *Breakdown `json:"othersBreakdown,omitempty"`
 	}
 	MultipleChoiceSummary struct {
 		Type           string          `json:"type"`
@@ -231,10 +258,11 @@ type (
 		Choices       []RankingCount  `json:"choices"`
 	}
 	HiddenFieldSummary struct {
-		Type          string   `json:"type"`
-		ID            string   `json:"id"`
-		ResponseCount int      `json:"responseCount"`
-		Samples       []Sample `json:"samples"`
+		Type          string    `json:"type"`
+		ID            string    `json:"id"`
+		ResponseCount int       `json:"responseCount"`
+		Samples       []Sample  `json:"samples"`
+		Breakdown     Breakdown `json:"breakdown"`
 	}
 )
 
@@ -600,18 +628,19 @@ func (g *samplesAggregate) result([]DropOff) (any, bool) {
 
 // choiceAggregate is the MultipleChoiceSingle and MultipleChoiceMulti summary.
 type choiceAggregate struct {
-	sv         *surveyDoc
-	el         *element
-	labels     []string
-	counts     map[string]int
-	other      *surveydoc.Choice
-	noneLabel  string
-	hasNone    bool
-	noneCount  int
-	others     []Other
-	otherCount int
-	selections int
-	responses  int
+	sv          *surveyDoc
+	el          *element
+	labels      []string
+	counts      map[string]int
+	other       *surveydoc.Choice
+	noneLabel   string
+	hasNone     bool
+	noneCount   int
+	others      []Other
+	otherCount  int
+	otherValues valueCounter
+	selections  int
+	responses   int
 }
 
 func newChoiceAggregate(sv *surveyDoc, el *element) *choiceAggregate {
@@ -651,6 +680,7 @@ func (g *choiceAggregate) count(r *summaryResponse, value any) {
 	}
 	if g.other != nil {
 		g.otherCount++
+		g.otherValues.add(jsvalue.String(value))
 		if len(g.others) < valuesLimit {
 			g.others = append(g.others, Other{Value: value, Contact: r.Contact, ContactAttributes: r.ContactAttributes})
 		}
@@ -694,7 +724,8 @@ func (g *choiceAggregate) result([]DropOff) (any, bool) {
 		if others == nil {
 			others = []Other{}
 		}
-		choices = append(choices, ChoiceCount{Value: label, Count: g.otherCount, Percentage: percent(float64(g.otherCount), total), Others: &others})
+		breakdown := g.otherValues.breakdown()
+		choices = append(choices, ChoiceCount{Value: label, Count: g.otherCount, Percentage: percent(float64(g.otherCount), total), Others: &others, OthersBreakdown: &breakdown})
 	}
 	if g.hasNone && g.noneLabel != "" {
 		choices = append(choices, ChoiceCount{Value: g.noneLabel, Count: g.noneCount, Percentage: percent(float64(g.noneCount), total)})
@@ -1034,11 +1065,12 @@ func (g *rankingAggregate) result([]DropOff) (any, bool) {
 	return RankingSummary{Type: g.el.Type, Element: g.el.Raw, ResponseCount: g.responses, Choices: choices}, true
 }
 
-// hiddenAggregate is a hidden field's summary: its non-empty text values; a number is not listed.
+// hiddenAggregate is a hidden field's summary: its non-empty text values, listed and grouped; a number is not counted.
 type hiddenAggregate struct {
 	key     string
 	count   int
 	samples []Sample
+	values  valueCounter
 }
 
 func (g *hiddenAggregate) add(r *summaryResponse) {
@@ -1047,11 +1079,55 @@ func (g *hiddenAggregate) add(r *summaryResponse) {
 		return
 	}
 	g.count++
+	g.values.add(s)
 	if len(g.samples) < valuesLimit {
 		g.samples = append(g.samples, Sample{UpdatedAt: r.UpdatedAt, Value: s, Contact: r.Contact, ContactAttributes: r.ContactAttributes})
 	}
 }
 
 func (g *hiddenAggregate) result() HiddenFieldSummary {
-	return HiddenFieldSummary{Type: "hiddenField", ID: g.key, ResponseCount: g.count, Samples: g.samples}
+	return HiddenFieldSummary{Type: "hiddenField", ID: g.key, ResponseCount: g.count, Samples: g.samples, Breakdown: g.values.breakdown()}
+}
+
+// valueCounter counts how often each value of a free-text field was given, for its Breakdown.
+type valueCounter struct {
+	counts map[string]int
+	total  int
+	// bytes is the length of the values in counts, held under breakdownTrackedBytes.
+	bytes int
+}
+
+func (c *valueCounter) add(value string) {
+	c.total++
+	if _, seen := c.counts[value]; !seen {
+		if len(c.counts) >= breakdownTracked || c.bytes+len(value) > breakdownTrackedBytes {
+			return
+		}
+		c.bytes += len(value)
+	}
+	if c.counts == nil {
+		c.counts = map[string]int{}
+	}
+	c.counts[value]++
+}
+
+// breakdown is the breakdownTop most frequent values with their shares of every counted answer, the answers outside them (untracked values included) added up as the rest.
+func (c *valueCounter) breakdown() Breakdown {
+	values := make([]ValueCount, 0, len(c.counts))
+	for value, n := range c.counts {
+		values = append(values, ValueCount{Value: value, Count: n})
+	}
+	slices.SortFunc(values, func(a, b ValueCount) int {
+		if a.Count != b.Count {
+			return cmp.Compare(b.Count, a.Count)
+		}
+		return strings.Compare(a.Value, b.Value)
+	})
+	values = values[:min(len(values), breakdownTop)]
+	rest := c.total
+	for i := range values {
+		values[i].Percentage = percent(float64(values[i].Count), float64(c.total))
+		rest -= values[i].Count
+	}
+	return Breakdown{Values: values, RestCount: rest, RestPercentage: percent(float64(rest), float64(c.total))}
 }

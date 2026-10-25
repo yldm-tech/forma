@@ -32,13 +32,13 @@ const setup = async (setupConfig: TConfigInput): Promise<void> => {
     if (isDebug) {
       console.warn("🧱 Forma - Warning: Using legacy init");
     }
-    await queue.add(Setup.setup, CommandType.Setup, false, {
+    await queue.add("setup()", Setup.setup, CommandType.Setup, false, {
       ...setupConfig,
       // @ts-expect-error -- apiHost was in the older type
       ...(setupConfig.apiHost && { appUrl: setupConfig.apiHost as string }),
     });
   } else {
-    await queue.add(Setup.setup, CommandType.Setup, false, setupConfig);
+    await queue.add("setup()", Setup.setup, CommandType.Setup, false, setupConfig);
   }
 
   // wait for setup to complete
@@ -47,36 +47,36 @@ const setup = async (setupConfig: TConfigInput): Promise<void> => {
   // Schedule checkPageUrl to run in the next event loop iteration. This ensures that any user actions (like setUserId) called synchronously after setup() will be queued BEFORE the page view actions are processed.
   // Through the queue, exactly like `registerRouteChange`, rather than called directly: the default setup check is what stops a failed setup (revoked workspaceId, forbidden fetch) from reaching `Config.get()` on a null config and throwing an uncaught rejection into the host page. An SDK that could not set itself up degrades to a console warning; it does not crash the page it is embedded in.
   setTimeout(() => {
-    void queue.add(checkPageUrl, CommandType.GeneralAction);
+    void queue.add("page view", checkPageUrl, CommandType.GeneralAction);
   }, 0);
 };
 
 const setUserId = async (userId: string): Promise<void> => {
-  await queue.add(User.setUserId, CommandType.UserAction, true, userId);
+  await queue.add("setUserId()", User.setUserId, CommandType.UserAction, true, userId);
 };
 
 const setEmail = async (email: string): Promise<void> => {
-  await queue.add(Attribute.setAttributes, CommandType.UserAction, true, { email });
+  await queue.add("setEmail()", Attribute.setAttributes, CommandType.UserAction, true, { email });
 };
 
 /**
  * Set one attribute on the identified user. The value's type decides the attribute's type when the key is new: a string, a number, or a Date (sent as an ISO 8601 string). An existing key only accepts values of its type; a mismatch is rejected by the server and logged as an error.
  */
 const setAttribute = async (key: string, value: TAttributeValue): Promise<void> => {
-  await queue.add(Attribute.setAttributes, CommandType.UserAction, true, { [key]: value });
+  await queue.add("setAttribute()", Attribute.setAttributes, CommandType.UserAction, true, { [key]: value });
 };
 
 /** Set several attributes at once. Same value types and rules as setAttribute(). */
 const setAttributes = async (attributes: Record<string, TAttributeValue>): Promise<void> => {
-  await queue.add(Attribute.setAttributes, CommandType.UserAction, true, attributes);
+  await queue.add("setAttributes()", Attribute.setAttributes, CommandType.UserAction, true, attributes);
 };
 
 const setLanguage = async (language: string): Promise<void> => {
-  await queue.add(Attribute.setAttributes, CommandType.UserAction, true, { language });
+  await queue.add("setLanguage()", Attribute.setAttributes, CommandType.UserAction, true, { language });
 };
 
 const logout = async (): Promise<void> => {
-  await queue.add(User.logout, CommandType.GeneralAction);
+  await queue.add("logout()", User.logout, CommandType.GeneralAction);
 };
 
 /**
@@ -84,11 +84,18 @@ const logout = async (): Promise<void> => {
  * @param properties - Optional properties to set, like the hidden fields (deprecated, hidden fields will be removed in a future version)
  */
 const track = async (code: string, properties?: TTrackProperties): Promise<void> => {
-  await queue.add(Action.trackCodeAction, CommandType.GeneralAction, true, code, properties);
+  await queue.add(
+    `track("${code}")`,
+    Action.trackCodeAction,
+    CommandType.GeneralAction,
+    true,
+    code,
+    properties
+  );
 };
 
 const registerRouteChange = async (): Promise<void> => {
-  await queue.add(checkPageUrl, CommandType.GeneralAction);
+  await queue.add("registerRouteChange()", checkPageUrl, CommandType.GeneralAction);
 };
 
 /**

@@ -1689,6 +1689,7 @@
       "your_survey_would_not_be_shown": "您的問卷將不會顯示。"
     },
     "analysis": {
+      "breakdown_rest": "其他所有值",
       "filter_op": {
         "applied": "已加上",
         "clicked": "已點擊",
@@ -1714,7 +1715,9 @@
         "starts_with": "開頭為",
         "submitted": "已作答"
       },
-      "nps_formula_tooltip": "NPS = 推廣者（9–10 分）比例 − 批評者（0–6 分）比例，以作答的 {count} 位受訪者為基數，不計入略過的回應。"
+      "new_responses_pill": "{count, plural, other {{count} 筆新回應}}",
+      "nps_formula_tooltip": "NPS = 推廣者（9–10 分）比例 − 批評者（0–6 分）比例，以作答的 {count} 位受訪者為基數，不計入略過的回應。",
+      "refresh": "重新整理結果"
     },
     "api_keys": {
       "add_api_key": "新增 API 金鑰",
@@ -3005,6 +3008,7 @@
         "convert_to_single_choice": "轉換為單選",
         "cooldown_period_across_surveys": "冷卻期（跨問卷）",
         "cooldown_period_across_surveys_description": "為避免問卷疲勞，請選擇此問卷如何與工作區的冷卻期互動。",
+        "cooldown_reset_warning": "此問卷忽略冷卻期，並在每次頁面瀏覽時觸發，因此會反覆顯示。每次顯示都會重新開始工作區的冷卻期，設定為「使用冷卻期」的問卷可能永遠沒有機會顯示。請將頁面瀏覽觸發器限定在特定頁面，或為此問卷設定冷卻期。",
         "country": "國家/地區",
         "create_group": "建立群組",
         "create_your_own_survey": "建立您自己的問卷",
@@ -3521,6 +3525,11 @@
         "partial_responses": "部分回應"
       },
       "filter_selected_count": "已選 {count} 項",
+      "list": {
+        "state_truncated": "SDK 只會載入工作區中最新的 {limit} 份進行中的應用程式問卷，較舊的問卷不會出現在你的網站或應用程式中。請完成或暫停不再需要的應用程式問卷：",
+        "state_truncated_more": "{count, plural, other {另有 {count} 份}}",
+        "state_truncated_title": "{count, plural, other {有 {count} 份進行中的應用程式問卷永遠不會顯示}}"
+      },
       "new_survey": "新增問卷",
       "no_other_workspaces_available": "沒有其他可用的工作區可複製此問卷。",
       "no_surveys_match_filters": "沒有符合這些篩選條件的問卷。",

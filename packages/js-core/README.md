@@ -70,7 +70,7 @@ App Router: render `<FormaScript />` in the root `app/layout.tsx`. Pages Router:
 
 The snippet defines `window.forma` straight away as a small stub. Calls to the methods it lists are queued, not thrown, and replayed in order once the SDK has loaded: `on`, `off`, `setNonce`, `setEmbeddedData` and `clearEmbeddedData` before `setup`, everything else after it. A queued call returns nothing, so do not `await` it or keep the function `on()` returns until the SDK is there. Once the SDK has loaded, the stub's methods forward to it, so a reference to `window.forma` or to one of its methods kept from before then still works.
 
-Without the snippet's stub (for example a plain `<script src=".../js/forma.umd.js">` and your own `setup()` call), call `setup()` first: a call that reaches the SDK before setup has finished is dropped with the console warning `🧱 Forma - Setup not complete.`
+Without the snippet's stub (for example a plain `<script src=".../js/forma.umd.js">` and your own `setup()` call), call `setup()` first: a call that reaches the SDK before setup has finished is dropped with a console warning that names it, for example `🧱 Forma - Setup not complete, track("upgrade_clicked") dropped.` The same warning follows every call after a `setup()` that failed.
 
 ### TypeScript
 
@@ -163,6 +163,15 @@ window.forma.setNonce("<nonce>");
 ## Debugging
 
 Add `?formaDebug=true` to the page's URL. The SDK then logs each step to the console with the `🧱 Forma` prefix, fetches the workspace state again instead of using its cache, and ignores a stored error state. Because the workspace state is cached, changes to surveys and actions in Forma can take several minutes to reach a page that has already loaded the SDK; debug mode skips that cache.
+
+To find out why a survey does not show, read what debug mode logs about it. The state names surveys by id, which is the id in the survey's URL in Forma.
+
+- Every survey the user cannot be shown is logged as `Survey <id> left out: <reason>` whenever the SDK works out which surveys can show (at setup, after `setUserId()` or an attribute change, after each display and close). The reasons: `shown once already` (Show only once), `already responded`, `shown 2/3 times` (the display limit), `workspace cooldown 7d, last survey shown 2d ago` or `survey cooldown ...` (the cooldown counts from the last display of any survey), `segment needs setUserId()` (an anonymous visitor never gets a targeted survey), and `user not in its segment`.
+- When an action is tracked, each survey it triggers that is left out is logged again with its reason, and an action no survey uses says so: `No survey uses action "checkout"`.
+- At the moment a triggered survey would show, it can still be left out because the user is outside its "show to X% of users" sample (fixed per user), the survey has no translation for the language set with `setLanguage()`, or another survey is on screen.
+- The workspace state lists only the 100 newest in-progress app surveys. When there are more, debug mode logs how many older ones are left out, and the survey list in Forma names them.
+
+A survey set to "Ignore Cooldown Period" that shows on every page view restarts the workspace cooldown each time it shows, so surveys that use the cooldown may never show; the survey editor warns about it.
 
 ## Development
 

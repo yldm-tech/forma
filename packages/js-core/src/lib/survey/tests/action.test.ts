@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { Config } from "@/lib/common/config";
 import { Logger } from "@/lib/common/logger";
 import { trackAction, trackCodeAction, trackNoCodeAction } from "@/lib/survey/action";
+import { getSurveyExclusionReason } from "@/lib/common/utils";
 import { SurveyStore } from "@/lib/survey/store";
 import { triggerSurvey } from "@/lib/survey/widget";
 
@@ -33,11 +34,22 @@ vi.mock("@/lib/common/logger", () => ({
 
 vi.mock("@/lib/common/utils", () => ({
   shouldDisplayBasedOnPercentage: vi.fn(),
+  getSurveyExclusionReason: vi.fn(),
 }));
 
 vi.mock("@/lib/survey/widget", () => ({
   triggerSurvey: vi.fn(),
 }));
+
+/** The config trackAction reads: the surveys the user can be shown, and the workspace state's full list (by default the same surveys). */
+const configWith = (
+  filteredSurveys: unknown[],
+  { surveys = filteredSurveys, truncated }: { surveys?: unknown[]; truncated?: number } = {}
+) => ({
+  filteredSurveys,
+  workspace: { data: { surveys, settings: { recontactDays: 7 }, actionClasses: [], truncated } },
+  user: { data: { userId: null, segments: [], displays: [], responses: [], lastDisplayAt: null } },
+});
 
 describe("survey/action.ts", () => {
   const mockSurvey = {
@@ -78,7 +90,7 @@ describe("survey/action.ts", () => {
 
   describe("trackAction", () => {
     test("logs debug message with action name", async () => {
-      mockConfig.get.mockReturnValue({ filteredSurveys: [] });
+      mockConfig.get.mockReturnValue(configWith([]));
 
       const result = await trackAction("testAction");
 
@@ -87,7 +99,7 @@ describe("survey/action.ts", () => {
     });
 
     test("logs debug message with alias if provided", async () => {
-      mockConfig.get.mockReturnValue({ filteredSurveys: [] });
+      mockConfig.get.mockReturnValue(configWith([]));
 
       const result = await trackAction("testAction", "aliasName");
 
@@ -96,9 +108,7 @@ describe("survey/action.ts", () => {
     });
 
     test("triggers survey if action matches survey trigger", async () => {
-      mockConfig.get.mockReturnValue({
-        filteredSurveys: [mockSurvey],
-      });
+      mockConfig.get.mockReturnValue(configWith([mockSurvey]));
 
       const result = await trackAction("testAction", undefined);
 
@@ -110,7 +120,7 @@ describe("survey/action.ts", () => {
       // ENG-1846: funnel analytics wants the misses too — the emit sits on the shared trackAction
       // path, above the survey-matching loop.
       delete (window as { dataLayer?: unknown }).dataLayer;
-      mockConfig.get.mockReturnValue({ filteredSurveys: [] });
+      mockConfig.get.mockReturnValue(configWith([]));
 
       const result = await trackAction("testAction", "aliasedCode");
 
@@ -143,9 +153,7 @@ describe("survey/action.ts", () => {
         },
       ];
 
-      mockConfig.get.mockReturnValue({
-        filteredSurveys: mockSurveys,
-      });
+      mockConfig.get.mockReturnValue(configWith(mockSurveys));
 
       const result = await trackAction("testAction");
 
@@ -153,8 +161,35 @@ describe("survey/action.ts", () => {
       expect(triggerSurvey).toHaveBeenCalledTimes(2);
     });
 
+    test("explains, in debug output, why a survey the action triggers is left out", async () => {
+      const leftOut = { id: "survey_checkout", triggers: [{ actionClass: { name: "testAction" } }] };
+      const other = { id: "survey_other", triggers: [{ actionClass: { name: "otherAction" } }] };
+      vi.mocked(getSurveyExclusionReason).mockReturnValue("shown once already");
+      mockConfig.get.mockReturnValue(configWith([mockSurvey], { surveys: [mockSurvey, leftOut, other] }));
+
+      const result = await trackAction("testAction", "checkout");
+
+      expect(result.ok).toBe(true);
+      expect(triggerSurvey).toHaveBeenCalledWith(mockSurvey, "testAction", undefined);
+      expect(getSurveyExclusionReason).toHaveBeenCalledTimes(1);
+      expect(getSurveyExclusionReason).toHaveBeenCalledWith(leftOut, expect.anything(), expect.anything());
+      expect(mockLogger.debug).toHaveBeenCalledWith("Survey survey_checkout left out: shown once already");
+    });
+
+    test("says when no survey uses the action, and when the state left surveys out", async () => {
+      mockConfig.get.mockReturnValue(configWith([]));
+      await trackAction("testAction", "checkout");
+      expect(mockLogger.debug).toHaveBeenCalledWith('No survey uses action "checkout"');
+
+      mockConfig.get.mockReturnValue(configWith([], { truncated: 3 }));
+      await trackAction("testAction", "checkout");
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'No survey uses action "checkout" (3 old surveys not in state)'
+      );
+    });
+
     test("logs when no active surveys", async () => {
-      mockConfig.get.mockReturnValue({ filteredSurveys: [] });
+      mockConfig.get.mockReturnValue(configWith([]));
 
       const result = await trackAction("testAction");
 
@@ -195,12 +230,14 @@ describe("survey/action.ts", () => {
       });
 
       mockConfig.get.mockReturnValue({
+        ...configWith([]),
         workspace: {
           data: {
             actionClasses: [actionClass],
+            surveys: [],
+            settings: { recontactDays: 7 },
           },
         },
-        filteredSurveys: [],
       });
 
       const result = await trackCodeAction("valid_code");
@@ -212,7 +249,7 @@ describe("survey/action.ts", () => {
 
   describe("trackNoCodeAction", () => {
     test("calls trackAction with provided name", async () => {
-      mockConfig.get.mockReturnValue({ filteredSurveys: [] });
+      mockConfig.get.mockReturnValue(configWith([]));
 
       const result = await trackNoCodeAction("noCodeAction");
 

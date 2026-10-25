@@ -46,6 +46,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.DELETE("/quotas/:quotaId", h.deleteQuota)
 	g.GET("/quotas/:quotaId/response-count", h.quotaResponseCount)
 	g.GET("/workspaces/:workspaceId/survey-templates", h.templates)
+	g.GET("/workspaces/:workspaceId/sdk-state", h.sdkState)
 	g.GET("/public-domain", h.publicDomain)
 	// The create-with-AI dialog's streamed generation spends from the same per-user bucket as POST /api/v3/surveys/generate.
 	g.POST("/surveys/generate/stream", ratelimit.Middleware(h.limiter, ratelimit.APIV3SurveyGenerate, ratelimit.ByUser), h.generateStream)
