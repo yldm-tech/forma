@@ -163,3 +163,38 @@ func TestSurveyLocaleFiles(t *testing.T) {
 		t.Fatalf("a build without js/: %v", err)
 	}
 }
+
+// A runtime that a browser or CDN cached under its fixed name from an earlier build asks for its locale files by that build's hashes. They are answered with this build's file for the same language, never stored, rather than a 404 that would render the survey's runtime strings in English.
+func TestSurveyLocaleFileByAnotherBuildsHash(t *testing.T) {
+	r := newEngine(t, sdkFiles())
+	for _, p := range []string{
+		"/js/surveys-locales/de-DE.000000000000.json",
+		"/js/surveys-locales/de-DE.json",
+		"/app/js/surveys-locales/de-DE.ffffffffffff.json",
+	} {
+		rec := get(r, http.MethodGet, p)
+		if rec.Code != http.StatusOK || rec.Body.String() != `{"common":{"required":"Pflichtfeld"}}` {
+			t.Fatalf("%s: code %d body %q, want this build's de-DE", p, rec.Code, rec.Body.String())
+		}
+		for k, v := range map[string]string{
+			"Cache-Control":               "no-store",
+			"Access-Control-Allow-Origin": "*",
+			"Content-Type":                "application/json",
+		} {
+			if got := rec.Header().Get(k); got != v {
+				t.Errorf("%s: %s = %q, want %q", p, k, got, v)
+			}
+		}
+	}
+	for _, p := range []string{
+		// A language this build does not ship, and names that are not a locale file.
+		"/js/surveys-locales/fr-FR.000000000000.json",
+		"/js/surveys-locales/de-DE.000000000000.js",
+		"/js/surveys-locales/x/de-DE.000000000000.json",
+		"/js/de-DE.000000000000.json",
+	} {
+		if rec := get(r, http.MethodGet, p); rec.Code != http.StatusNotFound {
+			t.Errorf("%s: code %d, want 404", p, rec.Code)
+		}
+	}
+}

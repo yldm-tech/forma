@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import { TI18nString } from "@forma/types/i18n";
-import i18n from "./i18n.config";
+import i18n, { switchSurveyLanguage } from "./i18n.config";
 
 // Type guard to check if an object is an I18nString
 const isI18nObject = (obj: any): obj is TI18nString => {
@@ -54,9 +54,7 @@ export const getTranslations = (languageCode: string): TFunction => {
   // the user's selected language (see issue #7515).
   const resolvedCode = languageCode === "default" ? i18n.language : languageCode;
 
-  // Ensure the language is set (i18n.changeLanguage is synchronous when resources are already loaded)
-  if (i18n.language !== resolvedCode) {
-    i18n.changeLanguage(resolvedCode);
-  }
+  // Ensure the language is set (i18n.changeLanguage is synchronous when resources are already loaded). Not for "default": the current language is already set, and switching to it would cancel a switch to a language that is still being fetched.
+  if (languageCode !== "default") switchSurveyLanguage(resolvedCode);
   return i18n.getFixedT(resolvedCode);
 };

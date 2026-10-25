@@ -16,7 +16,12 @@ const pendingRenders = new Map<string, number>();
 let renderCount = 0;
 
 /**
- * Renders once the translations `language` uses are in memory, so the first card is drawn in the respondent's language rather than in English and then again. A language already loaded (English always is) renders at once, as every call did before the other languages were fetched on demand. A call that waits renders only if no later call for the same container came in meanwhile (that one carries newer props, and may already have rendered) and the container is still in the document.
+ * How long renderSurvey waits for a language that is being fetched. A survey must appear even when the locale file is slow or never answers (js-core reports it shown as soon as it asks for it): past this it renders in the language i18next is on, English at first, and the language switches in place when its file arrives.
+ */
+export const LANGUAGE_WAIT_MS = 2000;
+
+/**
+ * Renders once the translations `language` uses are in memory, so the first card is drawn in the respondent's language rather than in English and then again; or after LANGUAGE_WAIT_MS, whichever comes first. A language already loaded (English always is) renders at once, as every call did before the other languages were fetched on demand. A call that waits renders only if no later call for the same container came in meanwhile (that one carries newer props, and may already have rendered) and the container is still in the document.
  */
 const renderWhenLanguageReady = (
   containerKey: string,
@@ -33,12 +38,16 @@ const renderWhenLanguageReady = (
   }
   const call = ++renderCount;
   pendingRenders.set(containerKey, call);
-  void loading.then(() => {
+  // Runs twice, when the language arrives and at the deadline; the first renders, the second finds the call no longer pending.
+  const renderIfLatest = () => {
     if (pendingRenders.get(containerKey) !== call) return;
     pendingRenders.delete(containerKey);
+    clearTimeout(deadline);
     // The host may have removed the container while the language loaded (a dismissed modal, an unmounted page); a survey rendered into a detached node would keep its timers and listeners running unseen.
     if (container.isConnected) renderNow();
-  });
+  };
+  const deadline = setTimeout(renderIfLatest, LANGUAGE_WAIT_MS);
+  void loading.then(renderIfLatest);
 };
 
 export const renderSurveyInline = (props: SurveyContainerProps) => {

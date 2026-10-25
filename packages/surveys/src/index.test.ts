@@ -3,7 +3,7 @@ import { render } from "preact";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { type SurveyContainerProps } from "@forma/types/forma-surveys";
 import { loadSurveyLanguage } from "@/lib/i18n.config";
-import { renderSurvey } from "./index";
+import { LANGUAGE_WAIT_MS, renderSurvey } from "./index";
 
 // The renderer itself is out of scope here: these tests are about the container element the modal
 // branch manages, so preact's render is a spy and the survey tree is never mounted.
@@ -119,6 +119,25 @@ describe("renderSurvey with a language that is still being fetched", () => {
     await finish();
     // The German call's props are older than what is on screen, so it must not render over them.
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  test("renders after LANGUAGE_WAIT_MS when the language has not arrived, and not again when it does", async () => {
+    vi.useFakeTimers();
+    try {
+      const finish = fetchingLanguage();
+
+      renderSurvey(inlineProps("survey-1", "de-DE"));
+      await vi.advanceTimersByTimeAsync(LANGUAGE_WAIT_MS - 1);
+      expect(render).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(render).toHaveBeenCalledTimes(1);
+
+      // The survey on screen switches language in place (react-i18next re-renders on languageChanged).
+      await finish();
+      expect(render).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("does not render into a container the host removed while the language loaded", async () => {
