@@ -2997,6 +2997,7 @@
         "convert_to_single_choice": "単一選択に変換",
         "cooldown_period_across_surveys": "クールダウン期間（全サーベイ共通）",
         "cooldown_period_across_surveys_description": "サーベイ疲れを防ぐため、このサーベイがワークスペース全体のクールダウン期間とどのように連携するかを選択してください。",
+        "cooldown_reset_warning": "このフォームはクールダウン期間を無視し、すべてのページビューで表示されるため、繰り返し表示されます。表示されるたびにワークスペースのクールダウン期間がリセットされるため、「クールダウン期間を使用」に設定したフォームは表示されない可能性があります。ページビューのトリガーを特定のページに絞るか、このフォームにクールダウン期間を設定してください。",
         "country": "国",
         "create_group": "グループを作成",
         "create_your_own_survey": "独自のフォームを作成",
@@ -3513,6 +3514,11 @@
         "partial_responses": "部分的な回答"
       },
       "filter_selected_count": "{count} 件選択中",
+      "list": {
+        "state_truncated": "SDK が読み込むのは、ワークスペースで進行中のアプリ内フォームのうち新しい {limit} 件だけです。それより古いフォームはウェブサイトやアプリに表示されません。不要になったアプリ内フォームを完了または一時停止してください：",
+        "state_truncated_more": "{count, plural, other {ほか {count} 件}}",
+        "state_truncated_title": "{count, plural, other {進行中のアプリ内フォーム {count} 件が表示されません}}"
+      },
       "new_survey": "新規フォーム",
       "no_other_workspaces_available": "このアンケートをコピーできる他のワークスペースがありません。",
       "no_surveys_match_filters": "条件に一致するフォームはありません。",
