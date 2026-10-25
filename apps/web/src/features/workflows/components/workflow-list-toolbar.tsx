@@ -73,7 +73,7 @@ export const WorkflowListToolbar = ({
             <button
               type="button"
               className={cn(
-                "flex h-8 items-center rounded-md border border-slate-700 px-2 text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-slate-400",
+                "flex h-8 items-center rounded-md border border-slate-700 px-2 text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                 filters.selectedStatuses.length > 0
                   ? "bg-slate-900 text-white"
                   : "hover:bg-slate-900 hover:text-white"
@@ -113,7 +113,7 @@ export const WorkflowListToolbar = ({
           <button
             type="button"
             aria-label={t("common.sort_by")}
-            className="flex h-8 items-center rounded-md border border-slate-700 px-2 text-sm outline-hidden hover:bg-slate-900 hover:text-white focus-visible:ring-2 focus-visible:ring-slate-400">
+            className="focus-visible:ring-ring flex h-8 items-center rounded-md border border-slate-700 px-2 text-sm outline-hidden hover:bg-slate-900 hover:text-white focus-visible:ring-2">
             <span className="whitespace-nowrap">{t("common.sort_by_value", { label: activeSortLabel })}</span>
             <ChevronDownIcon className="ml-2 size-4" aria-hidden="true" />
           </button>

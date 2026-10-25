@@ -136,7 +136,7 @@ export const HowToSendCard = ({ localSurvey, setLocalSurvey, appSetupCompleted }
                     option.comingSoon
                       ? "border-slate-200 bg-slate-50/50"
                       : option.id === localSurvey.type
-                        ? "cursor-pointer border-brand bg-slate-50"
+                        ? "cursor-pointer border-ink bg-slate-50 ring-1 ring-ink"
                         : "cursor-pointer bg-slate-50"
                   )}
                   id={`howToSendCardOption-${option.id}`}>

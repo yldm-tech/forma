@@ -233,7 +233,7 @@ const CustomScriptsForm = ({
             aria-describedby="customHeadScripts-description"
             placeholder={t("workspace.general.custom_scripts_placeholder")}
             className={cn(
-              "focus:border-ink flex w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 font-mono text-xs text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+              "focus:border-ink flex w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 font-mono text-xs text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
               isReadOnly && "bg-slate-50"
             )}
             value={scripts}

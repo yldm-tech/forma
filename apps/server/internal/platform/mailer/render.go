@@ -149,11 +149,18 @@ type renderer struct {
 	legal     legal
 }
 
-// button is the argument of the shared "button" template.
+// button is the argument of the shared "button" template; view.Button builds it.
 type button struct {
 	Href  string
 	Label string
+	Color template.CSS
 }
+
+// Button colours: Forma's crimson when the email carries Forma's logo, and the neutral black forma2 used when it carries an organization's own logo, so a white-labelled email never shows Forma's brand colour. White text clears WCAG AA on both (5.07:1 and 21:1).
+const (
+	formaButtonColor   template.CSS = "#d3264a"
+	neutralButtonColor template.CSS = "#000000"
+)
 
 func newRenderer(cfg config.Config) (*renderer, error) {
 	catalogue, err := loadCatalogue()
@@ -162,7 +169,6 @@ func newRenderer(cfg config.Config) (*renderer, error) {
 	}
 	base, err := template.New("layout.html").
 		Funcs(template.FuncMap{
-			"button":      func(href, label string) button { return button{Href: href, Label: label} },
 			"fileName":    FileName,
 			"lastSegment": LastSegment,
 			"inc":         func(i int) int { return i + 1 },
@@ -227,6 +233,15 @@ func (v view) Logo() string {
 		return b.logo()
 	}
 	return ""
+}
+
+// Button is the call to action for the shared "button" template, in the colour of whoever's logo the email carries.
+func (v view) Button(href, label string) button {
+	color := formaButtonColor
+	if v.Logo() != "" {
+		color = neutralButtonColor
+	}
+	return button{Href: href, Label: label, Color: color}
 }
 
 // SignOff reports whether the email ends with forma2's EmailFooter sign-off.

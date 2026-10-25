@@ -72,7 +72,7 @@ export const Sheet = ({ open, onOpenChange, title, description, children, classN
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:outline-hidden">
+              className="focus:ring-ring absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden">
               <X className="size-4" />
               <span className="sr-only">{t("common.close")}</span>
             </button>

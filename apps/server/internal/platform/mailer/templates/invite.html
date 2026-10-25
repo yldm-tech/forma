@@ -1,5 +1,5 @@
 {{define "content"}}
 {{template "heading" (.T "emails.invite_email_heading" "inviteeName" .Content.InviteeName)}}
 {{template "text" (.T "emails.invite_email_text" "inviterName" .Content.InviterName)}}
-{{template "button" (button .Content.VerifyLink (.T "emails.invite_email_button_label"))}}
+{{template "button" (.Button .Content.VerifyLink (.T "emails.invite_email_button_label"))}}
 {{end}}

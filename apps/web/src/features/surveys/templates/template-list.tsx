@@ -196,7 +196,7 @@ export const TemplateList = ({
             className={cn(
               "border-2 bg-transparent shadow-none",
               activeId === custom.id
-                ? "border-transparent ring-2 ring-brand"
+                ? "border-transparent ring-2 ring-ink"
                 : "border-dashed border-slate-300 hover:border-slate-500 hover:ring-0"
             )}
             action={

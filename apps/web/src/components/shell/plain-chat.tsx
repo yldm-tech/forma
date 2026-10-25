@@ -34,8 +34,8 @@ export const plainSessionQuery = queryOptions({
 export const PLAIN_SCRIPT_ID = "plain-chat-script";
 export const PLAIN_SCRIPT_SRC = "https://chat.cdn-plain.com/index.js";
 
-// Forma brand crimson, for the chat panel's accents.
-const BRAND_COLOR = "#D3264A";
+// Ink, the admin's primary-action colour: Plain paints its launcher and send buttons with brandColor, and crimson is kept for selected states in the admin.
+const BRAND_COLOR = "#0F172A";
 
 interface PlainCustomerDetails {
   email: string;

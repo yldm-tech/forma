@@ -52,7 +52,7 @@ export const WorkflowValidationStatus = () => {
           aria-haspopup="dialog"
           className={cn(
             PILL_CLASS_NAME,
-            "border-amber-200 bg-amber-100 text-amber-800 transition-colors hover:bg-amber-200 focus-visible:ring-1 focus-visible:ring-slate-400 focus-visible:outline-hidden"
+            "border-amber-200 bg-amber-100 text-amber-800 transition-colors hover:bg-amber-200 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
           )}
           onClick={() => {
             trackWorkflowEvent(

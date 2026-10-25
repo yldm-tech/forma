@@ -11,6 +11,6 @@
 <p style="font-size:14px;line-height:24px;margin:16px 0 0;font-weight:700">{{.T "emails.sso_recovery_factors_removed_email_single_sign_on"}}</p>
 {{- end}}
 {{template "text" (.T "emails.sso_recovery_factors_removed_email_sign_in_hint")}}
-{{template "button" (button .Content.SecuritySettingsLink (.T "emails.sso_recovery_factors_removed_email_review_security"))}}
+{{template "button" (.Button .Content.SecuritySettingsLink (.T "emails.sso_recovery_factors_removed_email_review_security"))}}
 <p style="font-size:14px;line-height:24px;margin:16px 0 0">{{.T "emails.sso_recovery_factors_removed_email_did_not_expect"}}</p>
 {{end}}

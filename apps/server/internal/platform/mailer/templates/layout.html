@@ -54,6 +54,6 @@
 
 {{define "bold"}}<p style="font-size:14px;line-height:24px;margin:16px 0;font-weight:700">{{.}}</p>{{end}}
 
-{{define "button"}}<a href="{{.Href}}" target="_blank" style="display:inline-block;background-color:#d3264a;color:#ffffff;border-radius:6px;padding:12px 24px;font-size:14px;line-height:20px;text-decoration:none">{{.Label}}</a>{{end}}
+{{define "button"}}<a href="{{.Href}}" target="_blank" style="display:inline-block;background-color:{{.Color}};color:#ffffff;border-radius:6px;padding:12px 24px;font-size:14px;line-height:20px;text-decoration:none">{{.Label}}</a>{{end}}
 
 {{define "link"}}<a href="{{.}}" style="font-size:14px;color:#000000;word-break:break-all">{{.}}</a>{{end}}

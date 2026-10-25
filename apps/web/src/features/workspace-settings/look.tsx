@@ -151,7 +151,7 @@ const StylingField = ({
   } else if (spec.kind === "dimension") {
     const { amount, unit } = parseDimension(styling[spec.name] as number | string | null | undefined);
     control = (
-      <div className="focus-within:border-ink flex h-10 rounded-md border border-slate-300 focus-within:ring-2 focus-within:ring-slate-400 focus-within:ring-offset-2">
+      <div className="focus-within:border-ink focus-within:ring-ring flex h-10 rounded-md border border-slate-300 focus-within:ring-2 focus-within:ring-offset-2">
         <Input
           id={id}
           type="number"
