@@ -30,6 +30,9 @@ const breakdownTop = 10
 // breakdownTracked bounds the distinct values a breakdown counts, so a field holding a different value in every response (an id, a timestamp) does not keep a map entry per response. A value first met after the bound is added to the remainder: responses are read newest first, so a value only older responses hold can then be missing from the top, which a field with that many distinct values cannot be read by anyway.
 const breakdownTracked = 10000
 
+// breakdownTrackedBytes bounds the bytes of the distinct values a breakdown keeps, since breakdownTracked alone lets long free text (an Other answer, a hidden field set through the client API) hold up to a request body per value. A value that would take its counter past the bound is added to the remainder like one met after breakdownTracked; a value that long, or that many, is not read as a bar.
+const breakdownTrackedBytes = 1 << 20
+
 // summaryBatchSize is how many responses one read of the summary takes, forma2's batchSize.
 const summaryBatchSize = 5000
 
@@ -1090,12 +1093,17 @@ func (g *hiddenAggregate) result() HiddenFieldSummary {
 type valueCounter struct {
 	counts map[string]int
 	total  int
+	// bytes is the length of the values in counts, held under breakdownTrackedBytes.
+	bytes int
 }
 
 func (c *valueCounter) add(value string) {
 	c.total++
-	if _, seen := c.counts[value]; !seen && len(c.counts) >= breakdownTracked {
-		return
+	if _, seen := c.counts[value]; !seen {
+		if len(c.counts) >= breakdownTracked || c.bytes+len(value) > breakdownTrackedBytes {
+			return
+		}
+		c.bytes += len(value)
 	}
 	if c.counts == nil {
 		c.counts = map[string]int{}

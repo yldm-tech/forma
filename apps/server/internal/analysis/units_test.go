@@ -3,6 +3,7 @@ package analysis
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"math"
 	"reflect"
 	"slices"
@@ -459,6 +460,29 @@ func TestBreakdownCountsTopValuesAndRest(t *testing.T) {
 		t.Errorf("a value met after the tracking bound is not in the remainder: %+v", got.Values)
 	}
 	if want := breakdownTracked + 4 - 11; got.RestCount != want {
+		t.Errorf("rest %d, want %d", got.RestCount, want)
+	}
+}
+
+// TestBreakdownBoundsTrackedBytes checks that long values cannot make a breakdown hold more than breakdownTrackedBytes: a new value past the bound, or longer than it, is added to the remainder, while the values already tracked keep counting.
+func TestBreakdownBoundsTrackedBytes(t *testing.T) {
+	const size = 1 << 10
+	long := func(i int) string { return fmt.Sprintf("%0*d", size, i) }
+	var c valueCounter
+	fits := breakdownTrackedBytes / size
+	for i := range fits + 5 {
+		c.add(long(i))
+	}
+	c.add(long(0))
+	c.add(strings.Repeat("x", breakdownTrackedBytes+1))
+	if len(c.counts) != fits || c.bytes != fits*size {
+		t.Errorf("tracked %d values of %d bytes, want %d of %d", len(c.counts), c.bytes, fits, fits*size)
+	}
+	got := c.breakdown()
+	if got.Values[0] != (ValueCount{long(0), 2, percent(2, float64(fits+7))}) {
+		t.Errorf("a tracked value is not counted again: %+v", got.Values[0])
+	}
+	if want := fits + 7 - 2 - (breakdownTop - 1); got.RestCount != want {
 		t.Errorf("rest %d, want %d", got.RestCount, want)
 	}
 }
