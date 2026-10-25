@@ -123,6 +123,7 @@
     "saml_connection_error": "發生錯誤。請檢查您的 app 主控台以取得更多詳細資料。",
     "signup": {
       "captcha_failed": "驗證碼失敗",
+      "check_your_account": "請檢查您的帳戶",
       "company_email_required": "請使用您的公司電子郵件地址註冊。",
       "have_an_account": "已有帳戶？",
       "log_in": "登入",
@@ -693,6 +694,11 @@
     "verification_security_notice": "如果您沒有要求更改此電子郵件，請忽略此電子郵件或立即聯絡支援。",
     "verified_link_survey_email_subject": "您的 survey 已準備好填寫。"
   },
+  "onboarding": {
+    "product_name_description": "它會成為工作區的名稱，問卷範本的問題中也會用到它。之後可以在工作區設定中修改。",
+    "product_name_label": "您的產品或公司叫什麼名字？",
+    "product_name_placeholder": "例如：Acme"
+  },
   "organizations": {
     "landing": {
       "no_workspaces_warning_subtitle": "請聯絡您的組織擁有者以取得工作區存取權，或自行建立組織開始使用。",
@@ -953,6 +959,7 @@
     "csat_survey_question_2_placeholder": "在此輸入您的答案...",
     "csat_upper_label": "非常滿意",
     "cta_description": "顯示資訊並提示使用者採取特定操作",
+    "custom_survey_default_name": "未命名問卷",
     "custom_survey_description": "建立沒有範本的問卷。",
     "custom_survey_name": "從頭開始",
     "custom_survey_question_1_headline": "您想瞭解什麼？",

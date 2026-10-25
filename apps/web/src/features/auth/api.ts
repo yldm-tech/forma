@@ -56,6 +56,8 @@ export interface SignupInput {
   turnstileToken?: string;
   subscribeToSecurityUpdates?: boolean;
   subscribeToProductUpdates?: boolean;
+  /** The browser's IANA zone, which the organization an uninvited sign-up creates displays dates and schedules surveys in; the server drops one it cannot load. */
+  timeZone?: string;
 }
 
 export const authKeys = {

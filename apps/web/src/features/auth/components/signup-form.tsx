@@ -1,11 +1,11 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { pickAttributionParams } from "../../../lib/attribution";
 import { type Validators, useForm } from "../../../lib/form";
-import { authApi, authOptionsQuery } from "../api";
-import { inviteUrl } from "../callback-url";
+import { authApi, authOptionsQuery, resetSession } from "../api";
+import { callbackPath, inviteUrl } from "../callback-url";
 import { signupFailure } from "../errors";
 import { withSignupEmail } from "../history-state";
 import { readLastUsed } from "../last-used";
@@ -36,12 +36,25 @@ export interface SignupFormSearch {
   error?: string;
 }
 
+/** Signs in with the credentials just used to sign up, true when that opened a session. The sign-up answer is the same whether or not the address already had an account, so this can fail (another password on an existing account, a second factor, a rate limit); the caller then shows the neutral notice that asks the visitor to sign in. */
+const signInAfterSignup = async (email: string, password: string): Promise<boolean> => {
+  try {
+    const { status } = await authApi.signIn(email, password);
+    return status === "signed_in";
+  } catch {
+    return false;
+  }
+};
+
 /**
  * forma2's SignupForm, shared by /auth/signup and the first administrator's /setup/signup. Forma Cloud offers the monthly product update emails where other instances offer the security ones, and the instance's terms and privacy links sit under the form.
+ *
+ * With email verification off (the self-hosted default) the visitor is signed in with the same credentials right after signing up and goes where a sign-in goes (onboarding, or the invite being accepted), instead of typing the password again on the login page.
  */
 export function SignupForm({ search }: { search: SignupFormSearch }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: options } = useSuspenseQuery(authOptionsQuery);
 
   const origin = window.location.origin;
@@ -87,6 +100,8 @@ export function SignupForm({ search }: { search: SignupFormSearch }) {
           turnstileToken,
           subscribeToSecurityUpdates,
           subscribeToProductUpdates,
+          // The organization a sign-up creates schedules surveys and shows dates in the creator's own zone rather than the instance's.
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
       } catch (error) {
         // A token is single-use, so a refused attempt needs a fresh challenge.
@@ -99,6 +114,11 @@ export function SignupForm({ search }: { search: SignupFormSearch }) {
           form.setFieldError(field as keyof SignupValues, message);
         }
         form.setFormError(failure.message);
+        return;
+      }
+      if (!options.emailVerificationRequired && (await signInAfterSignup(normalizedEmail, password))) {
+        resetSession(queryClient);
+        await navigate({ href: callbackPath(returnToUrl, origin) });
         return;
       }
       // The answer is the same whether or not the address already had an account, and so is where the visitor goes next. Both screens carry the invite back, for an invited visitor who already has an account and must sign in to reach it.

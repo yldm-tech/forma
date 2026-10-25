@@ -56,6 +56,26 @@ const stubSignup = () => {
   return bodies;
 };
 
+/** POST /api/app/auth/signup answering success and POST /api/app/auth/sign-in answering `signIn` (a status, or an error status); the requests are recorded in order. */
+const stubSignupAndSignIn = (signIn: "signed_in" | "two_factor_required" | 401) => {
+  const requests: { path: string; body: Record<string, unknown> }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init: RequestInit = {}) => {
+      requests.push({ path, body: JSON.parse(init.body as string) as Record<string, unknown> });
+      const json = (body: unknown, status = 200) =>
+        new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+      if (path === "/api/app/auth/signup") return json({ success: true });
+      if (path !== "/api/app/auth/sign-in") throw new Error(`unexpected ${path}`);
+      return signIn === 401
+        ? json({ code: "invalid_credentials", message: "Invalid email or password" }, 401)
+        : json({ status: signIn });
+    })
+  );
+  return requests;
+};
+
+/** The form on /auth/signup in a router served under the app's base path, as in the browser, beside the root page a sign-in lands on and the two notices a sign-up can end on. */
 const renderForm = (options: Partial<AuthOptions> = {}) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(authKeys.options, { ...OPTIONS, ...options });
@@ -63,7 +83,7 @@ const renderForm = (options: Partial<AuthOptions> = {}) => {
   const routeTree = rootRoute.addChildren([
     createRoute({
       getParentRoute: () => rootRoute,
-      path: "/",
+      path: "/auth/signup",
       component: () => (
         <Suspense fallback={null}>
           <SignupForm search={{}} />
@@ -72,11 +92,25 @@ const renderForm = (options: Partial<AuthOptions> = {}) => {
     }),
     createRoute({
       getParentRoute: () => rootRoute,
+      path: "/",
+      component: () => <h1>Home</h1>,
+    }),
+    createRoute({
+      getParentRoute: () => rootRoute,
       path: "/auth/verification-requested",
-      component: () => null,
+      component: () => <h1>Verification requested</h1>,
+    }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/auth/signup-without-verification-success",
+      component: () => <h1>Signup notice</h1>,
     }),
   ]);
-  const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  const router = createRouter({
+    routeTree,
+    basepath: "/app",
+    history: createMemoryHistory({ initialEntries: ["/app/auth/signup"] }),
+  });
   render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
@@ -86,7 +120,7 @@ const renderForm = (options: Partial<AuthOptions> = {}) => {
   );
 };
 
-const fillAndSubmit = async (optIn: string) => {
+const fillAndSubmit = async (optIn?: string) => {
   // With email the only way in, the fields show at once.
   await screen.findByLabelText(i18n.t("common.full_name"));
   fireEvent.change(screen.getByLabelText(i18n.t("common.full_name")), { target: { value: "Ada Lovelace" } });
@@ -94,7 +128,7 @@ const fillAndSubmit = async (optIn: string) => {
   fireEvent.change(screen.getByLabelText(i18n.t("common.password")), {
     target: { value: "Correct-Horse-1" },
   });
-  fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(optIn) }));
+  if (optIn) fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(optIn) }));
   fireEvent.click(screen.getByRole("button", { name: i18n.t("auth.continue_with_email") }));
 };
 
@@ -153,7 +187,8 @@ test("the sign-in link carries the page's marketing attribution", async () => {
   globalThis.history.replaceState(null, "", "/auth/signup?utm_source=newsletter&email=ada%40example.com");
   renderForm();
   const login = await screen.findByRole("link", { name: i18n.t("auth.signup.log_in") });
-  expect(login.getAttribute("href")).toBe("/auth/login?utm_source=newsletter");
+  // The router serves the app under its base path, as in the browser.
+  expect(login.getAttribute("href")).toBe("/app/auth/login?utm_source=newsletter");
 });
 
 describe("the email form", () => {
@@ -191,4 +226,48 @@ describe("the email form", () => {
     fireEvent.blur(email);
     await waitFor(() => expect((email as HTMLInputElement).value).toBe("ada@example.com"));
   });
+});
+
+describe("with email verification off", () => {
+  test("a sign-up signs in with the same credentials and goes where a sign-in goes", async () => {
+    const requests = stubSignupAndSignIn("signed_in");
+    renderForm({ emailVerificationRequired: false });
+    await fillAndSubmit();
+
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeTruthy();
+    expect(requests.map((request) => request.path)).toEqual([
+      "/api/app/auth/signup",
+      "/api/app/auth/sign-in",
+    ]);
+    expect(requests[1]?.body).toEqual({ email: "ada@example.com", password: "Correct-Horse-1" });
+  });
+
+  test.each(["two_factor_required", 401] as const)(
+    "a sign-in that does not open a session (%s) leaves the visitor on the notice that asks them to log in",
+    async (signIn) => {
+      stubSignupAndSignIn(signIn);
+      renderForm({ emailVerificationRequired: false });
+      await fillAndSubmit();
+
+      expect(await screen.findByRole("heading", { name: "Signup notice" })).toBeTruthy();
+    }
+  );
+});
+
+test("with email verification on, a sign-up does not try to sign in", async () => {
+  const requests = stubSignupAndSignIn("signed_in");
+  renderForm({ emailVerificationRequired: true });
+  await fillAndSubmit();
+
+  expect(await screen.findByRole("heading", { name: "Verification requested" })).toBeTruthy();
+  expect(requests.map((request) => request.path)).toEqual(["/api/app/auth/signup"]);
+});
+
+test("a sign-up sends the browser's time zone for the organization it creates", async () => {
+  const requests = stubSignupAndSignIn("signed_in");
+  renderForm();
+  await fillAndSubmit();
+
+  await waitFor(() => expect(requests.length).toBeGreaterThan(0));
+  expect(requests[0]?.body.timeZone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
 });
