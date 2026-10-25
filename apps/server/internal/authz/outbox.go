@@ -79,6 +79,21 @@ func (e outboxEvent) valid() bool {
 
 // claimOutbox leases up to limit deliverable events to owner, revocations first and then oldest first. SKIP LOCKED lets concurrent workers claim disjoint batches; an expired lease is claimable again. Events that name nothing deliverable are dead-lettered at once rather than left leased forever; an invalid revocation then arms the freshness guard.
 func claimOutbox(ctx context.Context, db *gorm.DB, owner string, limit int) ([]outboxEvent, error) {
+	return claim(ctx, db, owner, limit, nil)
+}
+
+// aggregate names one root object's events: its own row and the pair rows whose first id is that object, such as an API key and its workspace grants.
+type aggregate struct {
+	targetTypes []string
+	primaryID   string
+}
+
+// claimAggregate is claimOutbox narrowed to one aggregate, for a request that delivers its own write before it answers. Events another lease holds are left to that lease.
+func claimAggregate(ctx context.Context, db *gorm.DB, owner string, a aggregate) ([]outboxEvent, error) {
+	return claim(ctx, db, owner, outboxBatchSize, &a)
+}
+
+func claim(ctx context.Context, db *gorm.DB, owner string, limit int, scope *aggregate) ([]outboxEvent, error) {
 	type row struct {
 		ID           uuid.UUID
 		TargetType   string
@@ -89,6 +104,13 @@ func claimOutbox(ctx context.Context, db *gorm.DB, owner string, limit int) ([]o
 		CreatedAt    time.Time
 	}
 	var rows []row
+	// The scope is a fixed fragment with bound values; the pending set it filters is what the partial claim index holds.
+	filter, args := "", []any{}
+	if scope != nil {
+		filter = "AND target_type IN ? AND primary_id = ?"
+		args = append(args, scope.targetTypes, scope.primaryID)
+	}
+	args = append(args, limit, outboxLease.Milliseconds(), owner)
 	err := db.WithContext(ctx).Raw(`
 		WITH claimable AS (
 			SELECT id
@@ -97,6 +119,7 @@ func claimOutbox(ctx context.Context, db *gorm.DB, owner string, limit int) ([]o
 				AND dead_lettered_at IS NULL
 				AND available_at <= now()
 				AND (lease_expires_at IS NULL OR lease_expires_at <= now())
+				`+filter+`
 			ORDER BY is_revocation DESC, created_at ASC
 			LIMIT ?
 			FOR UPDATE SKIP LOCKED
@@ -111,7 +134,7 @@ func claimOutbox(ctx context.Context, db *gorm.DB, owner string, limit int) ([]o
 		FROM claimable
 		WHERE outbox.id = claimable.id
 		RETURNING outbox.id, outbox.target_type, outbox.primary_id, outbox.secondary_id, outbox.is_revocation, outbox.attempts, outbox.created_at`,
-		limit, outboxLease.Milliseconds(), owner).Scan(&rows).Error
+		args...).Scan(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("claim authz outbox: %w", err)
 	}

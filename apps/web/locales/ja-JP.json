@@ -698,6 +698,7 @@
       "no_workspaces_warning_subtitle": "ワークスペースへのアクセスを取得するには、組織のオーナーに連絡してください。または、独自の組織を作成して開始することもできます。",
       "no_workspaces_warning_title": "お使いのアカウントはまだワークスペースにアクセスできません。"
     },
+    "security_tip_github": "セキュリティ修正の情報を受け取りましょう：<githubLink>GitHub の Forma セキュリティアドバイザリ</githubLink>を開き、Watch → Custom → Releases と Security alerts を選択してください。",
     "workspaces": {
       "new": {
         "skip_for_now": "今はスキップ",
@@ -1672,6 +1673,34 @@
       "your_survey_would_be_shown_on_this_url": "あなたのフォームはこのURLに表示されます。",
       "your_survey_would_not_be_shown": "あなたのフォームは表示されません。"
     },
+    "analysis": {
+      "filter_op": {
+        "applied": "付与済み",
+        "clicked": "クリック済み",
+        "contains": "を含む",
+        "does_not_contain": "を含まない",
+        "does_not_end_with": "で終わらない",
+        "does_not_start_with": "で始まらない",
+        "ends_with": "で終わる",
+        "equals": "と等しい",
+        "filled_out": "回答あり",
+        "is": "は",
+        "is_after": "より後",
+        "is_before": "より前",
+        "is_greater_than": "より大きい",
+        "is_more_than": "より大きい",
+        "is_not_set": "設定されていない",
+        "is_set": "設定されている",
+        "not_applied": "未付与",
+        "not_equals": "と等しくない",
+        "not_in_quota": "クォータ対象外",
+        "screened_in": "クォータに算入",
+        "screened_out_overquota": "除外（クォータ超過）",
+        "starts_with": "で始まる",
+        "submitted": "回答済み"
+      },
+      "nps_formula_tooltip": "NPS = 推奨者（9〜10）の割合 − 批判者（0〜6）の割合。回答した{count}人を母数とし、スキップは含みません。"
+    },
     "api_keys": {
       "add_api_key": "APIキーを追加",
       "api_key": "APIキー",
@@ -1695,6 +1724,7 @@
       "unable_to_copy_api_key": "APIキーをコピーできません",
       "unable_to_delete_api_key": "APIキーを削除できません",
       "unknown_workspace": "不明なワークスペース",
+      "v3_propagation_note": "新しいキーは API v1・v2 ではすぐに使えます。API v3 と MCP では、使えるようになるまで数秒かかることがあります。",
       "view_permissions_for": "{label}の権限を表示",
       "workspace_access": "ワークスペースアクセス",
       "workspace_access_description": "アンケートと回答データ。ワークスペースごとにアクセス権を付与します。",

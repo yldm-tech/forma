@@ -698,6 +698,7 @@
       "no_workspaces_warning_subtitle": "Reach out to your organization owner to get access to workspaces. Or create an own organization to get started.",
       "no_workspaces_warning_title": "Your account does not have access to any workspaces yet."
     },
+    "security_tip_github": "Stay informed about security fixes: open <githubLink>Forma's security advisories on GitHub</githubLink> and choose Watch → Custom → Releases and Security alerts.",
     "workspaces": {
       "new": {
         "skip_for_now": "Skip for now",
@@ -1672,6 +1673,34 @@
       "your_survey_would_be_shown_on_this_url": "Your survey would be shown on this URL.",
       "your_survey_would_not_be_shown": "Your survey would not be shown."
     },
+    "analysis": {
+      "filter_op": {
+        "applied": "Applied",
+        "clicked": "Clicked",
+        "contains": "Contains",
+        "does_not_contain": "Does not contain",
+        "does_not_end_with": "Does not end with",
+        "does_not_start_with": "Does not start with",
+        "ends_with": "Ends with",
+        "equals": "Equals",
+        "filled_out": "Filled out",
+        "is": "is",
+        "is_after": "Is after",
+        "is_before": "Is before",
+        "is_greater_than": "Is greater than",
+        "is_more_than": "Is more than",
+        "is_not_set": "Is not set",
+        "is_set": "Is set",
+        "not_applied": "Not applied",
+        "not_equals": "Not equals",
+        "not_in_quota": "Not in quota",
+        "screened_in": "Screened in",
+        "screened_out_overquota": "Screened out (overquota)",
+        "starts_with": "Starts with",
+        "submitted": "Submitted"
+      },
+      "nps_formula_tooltip": "NPS = % promoters (9 to 10) minus % detractors (0 to 6), out of the {count, plural, one {# respondent} other {# respondents}} who answered. Skips are not counted."
+    },
     "api_keys": {
       "add_api_key": "Add API Key",
       "api_key": "API Key",
@@ -1695,6 +1724,7 @@
       "unable_to_copy_api_key": "Unable to copy API key",
       "unable_to_delete_api_key": "Unable to delete API Key",
       "unknown_workspace": "Unknown workspace",
+      "v3_propagation_note": "New keys work on API v1 and v2 right away. On API v3 and MCP they can take a few seconds to start working.",
       "view_permissions_for": "View permissions for {label}",
       "workspace_access": "Workspace Access",
       "workspace_access_description": "Survey and response data. Grant access one workspace at a time.",

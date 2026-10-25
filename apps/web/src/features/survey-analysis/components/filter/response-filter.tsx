@@ -17,7 +17,13 @@ import {
   type TResponseStatus,
 } from "../../lib/filter-types";
 import { countAppliedFilters } from "../../lib/filter-state";
-import { NO_VALUE_FILTER_OPERATORS, generateElementAndFilterOptions } from "../../lib/filters";
+import {
+  describeFilterCondition,
+  generateElementAndFilterOptions,
+  getFilterRowType,
+  getFilterTargetLabel,
+  isNoValueFilterOperator,
+} from "../../lib/filters";
 import { ElementFilterComboBox } from "./element-filter-combo-box";
 import { ElementsComboBox } from "./elements-combo-box";
 import { useResponseFilter } from "./response-filter-context";
@@ -57,13 +63,13 @@ const findFilterOption = (options: ElementFilterOptions[], elementType: Partial<
       option.id === elementType.id
   );
 
-/** forma2's clearItem: rows without a target, or without a value their operator needs, are dropped. */
+/** forma2's clearItem: rows without a target, or without a value their operator needs, are dropped. A row whose operator takes no value ("Is set", or "Submitted" / "Skipped" on a score element) is complete as it is. */
 const withoutIncompleteRows = (value: SelectedFilterValue): SelectedFilterValue => ({
   filter: value.filter.filter(
     (row) =>
       Object.hasOwn(row.elementType, "label") &&
       (Boolean(row.filterType.filterComboBoxValue?.length) ||
-        NO_VALUE_FILTER_OPERATORS.includes(row.filterType.filterValue ?? ""))
+        isNoValueFilterOperator(getFilterRowType(row), row.filterType.filterValue))
   ),
   responseStatus: value.responseStatus,
 });
@@ -284,13 +290,6 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
   );
 };
 
-/** What one applied condition reads as on its chip: the operator and the value, shown after the target. */
-const describeCondition = (row: SelectedFilterValue["filter"][number]): string => {
-  const value = row.filterType.filterComboBoxValue;
-  const values = Array.isArray(value) ? value.join(", ") : (value ?? "");
-  return [row.filterType.filterValue, values].filter(Boolean).join(" ");
-};
-
 /** The applied conditions as chips beside the filter bar, each removable on its own, so a filtered view says what it is filtered by. */
 export const AppliedFilterChips = () => {
   const { t } = useTranslation();
@@ -303,8 +302,8 @@ export const AppliedFilterChips = () => {
   const chips = [
     ...selectedFilter.filter.map((row, index) => ({
       key: `${row.elementType.id ?? ""}-${index}`,
-      label: row.elementType.label ?? "",
-      condition: describeCondition(row),
+      label: getFilterTargetLabel(row.elementType, t),
+      condition: describeFilterCondition(row, t),
       remove: () =>
         setSelectedFilter((current) => ({
           ...current,

@@ -2,6 +2,8 @@ package authz
 
 import (
 	"context"
+	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -89,6 +91,146 @@ func TestUnreachableSpiceDBReleasesTheBatchWithoutBlame(t *testing.T) {
 	if e.countOutbox(`permanent_failures = 0 AND dead_lettered_at IS NULL AND last_error_code = 'authzed_unavailable' AND available_at > now() AND lease_owner IS NULL`) != 5 {
 		t.Fatal("failed events were not released with a backoff")
 	}
+}
+
+func TestDeliverAPIKeyProjectsThatKeyBeforeTheWorker(t *testing.T) {
+	e := newTestEnv(t)
+	org := e.org()
+	ws := e.workspace(org)
+	e.drain()
+	key, other := e.apiKey(org, true, false), e.apiKey(org, true, false)
+	e.apiKeyWorkspace(key, ws, "read")
+	e.apiKeyWorkspace(other, ws, "read")
+
+	e.delivery.DeliverAPIKey(e.ctx, key)
+	e.expect(APIKey(key), Workspace(ws), map[Action]bool{WorkspaceRead: true})
+	e.expect(APIKey(key), Organization(org), map[Action]bool{OrganizationReadAccess: true})
+	if n := e.countOutbox(`primary_id = ? AND processed_at IS NULL`, key.String()); n != 0 {
+		t.Fatalf("%d of the key's events are still pending", n)
+	}
+	// Only the named aggregate is delivered; the other key waits for the worker as before.
+	if n := e.countOutbox(`primary_id = ? AND processed_at IS NULL AND lease_owner IS NULL AND attempts = 0`, other.String()); n != 2 {
+		t.Fatalf("the other key's events were touched: %d still untouched, want 2", n)
+	}
+	e.expect(APIKey(other), Workspace(ws), map[Action]bool{WorkspaceRead: false})
+	// Nil is AuthZed disabled: nothing to project, nothing to fail.
+	(*Delivery)(nil).DeliverAPIKey(e.ctx, other)
+}
+
+func TestDeliverAPIKeyFallsBackToTheOutboxWhenSpiceDBIsDown(t *testing.T) {
+	e := newTestEnv(t)
+	down, err := NewClient(config.AuthzConfig{Enabled: true, Endpoint: "127.0.0.1:1", Token: "x", Insecure: true, Consistency: "fully_consistent"}, RequestProfile, discardLog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = down.Close() })
+	org := e.org()
+	ws := e.workspace(org)
+	e.drain()
+	key := e.apiKey(org, false, false)
+	e.apiKeyWorkspace(key, ws, "read")
+
+	NewDelivery(e.db, down, discardLog()).DeliverAPIKey(e.ctx, key)
+	// Released exactly as a failed worker batch is: unblamed, unleased, backing off.
+	if n := e.countOutbox(`primary_id = ? AND processed_at IS NULL AND lease_owner IS NULL AND permanent_failures = 0 AND last_error_code = 'authzed_unavailable' AND available_at > now()`, key.String()); n != 2 {
+		t.Fatalf("%d of the key's 2 events were released to the outbox", n)
+	}
+	e.exec(`UPDATE authz_projection_outbox SET available_at = now() WHERE primary_id = ?`, key.String())
+	e.drain()
+	e.expect(APIKey(key), Workspace(ws), map[Action]bool{WorkspaceRead: true})
+}
+
+func TestDeliverAPIKeyReleasesTheKeyWhenSpiceDBStalls(t *testing.T) {
+	e := newTestEnv(t)
+	// A SpiceDB that accepts the connection and never answers: every call runs into its deadline.
+	stalled, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	var conns []net.Conn
+	go func() {
+		for {
+			conn, err := stalled.Accept()
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			conns = append(conns, conn)
+			mu.Unlock()
+		}
+	}()
+	t.Cleanup(func() {
+		_ = stalled.Close()
+		mu.Lock()
+		defer mu.Unlock()
+		for _, conn := range conns {
+			_ = conn.Close()
+		}
+	})
+	client, err := NewClient(config.AuthzConfig{Enabled: true, Endpoint: stalled.Addr().String(), Token: "x", Insecure: true, Consistency: "fully_consistent"}, RequestProfile, discardLog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = client.Close() })
+	org := e.org()
+	ws := e.workspace(org)
+	e.drain()
+	key := e.apiKey(org, false, false)
+	e.apiKeyWorkspace(key, ws, "read")
+
+	started := time.Now()
+	NewDelivery(e.db, client, discardLog()).DeliverAPIKey(e.ctx, key)
+	if waited := time.Since(started); waited > syncDeliveryTimeout+syncSettleTimeout {
+		t.Fatalf("Create would have waited %s on a stalled SpiceDB", waited)
+	}
+	// Released as a timed-out worker batch is: unblamed, unleased, backing off.
+	if n := e.countOutbox(`primary_id = ? AND processed_at IS NULL AND lease_owner IS NULL AND permanent_failures = 0 AND last_error_code = 'authzed_timeout' AND available_at > now()`, key.String()); n != 2 {
+		t.Fatalf("%d of the key's 2 events were released to the outbox", n)
+	}
+	e.exec(`UPDATE authz_projection_outbox SET available_at = now() WHERE primary_id = ?`, key.String())
+	e.drain()
+	e.expect(APIKey(key), Workspace(ws), map[Action]bool{WorkspaceRead: true})
+}
+
+func TestDeliverAPIKeyDoesNotWaitOnABlockedClaim(t *testing.T) {
+	e := newTestEnv(t)
+	org := e.org()
+	ws := e.workspace(org)
+	e.drain()
+	key := e.apiKey(org, false, false)
+	e.apiKeyWorkspace(key, ws, "read")
+
+	// Another transaction holds the outbox, as a claim over a long backlog would hold the request: the claim cannot proceed until it ends.
+	lock := e.db.Begin()
+	if err := lock.Exec(`LOCK TABLE authz_projection_outbox IN EXCLUSIVE MODE`).Error; err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { lock.Rollback() })
+	done := make(chan time.Duration, 1)
+	started := time.Now()
+	go func() {
+		e.delivery.DeliverAPIKey(e.ctx, key)
+		done <- time.Since(started)
+	}()
+	select {
+	case waited := <-done:
+		if waited > syncDeliveryTimeout+syncSettleTimeout {
+			t.Fatalf("Create waited %s on a blocked claim", waited)
+		}
+	case <-time.After(3 * (syncDeliveryTimeout + syncSettleTimeout)):
+		lock.Rollback()
+		<-done
+		t.Fatal("Create waited for the blocked claim instead of giving up at its deadline")
+	}
+	lock.Rollback()
+
+	// The cancelled claim leased nothing, so the worker delivers the key on its next tick.
+	if n := e.countOutbox(`primary_id = ? AND processed_at IS NULL AND lease_owner IS NULL AND attempts = 0`, key.String()); n != 2 {
+		t.Fatalf("%d of the key's 2 events are left untouched for the worker", n)
+	}
+	e.drain()
+	e.expect(APIKey(key), Workspace(ws), map[Action]bool{WorkspaceRead: true})
 }
 
 func TestDeliveryJobRunsOnTheWorker(t *testing.T) {
