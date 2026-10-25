@@ -8,6 +8,8 @@ import {
   $isTextNode,
   COMMAND_PRIORITY_HIGH,
   EditorState,
+  HISTORIC_TAG,
+  HISTORY_MERGE_TAG,
   KEY_DOWN_COMMAND,
   LexicalNode,
   TextNode,
@@ -28,6 +30,7 @@ interface RecallPluginProps {
   fallbacks: { [id: string]: string };
   setFallbacks: (fallbacks: { [id: string]: string }) => void;
   onShowFallbackInput: () => void;
+  onHideFallbackInput: () => void;
   setAddFallbackFunction: (fn: (() => void) | null) => void;
   setShowRecallItemSelect: (show: boolean) => void;
   showRecallItemSelect: boolean;
@@ -42,6 +45,7 @@ export const RecallPlugin = ({
   fallbacks,
   setFallbacks,
   onShowFallbackInput,
+  onHideFallbackInput,
   setAddFallbackFunction,
   setShowRecallItemSelect,
   showRecallItemSelect,
@@ -172,6 +176,8 @@ export const RecallPlugin = ({
   // Monitor editor content for recall patterns
   const handleEditorUpdate = useCallback(
     ({ editorState, tags }: { editorState: EditorState; tags: Set<string> }) => {
+      // Undo and Redo take recalled items away and bring them back. The fallback popover's inputs mount with autoFocus, so a popover left open would take the caret out of the editor as soon as Redo restored an item, and the next Cmd/Ctrl+Z would then reach the browser's own undo and change the text behind the editor's back. The popover is opened by inserting a recall item or from the toolbar, never by history.
+      if (tags.has(HISTORIC_TAG)) onHideFallbackInput();
       editorState.read(() => {
         const root = $getRoot();
         const fullText = root.getTextContent();
@@ -234,6 +240,7 @@ export const RecallPlugin = ({
       setFallbacks,
       editor,
       convertTextToRecallNodes,
+      onHideFallbackInput,
     ]
   );
 
@@ -352,6 +359,8 @@ export const RecallPlugin = ({
         }
       },
       {
+        // Renaming a recalled item elsewhere relabels it here; that is not an edit of this text, so it folds into the current undo step instead of becoming one.
+        tag: HISTORY_MERGE_TAG,
         onUpdate: () => {
           // Restore the full selection (including cursor position) after reconciliation
           if (!editorHasFocus && savedRange) {

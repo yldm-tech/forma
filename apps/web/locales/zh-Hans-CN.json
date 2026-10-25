@@ -123,6 +123,7 @@
     "saml_connection_error": "出了问题。请查看应用控制台以获取更多详情。",
     "signup": {
       "captcha_failed": "验证码验证失败",
+      "check_your_account": "请检查你的账户",
       "company_email_required": "请使用你的公司电子邮箱注册。",
       "have_an_account": "有账户？",
       "log_in": "登录",
@@ -693,6 +694,11 @@
     "verification_security_notice": "如果你没有申请更改邮箱，请忽略此邮件或立即联系客服。",
     "verified_link_survey_email_subject": "您的问卷已准备好进行填写。"
   },
+  "onboarding": {
+    "product_name_description": "它会成为工作区的名称，问卷模板的问题中也会用到它。之后可以在工作区设置中修改。",
+    "product_name_label": "你的产品或公司叫什么名字？",
+    "product_name_placeholder": "例如：Acme"
+  },
   "organizations": {
     "landing": {
       "no_workspaces_warning_subtitle": "请联系你的组织所有者以获取工作区访问权限，或创建自己的组织开始使用。",
@@ -953,6 +959,7 @@
     "csat_survey_question_2_placeholder": "在此输入您的答案...",
     "csat_upper_label": "非常满意",
     "cta_description": "显示信息并提示用户采取特定行动",
+    "custom_survey_default_name": "未命名问卷",
     "custom_survey_description": "创建一个没有模板的问卷。",
     "custom_survey_name": "从零开始",
     "custom_survey_question_1_headline": "您想知道什么？",
@@ -3169,6 +3176,12 @@
         "link_survey_description": "分享问卷页面链接或将其嵌入网页或电子邮件中。",
         "list": "列表",
         "load_segment": "载入细分",
+        "logic": {
+          "action_options": "操作选项",
+          "condition_group_options": "条件组选项",
+          "condition_options": "条件选项",
+          "rule_options": "逻辑规则选项"
+        },
         "logic_error_warning": "更改将导致逻辑错误",
         "logic_error_warning_text": "更改问题类型会移除此问题的逻辑条件",
         "logo_settings": "徽标设置",

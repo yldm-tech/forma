@@ -123,6 +123,7 @@
     "saml_connection_error": "Something went wrong. Please check your app console for more details.",
     "signup": {
       "captcha_failed": "Captcha failed",
+      "check_your_account": "Check your account",
       "company_email_required": "Please sign up with your company email address.",
       "have_an_account": "Have an account?",
       "log_in": "Log in",
@@ -693,6 +694,11 @@
     "verification_security_notice": "If you did not request this email change, please ignore this email or contact support immediately.",
     "verified_link_survey_email_subject": "Your survey is ready to be filled out."
   },
+  "onboarding": {
+    "product_name_description": "Your workspace is named after it, and survey templates use it in their questions. You can change it later in the workspace settings.",
+    "product_name_label": "What is your product or company called?",
+    "product_name_placeholder": "e.g. Acme"
+  },
   "organizations": {
     "landing": {
       "no_workspaces_warning_subtitle": "Reach out to your organization owner to get access to workspaces. Or create an own organization to get started.",
@@ -953,6 +959,7 @@
     "csat_survey_question_2_placeholder": "Type your answer here…",
     "csat_upper_label": "Very satisfied",
     "cta_description": "Display information and prompt users to take a specific action",
+    "custom_survey_default_name": "Untitled survey",
     "custom_survey_description": "Create a survey without template.",
     "custom_survey_name": "Start from scratch",
     "custom_survey_question_1_headline": "What would you like to know?",
@@ -3169,6 +3176,12 @@
         "link_survey_description": "Share a link to a survey page or embed it in a web page or email.",
         "list": "List",
         "load_segment": "Load segment",
+        "logic": {
+          "action_options": "Action options",
+          "condition_group_options": "Condition group options",
+          "condition_options": "Condition options",
+          "rule_options": "Logic rule options"
+        },
         "logic_error_warning": "Changing will cause logic errors",
         "logic_error_warning_text": "Changing the question type will remove the logic conditions from this question",
         "logo_settings": "Logo settings",

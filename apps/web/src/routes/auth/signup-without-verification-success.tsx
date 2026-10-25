@@ -12,7 +12,7 @@ export const Route = createFileRoute("/auth/signup-without-verification-success"
   component: SignupWithoutVerificationSuccessPage,
 });
 
-/** Where sign-up lands when email verification is off (the self-hosted default). The sign-in button carries an invite's callback, the only way back to it for an invited visitor whose address already had an account. */
+/** Where sign-up lands when email verification is off (the self-hosted default) and signing in with the same credentials right after did not open a session: the address already had an account with another password or a second factor, or the sign-in was refused. The heading stays neutral, since the page cannot say whether an account was created. The sign-in button carries an invite's callback, the only way back to it for an invited visitor whose address already had an account. */
 function SignupWithoutVerificationSuccessPage() {
   const { t } = useTranslation();
   const search = Route.useSearch();
@@ -30,9 +30,7 @@ function SignupWithoutVerificationSuccessPage() {
   }
   return (
     <>
-      <h1 className="mb-4 text-center font-bold">
-        {t("auth.signup_without_verification_success.user_successfully_created")}
-      </h1>
+      <h1 className="mb-4 text-center font-bold">{t("auth.signup.check_your_account")}</h1>
       <p className="text-center text-sm">
         {t("auth.signup_without_verification_success.user_successfully_created_info", { email })}
       </p>

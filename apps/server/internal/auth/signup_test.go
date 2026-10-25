@@ -91,6 +91,50 @@ func TestSignupCreatesTheAccount(t *testing.T) {
 	}
 }
 
+// The organization a sign-up creates displays dates and schedules surveys in the browser's zone; a missing zone, or one this build cannot load, leaves both unset (UTC and the instance's zone) and never fails the sign-up.
+func TestSignupOrganizationTimeZone(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t, func(c *config.Config) { c.E2ETesting = true })
+	tokyo := "Asia/Tokyo"
+	for i, tc := range []struct {
+		zone any
+		want *string
+	}{
+		{zone: "Asia/Tokyo", want: &tokyo},
+		{zone: nil},
+		{zone: "Mars/Olympus"},
+		{zone: ""},
+		{zone: "Local"},
+	} {
+		email := fmt.Sprintf("zone%d@example.com", i)
+		body := signupBody(email)
+		if tc.zone != nil {
+			body["timeZone"] = tc.zone
+		}
+		expectStatus(t, e.browser().post("/auth/signup", body), http.StatusOK, "")
+		var zones struct {
+			DisplayTimeZone          *string
+			SurveySchedulingTimeZone *string
+		}
+		if err := e.db.Raw(
+			`SELECT o.display_time_zone, o.survey_scheduling_time_zone FROM organizations o JOIN memberships m ON m.organization_id = o.id JOIN users u ON u.id = m.user_id WHERE u.email = ?`, email,
+		).Scan(&zones).Error; err != nil {
+			t.Fatal(err)
+		}
+		show := func(zone *string) string {
+			if zone == nil {
+				return "unset"
+			}
+			return *zone
+		}
+		for name, got := range map[string]*string{"display": zones.DisplayTimeZone, "scheduling": zones.SurveySchedulingTimeZone} {
+			if show(got) != show(tc.want) {
+				t.Errorf("zone %v: %s time zone %s, want %s", tc.zone, name, show(got), show(tc.want))
+			}
+		}
+	}
+}
+
 // forma2's ENG-2091/ENG-2099: a duplicate (in any case) is answered exactly like a new account, a Set-Cookie included, and writes, mails and audits nothing.
 func TestSignupDuplicateIsIndistinguishable(t *testing.T) {
 	t.Parallel()

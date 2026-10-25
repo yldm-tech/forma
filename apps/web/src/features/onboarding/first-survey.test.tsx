@@ -37,17 +37,39 @@ afterEach(() => {
   posthog.capture.mockClear();
 });
 
-const renderStep = () => {
+interface RecordedRequest {
+  method: string;
+  path: string;
+  body?: unknown;
+}
+
+/** The step for a workspace still called "My workspace", for a user with a personal address unless `email` says otherwise. PATCH /api/app/workspaces/{id} answers with `rename` (the stored workspace, or an error status); every request is recorded. */
+const renderStep = ({
+  workspaceName = "My workspace",
+  email = "ada@gmail.com",
+  rename = 200,
+}: { workspaceName?: string; email?: string; rename?: 200 | 400 } = {}) => {
+  const requests: RecordedRequest[] = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (path: string) => {
-      if (path === `/api/app/workspaces/${WS}/ai`) {
-        return new Response(JSON.stringify({ available: true }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        });
+    vi.fn(async (path: string, init: RequestInit = {}) => {
+      const method = init.method ?? "GET";
+      requests.push({ method, path, body: init.body ? JSON.parse(init.body as string) : undefined });
+      const json = (body: unknown, status = 200) =>
+        new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+      if (method === "GET" && path === `/api/app/workspaces/${WS}/ai`) return json({ available: true });
+      if (method === "PATCH" && path === `/api/app/workspaces/${WS}`) {
+        return rename === 200
+          ? json({ id: WS, name: (JSON.parse(init.body as string) as { name: string }).name })
+          : json(
+              {
+                code: "workspace_name_taken",
+                message: "A workspace with this name already exists in your organization",
+              },
+              400
+            );
       }
-      throw new Error(`unexpected ${path}`);
+      throw new Error(`unexpected ${method} ${path}`);
     })
   );
   const rootRoute = createRootRoute({ component: Outlet });
@@ -55,7 +77,15 @@ const renderStep = () => {
     createRoute({
       getParentRoute: () => rootRoute,
       path: "/organizations/$organizationId/workspaces/new/survey",
-      component: () => <CreateFirstSurvey organizationId={ORG} workspaceId={WS} defaultLanguage="en" />,
+      component: () => (
+        <CreateFirstSurvey
+          organizationId={ORG}
+          workspaceId={WS}
+          workspaceName={workspaceName}
+          email={email}
+          defaultLanguage="en"
+        />
+      ),
     }),
     createRoute({
       getParentRoute: () => rootRoute,
@@ -74,12 +104,12 @@ const renderStep = () => {
       </QueryClientProvider>
     </I18nextProvider>
   );
-  return router;
+  return { router, requests };
 };
 
 describe("CreateFirstSurvey", () => {
   test("choosing templates reports the path, the organization and the workspace", async () => {
-    const router = renderStep();
+    const { router } = renderStep();
 
     fireEvent.click(await screen.findByText(i18n.t("organizations.workspaces.new.survey.use_template")));
 
@@ -107,5 +137,48 @@ describe("CreateFirstSurvey", () => {
       organization_id: ORG,
       workspace_id: WS,
     });
+  });
+
+  test("a product name typed in the field renames the workspace before the next step", async () => {
+    const { router, requests } = renderStep();
+    const field = await screen.findByRole("textbox", { name: i18n.t("onboarding.product_name_label") });
+    // A personal address suggests nothing.
+    expect((field as HTMLInputElement).value).toBe("");
+
+    fireEvent.change(field, { target: { value: "  Acme  " } });
+    fireEvent.click(screen.getByText(i18n.t("organizations.workspaces.new.survey.use_template")));
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(`/organizations/${ORG}/workspaces/new/templates`)
+    );
+    expect(requests.filter((request) => request.method === "PATCH")).toEqual([
+      { method: "PATCH", path: `/api/app/workspaces/${WS}`, body: { name: "Acme" } },
+    ]);
+  });
+
+  test("a work address suggests the name, and an untouched field that matches the workspace sends nothing", async () => {
+    const { router, requests } = renderStep({ workspaceName: "Acme", email: "ada@acme.com" });
+    const field = await screen.findByRole("textbox", { name: i18n.t("onboarding.product_name_label") });
+    expect((field as HTMLInputElement).value).toBe("Acme");
+
+    fireEvent.click(screen.getByText(i18n.t("organizations.workspaces.new.survey.use_template")));
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(`/organizations/${ORG}/workspaces/new/templates`)
+    );
+    expect(requests.some((request) => request.method === "PATCH")).toBe(false);
+  });
+
+  test("a name the server refuses stays on the step with the reason under the field", async () => {
+    const { router } = renderStep({ rename: 400 });
+    const field = await screen.findByRole("textbox", { name: i18n.t("onboarding.product_name_label") });
+    fireEvent.change(field, { target: { value: "Taken" } });
+    fireEvent.click(screen.getByText(i18n.t("organizations.workspaces.new.survey.use_template")));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "A workspace with this name already exists in your organization"
+    );
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(router.state.location.pathname).toBe(`/organizations/${ORG}/workspaces/new/survey`);
   });
 });

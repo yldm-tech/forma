@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { DEFAULT_QUESTION, PASSWORD, uniqueEmail } from "./helpers";
+import { DEFAULT_QUESTION, PASSWORD, post, uniqueEmail } from "./helpers";
 
-// forma2's signup.spec.ts and onboarding.spec.ts: a visitor signs up with email and password, logs in, and finishes onboarding by starting their first survey from scratch.
-test("signs up, logs in and finishes onboarding with a survey from scratch", async ({ page }) => {
+// forma2's signup.spec.ts and onboarding.spec.ts: a visitor signs up with email and password, is signed in at once (email verification is off on this instance), names the product, and finishes onboarding by starting their first survey from scratch.
+test("signs up, names the product and finishes onboarding with a survey from scratch", async ({ page }) => {
   const email = uniqueEmail("signup");
 
   await test.step("sign up", async () => {
@@ -20,25 +20,28 @@ test("signs up, logs in and finishes onboarding with a survey from scratch", asy
     await expect(page.getByRole("textbox", { name: "Password" })).toBeFocused();
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
     await submit.click();
-    await page.waitForURL(/\/app\/auth\/signup-without-verification-success/);
-    await expect(page.getByText(email)).toBeVisible();
-  });
-
-  await test.step("log in", async () => {
-    await page.getByRole("link", { name: "Log in" }).click();
-    // The address just signed up with is carried over, so the password is what is left to type.
-    await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(email);
-    await expect(page.getByRole("textbox", { name: "Password" })).toBeFocused();
-    await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
-    await page.getByRole("button", { name: "Log in with Email" }).click();
+    // The new account is signed in with the same credentials and goes where a sign-in goes, without the login page.
     await page.waitForURL(/\/app\/organizations\/[^/]+\/workspaces\/new\/survey/);
     await expect(page.getByRole("heading", { name: "Create your first survey" })).toBeVisible();
+  });
+
+  await test.step("name the product", async () => {
+    const productName = page.getByRole("textbox", { name: "What is your product or company called?" });
+    // A work address suggests its domain; example.com is not a personal mail provider.
+    await expect(productName).toHaveValue("Example");
+    await productName.fill("Playwright Labs");
   });
 
   await test.step("start the first survey from scratch", async () => {
     await page.getByRole("button", { name: /Start from scratch/ }).click();
     await page.waitForURL(/\/app\/workspaces\/[^/]+\/surveys\/[^/]+\/edit/);
     await expect(page.getByRole("main").getByRole("heading", { name: DEFAULT_QUESTION })).toBeVisible();
+    // The workspace was renamed before the survey was created.
+    await expect(page.getByText("Playwright Labs /")).toBeVisible();
+    // The survey's placeholder name is selected, ready to type over.
+    const name = page.getByRole("textbox", { name: "Survey name" });
+    await expect(name).toHaveValue("Untitled survey");
+    await expect(name).toBeFocused();
     // The onboarding editor names its primary button for what it does: Publish, beside Save as draft.
     await expect(page.getByRole("button", { name: "Save as draft" })).toBeVisible();
     await page.getByRole("button", { name: "Publish", exact: true }).click();
@@ -55,11 +58,38 @@ test("signs up, logs in and finishes onboarding with a survey from scratch", asy
     const row = page
       .getByRole("main")
       .getByRole("row")
-      .filter({ has: page.getByRole("link", { name: "Start from scratch", exact: true }) });
+      .filter({ has: page.getByRole("link", { name: "Untitled survey", exact: true }) });
     await expect(row).toBeVisible();
     await expect(row).toContainText("In Progress");
     await expect(row).toContainText("Link");
   });
+});
+
+// A sign-up whose credentials do not sign in (here the address already has an account with another password) gets the same answer as any sign-up and a neutral notice that asks the visitor to log in, carrying the address over.
+test("asks to log in when signing up again cannot sign in", async ({ page, baseURL }) => {
+  const email = uniqueEmail("again");
+  await post(page.request, baseURL!, "/api/app/auth/signup", {
+    name: "First User",
+    email,
+    password: PASSWORD,
+  });
+
+  await page.goto("/app/auth/signup");
+  await page.getByRole("textbox", { name: "Full name" }).fill("Second User");
+  await page.getByRole("textbox", { name: "Email" }).fill(email);
+  await page.getByRole("textbox", { name: "Password" }).fill(`${PASSWORD}x`);
+  await page.getByRole("button", { name: "Continue with Email" }).click();
+  await page.waitForURL(/\/app\/auth\/signup-without-verification-success/);
+  await expect(page.getByRole("heading", { name: "Check your account" })).toBeVisible();
+  await expect(page.getByText(email)).toBeVisible();
+
+  await page.getByRole("link", { name: "Log in" }).click();
+  // The address just signed up with is carried over, so the password is what is left to type.
+  await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(email);
+  await expect(page.getByRole("textbox", { name: "Password" })).toBeFocused();
+  await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Log in with Email" }).click();
+  await page.waitForURL(/\/app\/organizations\/[^/]+\/workspaces\/new\/survey/);
 });
 
 test("refuses a wrong password", async ({ page }) => {

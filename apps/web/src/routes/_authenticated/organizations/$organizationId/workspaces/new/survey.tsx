@@ -31,6 +31,8 @@ function FirstSurveyStep() {
     <CreateFirstSurvey
       organizationId={organizationId}
       workspaceId={workspace.id}
+      workspaceName={workspace.name}
+      email={me.email}
       defaultLanguage={resolveDefaultSurveyLanguage({
         workspaceDefaultLanguage: workspaceSurveyConfig(workspace).defaultSurveyLanguage,
         userLocale: me.locale,
