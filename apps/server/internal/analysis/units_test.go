@@ -222,6 +222,9 @@ func TestSheetWriters(t *testing.T) {
 	for _, p := range payloads {
 		rows = append(rows, []any{p, 0.0, nil})
 	}
+	// A number input: the CSV keeps the text as typed, the XLSX holds the number.
+	numberRow := len(rows) + 1
+	rows = append(rows, []any{numberInput{7, "007"}, numberInput{1.5, "1.50"}, numberInput{-2, "-2"}})
 
 	var csv bytes.Buffer
 	w := newCSVWriter(&csv)
@@ -239,6 +242,9 @@ func TestSheetWriters(t *testing.T) {
 	}
 	if lines[4] != `"'=HYPERLINK(""https://evil.tld"",""Click"")",0,` {
 		t.Errorf("csv formula %q", lines[4])
+	}
+	if lines[numberRow-1] != `"007","1.50","'-2"` {
+		t.Errorf("csv number input %q", lines[numberRow-1])
 	}
 
 	var xlsx bytes.Buffer
@@ -285,6 +291,16 @@ func TestSheetWriters(t *testing.T) {
 			t.Errorf("xlsx %s is a formula: %q", cell, formula)
 		}
 	}
+	for col, want := range []string{"7", "1.5", "-2"} {
+		cell, _ := excelize.CoordinatesToCellName(col+1, numberRow)
+		typ, err := f.GetCellType("Sheet1", cell)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := get(cell); got != want || typ != excelize.CellTypeUnset || xlsxQuotePrefixed(t, f, cell) {
+			t.Errorf("xlsx number input %s: %q (%v), want the number %s", cell, got, typ, want)
+		}
+	}
 }
 
 // xlsxQuotePrefixed reports whether the cell's format carries Excel's quote prefix, which excelize's Style does not show.
@@ -301,7 +317,7 @@ func xlsxQuotePrefixed(t *testing.T, f *excelize.File, cell string) bool {
 	return xf.QuotePrefix != nil && *xf.QuotePrefix
 }
 
-// An answer as its export cell: numbers stay numbers, so a spreadsheet can compute with scores; a number input's text becomes the number it holds unless it is not a plain decimal or has more digits than a float64 keeps.
+// An answer as its export cell: numbers stay numbers, so a spreadsheet can compute with scores; a number input keeps the text as typed beside the number it holds, unless it is not a plain decimal or has more digits than a float64 keeps.
 func TestExportAnswer(t *testing.T) {
 	number := &element{Element: surveydoc.Element{Type: surveydoc.ElementOpenText, InputType: "number"}}
 	text := &element{Element: surveydoc.Element{Type: surveydoc.ElementOpenText}}
@@ -314,11 +330,12 @@ func TestExportAnswer(t *testing.T) {
 		{nps, 10.0, 10.0},
 		{nps, 0.0, 0.0},
 		{text, 42.0, 42.0},
-		{number, "30", 30.0},
-		{number, " -12.5 ", -12.5},
-		{number, "1e3", 1000.0},
-		{number, "007", 7.0},
-		{number, "123456789012345", 123456789012345.0},
+		{number, "30", numberInput{30, "30"}},
+		{number, " -12.5 ", numberInput{-12.5, " -12.5 "}},
+		{number, "1e3", numberInput{1000, "1e3"}},
+		{number, "007", numberInput{7, "007"}},
+		{number, "1.50", numberInput{1.5, "1.50"}},
+		{number, "123456789012345", numberInput{123456789012345, "123456789012345"}},
 		{number, "1234567890123456789", "1234567890123456789"},
 		{number, "３０", "３０"},
 		{number, "0x10", "0x10"},

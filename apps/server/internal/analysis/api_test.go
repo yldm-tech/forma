@@ -86,17 +86,18 @@ func TestSummaryCountsResponsesDisplaysAndQuotas(t *testing.T) {
 		t.Errorf("open text summary %s", s.Summary[0])
 	}
 	var nps struct {
-		Total      int   `json:"total"`
-		Answered   int   `json:"answered"`
-		Score      int   `json:"score"`
-		Promoters  Count `json:"promoters"`
-		Detractors Count `json:"detractors"`
-		Dismissed  Count `json:"dismissed"`
+		ResponseCount int   `json:"responseCount"`
+		Total         int   `json:"total"`
+		Answered      int   `json:"answered"`
+		Score         int   `json:"score"`
+		Promoters     Count `json:"promoters"`
+		Detractors    Count `json:"detractors"`
+		Dismissed     Count `json:"dismissed"`
 	}
 	if err := json.Unmarshal(s.Summary[1], &nps); err != nil {
 		t.Fatal(err)
 	}
-	if nps.Total != 3 || nps.Answered != 2 || nps.Score != 0 || nps.Promoters != (Count{1, 50}) || nps.Detractors != (Count{1, 50}) || nps.Dismissed != (Count{1, 33.33}) {
+	if nps.ResponseCount != 2 || nps.Total != 3 || nps.Answered != 2 || nps.Score != 0 || nps.Promoters != (Count{1, 50}) || nps.Detractors != (Count{1, 50}) || nps.Dismissed != (Count{1, 33.33}) {
 		t.Errorf("nps summary %s", s.Summary[1])
 	}
 	var pick struct {
@@ -416,7 +417,7 @@ const multilingualBlocks = `[{"id":"b1","name":"B1","elements":[
 	{"id":"note","type":"openText","headline":{"default":"Note"},"required":false,"inputType":"text"}
 ]}]`
 
-// Answers given in a survey language are exported under the default-language labels, as the summary counts them, so each answer column holds one value per choice; an "Other" text stays as written. Scores and number inputs are numbers, and a text starting like a formula is defanged in CSV only.
+// Answers given in a survey language are exported under the default-language labels, as the summary counts them, so each answer column holds one value per choice; an "Other" text stays as written. Scores are numbers; a number input is a number in the XLSX and the text as typed in the CSV; a text starting like a formula is defanged in CSV only.
 func TestExportMapsAnswersToTheDefaultLanguage(t *testing.T) {
 	e := newEnv(t)
 	owner := e.user()
@@ -430,18 +431,18 @@ func TestExportMapsAnswersToTheDefaultLanguage(t *testing.T) {
 		e.exec(`INSERT INTO survey_languages (survey_id, language_id, is_default) VALUES (?, ?, ?)`, sv, id, l.isDefault)
 	}
 	de := e.response(sv, row{at: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), finished: true, language: ptr("de-DE"),
-		data: `{"best":"Geschwindigkeit","many":["Apps","Mein eigenes"],"mx":{"Tempo":"Gut","Preis":"Schlecht","Support":"Gut"},"nps":10,"seats":"30","note":"+1 for webhooks"}`})
+		data: `{"best":"Geschwindigkeit","many":["Apps","Mein eigenes"],"mx":{"Tempo":"Gut","Preis":"Schlecht","Support":"Gut"},"nps":10,"seats":"030","note":"+1 for webhooks"}`})
 	ja := e.response(sv, row{at: time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC), finished: true, language: ptr("ja-JP"),
 		data: `{"best":"価格","many":["アプリ","Web"],"rank":["ワイ","エックス"],"nps":3,"seats":"1234567890123456789","note":"-not bad"}`})
 	en := e.response(sv, row{at: time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC), finished: true,
 		data: `{"best":"Speed","mx":{"Speed":"Bad"},"nps":9,"seats":" 12.5 "}`})
 	columns := []string{"1. Best?", "1. Best? - Option ID", "2. Which?", "2. Which? - Option ID", "3. Rank", "3. Rank - Option ID",
 		"4. Rate - Speed", "4. Rate - Price", "4. Rate - Support", "5. Recommend?", "6. Seats", "7. Note"}
-	// The cells as the XLSX holds them; a number is a number cell.
+	// The cells as the XLSX holds them; a number is a number cell, and a number input is also written as typed in the CSV.
 	want := map[uuid.UUID][]any{
-		de: {"Speed", "fast", "Apps; Mein eigenes", "a, other", "", "", "Good", "Bad", "Good", 10.0, 30.0, "+1 for webhooks"},
+		de: {"Speed", "fast", "Apps; Mein eigenes", "a, other", "", "", "Good", "Bad", "Good", 10.0, numberInput{30, "030"}, "+1 for webhooks"},
 		ja: {"Price", "price", "Apps; Web", "a, w", "Y; X", "y, x", nil, nil, nil, 3.0, "1234567890123456789", "-not bad"},
-		en: {"Speed", "fast", "", "", "", "", "Bad", "", "", 9.0, 12.5, ""},
+		en: {"Speed", "fast", "", "", "", "", "Bad", "", "", 9.0, numberInput{12.5, " 12.5 "}, ""},
 	}
 
 	rec := e.request(owner, http.MethodPost, "/api/app/surveys/"+sv.String()+"/responses/export", map[string]any{"format": "csv", "filterCriteria": map[string]any{}})
@@ -468,6 +469,8 @@ func TestExportMapsAnswersToTheDefaultLanguage(t *testing.T) {
 				if strings.Contains(lines[i+1], `"`+wantText+`"`) {
 					t.Errorf("csv %s %s: %s is quoted text", id, h, wantText)
 				}
+			case numberInput:
+				wantText = defang(v.text)
 			}
 			if got := r[index(h)]; got != wantText {
 				t.Errorf("csv %s %s: %q, want %q", id, h, got, wantText)
@@ -501,6 +504,10 @@ func TestExportMapsAnswersToTheDefaultLanguage(t *testing.T) {
 			case float64:
 				if got != strconv.FormatFloat(v, 'f', -1, 64) || typ != excelize.CellTypeUnset {
 					t.Errorf("xlsx %s %s: %q (%v), want the number %v", id, h, got, typ, v)
+				}
+			case numberInput:
+				if got != strconv.FormatFloat(v.value, 'f', -1, 64) || typ != excelize.CellTypeUnset {
+					t.Errorf("xlsx %s %s: %q (%v), want the number %v", id, h, got, typ, v.value)
 				}
 			case string:
 				if got != v || (v != "" && typ != excelize.CellTypeInlineString) {

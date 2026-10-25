@@ -824,7 +824,7 @@ func (g *scaleAggregate) result([]DropOff) (any, bool) {
 	return out, true
 }
 
-// npsAggregate is the NPS summary: 9 and 10 promote, 7 and 8 are passive, the rest detract. The score, the three groups' shares and the 0 to 10 distribution are taken over the responses that answered, the standard NPS; a dismissal (time spent on the element without a number) is counted apart, its share taken over everyone who reached the element, which the total and the response count still are.
+// npsAggregate is the NPS summary: 9 and 10 promote, 7 and 8 are passive, the rest detract. The score, the three groups' shares and the 0 to 10 distribution are taken over the responses that answered, the standard NPS; the response count is the answered responses too, as for rating, CSAT and CES, so the card header states the base of its shares. A dismissal (time spent on the element without a number) is counted apart, its share taken over everyone who reached the element, which the total is.
 type npsAggregate struct {
 	el                                         *element
 	buckets                                    *buckets
@@ -858,7 +858,7 @@ func (g *npsAggregate) add(r *summaryResponse) {
 func (g *npsAggregate) result([]DropOff) (any, bool) {
 	answered := float64(g.answered)
 	share := func(n int) Count { return Count{Count: n, Percentage: percent(float64(n), answered)} }
-	return NPSSummary{Type: g.el.Type, Element: g.el.Raw, ResponseCount: g.total, Total: g.total, Answered: g.answered,
+	return NPSSummary{Type: g.el.Type, Element: g.el.Raw, ResponseCount: g.answered, Total: g.total, Answered: g.answered,
 		Score: percent(float64(g.promoters-g.detractors), answered), Promoters: share(g.promoters), Passives: share(g.passives),
 		Detractors: share(g.detractors), Dismissed: Count{Count: g.dismissed, Percentage: percent(float64(g.dismissed), float64(g.total))},
 		Choices: g.buckets.choices(answered)}, true

@@ -233,7 +233,13 @@ var numberText = regexp.MustCompile(`^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]
 // maxExactDigits is how many significant digits a float64 always holds exactly; a longer number input stays text so no digit is lost.
 const maxExactDigits = 15
 
-// exportAnswer is an element's answer as its export cell: a number as a number, so a spreadsheet computes with rating, NPS, CSAT and CES scores; the text of a number input as the number it holds; anything else as processResponseData's text.
+// numberInput is a number input's answer as an export cell: the XLSX writes the number it holds, so a spreadsheet computes with it; the CSV writes the text as the respondent typed it, which keeps leading zeros, trailing fractional zeros and exponents for an ID or postal code read by a script.
+type numberInput struct {
+	value float64
+	text  string
+}
+
+// exportAnswer is an element's answer as its export cell: a number as a number, so a spreadsheet computes with rating, NPS, CSAT and CES scores; the text of a number input as a numberInput; anything else as processResponseData's text.
 func exportAnswer(el *element, answer any) any {
 	switch x := answer.(type) {
 	case float64:
@@ -253,7 +259,7 @@ func exportAnswer(el *element, answer any) any {
 			break
 		}
 		if n, err := strconv.ParseFloat(text, 64); err == nil && !math.IsInf(n, 0) {
-			return n
+			return numberInput{value: n, text: x}
 		}
 	}
 	return processResponseData(answer)
@@ -450,7 +456,7 @@ type sheetWriter interface {
 	close() error
 }
 
-// csvWriter is forma2's convertToCsv (json2csv's defaults: every header and text quoted, numbers and booleans bare, an undefined or null cell empty, rows joined by "\n") behind the byte order mark the download added. Text is defanged as it is written.
+// csvWriter is forma2's convertToCsv (json2csv's defaults: every header and text quoted, numbers and booleans bare, an undefined or null cell empty, rows joined by "\n") behind the byte order mark the download added. Text is defanged as it is written; a number input is written as the text typed, not the number it holds.
 type csvWriter struct {
 	w    *bufio.Writer
 	rows int
@@ -479,6 +485,8 @@ func (c *csvWriter) row(cells []any) error {
 			_, _ = c.w.WriteString(csvQuote(defang(x)))
 		case float64:
 			_, _ = c.w.WriteString(jsvalue.FormatNumber(x))
+		case numberInput:
+			_, _ = c.w.WriteString(csvQuote(defang(x.text)))
 		case bool:
 			_, _ = c.w.WriteString(strconv.FormatBool(x))
 		default:
@@ -542,6 +550,8 @@ func (x *xlsxWriter) row(cells []any) error {
 			}
 		case nil, float64, bool:
 			values[i] = c
+		case numberInput:
+			values[i] = c.value
 		default:
 			b, err := json.Marshal(c)
 			if err != nil {
