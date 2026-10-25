@@ -300,14 +300,13 @@ func (d *Delivery) processBatch(ctx context.Context, owner string) (BatchResult,
 	if err != nil || len(events) == 0 {
 		return BatchResult{}, err
 	}
-	return d.settle(ctx, ctx, owner, events)
+	started := time.Now()
+	out := d.deliverAll(ctx, events)
+	return d.settle(ctx, owner, events, out, time.Since(started))
 }
 
-// settle delivers claimed events under deliverCtx and then, under ctx, completes the delivered ones and releases the rest with their backoff, so a bounded delivery never leaves its events leased.
-func (d *Delivery) settle(ctx, deliverCtx context.Context, owner string, events []outboxEvent) (BatchResult, error) {
-	started := time.Now()
-	out := d.deliverAll(deliverCtx, events)
-	duration := time.Since(started)
+// settle completes the delivered events of a claimed batch and releases the rest with their backoff. It runs under its own context so that a delivery bounded by a deadline that has already passed can still settle its events rather than leave them leased.
+func (d *Delivery) settle(ctx context.Context, owner string, events []outboxEvent, out deliveryOutcome, duration time.Duration) (BatchResult, error) {
 	if err := markDelivered(ctx, d.db, owner, out.delivered); err != nil {
 		return BatchResult{}, err
 	}
@@ -344,8 +343,11 @@ func (d *Delivery) settle(ctx, deliverCtx context.Context, owner string, events 
 	return res, nil
 }
 
-// syncDeliveryTimeout bounds the SpiceDB work a request waits for before it answers; past it the events fall back to the outbox.
-const syncDeliveryTimeout = 3 * time.Second
+// syncDeliveryTimeout bounds the claim and the SpiceDB delivery a request waits for before it answers; past it the events fall back to the outbox. syncSettleTimeout bounds the bookkeeping that follows, on a budget of its own so that a delivery that used all of syncDeliveryTimeout can still release its events. A request therefore waits at most their sum, however long the outbox backlog and however slow SpiceDB.
+const (
+	syncDeliveryTimeout = 3 * time.Second
+	syncSettleTimeout   = time.Second
+)
 
 // DeliverAPIKey projects one API key's pending events, the key and its workspace grants, before the request that wrote them answers. /api/v3 and MCP authorize against SpiceDB while v1 and v2 read PostgreSQL, so without this a new key works on v1 and is refused on v3 until the worker's next tick, up to deliveryInterval later. A failure is not the caller's: the events are released to the outbox exactly as a failed batch's are, the worker delivers them, and the failure is logged by its stable code. Nil, with AuthZed disabled, does nothing.
 func (d *Delivery) DeliverAPIKey(ctx context.Context, id uuid.UUID) {
@@ -356,17 +358,22 @@ func (d *Delivery) DeliverAPIKey(ctx context.Context, id uuid.UUID) {
 }
 
 func (d *Delivery) deliverAggregate(ctx context.Context, a aggregate) {
-	// The outbox bookkeeping outlives a client that goes away mid-request, or the claimed events would stay leased for a whole outboxLease.
+	// Detached from the request, so a client that goes away mid-request cannot leave the claimed events leased for a whole outboxLease; bounded instead by the deadlines below, so the request never waits on the outbox backlog (the claim filters the whole pending set) or on a stalled SpiceDB.
 	ctx = context.WithoutCancel(ctx)
+	deliverCtx, cancel := context.WithTimeout(ctx, syncDeliveryTimeout)
+	defer cancel()
 	owner := uuid.NewString()
-	events, err := claimAggregate(ctx, d.db, owner, a)
+	events, err := claimAggregate(deliverCtx, d.db, owner, a)
 	if err == nil && len(events) > 0 {
-		deliverCtx, cancel := context.WithTimeout(ctx, syncDeliveryTimeout)
-		_, err = d.settle(ctx, deliverCtx, owner, events)
-		cancel()
+		started := time.Now()
+		out := d.deliverAll(deliverCtx, events)
+		duration := time.Since(started)
+		settleCtx, cancelSettle := context.WithTimeout(ctx, syncSettleTimeout)
+		_, err = d.settle(settleCtx, owner, events, out, duration)
+		cancelSettle()
 	}
 	if err != nil {
-		// Only the PostgreSQL bookkeeping fails here, and its text can carry identifiers, so only the stable code is logged. Whatever it left unsettled is claimable again once its lease expires.
+		// Only PostgreSQL fails here, the claim or the bookkeeping, and its text can carry identifiers, so only the stable code is logged. A claim cut off by its deadline leased nothing, and whatever the bookkeeping left unsettled is claimable again once its lease expires; either way the worker delivers the events.
 		d.log.WarnContext(ctx, "AuthZed synchronous projection failed", "component", "authz", "operation", "projection_sync_delivery", "status", "failed", "error_code", codeProjectionDeliveryFailed)
 	}
 }
