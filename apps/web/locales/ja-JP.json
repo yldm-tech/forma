@@ -698,6 +698,7 @@
       "no_workspaces_warning_subtitle": "ワークスペースへのアクセスを取得するには、組織のオーナーに連絡してください。または、独自の組織を作成して開始することもできます。",
       "no_workspaces_warning_title": "お使いのアカウントはまだワークスペースにアクセスできません。"
     },
+    "security_tip_github": "セキュリティ修正の情報を受け取りましょう：<githubLink>GitHub の Forma セキュリティアドバイザリ</githubLink>を開き、Watch → Custom → Releases と Security alerts を選択してください。",
     "workspaces": {
       "new": {
         "skip_for_now": "今はスキップ",

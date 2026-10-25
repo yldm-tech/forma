@@ -698,6 +698,7 @@
       "no_workspaces_warning_subtitle": "Reach out to your organization owner to get access to workspaces. Or create an own organization to get started.",
       "no_workspaces_warning_title": "Your account does not have access to any workspaces yet."
     },
+    "security_tip_github": "Stay informed about security fixes: open <githubLink>Forma's security advisories on GitHub</githubLink> and choose Watch → Custom → Releases and Security alerts.",
     "workspaces": {
       "new": {
         "skip_for_now": "Skip for now",

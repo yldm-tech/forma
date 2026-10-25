@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Building2Icon, ChevronDownIcon, ChevronRightIcon, SettingsIcon } from "lucide-react";
+import { Building2Icon, ChevronDownIcon, ChevronRightIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { organizationSettingsPath, organizationSwitchPath, sortByName } from "../../lib/navigation";
@@ -13,9 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { CreateOrganizationModal } from "./create-organization-modal";
 import { SwitcherDropdownBody } from "./switcher-dropdown-body";
 
-/** forma2's OrganizationBreadcrumb: the current organization, a switcher loaded when it opens, and a link to its settings. */
+/** forma2's OrganizationBreadcrumb: the current organization, a switcher loaded when it opens with "Create new organization" under the list (any signed-in user may create one, as the workspace switcher offers "Add new workspace"), and a link to its settings. */
 export const OrganizationBreadcrumb = ({
   organizationId,
   organizationName,
@@ -28,6 +29,7 @@ export const OrganizationBreadcrumb = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const organizations = useQuery({ ...organizationsQuery, enabled: open });
 
   return (
@@ -50,8 +52,12 @@ export const OrganizationBreadcrumb = ({
             onRetry={() => void organizations.refetch()}
             items={sortByName(organizations.data ?? [])}
             selectedId={organizationId}
-            onSelect={(id) => void navigate({ href: organizationSwitchPath(id, organizationId) })}
-          />
+            onSelect={(id) => void navigate({ href: organizationSwitchPath(id, organizationId) })}>
+            <DropdownMenuCheckboxItem className="w-full justify-between" onSelect={() => setCreateOpen(true)}>
+              <span>{t("workspace.settings.general.create_new_organization")}</span>
+              <PlusIcon className="ml-2 size-4" strokeWidth={1.5} />
+            </DropdownMenuCheckboxItem>
+          </SwitcherDropdownBody>
           <DropdownMenuSeparator />
           <DropdownMenuCheckboxItem
             onSelect={() => void navigate({ href: organizationSettingsPath(organizationId, "general") })}>
@@ -60,6 +66,7 @@ export const OrganizationBreadcrumb = ({
           </DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <CreateOrganizationModal open={createOpen} setOpen={setCreateOpen} />
     </BreadcrumbItem>
   );
 };

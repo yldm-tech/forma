@@ -113,11 +113,15 @@ export const membersQuery = (id: string) =>
         .then((res) => res.members),
   });
 
+/** Creates an organization in the creator's browser time zone, which the server stores as its display and survey scheduling zone (an unknown zone is ignored there), so its surveys do not open and close at midnight in the instance's zone. */
 export const useCreateOrganization = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (name: string) =>
-      api.post<Organization & { workspaceId: string }>("/api/app/organizations", { name }),
+      api.post<Organization & { workspaceId: string }>("/api/app/organizations", {
+        name,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: organizationKeys.all }),
   });
 };
