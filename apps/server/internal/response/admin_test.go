@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -219,8 +220,18 @@ func TestDeleteTakesTheDisplayAndQueuesTheFiles(t *testing.T) {
 	if !reflect.DeepEqual(files, want) {
 		t.Fatalf("file cleanup job %v, want %v", files, want)
 	}
-	if !contains(e.logs.String(), `"action":"deleted"`) {
+	var deletion string
+	for line := range strings.SplitSeq(e.logs.String(), "\n") {
+		if contains(line, `"msg":"audit"`) && contains(line, `"action":"deleted"`) {
+			deletion = line
+		}
+	}
+	if deletion == "" {
 		t.Fatal("no audit event for the deletion")
+	}
+	// The event names the answered questions but keeps none of the answers.
+	if contains(deletion, "private/a.pdf") || !contains(deletion, `"data":{`) || !contains(deletion, `"q1":"********"`) || !contains(deletion, `"f1":"********"`) {
+		t.Fatalf("deletion audit event %s, want the answers' keys without their values", deletion)
 	}
 }
 

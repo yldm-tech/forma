@@ -208,7 +208,7 @@ func (em *Emitter) build(e Event) ([]slog.Attr, error) {
 		}
 	}
 
-	changes, err := changesOf(e.OldObject, e.NewObject)
+	changes, err := changesOf(e.TargetType, e.OldObject, e.NewObject)
 	if err != nil {
 		return nil, err
 	}
@@ -245,8 +245,8 @@ func orUnknown(s string) string {
 	return s
 }
 
-// changesOf is forma2's rule: the redacted diff when both objects are given, otherwise the redacted object that is.
-func changesOf(oldObject, newObject any) (map[string]any, error) {
+// changesOf is forma2's rule: the redacted diff when both objects are given, otherwise the redacted object that is. For a response or contact target, the submitted subtrees keep only their keys (see maskSubmitted).
+func changesOf(target Target, oldObject, newObject any) (map[string]any, error) {
 	oldV, err := toJSONValue(oldObject)
 	if err != nil {
 		return nil, err
@@ -269,6 +269,9 @@ func changesOf(oldObject, newObject any) (map[string]any, error) {
 		changes = oldV
 	default:
 		return nil, nil
+	}
+	if keysOnlyTargets[target] {
+		changes = maskSubmitted(changes)
 	}
 	m, ok := redact(changes).(map[string]any)
 	if !ok {
