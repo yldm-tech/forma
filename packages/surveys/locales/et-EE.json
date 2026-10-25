@@ -36,6 +36,8 @@
     "response_saved_offline": "Sinu vastust pole veel saadetud. See edastatakse automaatselt, kui oled taas võrgus.",
     "retry": "Proovi uuesti",
     "retrying": "Proovin uuesti…",
+    "saving_offline": "Oled võrguühenduseta. Võid edasi vastata; sinu vastused salvestatakse, kui oled taas võrgus.",
+    "saving_reconnecting": "Mõned vastused pole veel salvestatud. Proovime edasi, kuni sa jätkad.",
     "scheduling_calendar": "Planeerimiskalender",
     "scroll_to_bottom": "Keri alla",
     "search": "Otsi...",

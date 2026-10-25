@@ -36,6 +36,8 @@
     "response_saved_offline": "A válasza még nem lett elküldve. Automatikusan elküldésre kerül, amint újra elérhető lesz.",
     "retry": "Újrapróbálkozás",
     "retrying": "Újrapróbálkozás…",
+    "saving_offline": "Nincs internetkapcsolat. Folytathatja a válaszadást; a válaszai mentésre kerülnek, amint újra online lesz.",
+    "saving_reconnecting": "Néhány válasz még nincs elmentve. Tovább próbálkozunk, amíg Ön folytatja.",
     "scheduling_calendar": "Naptár ütemezése",
     "scroll_to_bottom": "Görgetés az aljára",
     "search": "Keresés…",

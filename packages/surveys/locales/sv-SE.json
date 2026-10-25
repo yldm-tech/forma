@@ -36,6 +36,8 @@
     "response_saved_offline": "Ditt svar har inte skickats än. Det kommer att skickas automatiskt när du är online igen.",
     "retry": "Försök igen",
     "retrying": "Försöker igen...",
+    "saving_offline": "Du är offline. Du kan fortsätta svara; dina svar sparas när du är online igen.",
+    "saving_reconnecting": "Vissa svar har inte sparats än. Vi fortsätter att försöka medan du fortsätter.",
     "scheduling_calendar": "Schemaläggningskalender",
     "scroll_to_bottom": "Rulla längst ner",
     "search": "Sök...",

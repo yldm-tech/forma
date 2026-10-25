@@ -36,6 +36,8 @@
     "response_saved_offline": "Yanıtın henüz gönderilmedi. İnternete geri döndüğünde otomatik olarak iletilecek.",
     "retry": "Yeniden dene",
     "retrying": "Yeniden deneniyor…",
+    "saving_offline": "Çevrimdışısın. Yanıtlamaya devam edebilirsin; yanıtların tekrar çevrimiçi olduğunda kaydedilecek.",
+    "saving_reconnecting": "Bazı yanıtlar henüz kaydedilmedi. Sen devam ederken denemeyi sürdüreceğiz.",
     "scheduling_calendar": "Planlama takvimi",
     "scroll_to_bottom": "Aşağı kaydır",
     "search": "Ara...",

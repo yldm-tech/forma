@@ -23,8 +23,22 @@ interface QueueConfig {
   onResponseCreated?: (responseId: string) => void;
   onResponseSendingFailed?: (responseUpdate: TResponseUpdate, errorCode?: TResponseErrorCodesEnum) => void;
   onResponseSendingFinished?: () => void;
+  /**
+   * Called with `true` when a send attempt fails for a reason that may pass (the network or the server), and with `false` once a send succeeds again. The queue keeps the answers meanwhile; a survey shows a non-blocking notice and lets the respondent carry on.
+   */
+  onResponseSendingDelayedChange?: (isDelayed: boolean) => void;
   onQuotaFull?: (quotaInfo: TQuotaFullResponse) => void;
   setSurveyState?: (state: SurveyState) => void;
+}
+
+interface SyncOutcome {
+  // Every stored row was either delivered or dropped as permanently rejected.
+  drained: boolean;
+  // A row could not be sent because of the network or the server; it stays stored.
+  sendFailed: boolean;
+  // A delivered row was the final submission.
+  sentFinished: boolean;
+  quotaFullResponse?: TQuotaFullResponse;
 }
 
 export const delay = (ms: number): Promise<void> => {
@@ -33,26 +47,13 @@ export const delay = (ms: number): Promise<void> => {
   });
 };
 
-// Module-level locks keyed by surveyId.
-// Survive ResponseQueue instance recreation (e.g. React useMemo recomputation)
-// so that only one sync/send runs at a time per survey, even across instances.
-const syncingBySurvey = new Map<string, boolean>();
-const requestInProgressBySurvey = new Map<string, boolean>();
-const processedDbIdsPendingRemovalBySurvey = new Map<string, Set<number>>();
+// After a burst of retries has failed, the queue tries again on its own for as long as the page is open: at once when the browser reports it is back online, otherwise after a backoff that starts at RECOVERY_BASE_DELAY_MS and doubles up to RECOVERY_MAX_DELAY_MS.
+export const RECOVERY_BASE_DELAY_MS = 5_000;
+export const RECOVERY_MAX_DELAY_MS = 60_000;
 
-/** @internal Exposed for tests only. */
-export const _syncLocks = {
-  clear: () => {
-    syncingBySurvey.clear();
-    requestInProgressBySurvey.clear();
-    processedDbIdsPendingRemovalBySurvey.clear();
-  },
-  set: (surveyId: string, value: boolean) => syncingBySurvey.set(surveyId, value),
-  get: (surveyId: string) => syncingBySurvey.get(surveyId) ?? false,
-  setRequestInProgress: (surveyId: string, value: boolean) => requestInProgressBySurvey.set(surveyId, value),
-  getRequestInProgress: (surveyId: string) => requestInProgressBySurvey.get(surveyId) ?? false,
-};
-
+/**
+ * One queue per response being collected. Its locks belong to the instance: a survey keeps a single queue for its whole life, so the in-flight request and the answers waiting behind it are always held by the same object. Locks shared by surveyId let a second instance (a remount, or a second embed of the same survey) see "a request is in flight" and leave its own answers queued with nobody left to send them.
+ */
 export class ResponseQueue {
   readonly queue: TResponseUpdate[] = [];
   readonly config: QueueConfig;
@@ -61,6 +62,16 @@ export class ResponseQueue {
   private responseRecaptchaToken?: string;
   // Maps queued response objects to their IndexedDB ids for cleanup after successful sends.
   private readonly pendingDbIds: Map<TResponseUpdate, number> = new Map();
+  private isSyncing = false;
+  private isRequestInProgress = false;
+  // IndexedDB rows already sent whose removal failed; skipped by the next sync so they are not sent twice.
+  private readonly processedDbIdsPendingRemoval = new Set<number>();
+  private isDelayed = false;
+  private recoveryTimer: ReturnType<typeof setTimeout> | null = null;
+  private recoveryRound = 0;
+  private isListeningForOnline = false;
+  // Ends the backoff wait of the burst in flight, so a send can go out as soon as the connection is back.
+  private wakeBackoff: (() => void) | null = null;
 
   constructor(config: QueueConfig, surveyState: SurveyState) {
     this.config = config;
@@ -69,26 +80,6 @@ export class ResponseQueue {
       appUrl: config.appUrl,
       workspaceId: config.workspaceId,
     });
-  }
-
-  private get isSyncing(): boolean {
-    return this.config.surveyId ? (syncingBySurvey.get(this.config.surveyId) ?? false) : false;
-  }
-
-  private set isSyncing(value: boolean) {
-    if (this.config.surveyId) {
-      syncingBySurvey.set(this.config.surveyId, value);
-    }
-  }
-
-  private get isRequestInProgress(): boolean {
-    return this.config.surveyId ? (requestInProgressBySurvey.get(this.config.surveyId) ?? false) : false;
-  }
-
-  private set isRequestInProgress(value: boolean) {
-    if (this.config.surveyId) {
-      requestInProgressBySurvey.set(this.config.surveyId, value);
-    }
   }
 
   setResponseRecaptchaToken(token?: string) {
@@ -114,8 +105,8 @@ export class ResponseQueue {
     });
   }
 
-  private processQueueInBackground(context: string) {
-    void this.processQueue().catch((error) => {
+  private processQueueInBackground(context: string, retryAttempts?: number) {
+    void this.processQueue(retryAttempts).catch((error) => {
       this.logOfflinePersistenceError(context, error);
     });
   }
@@ -131,22 +122,11 @@ export class ResponseQueue {
 
     try {
       const pendingCount = await countPendingResponsesStrict(this.config.surveyId);
-      return Math.max(0, pendingCount - this.getProcessedDbIdsPendingRemoval().size);
+      return Math.max(0, pendingCount - this.processedDbIdsPendingRemoval.size);
     } catch (error) {
       this.logOfflinePersistenceError("Failed to count pending responses in IndexedDB", error);
       throw error;
     }
-  }
-
-  private getProcessedDbIdsPendingRemoval(): Set<number> {
-    if (!this.config.surveyId) return new Set();
-
-    const existingIds = processedDbIdsPendingRemovalBySurvey.get(this.config.surveyId);
-    if (existingIds) return existingIds;
-
-    const ids = new Set<number>();
-    processedDbIdsPendingRemovalBySurvey.set(this.config.surveyId, ids);
-    return ids;
   }
 
   private removePendingDbId(dbId: number) {
@@ -165,20 +145,20 @@ export class ResponseQueue {
   ): Promise<boolean> {
     try {
       await removePendingResponseStrict(dbId);
-      this.getProcessedDbIdsPendingRemoval().delete(dbId);
+      this.processedDbIdsPendingRemoval.delete(dbId);
       if (options.removeTrackedDbIdOnSuccess ?? true) {
         this.removePendingDbId(dbId);
       }
       return true;
     } catch (error) {
-      this.getProcessedDbIdsPendingRemoval().add(dbId);
+      this.processedDbIdsPendingRemoval.add(dbId);
       this.logOfflinePersistenceError(context, error);
       return false;
     }
   }
 
   private async retryProcessedDbIdCleanup() {
-    for (const dbId of Array.from(this.getProcessedDbIdsPendingRemoval())) {
+    for (const dbId of Array.from(this.processedDbIdsPendingRemoval)) {
       await this.removePendingResponseFromIndexedDB(
         dbId,
         "Failed to remove processed response from IndexedDB"
@@ -289,7 +269,10 @@ export class ResponseQueue {
     }
   }
 
-  async processQueue(): Promise<{ success: boolean }> {
+  /**
+   * Sends the queued answers in order, retrying a failed send `retryAttempts` times with exponential backoff. An answer that still cannot be sent stays queued: the queue keeps retrying in the background, and only a failed final submission is reported through `onResponseSendingFailed`.
+   */
+  async processQueue(retryAttempts = this.config.retryAttempts): Promise<{ success: boolean }> {
     if (this.isRequestInProgress || this.queue.length === 0) {
       return { success: false };
     }
@@ -330,7 +313,9 @@ export class ResponseQueue {
 
     const responseUpdate = this.queue[0];
     this.isRequestInProgress = true;
-    const result = await this.sendResponseWithRetry(responseUpdate);
+    // This run supersedes a scheduled background retry; a failure below schedules the next one.
+    this.clearRecoveryTimer();
+    const result = await this.sendResponseWithRetry(responseUpdate, retryAttempts);
 
     if (result.success) {
       // Remove from IndexedDB on successful send
@@ -345,6 +330,7 @@ export class ResponseQueue {
       // If offline persistence is enabled and we're now offline, don't treat it as a failure
       if (this.config.persistOffline && typeof navigator !== "undefined" && !navigator.onLine) {
         this.isRequestInProgress = false;
+        this.startRecovery();
         return { success: false };
       }
 
@@ -361,9 +347,83 @@ export class ResponseQueue {
         }
       }
 
+      if (result.isTerminalClientError || result.isRecaptchaError) {
+        // Sending the same payload again cannot succeed.
+        this.stopRecovery();
+      } else {
+        this.startRecovery();
+        // A card in the middle of the survey does not interrupt the respondent: its answers stay queued and go out with the next successful send. Only the final submission, the one the ending card waits for, is reported as failed.
+        if (!this.queue.some((item) => item.finished)) {
+          this.isRequestInProgress = false;
+          return { success: false };
+        }
+      }
+
       this.handleFailedResponse(responseUpdate, result.isRecaptchaError, result.errorCode);
       return { success: false };
     }
+  }
+
+  private setDelayed(isDelayed: boolean) {
+    if (this.isDelayed === isDelayed) return;
+    this.isDelayed = isDelayed;
+    this.config.onResponseSendingDelayedChange?.(isDelayed);
+  }
+
+  private readonly handleOnline = () => {
+    if (this.wakeBackoff) {
+      this.wakeBackoff();
+      return;
+    }
+    this.clearRecoveryTimer();
+    this.processQueueInBackground("Failed to process queue after coming back online");
+  };
+
+  private clearRecoveryTimer() {
+    if (this.recoveryTimer !== null) {
+      clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = null;
+    }
+  }
+
+  private listenForOnline() {
+    if (globalThis.window !== undefined && !this.isListeningForOnline) {
+      globalThis.window.addEventListener("online", this.handleOnline);
+      this.isListeningForOnline = true;
+    }
+  }
+
+  /** Keeps trying to deliver what is queued: on the browser's `online` event and on a capped backoff. */
+  private startRecovery() {
+    this.listenForOnline();
+    if (this.recoveryTimer !== null) return;
+    const wait = Math.min(RECOVERY_BASE_DELAY_MS * 2 ** this.recoveryRound, RECOVERY_MAX_DELAY_MS);
+    this.recoveryRound += 1;
+    this.recoveryTimer = setTimeout(() => {
+      this.recoveryTimer = null;
+      // A single attempt per round: the rounds themselves are the backoff.
+      this.processQueueInBackground("Failed to process queue in a background retry", 0);
+    }, wait);
+  }
+
+  private stopRecovery() {
+    this.clearRecoveryTimer();
+    this.recoveryRound = 0;
+    if (this.isListeningForOnline) {
+      globalThis.window.removeEventListener("online", this.handleOnline);
+      this.isListeningForOnline = false;
+    }
+  }
+
+  private waitBeforeRetry(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => this.wakeBackoff?.(), ms);
+      this.wakeBackoff = () => {
+        clearTimeout(timer);
+        this.wakeBackoff = null;
+        resolve();
+      };
+    });
   }
 
   /**
@@ -409,14 +469,19 @@ export class ResponseQueue {
 
     this.isSyncing = true;
     let syncedCount = 0;
+    // What the sync achieved, settled once the lock is released (see settleSync).
+    const outcome: SyncOutcome = { drained: false, sendFailed: false, sentFinished: false };
 
     try {
       await this.retryProcessedDbIdCleanup();
       const entries = await getPendingResponsesStrict(this.config.surveyId);
       const entriesToSync = entries.filter((entry) => {
-        return entry.id === undefined || !this.getProcessedDbIdsPendingRemoval().has(entry.id);
+        return entry.id === undefined || !this.processedDbIdsPendingRemoval.has(entry.id);
       });
-      if (entriesToSync.length === 0) return { success: true, syncedCount: 0 };
+      if (entriesToSync.length === 0) {
+        outcome.drained = true;
+        return { success: true, syncedCount: 0 };
+      }
 
       const processedDbIds = new Set<number>();
 
@@ -441,6 +506,12 @@ export class ResponseQueue {
         }
 
         if (result.ok) {
+          if (entry.responseUpdate.finished) {
+            outcome.sentFinished = true;
+          }
+          if (this.isQuotaFullResponse(result.data)) {
+            outcome.quotaFullResponse = result.data;
+          }
           if (entry.id !== undefined) {
             const removed = await this.removePendingResponseFromIndexedDB(
               entry.id,
@@ -471,6 +542,7 @@ export class ResponseQueue {
           }
 
           // Server/network error — stop syncing, remaining entries stay for next attempt
+          outcome.sendFailed = true;
           this.removeProcessedQueueItemsByDbId(processedDbIds);
           return { success: false, syncedCount };
         }
@@ -480,11 +552,7 @@ export class ResponseQueue {
       }
 
       this.removeProcessedQueueItemsByDbId(processedDbIds);
-
-      // Kick off processQueue for any entries added during sync
-      if (this.queue.length > 0) {
-        this.processQueueInBackground("Failed to process queue after persisted response sync");
-      }
+      outcome.drained = true;
 
       return { success: true, syncedCount };
     } catch (error) {
@@ -492,10 +560,49 @@ export class ResponseQueue {
       return { success: false, syncedCount };
     } finally {
       this.isSyncing = false;
+      this.settleSync(outcome, syncedCount);
     }
   }
 
-  private async sendResponseWithRetry(responseUpdate: TResponseUpdate): Promise<{
+  /**
+   * Gives a sync the same follow-up as a send through processQueue. processQueue hands its work to syncPersistedResponses once two answers are stored, so without this a final submission delivered by a sync never reaches the ending card, and the delayed notice of an earlier failed card never goes away. Runs after the sync lock is released, so the processQueue it starts for answers added meanwhile is not turned away by that lock.
+   */
+  private settleSync(outcome: SyncOutcome, syncedCount: number) {
+    if (outcome.sentFinished) {
+      this.config.onResponseSendingFinished?.();
+    }
+
+    if (outcome.drained) {
+      if (syncedCount > 0) {
+        this.setDelayed(false);
+        // The connection works again: the next failure starts its backoff from the beginning.
+        this.stopRecovery();
+      }
+    } else if (this.queue.length > 0) {
+      // Answers given on this page are still waiting: keep trying, as processQueue does after a failed burst. Rows left by an earlier visit are retried by the survey when the browser comes back online.
+      if (outcome.sendFailed) {
+        this.setDelayed(true);
+      }
+      this.startRecovery();
+    }
+
+    if (outcome.quotaFullResponse) {
+      this.config.onQuotaFull?.(outcome.quotaFullResponse);
+    }
+
+    // Answers added while the sync ran were not in the rows it read.
+    if (outcome.drained && this.queue.length > 0) {
+      this.processQueueInBackground("Failed to process queue after persisted response sync");
+    }
+  }
+
+  /**
+   * Sends one queued update: a first attempt, then up to `retryAttempts` retries, each after a backoff of 1s, 2s, 4s, 8s... The last backoff is followed by a last attempt rather than by giving up, so a connection that came back during the wait is not reported as down.
+   */
+  private async sendResponseWithRetry(
+    responseUpdate: TResponseUpdate,
+    retryAttempts: number
+  ): Promise<{
     success: boolean;
     quotaFullResponse?: TQuotaFullResponse;
     isRecaptchaError?: boolean;
@@ -505,11 +612,12 @@ export class ResponseQueue {
     let attempts = 0;
     let quotaFullResponse: TQuotaFullResponse | null = null;
 
-    while (attempts < this.config.retryAttempts) {
+    for (;;) {
       const res = await this.sendResponse(responseUpdate);
 
       if (res.ok) {
         this.queue.shift(); // remove the successfully sent response from the queue
+        this.setDelayed(false);
 
         if (this.isQuotaFullResponse(res.data)) {
           quotaFullResponse = res.data;
@@ -547,19 +655,23 @@ export class ResponseQueue {
 
       console.error(`Forma: Response send failed`, {
         attempt: attempts + 1,
-        maxAttempts: this.config.retryAttempts,
+        maxAttempts: retryAttempts + 1,
         error: res.error,
         responseId: this.surveyState.responseId,
         queueLength: this.queue.length,
       });
+      this.setDelayed(true);
+      this.listenForOnline();
+
+      if (attempts >= retryAttempts) break;
 
       // Exponential backoff: 1s, 2s, 4s, 8s
       const backoffMs = 1000 * Math.pow(2, attempts);
-      await delay(backoffMs);
+      await this.waitBeforeRetry(backoffMs);
       attempts++;
     }
 
-    console.error(`Forma: Failed to send response after ${this.config.retryAttempts} attempts`, {
+    console.error(`Forma: Failed to send response after ${attempts + 1} attempts`, {
       queueLength: this.queue.length,
       responseId: this.surveyState.responseId,
       surveyId: this.surveyState.surveyId,
@@ -613,6 +725,8 @@ export class ResponseQueue {
     }
 
     this.isRequestInProgress = false;
+    // The connection works again: the next failure starts its backoff from the beginning.
+    this.stopRecovery();
 
     if (quotaFullResponse) {
       this.config.onQuotaFull?.(quotaFullResponse);

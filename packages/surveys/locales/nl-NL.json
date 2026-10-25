@@ -36,6 +36,8 @@
     "response_saved_offline": "Je reactie is nog niet verzonden. Deze wordt automatisch verstuurd zodra je weer online bent.",
     "retry": "Opnieuw proberen",
     "retrying": "Opnieuw proberen...",
+    "saving_offline": "Je bent offline. Je kunt verder antwoorden; je antwoorden worden opgeslagen zodra je weer online bent.",
+    "saving_reconnecting": "Sommige antwoorden zijn nog niet opgeslagen. We blijven het proberen terwijl je verdergaat.",
     "scheduling_calendar": "Planningskalender",
     "scroll_to_bottom": "Naar beneden scrollen",
     "search": "Zoeken...",
