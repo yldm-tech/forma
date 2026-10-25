@@ -87,6 +87,11 @@ func (a *Authenticator) Authenticate(ctx context.Context, h http.Header, opts Op
 	if err != nil || key == nil {
 		return nil, err
 	}
+	// A disabled key is refused after its secret was verified, so it costs what any other key does, and the warning names only a key whose holder proved they have it. Its use is not recorded: Last used stays the last request it was allowed.
+	if key.DisabledAt.Valid {
+		a.log.WarnContext(ctx, "A disabled API key was used", "apiKeyId", key.ID.String())
+		return nil, nil
+	}
 	if !key.LastUsedAt.Valid || !key.LastUsedAt.Time.After(a.now().Add(-usageWriteInterval)) {
 		now := a.now()
 		// A failed usage write never fails the request it records.

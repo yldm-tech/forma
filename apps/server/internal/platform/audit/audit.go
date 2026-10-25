@@ -57,6 +57,8 @@ const (
 	ActionSSORecoveryStarted   Action = "sso_recovery_started"
 	ActionSSORecoveryCompleted Action = "sso_recovery_completed"
 	ActionSSORecoveryFailed    Action = "sso_recovery_failed"
+	// ActionDisabled turns a credential off without deleting it: an API key whose creator left the organization or lost the role that may create keys.
+	ActionDisabled Action = "disabled"
 )
 
 var actions = []Action{
@@ -66,7 +68,7 @@ var actions = []Action{
 	ActionTwoFactorVerified, ActionEmailVerified, ActionJWTTokenCreated, ActionAuthenticationAttempted,
 	ActionAuthenticationSucceeded, ActionPasswordVerified, ActionTwoFactorAttempted, ActionTwoFactorRequired,
 	ActionEmailVerificationTried, ActionUserSignedOut, ActionPasswordReset, ActionBulkCreated, ActionPurged,
-	ActionQueried, ActionExported, ActionSSORecoveryStarted, ActionSSORecoveryCompleted, ActionSSORecoveryFailed,
+	ActionQueried, ActionExported, ActionSSORecoveryStarted, ActionSSORecoveryCompleted, ActionSSORecoveryFailed, ActionDisabled,
 }
 
 type Target string

@@ -8,6 +8,10 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
+	"github.com/yldm-tech/forma/apps/server/internal/apikey/disable"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
 )
 
 // Repository reads and writes api_keys and api_key_workspaces. Every admin query is scoped by organization as well as by id, so tenant isolation never rests on the authorization check alone. The authz triggers enqueue the SpiceDB projection of every insert and delete in the same transaction.
@@ -52,15 +56,27 @@ type grantInput struct {
 	Permission  string
 }
 
-// create inserts a key and its workspace grants in one transaction and returns its id and creation time.
-func (r *Repository) create(ctx context.Context, row newKeyRow) (uuid.UUID, time.Time, error) {
-	var created struct {
-		ID        uuid.UUID
-		CreatedAt time.Time
-	}
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+// createdKey is what create returns of the new row.
+type createdKey struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	CreatorName string
+}
+
+// create inserts a key and its workspace grants and returns the new row. It refuses with 403 when the creator is no longer an owner or manager of the organization: the service has authorized them through SpiceDB, which follows a removal or demotion only once the outbox delivers it, and the check runs in the same Serializable transaction as the insert, so a key cannot be created after, and slip past, the disable.CreatedBy of a concurrent removal or demotion (which run Serializable too).
+func (r *Repository) create(ctx context.Context, row newKeyRow) (createdKey, error) {
+	var created createdKey
+	err := database.Serializable(ctx, r.db, func(tx *gorm.DB) error {
+		var roles []string
+		if err := tx.Raw(`SELECT role FROM memberships WHERE user_id = ? AND organization_id = ?`, row.CreatedBy, row.OrganizationID).Scan(&roles).Error; err != nil {
+			return fmt.Errorf("load creator role: %w", err)
+		}
+		if len(roles) == 0 || !disable.ManagesKeys(roles[0]) {
+			return apperr.Forbidden("Not authorized")
+		}
 		err := tx.Raw(
-			`INSERT INTO api_keys (organization_id, created_by, label, hashed_key, lookup_hash, organization_access) VALUES (?, ?, ?, ?, ?, ?::jsonb) RETURNING id, created_at`,
+			`WITH k AS (INSERT INTO api_keys (organization_id, created_by, label, hashed_key, lookup_hash, organization_access) VALUES (?, ?, ?, ?, ?, ?::jsonb) RETURNING id, created_at, created_by)
+			SELECT k.id, k.created_at, u.name AS creator_name FROM k JOIN users u ON u.id = k.created_by`,
 			row.OrganizationID, row.CreatedBy, row.Label, row.HashedKey, row.LookupHash, string(row.OrganizationAccess),
 		).Scan(&created).Error
 		if err != nil {
@@ -73,7 +89,7 @@ func (r *Repository) create(ctx context.Context, row newKeyRow) (uuid.UUID, time
 		}
 		return nil
 	})
-	return created.ID, created.CreatedAt, err
+	return created, err
 }
 
 type keyRow struct {
@@ -81,6 +97,24 @@ type keyRow struct {
 	Label              string
 	CreatedAt          time.Time
 	OrganizationAccess []byte
+	LastUsedAt         *time.Time
+	DisabledAt         *time.Time
+	DisabledReason     *string
+	CreatorID          *uuid.UUID
+	CreatorName        *string
+	CreatorIsMember    bool
+}
+
+// creator is the key's Creator, or nil when its creator's account is gone.
+func (k keyRow) creator() *Creator {
+	if k.CreatorID == nil {
+		return nil
+	}
+	c := &Creator{ID: *k.CreatorID, FormerMember: !k.CreatorIsMember}
+	if k.CreatorName != nil {
+		c.Name = *k.CreatorName
+	}
+	return c
 }
 
 type grantRow struct {
@@ -109,12 +143,17 @@ func oneView(ctx context.Context, db *gorm.DB, organizationID, id uuid.UUID) (*V
 }
 
 func views(ctx context.Context, db *gorm.DB, organizationID uuid.UUID, id *uuid.UUID) ([]View, error) {
-	query := db.WithContext(ctx).Table("api_keys").Select("id, label, created_at, organization_access").Where("organization_id = ?", organizationID)
+	// The creator is read through users, and whether they still belong to the key's organization through memberships, so a key whose creator left reads as a former member's.
+	query := `SELECT k.id, k.label, k.created_at, k.organization_access, k.last_used_at, k.disabled_at, k.disabled_reason, u.id AS creator_id, u.name AS creator_name,
+		EXISTS (SELECT 1 FROM memberships m WHERE m.user_id = k.created_by AND m.organization_id = k.organization_id) AS creator_is_member
+		FROM api_keys k LEFT JOIN users u ON u.id = k.created_by WHERE k.organization_id = ?`
+	args := []any{organizationID}
 	if id != nil {
-		query = query.Where("id = ?", *id)
+		query += ` AND k.id = ?`
+		args = append(args, *id)
 	}
 	var keys []keyRow
-	if err := query.Order("created_at, id").Scan(&keys).Error; err != nil {
+	if err := db.WithContext(ctx).Raw(query+` ORDER BY k.created_at, k.id`, args...).Scan(&keys).Error; err != nil {
 		return nil, fmt.Errorf("list api keys: %w", err)
 	}
 	out := make([]View, len(keys))
@@ -124,7 +163,10 @@ func views(ctx context.Context, db *gorm.DB, organizationID uuid.UUID, id *uuid.
 	index := make(map[uuid.UUID]int, len(keys))
 	ids := make([]uuid.UUID, len(keys))
 	for i, k := range keys {
-		out[i] = View{ID: k.ID, Label: k.Label, CreatedAt: k.CreatedAt, OrganizationAccess: storedAccess(k.OrganizationAccess), WorkspacePermissions: []WorkspaceGrant{}}
+		out[i] = View{
+			ID: k.ID, Label: k.Label, CreatedAt: k.CreatedAt, OrganizationAccess: storedAccess(k.OrganizationAccess), WorkspacePermissions: []WorkspaceGrant{},
+			LastUsedAt: k.LastUsedAt, CreatedBy: k.creator(), DisabledAt: k.DisabledAt, DisabledReason: k.DisabledReason,
+		}
 		index[k.ID] = i
 		ids[i] = k.ID
 	}
@@ -177,12 +219,14 @@ type storedKey struct {
 	HashedKey          string
 	OrganizationAccess []byte
 	LastUsedAt         sql.NullTime
+	// DisabledAt is set once the key was disabled; such a key never authenticates.
+	DisabledAt sql.NullTime
 }
 
 // byLookupHash finds the key whose lookup_hash is hash, or nil.
 func (r *Repository) byLookupHash(ctx context.Context, hash string) (*storedKey, error) {
 	var rows []storedKey
-	err := r.db.WithContext(ctx).Raw(`SELECT id, organization_id, hashed_key, organization_access, last_used_at FROM api_keys WHERE lookup_hash = ?`, hash).Scan(&rows).Error
+	err := r.db.WithContext(ctx).Raw(`SELECT id, organization_id, hashed_key, organization_access, last_used_at, disabled_at FROM api_keys WHERE lookup_hash = ?`, hash).Scan(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("look up api key: %w", err)
 	}

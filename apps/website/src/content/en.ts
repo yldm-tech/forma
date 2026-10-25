@@ -310,7 +310,7 @@ export const en: SiteContent = {
             },
             {
               term: "API keys",
-              body: "Organization owners and managers create keys in the app under Organization Settings → API Keys → Add API key. Grant read, write or manage access one workspace at a time, then copy the key: it is shown only once.",
+              body: "Organization owners and managers create keys in the app under Organization Settings → API Keys → Add API key. Grant read, write or manage access one workspace at a time, then copy the key: it is shown only once. A key stops working for good when the person who created it leaves the organization, is removed from it, deletes their account or is given a role below Manager; the API Keys page shows which keys were disabled and why.",
             },
           ],
           resourcesTitle: "Main resources",

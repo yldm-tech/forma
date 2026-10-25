@@ -38,6 +38,10 @@ func TestDeleteAccount(t *testing.T) {
 	shared := e.orgWith(map[uuid.UUID]string{id: "owner", other: "owner"})
 	membership := e.orgWith(map[uuid.UUID]string{other: "owner", id: "member"})
 	e.exec(`INSERT INTO invites (organization_id, email, creator_id, expires_at) VALUES (?, 'x@example.com', ?, now() + interval '1 day')`, shared, id)
+	apiKey := func(org, creator uuid.UUID) uuid.UUID {
+		return e.insertID(`INSERT INTO api_keys (organization_id, created_by, label, hashed_key, lookup_hash) VALUES (?, ?, 'key', 'x', ?) RETURNING id`, org, creator, uuid.NewString())
+	}
+	soleOwnedKey, sharedKey, membershipKey, othersKey := apiKey(soleOwned, id), apiKey(shared, id), apiKey(membership, id), apiKey(shared, other)
 
 	b := e.browser()
 	b.signIn("ada@example.com", strongPassword)
@@ -82,6 +86,28 @@ func TestDeleteAccount(t *testing.T) {
 		t.Fatalf("deleted events %v", events)
 	}
 	expectStatus(t, e.browser().post("/auth/sign-in", credentials("ada@example.com", strongPassword)), http.StatusUnauthorized, "")
+
+	// Owner decision D-AO02: the keys the user created in the organizations that remain are disabled, not left working without a creator; the sole-owned organization's key went with it, and other creators' keys are untouched.
+	disabledKeys := map[uuid.UUID]bool{}
+	for _, ev := range e.auditEvents(audit.ActionDisabled) {
+		if field(ev, "target", "type") != "apiKey" || field(ev, "actor", "id") != id.String() || field(ev, "changes", "disabledReason") != "creator_deleted" {
+			t.Fatalf("disabled event %v", ev)
+		}
+		keyID, _ := field(ev, "target", "id").(string)
+		disabledKeys[uuid.MustParse(keyID)] = true
+	}
+	if len(disabledKeys) != 2 || !disabledKeys[sharedKey] || !disabledKeys[membershipKey] {
+		t.Fatalf("disabled events for %v, want the shared and membership organizations' keys", disabledKeys)
+	}
+	if e.count(`SELECT count(*) FROM api_keys WHERE id = ?`, soleOwnedKey) != 0 {
+		t.Error("the sole-owned organization's key survived")
+	}
+	if e.count(`SELECT count(*) FROM api_keys WHERE id IN (?, ?) AND created_by IS NULL AND disabled_reason = 'creator_deleted'`, sharedKey, membershipKey) != 2 {
+		t.Error("the deleted user's keys are not disabled")
+	}
+	if e.count(`SELECT count(*) FROM api_keys WHERE id = ? AND disabled_at IS NULL`, othersKey) != 1 {
+		t.Error("another creator's key was disabled")
+	}
 }
 
 func TestDeleteAccountOnFormaCloudGoesToTheSurvey(t *testing.T) {

@@ -2,7 +2,9 @@ package auth
 
 import (
 	"context"
+	"slices"
 
+	"github.com/yldm-tech/forma/apps/server/internal/apikey/disable"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
@@ -36,15 +38,15 @@ func (s *Service) deleteAccount(ctx context.Context, actor httpapi.Actor, passwo
 	if !ok {
 		return "", errInvalidPassword()
 	}
-	var customers []string
+	var removed removedAccount
 	if err := s.serializableJobTransaction(ctx, func(tx *Repository, jtx *jobs.Tx) error {
 		var err error
-		customers, err = s.removeAccount(ctx, tx, jtx, acc)
+		removed, err = s.removeAccount(ctx, tx, jtx, acc)
 		return err
 	}); err != nil {
 		return "", err
 	}
-	s.accountDeleted(ctx, acc, customers)
+	s.accountDeleted(ctx, acc, removed)
 	return s.afterDeletionURL(), nil
 }
 
@@ -90,7 +92,7 @@ func (s *Service) confirmAccountDeletion(ctx context.Context, actor httpapi.Acto
 		return "", err
 	}
 	var acc *account
-	var customers []string
+	var removed removedAccount
 	err := s.serializableJobTransaction(ctx, func(tx *Repository, jtx *jobs.Tx) error {
 		v, err := tx.consumeUserVerification(ctx, purposeAccountDeletion, secret.HashToken(token), actor.UserID, s.now())
 		if err != nil {
@@ -105,39 +107,57 @@ func (s *Service) confirmAccountDeletion(ctx context.Context, actor httpapi.Acto
 		if acc == nil {
 			return errInvalidToken()
 		}
-		customers, err = s.removeAccount(ctx, tx, jtx, acc)
+		removed, err = s.removeAccount(ctx, tx, jtx, acc)
 		return err
 	})
 	if err != nil {
 		return "", err
 	}
-	s.accountDeleted(ctx, acc, customers)
+	s.accountDeleted(ctx, acc, removed)
 	return s.afterDeletionURL(), nil
 }
 
-// removeAccount deletes the user together with every organization they are the only active owner of, as forma2 did with multiple organizations enabled (always, since its licence checks were removed). It must run in a Serializable transaction (Service.serializableJobTransaction): the organization module's owner guards are serializable, and only a serializable deletion conflicts with them, so a co-owner's concurrent demotion, removal or own deletion aborts one side instead of leaving the organization without an owner. SpiceDB relationships follow through the projection outbox triggers on the deleted rows. Returns the Stripe customers of the deleted organizations.
-func (s *Service) removeAccount(ctx context.Context, tx *Repository, jtx *jobs.Tx, acc *account) ([]string, error) {
+// removedAccount is what removeAccount leaves to do once its transaction has committed.
+type removedAccount struct {
+	// stripeCustomers are the Stripe customers of the organizations deleted with the account.
+	stripeCustomers []string
+	// disabledKeys are the API keys the user had created in the organizations that remain.
+	disabledKeys []disable.Key
+}
+
+// removeAccount deletes the user together with every organization they are the only active owner of, as forma2 did with multiple organizations enabled (always, since its licence checks were removed), and disables the API keys they created in every other organization: created_by is set to null with the user, so they are disabled first, while the creator can still be matched. It must run in a Serializable transaction (Service.serializableJobTransaction): the organization module's owner guards are serializable, and only a serializable deletion conflicts with them, so a co-owner's concurrent demotion, removal or own deletion aborts one side instead of leaving the organization without an owner. SpiceDB relationships follow through the projection outbox triggers on the deleted rows.
+func (s *Service) removeAccount(ctx context.Context, tx *Repository, jtx *jobs.Tx, acc *account) (removedAccount, error) {
 	soleOwned, err := tx.soleOwnedOrganizations(ctx, acc.ID)
 	if err != nil {
-		return nil, err
+		return removedAccount{}, err
 	}
 	customers, err := tx.stripeCustomers(ctx, soleOwned)
 	if err != nil {
-		return nil, err
+		return removedAccount{}, err
 	}
+	keys, err := disable.CreatedBy(ctx, tx.db, acc.ID, nil, disable.ReasonCreatorDeleted)
+	if err != nil {
+		return removedAccount{}, err
+	}
+	// Keys of the organizations deleted with the account go with them; only those that stay listed are reported.
+	keys = slices.DeleteFunc(keys, func(k disable.Key) bool { return slices.Contains(soleOwned, k.OrganizationID) })
 	if err := tx.deleteAccount(ctx, acc.ID, soleOwned); err != nil {
-		return nil, err
+		return removedAccount{}, err
 	}
 	// forma2 deleted the Brevo contact, by address, with the user.
-	return customers, s.contacts.Deleted(ctx, jtx, acc.Email)
+	return removedAccount{stripeCustomers: customers, disabledKeys: keys}, s.contacts.Deleted(ctx, jtx, acc.Email)
 }
 
-// accountDeleted records the deletion and, as forma2's deleteOrganization did for each organization that went with the account, cancels their Stripe subscriptions.
-func (s *Service) accountDeleted(ctx context.Context, acc *account, stripeCustomers []string) {
-	for _, customer := range stripeCustomers {
+// accountDeleted records the deletion and the API keys it disabled and, as forma2's deleteOrganization did for each organization that went with the account, cancels their Stripe subscriptions.
+func (s *Service) accountDeleted(ctx context.Context, acc *account, removed removedAccount) {
+	for _, customer := range removed.stripeCustomers {
 		s.billing.OrganizationDeleted(ctx, &customer)
 	}
 	s.logDeletion(ctx, acc)
+	for _, e := range disable.Events(removed.disabledKeys, disable.ReasonCreatorDeleted) {
+		e.ActorID = acc.ID.String()
+		s.logEvent(ctx, e)
+	}
 	analytics.Capture(acc.ID.String(), "delete_account", nil, analytics.Groups{})
 }
 

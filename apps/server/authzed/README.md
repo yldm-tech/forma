@@ -256,10 +256,7 @@ Each workspace scope touches its selected relation and deletes the other two,
 so repeating a write is idempotent and a lower permission removes any stale
 higher grant.
 
-API-key scopes are selected during creation and are not editable today. Label
-and `lastUsedAt` updates do not affect authorization and therefore do not
-project. There is no separate revoked state in the current data model: deleting
-an API key is revocation.
+API-key scopes are selected during creation and are not editable today. Label and `lastUsedAt` updates do not affect authorization and therefore do not project. Deleting an API key is revocation. A key is also disabled (`disabled_at`, `disabled_reason`) when its creator is removed from the organization, leaves it, deletes their account or is demoted below manager (`internal/apikey/disable`); disabling does not project either. A disabled key keeps its relationships, but `apikey.Authenticator` refuses it before any authorization check, so it is never the subject of one, and deleting it removes the relationships as for any key.
 
 Deletion cleanup removes every relationship on the API-key resource and every
 organization or workspace relationship where the API key is the subject.

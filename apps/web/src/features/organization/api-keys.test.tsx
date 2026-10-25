@@ -16,7 +16,7 @@ import { initI18n } from "../../lib/i18n";
 import type { ApiKey, CreatedApiKey } from "../../lib/queries/api-keys";
 import type { OrganizationDetail } from "../../lib/queries/organizations";
 import { toast } from "../../lib/toast";
-import { ApiKeysPage, ConnectAppBanner, permissionLabel } from "./api-keys";
+import { ApiKeysPage, ConnectAppBanner, permissionLabel, scopeSummary } from "./api-keys";
 
 // forma2's API keys page (modules/organization/settings/api-keys/page.tsx): a website or app survey needs no key, so the page points to the first workspace's SDK page while there is a workspace.
 
@@ -127,11 +127,15 @@ const existing: ApiKey = {
   createdAt: "2026-01-01T00:00:00Z",
   organizationAccess: { accessControl: { read: true, write: false } },
   workspacePermissions: [],
+  lastUsedAt: null,
+  createdBy: { id: "u1", name: "Ada Owner", formerMember: false },
+  disabledAt: null,
+  disabledReason: null,
 };
 
 /** The API keys endpoints over an in-memory list, so a create or delete shows up in the next list read. */
-const stubKeysServer = () => {
-  const keys: ApiKey[] = [existing];
+const stubKeysServer = (listed: ApiKey[] = [existing]) => {
+  const keys: ApiKey[] = [...listed];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string, init: RequestInit = {}) => {
@@ -147,6 +151,10 @@ const stubKeysServer = () => {
           createdAt: "2026-01-02T00:00:00Z",
           organizationAccess: { accessControl: { read: true, write: false } },
           workspacePermissions: [],
+          lastUsedAt: null,
+          createdBy: { id: "u1", name: "Ada Owner", formerMember: false },
+          disabledAt: null,
+          disabledReason: null,
           key: "fbk_plaintext",
         };
         keys.push(created);
@@ -202,13 +210,89 @@ test("tells the creator of a key that v3 and MCP can lag, only while that key is
   expect((await screen.findByText(note)).getAttribute("role")).toBe("status");
   expect(await screen.findByText("fbk_plaintext")).toBeTruthy();
 
-  // Deleting the key just created takes the note with it: no listed key is new any more.
-  const row = screen.getByText("CI").closest("tr");
+  // Deleting the key just created takes the note and the plaintext with it: no listed key is new any more. Until then the label shows twice, in the notice and in the key's row.
+  const row = within(screen.getByRole("table")).getByText("CI").closest("tr");
   if (!row) throw new Error("the new key has no row");
   fireEvent.click(within(row).getByRole("button", { name: i18n.t("common.delete") }));
   const confirm = await screen.findByRole("alertdialog");
   fireEvent.click(within(confirm).getByRole("button", { name: i18n.t("common.delete") }));
-  await waitFor(() => expect(screen.queryByText("CI")).toBeNull());
+  await waitFor(() => expect(screen.queryAllByText("CI")).toEqual([]));
+  expect(screen.queryByText("fbk_plaintext")).toBeNull();
   expect(screen.queryByText(note)).toBeNull();
   expect(screen.getByText("Existing")).toBeTruthy();
+});
+
+test("summarises a key's scope in one line: the first workspaces, how many more, and its organization access", () => {
+  const grant = (name: string, permission: "read" | "write" | "manage") => ({
+    workspaceId: name,
+    workspaceName: name,
+    permission,
+  });
+  expect(
+    scopeSummary(i18n.t, {
+      workspacePermissions: [grant("Growth", "manage"), grant("Ops", "read"), grant("Web", "write")],
+      organizationAccess: { accessControl: { read: false, write: true } },
+    })
+  ).toBe("Growth: Manage · Ops: Read · +1 more · Organization: Read & Write");
+  expect(
+    scopeSummary(i18n.t, {
+      workspacePermissions: [],
+      organizationAccess: { accessControl: { read: false, write: false } },
+    })
+  ).toBe("No access");
+});
+
+test("lists when each key was last used, who created it, and which keys a departed creator left disabled", async () => {
+  const usedAt = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+  stubKeysServer([
+    { ...existing, lastUsedAt: usedAt },
+    {
+      ...existing,
+      id: "k2",
+      label: "Left behind",
+      createdBy: { id: "u2", name: "Grace Gone", formerMember: true },
+      disabledAt: "2026-02-01T00:00:00Z",
+      disabledReason: "creator_removed",
+    },
+    { ...existing, id: "k3", label: "Orphan", createdBy: null },
+  ]);
+  await renderPage(<ApiKeysPage organization={owner} />);
+
+  const row = (label: string) => {
+    const found = screen.getByText(label).closest("tr");
+    if (!found) throw new Error(`no row for ${label}`);
+    return within(found);
+  };
+  await screen.findByText("Left behind");
+  expect(row("Existing").getByText("Ada Owner")).toBeTruthy();
+  expect(row("Existing").getByText("about 3 hours ago")).toBeTruthy();
+  expect(row("Existing").queryByText(i18n.t("common.disabled"))).toBeNull();
+  expect(row("Existing").getByText("Organization: Read")).toBeTruthy();
+
+  const formerMember = i18n.t("workspace.api_keys.former_member");
+  expect(row("Left behind").getByText("Grace Gone")).toBeTruthy();
+  expect(row("Left behind").getByText(formerMember)).toBeTruthy();
+  expect(row("Left behind").getByText(i18n.t("workspace.api_keys.never_used"))).toBeTruthy();
+  const badge = row("Left behind").getByText(i18n.t("common.disabled"));
+  expect(badge.getAttribute("title")).toBe(i18n.t("workspace.api_keys.disabled_reason_creator_removed"));
+  expect(row("Orphan").getByText(formerMember)).toBeTruthy();
+
+  // The key's dialog says why it stopped working and what to do.
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: i18n.t("workspace.api_keys.view_permissions_for", { label: "Left behind" }),
+    })
+  );
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByText(i18n.t("workspace.api_keys.disabled_reason_creator_removed"))).toBeTruthy();
+  expect(within(dialog).getByText(/can't be turned back on/)).toBeTruthy();
+  expect(within(dialog).getByText("Grace Gone")).toBeTruthy();
+});
+
+test("links the API reference on the website from the page header", async () => {
+  stubKeysServer();
+  await renderPage(<ApiKeysPage organization={owner} />);
+  const link = await screen.findByRole("link", { name: i18n.t("workspace.api_keys.api_reference") });
+  expect(link.getAttribute("href")).toBe("https://forma.yldm.ai/developers/#reference");
+  expect(link.getAttribute("target")).toBe("_blank");
 });

@@ -138,22 +138,29 @@ func (e *dbEnv) v2Key(org uuid.UUID, access OrganizationAccess, grants ...grantI
 		e.t.Fatal(err)
 	}
 	raw, _ := json.Marshal(access)
-	id, _, err := e.repo.create(e.ctx, newKeyRow{OrganizationID: org, CreatedBy: e.user(), Label: "key", HashedKey: k.HashedKey, LookupHash: k.LookupHash, OrganizationAccess: raw, Grants: grants})
+	created, err := e.repo.create(e.ctx, newKeyRow{OrganizationID: org, CreatedBy: e.creator(org), Label: "key", HashedKey: k.HashedKey, LookupHash: k.LookupHash, OrganizationAccess: raw, Grants: grants})
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	return id, k.Key
+	return created.ID, k.Key
+}
+
+// creator is a new manager of org, who may create its keys.
+func (e *dbEnv) creator(org uuid.UUID) uuid.UUID {
+	user := e.user()
+	e.member(org, user, "manager")
+	return user
 }
 
 // legacyKey stores a pre-bcrypt key as the forma2 migration carries it over: the SHA-256 of the whole raw key in both hash columns.
 func (e *dbEnv) legacyKey(org uuid.UUID, raw string, grants ...grantInput) uuid.UUID {
 	e.t.Helper()
 	digest := sha256Hex(raw)
-	id, _, err := e.repo.create(e.ctx, newKeyRow{OrganizationID: org, CreatedBy: e.user(), Label: "legacy", HashedKey: digest, LookupHash: digest, OrganizationAccess: []byte(`{"accessControl":{"read":false,"write":false}}`), Grants: grants})
+	created, err := e.repo.create(e.ctx, newKeyRow{OrganizationID: org, CreatedBy: e.creator(org), Label: "legacy", HashedKey: digest, LookupHash: digest, OrganizationAccess: []byte(`{"accessControl":{"read":false,"write":false}}`), Grants: grants})
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	return id
+	return created.ID
 }
 
 func (e *dbEnv) lastUsedAt(id uuid.UUID) *time.Time {

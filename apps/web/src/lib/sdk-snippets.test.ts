@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { expect, test } from "vite-plus/test";
-import { SDK_STUB_METHODS, sdkReferenceUrl, sdkSnippets } from "./sdk-snippets";
+import { SDK_STUB_METHODS, apiReferenceUrl, sdkReferenceUrl, sdkSnippets } from "./sdk-snippets";
 
 const WORKSPACE_ID = "0190a000-0000-7000-8000-000000000002";
 const APP_URL = "https://forma.example.com";
@@ -235,4 +235,10 @@ test("the SDK reference link follows the app's language to the website's closest
   expect(sdkReferenceUrl("ja-JP")).toBe("https://forma.yldm.ai/ja/developers/sdk/");
   expect(sdkReferenceUrl("zh-Hans-CN")).toBe("https://forma.yldm.ai/zh/developers/sdk/");
   expect(sdkReferenceUrl("zh-Hant-TW")).toBe("https://forma.yldm.ai/zh/developers/sdk/");
+});
+
+test("apiReferenceUrl points to the developers page's reference section in the closest website language", () => {
+  expect(apiReferenceUrl("en-US")).toBe("https://forma.yldm.ai/developers/#reference");
+  expect(apiReferenceUrl("ja-JP")).toBe("https://forma.yldm.ai/ja/developers/#reference");
+  expect(apiReferenceUrl("zh-Hant-TW")).toBe("https://forma.yldm.ai/zh/developers/#reference");
 });

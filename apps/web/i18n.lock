@@ -1644,6 +1644,7 @@ checksums:
     workspace/analysis/new_responses_pill: 9d45e8c6a91b67744980b06b26ac3903
     workspace/analysis/nps_formula_tooltip: 22f37aac6d65e65a0d787badcb4cf4f5
     workspace/analysis/refresh: 8dab72d1eded5437272bb02c543e4042
+    workspace/api_keys/access: 550606d4a12bdf108c1b12b925ca1b3a
     workspace/api_keys/add_api_key: 3c7633bae18a6e19af7a5af12f9bc3da
     workspace/api_keys/api_key: ce825fec5b3e1f8e27c45b1a63619985
     workspace/api_keys/api_key_copied_to_clipboard: daeeac786ba09ffa650e206609b88f9c
@@ -1652,8 +1653,19 @@ checksums:
     workspace/api_keys/api_key_label: 66e9effa26d3dccd76383eb858e18dd4
     workspace/api_keys/api_key_security_warning: 7c52e973ec6eaaa847beea823b506229
     workspace/api_keys/api_key_updated: 0e03754eb33742b4ee8d5fdad64c9b3f
+    workspace/api_keys/api_reference: e7c0bc41e2bcc45582e0ea9879937070
     workspace/api_keys/delete_api_key_confirmation: 05a784c03236093df32a902a795ed781
+    workspace/api_keys/disabled_description: f77524c6030c1f8f33804c56e30bd7e1
+    workspace/api_keys/disabled_reason_creator_deleted: 4ff9247d52d11ed2ef80bc7bfb0dbf1e
+    workspace/api_keys/disabled_reason_creator_demoted: 340d1b8405a98db789f98543e24bad1b
+    workspace/api_keys/disabled_reason_creator_left: 82dc9364d72e5dcec2965922f0ab7c13
+    workspace/api_keys/disabled_reason_creator_removed: 120c9848f3094b6c79c31caee3c876bb
     workspace/api_keys/duplicate_access: 7ac7ac5ba755ce94e6fc81afa5a21997
+    workspace/api_keys/former_member: c233eef3b9b1792b6a932935d904dda8
+    workspace/api_keys/last_used: 79c1790ff1f8cf956c06f93699704b4d
+    workspace/api_keys/never_used: a0d6a91032b55f05581651df64f0b4dc
+    workspace/api_keys/new_key_description: b33ef817d4df5ab4e054994facaa7943
+    workspace/api_keys/new_key_title: 4bade0fcd5109303b67dbb33cff85afc
     workspace/api_keys/no_api_keys_yet: 58593ed9f7e507dcd7ca7fe069add599
     workspace/api_keys/no_workspace_permissions_found: 1d719624828a9d3e433cdf6b387549f3
     workspace/api_keys/organization_access: 96a92fa907b15e0c0e47e33cac15be88
@@ -1662,6 +1674,10 @@ checksums:
     workspace/api_keys/organization_read: 2494ca23d10e5b6381eb271aceeb5270
     workspace/api_keys/organization_write: 0c8cd5e85bbf4a4ef271c6df37736df3
     workspace/api_keys/permissions: 2160be68b1d6b6577e64634e9feba2ed
+    workspace/api_keys/scope_more: f0be9cef4f29cd8e4af396331401f6c1
+    workspace/api_keys/scope_none: cdb44adb343d96f0a793f0ef31946d96
+    workspace/api_keys/scope_organization: c47873eb70bad62110cb5044f4a425e3
+    workspace/api_keys/scope_workspace: 99f3f2e2ceb05aafca176151f26332b1
     workspace/api_keys/secret: f041e5eb96121c8b4f2b8af7e0f83a9b
     workspace/api_keys/unable_to_copy_api_key: 148506832e31d033fa3569ce292d2120
     workspace/api_keys/unable_to_delete_api_key: 1fd76d9a22c5f5f8c241c4891fca8295

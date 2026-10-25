@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import { canSubmitApiKey, effectiveAccess, hasDuplicateWorkspace } from "./api-key-form";
+import { apiKeyScope, canSubmitApiKey, effectiveAccess, hasDuplicateWorkspace } from "./api-key-form";
 
 const none = { accessControl: { read: false, write: false } };
 
@@ -32,4 +32,23 @@ test("effectiveAccess: write implies read", () => {
     accessControl: { read: true, write: true },
   });
   expect(effectiveAccess(none)).toEqual(none);
+});
+
+test("apiKeyScope lists the first workspace grants, counts the rest and reads write as including read", () => {
+  const grant = (name: string) => ({ workspaceId: name, workspaceName: name, permission: "read" as const });
+  expect(
+    apiKeyScope({ workspacePermissions: [grant("A"), grant("B"), grant("C")], organizationAccess: none })
+  ).toEqual({ shown: [grant("A"), grant("B")], more: 1, organization: null });
+  expect(
+    apiKeyScope({
+      workspacePermissions: [],
+      organizationAccess: { accessControl: { read: false, write: true } },
+    })
+  ).toEqual({ shown: [], more: 0, organization: "write" });
+  expect(
+    apiKeyScope({
+      workspacePermissions: [grant("A")],
+      organizationAccess: { accessControl: { read: true, write: false } },
+    })
+  ).toEqual({ shown: [grant("A")], more: 0, organization: "read" });
 });
