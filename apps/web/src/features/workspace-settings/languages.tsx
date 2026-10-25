@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
+import { useUnsavedChanges } from "../../components/shell/unsaved-changes";
 import { ConfirmationModal } from "../../components/ui/confirmation-modal";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -60,6 +61,16 @@ const storedRows = (workspace: WorkspaceDetail): LanguageRowValue[] =>
 const storedDefault = (workspace: WorkspaceDetail) =>
   normalizeLanguageCode(workspace.config.defaultSurveyLanguage ?? "") ?? "";
 
+/** Whether the rows differ from the stored ones, reading a cleared alias as the absent one it saves as. */
+const rowsChanged = (rows: LanguageRowValue[], stored: LanguageRowValue[]) =>
+  rows.length !== stored.length ||
+  rows.some(
+    (row, index) =>
+      row.id !== stored[index]?.id ||
+      row.code !== stored[index]?.code ||
+      (row.alias || "") !== (stored[index]?.alias || "")
+  );
+
 interface Confirmation {
   open: boolean;
   text: string;
@@ -93,6 +104,12 @@ const EditLanguages = ({
     isButtonDisabled: false,
   });
   const options = useMemo(() => defaultLanguageOptions(languages, locale), [languages, locale]);
+  useUnsavedChanges(
+    isEditing &&
+      (deletedIds.length > 0 ||
+        defaultLanguage !== storedDefault(workspace) ||
+        rowsChanged(languages, storedRows(workspace)))
+  );
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: workspaceKeys.detail(workspace.id) });
 

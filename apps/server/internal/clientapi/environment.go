@@ -19,6 +19,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
+	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
 const (
@@ -28,8 +29,8 @@ const (
 	stateTTL = time.Minute
 	// stateExpiry is when the SDK is told to fetch the state again, so a paused survey, a new action or changed targeting reaches returning visitors within about five minutes. forma2 said an hour, which kept them on the old state that long although the server rebuilds it every minute.
 	stateExpiry = 5 * time.Minute
-	// maxStateSurveys is how many surveys the state lists, newest first. When a workspace has more live app surveys, the state says how many it left out under truncated.
-	maxStateSurveys = 100
+	// maxStateSurveys is how many surveys the state lists, newest first. When a workspace has more live app surveys, the state says how many it left out under truncated. The survey list warns about the same surveys through survey.SDKState, which shares the constant and the query's filter and order.
+	maxStateSurveys = survey.MaxSDKStateSurveys
 
 	// surveyNamePlaceholder and segmentTitlePlaceholder are forma2's PUBLIC_API_SURVEY_NAME_PLACEHOLDER and its segment counterpart: older SDKs decode these fields as required, but their values are internal.
 	surveyNamePlaceholder   = "[deprecated] survey name omitted from public API - will be removed soon"

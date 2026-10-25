@@ -57,7 +57,8 @@ export const NoMobileOverlay = ({ email }: { email: string }) => {
       setStatus(errorMessage(t, error));
       return;
     }
-    await navigate({ href: "/auth/login" });
+    // The session is gone, so a page with unsaved edits has nothing left to keep editing: skip its "Discard changes?" question.
+    await navigate({ href: "/auth/login", ignoreBlocker: true });
   };
 
   return (

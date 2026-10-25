@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ChevronDownIcon,
   InfoIcon,
@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertDescription, AlertTitle } from "../../../components/ui/alert";
 import { Button } from "../../../components/ui/button";
 import {
   DropdownMenu,
@@ -24,7 +25,7 @@ import { cn } from "../../../lib/cn";
 import { readStorage, writeStorage } from "../../../lib/storage";
 import { workspaceAIQuery } from "../../ai/availability";
 import { CreateWithAIDialog } from "../ai-create/create-with-ai-dialog";
-import { CUSTOM_TEMPLATE_ID, publicDomainQuery, v3ErrorMessage } from "../api";
+import { CUSTOM_TEMPLATE_ID, publicDomainQuery, surveySdkStateQuery, v3ErrorMessage } from "../api";
 import { TemplateGallery } from "../templates/template-gallery";
 import { useCreateSurveyFromTemplate } from "../templates/use-create-survey";
 import {
@@ -191,6 +192,39 @@ const SurveyTableHeader = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+/**
+ * The live app surveys the SDK never receives: its workspace state lists only the newest few, and an older survey past that cap is silently never shown. Names the newest of them, each linked to its summary, so the creator can complete or pause the ones they no longer need.
+ */
+const SdkStateWarning = ({ workspaceId }: { workspaceId: string }) => {
+  const { t } = useTranslation();
+  const state = useQuery(surveySdkStateQuery(workspaceId)).data;
+  if (!state || state.excludedCount === 0) return null;
+  const unnamed = state.excludedCount - state.excluded.length;
+  return (
+    <Alert variant="warning" role="status" data-testid="sdk-state-truncated">
+      <AlertTitle>
+        {t("workspace.surveys.list.state_truncated_title", { count: state.excludedCount })}
+      </AlertTitle>
+      <AlertDescription>
+        <p>{t("workspace.surveys.list.state_truncated", { limit: state.limit })}</p>
+        <ul className="mt-1 list-disc pl-5">
+          {state.excluded.map((survey) => (
+            <li key={survey.id}>
+              <Link
+                to="/workspaces/$workspaceId/surveys/$surveyId/summary"
+                params={{ workspaceId, surveyId: survey.id }}
+                className="bg-transparent! underline">
+                {survey.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {unnamed > 0 && <p>{t("workspace.surveys.list.state_truncated_more", { count: unnamed })}</p>}
+      </AlertDescription>
+    </Alert>
   );
 };
 
@@ -396,6 +430,7 @@ export const SurveysList = ({
         }
       />
       <div className="space-y-6">
+        {channel !== "link" && <SdkStateWarning workspaceId={workspaceId} />}
         <SurveyFilters
           key={filtersResetCount}
           filters={normalized}

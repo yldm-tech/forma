@@ -47,6 +47,17 @@ describe("documentTitle", () => {
     );
   });
 
+  // The tab names a page as the settings navigation does, not by a heading forma2 inherited.
+  test("names the members and the branding pages as the settings navigation does", () => {
+    const ORG = "/_authenticated/organizations/$organizationId";
+    expect(title(["__root__", "/_authenticated", ORG, `${ORG}/settings`, `${ORG}/settings/teams`])).toBe(
+      "common.members_and_teams | Forma"
+    );
+    expect(title(["__root__", "/_authenticated", ORG, `${ORG}/settings`, `${ORG}/settings/domain`])).toBe(
+      "common.branding_and_links | Forma"
+    );
+  });
+
   test("is Forma for a page without a title", () => {
     expect(title(["__root__", "/auth", "/auth/verify-email"])).toBe("Forma");
   });

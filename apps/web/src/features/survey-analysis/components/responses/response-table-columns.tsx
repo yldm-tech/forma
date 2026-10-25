@@ -5,8 +5,17 @@ import type { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { TFunction } from "i18next";
-import { EyeOffIcon, FileDigitIcon, FileType2Icon, MailIcon, TagIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ClockIcon,
+  EyeOffIcon,
+  FileDigitIcon,
+  FileType2Icon,
+  MailIcon,
+  TagIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
+import { Badge } from "../../../../components/ui/badge";
 import { IdBadge } from "../../../../components/ui/id-badge";
 import { cn } from "../../../../lib/cn";
 import { getLocalizedValue } from "../../../../lib/survey/i18n";
@@ -223,7 +232,15 @@ export const generateResponseTableColumns = (
     accessorKey: "status",
     size: 200,
     header: () => <div className="gap-x-1.5">{t("common.status")}</div>,
-    cell: ({ row }) => <ResponseBadges items={[{ value: row.original.status }]} showId={false} />,
+    // A completed response green with a check, one still open grey with a clock, so the two read apart at a glance.
+    cell: ({ row }) => (
+      <Badge
+        type={row.original.finished ? "success" : "gray"}
+        icon={row.original.finished ? CheckIcon : ClockIcon}
+        text={row.original.status}
+        className="my-1"
+      />
+    ),
   };
 
   const verifiedEmailColumn: ColumnDef<TResponseTableData> = {
