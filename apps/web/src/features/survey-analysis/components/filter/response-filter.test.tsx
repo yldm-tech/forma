@@ -28,7 +28,8 @@ vi.mock("../../api", () => ({
     queryKey: ["filter-data", surveyId],
     queryFn: async () => ({
       environmentTags: [],
-      attributes: {},
+      attributes: { seats: ["25", "100"] },
+      attributeTypes: { seats: "number" },
       meta: {},
       hiddenFields: {},
       reservedValues: {},
@@ -109,8 +110,8 @@ const scoreRow = (id: string, elementType: TSurveyElementTypeEnum, filterValue: 
   filterType: { filterValue, filterComboBoxValue: undefined },
 });
 
-/** Opens the popover on the given filter, clicks Apply, and returns what was applied. */
-const applyFilter = (filter: SelectedFilterValue): SelectedFilterValue => {
+/** Renders the popover on the given filter and opens it. */
+const openFilter = (filter: SelectedFilterValue) => {
   const setSelectedFilter = vi.fn();
   context.selectedFilter = filter;
   context.setSelectedFilter = setSelectedFilter;
@@ -122,10 +123,16 @@ const applyFilter = (filter: SelectedFilterValue): SelectedFilterValue => {
     </QueryClientProvider>
   );
   fireEvent.click(screen.getByRole("button", { name: new RegExp(i18n.t("common.filter")) }));
-  fireEvent.click(screen.getByRole("button", { name: i18n.t("common.apply_filters") }));
-  expect(setSelectedFilter).toHaveBeenCalledTimes(1);
-  return setSelectedFilter.mock.calls[0]?.[0] as SelectedFilterValue;
+  const apply = (): SelectedFilterValue => {
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.apply_filters") }));
+    expect(setSelectedFilter).toHaveBeenCalledTimes(1);
+    return setSelectedFilter.mock.calls[0]?.[0] as SelectedFilterValue;
+  };
+  return { apply };
 };
+
+/** Opens the popover on the given filter, clicks Apply, and returns what was applied. */
+const applyFilter = (filter: SelectedFilterValue): SelectedFilterValue => openFilter(filter).apply();
 
 // Submitted and Skipped on a score element take no value (the value box is disabled), so Apply must keep the row and send the operator alone.
 describe("ResponseFilter Apply", () => {
@@ -164,5 +171,27 @@ describe("ResponseFilter Apply and the keyword search", () => {
   test("applying the rows keeps the keyword the search box set", () => {
     const applied = applyFilter({ filter: [], responseStatus: "all", keyword: "onboarding" });
     expect(applied.keyword).toBe("onboarding");
+  });
+});
+
+// A link made before contact attributes were typed decodes an attribute row without its type; the popover offers the attribute's number operators, so the applied row must carry the type and send a numeric comparison.
+describe("ResponseFilter Apply and an untyped attribute row", () => {
+  test("the applied row takes the attribute's type from the filter data", async () => {
+    const { apply } = openFilter({
+      responseStatus: "all",
+      filter: [
+        {
+          elementType: { type: OptionsType.ATTRIBUTES, label: "seats", id: "seats" },
+          filterType: { filterValue: "Equals", filterComboBoxValue: "25" },
+        },
+      ],
+    });
+    // The filter data has loaded once the row offers a number box for its value.
+    await screen.findByRole("spinbutton");
+    const applied = apply();
+    expect(applied.filter[0]?.elementType.dataType).toBe("number");
+    expect(getFormattedFilters(survey, applied, {} as DateRange).contactAttributes).toEqual({
+      seats: { op: "equals", value: 25 },
+    });
   });
 });

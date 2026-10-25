@@ -9,7 +9,7 @@ import { EmptyState } from "../../../../components/ui/empty-state";
 import { SkeletonLoader } from "../../../../components/ui/skeleton-loader";
 import { getLocalizedValue } from "../../../../lib/survey/i18n";
 import { toast } from "../../../../lib/toast";
-import { hasActiveFilters } from "../../lib/filter-state";
+import { hasActiveFilters, withSummaryFilterRow } from "../../lib/filter-state";
 import { OptionsType, type SelectedFilterValue } from "../../lib/filter-types";
 import { constructToastMessage } from "../../lib/summary";
 import { AnalysisEmptyState } from "../analysis-empty-state";
@@ -90,18 +90,12 @@ export const SummaryList = ({
       type: OptionsType.ELEMENTS,
     };
     const row = { elementType: value, filterType: { filterComboBoxValue, filterValue } };
-    const existingIndex = selectedFilter.filter.findIndex((filter) => filter.elementType.id === elementId);
-    const next: SelectedFilterValue = {
-      ...selectedFilter,
-      filter:
-        existingIndex === -1
-          ? [...selectedFilter.filter, row]
-          : selectedFilter.filter.map((filter, index) => (index === existingIndex ? row : filter)),
-    };
+    const { rows, replaced } = withSummaryFilterRow(selectedFilter.filter, row);
+    const next: SelectedFilterValue = { ...selectedFilter, filter: rows };
     toast.success(
-      existingIndex === -1
-        ? constructToastMessage(elementType, filterValue, survey, elementId, t, filterComboBoxValue)
-        : t("workspace.surveys.summary.filter_updated_successfully")
+      replaced
+        ? t("workspace.surveys.summary.filter_updated_successfully")
+        : constructToastMessage(elementType, filterValue, survey, elementId, t, filterComboBoxValue)
     );
     setSelectedFilter(next);
   };

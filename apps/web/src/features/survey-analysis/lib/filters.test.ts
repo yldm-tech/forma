@@ -1706,8 +1706,25 @@ describe("open text, contact attribute and repeated-field filters", () => {
         attributeRow("seats", "number", "Is greater than", "many"),
         attributeRow("renewal", "date", "Is on", "March"),
         attributeRow("plan", "string", "Is greater than", "a"),
+        attributeRow("seats", undefined, "Is greater than", "many"),
       ]).contactAttributes
     ).toBe(undefined);
+  });
+
+  test("an untyped attribute row (an old link) still sends a comparison its chip shows, as a number", () => {
+    expect(
+      format([
+        attributeRow("seats", undefined, "Is greater than", "20"),
+        attributeRow("seats", undefined, "Is less than", "100"),
+        attributeRow("plan", undefined, "Equals", "25"),
+      ]).contactAttributes
+    ).toEqual({
+      seats: [
+        { op: "greaterThan", value: 20 },
+        { op: "lessThan", value: 100 },
+      ],
+      plan: { op: "equals", value: "25" },
+    });
   });
 
   test("the keyword search is sent trimmed, and a blank one not at all", () => {

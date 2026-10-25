@@ -74,6 +74,21 @@ const withoutIncompleteRows = (value: SelectedFilterValue): SelectedFilterValue 
   ),
 });
 
+/** A contact attribute row from a link made before attributes were typed carries no type. The popover offers it its attribute's operators by the filter data's type, so the applied row takes that type too, or a number or date operator picked there could not form the condition its chip shows. */
+const withContactAttributeTypes = (
+  value: SelectedFilterValue,
+  options: ElementFilterOptions[]
+): SelectedFilterValue => ({
+  ...value,
+  filter: value.filter.map((row) => {
+    if (row.elementType.type !== OptionsType.ATTRIBUTES || row.elementType.dataType) return row;
+    const dataType = findFilterOption(options, row.elementType)?.fieldDataType;
+    return dataType === "string" || dataType === "number" || dataType === "date"
+      ? { ...row, elementType: { ...row.elementType, dataType } }
+      : row;
+  }),
+});
+
 /** forma2's ResponseFilter: the popover that edits the filter rows and the response status, applied together. The options are read from the survey's filter data when the popover opens. */
 export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
   const { t } = useTranslation();
@@ -161,7 +176,7 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
   };
 
   const handleApplyFilters = () => {
-    setSelectedFilter(withoutIncompleteRows(filterValue));
+    setSelectedFilter(withContactAttributeTypes(withoutIncompleteRows(filterValue), elementFilterOptions));
     setIsOpen(false);
   };
 
@@ -339,11 +354,15 @@ export const AppliedFilterChips = () => {
         <li
           key={chip.key}
           className="flex h-9 max-w-96 items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 pr-1 pl-2.5 text-sm text-slate-700">
-          {/* A long question is cut, never the condition after it. */}
+          {/* A long question is cut before the condition after it; a condition is cut only past max-w-56 (typed text, many values), which leaves the label room and keeps the remove button inside the chip. */}
           <span className="min-w-0 truncate" title={chip.label}>
             {chip.label}
           </span>
-          {chip.condition && <span className="shrink-0 font-medium text-slate-900">{chip.condition}</span>}
+          {chip.condition && (
+            <span className="max-w-56 shrink-0 truncate font-medium text-slate-900" title={chip.condition}>
+              {chip.condition}
+            </span>
+          )}
           <button
             type="button"
             className="focus-visible:ring-ring shrink-0 cursor-pointer rounded-sm p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-800 focus-visible:ring-2 focus-visible:outline-hidden"

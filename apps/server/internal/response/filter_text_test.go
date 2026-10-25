@@ -131,7 +131,7 @@ func TestSeveralConditionsOnOneKeyAllHold(t *testing.T) {
 	}
 }
 
-// Contact attributes filter by their type: text by the text operators, a number (stored as text, or as a JSON number) by comparisons, a date by its day. notEquals and isNotSet count a response without the attribute, or without a contact.
+// Contact attributes filter by their type: text by the text operators, a number (stored as text, or as a JSON number) by comparisons, a date by its day. Every negative operator (notEquals, the doesNot text operators, isNotSet) counts a response without the attribute, or without a contact.
 func TestContactAttributeOperatorsFollowTheAttributesType(t *testing.T) {
 	e := newEnv(t)
 	owner := e.user()
@@ -146,6 +146,9 @@ func TestContactAttributeOperatorsFollowTheAttributesType(t *testing.T) {
 		{"text notEquals counts responses without a contact", `{"contactAttributes":{"plan":{"op":"notEquals","value":"pro"}}}`, []string{"pricing", "address", "contact", "choice", "empty"}},
 		{"text contains ignores case", `{"contactAttributes":{"plan":{"op":"contains","value":"PRO"}}}`, []string{"onboarding", "address"}},
 		{"text startsWith", `{"contactAttributes":{"plan":{"op":"startsWith","value":"ent"}}}`, []string{"pricing"}},
+		{"text doesNotContain counts responses without a contact, as notEquals does", `{"contactAttributes":{"plan":{"op":"doesNotContain","value":"PRO"}}}`, []string{"pricing", "contact", "choice", "empty"}},
+		{"text doesNotEndWith counts responses without a contact", `{"contactAttributes":{"plan":{"op":"doesNotEndWith","value":"e"}}}`, []string{"onboarding", "address", "choice", "empty"}},
+		{"text doesNotStartWith counts a response without the attribute", `{"contactAttributes":{"renewal":{"op":"doesNotStartWith","value":"2026-03-01"}}}`, []string{"pricing", "address", "contact", "choice", "empty"}},
 		{"isSet", `{"contactAttributes":{"renewal":{"op":"isSet"}}}`, []string{"onboarding", "pricing"}},
 		{"isNotSet", `{"contactAttributes":{"renewal":{"op":"isNotSet"}}}`, []string{"address", "contact", "choice", "empty"}},
 		{"number greaterThan reads text and JSON numbers", `{"contactAttributes":{"seats":{"op":"greaterThan","value":2}}}`, []string{"onboarding", "pricing", "address"}},

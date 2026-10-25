@@ -484,7 +484,7 @@ func attributeDay(p jsonPath) *cond {
 	return q("(CASE WHEN jsonb_typeof(", p, ") = 'string' AND (", p, " #>> '{}') ~ ", arg{attributeDatePattern}, " THEN left(", p, " #>> '{}', 10) END)")
 }
 
-// attributeCondition is one condition on the contact attribute snapshot a response holds, by the attribute's type, which the operator and the value's kind name: a string value compares as text (equals, notEquals and the text operators), a number value as a number (equals, notEquals and the comparisons), a YYYY-MM-DD value with isBefore, isAfter or isSameDay as a day. notEquals and isNotSet count an absent attribute, or no contact at all, as a match. ok is false for a malformed condition.
+// attributeCondition is one condition on the contact attribute snapshot a response holds, by the attribute's type, which the operator and the value's kind name: a string value compares as text (equals, notEquals and the text operators), a number value as a number (equals, notEquals and the comparisons), a YYYY-MM-DD value with isBefore, isAfter or isSameDay as a day. Every negative operator (notEquals, the doesNot text operators, isNotSet) counts an absent attribute, or no contact at all, as a match. ok is false for a malformed condition.
 func attributeCondition(p jsonPath, c Condition) (*cond, bool) {
 	switch c.Op {
 	case "isSet":
@@ -504,7 +504,12 @@ func attributeCondition(p jsonPath, c Condition) (*cond, bool) {
 		if !ok {
 			return nil, false
 		}
-		return textCondition(p, c.Op, v.(string)), true
+		test := textCondition(p, c.Op, v.(string))
+		if strings.HasPrefix(c.Op, "doesNot") {
+			// NOT over an absent value is NULL, which would drop the response; an absent attribute does not contain the text, as it does not equal a value.
+			return q("(", test, " OR ", p, " IS NULL)"), true
+		}
+		return test, true
 	}
 	v, ok := jsonValue(c.Value, "string", "number")
 	if !ok {

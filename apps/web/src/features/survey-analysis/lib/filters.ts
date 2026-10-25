@@ -347,10 +347,10 @@ type TContactAttributeFilterCondition = Extract<
   { op: string }
 >;
 
-/** One contact attribute row → one condition: a number attribute sends a real number, which the server compares numerically against the text the response's snapshot holds; a date attribute sends the picked day. Null when the row cannot form a valid condition. */
+/** One contact attribute row → one condition: a number attribute sends a real number, which the server compares numerically against the text the response's snapshot holds; a date attribute sends the picked day. A row without a type (a link from before attributes were typed) sends text, except that a comparison sends its value as a number, since only a number attribute offers one. Null when the row cannot form a valid condition. */
 const buildContactAttributeCondition = (
   filterType: FilterValue["filterType"],
-  dataType: TContactAttributeDataType
+  dataType: TContactAttributeDataType | undefined
 ): TContactAttributeFilterCondition | null => {
   const op = CONTACT_ATTRIBUTE_OP_MAP[filterType.filterValue ?? ""];
   if (!op) return null;
@@ -365,12 +365,13 @@ const buildContactAttributeCondition = (
   if (op === "isSameDay" || op === "isBefore" || op === "isAfter") {
     return /^\d{4}-\d{2}-\d{2}$/.test(value) ? ({ op, value } as TContactAttributeFilterCondition) : null;
   }
-  if (dataType === "number") {
+  const isComparison = op === "greaterThan" || op === "lessThan";
+  if (dataType === "number" || (dataType === undefined && isComparison)) {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return null;
     return { op, value: numeric } as TContactAttributeFilterCondition;
   }
-  if (op === "greaterThan" || op === "lessThan") return null;
+  if (isComparison) return null;
   return { op, value } as TContactAttributeFilterCondition;
 };
 
@@ -829,12 +830,12 @@ const processElementFilters = (
   });
 };
 
-// Contact attribute rows → the `contactAttributes` group, each by its attribute's type. A row from before attributes were typed (a saved link) carries no type and is text, which is what it filtered as then.
+// Contact attribute rows → the `contactAttributes` group, each by its attribute's type. A row from before attributes were typed (a saved link) carries no type until the filter popover applies it with the type the filter data reports; until then it is text, which is what it filtered as then.
 const processContactAttributeFilters = (attributes: FilterValue[], filters: TResponseFilterCriteria) => {
   attributes.forEach(({ filterType, elementType }) => {
     const key = elementType.id ?? elementType.label;
     if (!key) return;
-    const condition = buildContactAttributeCondition(filterType, elementType.dataType ?? "string");
+    const condition = buildContactAttributeCondition(filterType, elementType.dataType);
     if (!condition) return;
     addCondition((filters.contactAttributes ??= {}), key, condition);
   });

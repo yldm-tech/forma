@@ -128,9 +128,8 @@ export const ResponsePage = ({
 
   return (
     <>
-      <div className="flex min-h-9 flex-wrap items-start justify-between gap-1.5">
-        <CustomFilter survey={surveyWithRecall} />
-        {canSearch && <ResponseKeywordSearch />}
+      <div className="flex min-h-9 gap-1.5">
+        <CustomFilter survey={surveyWithRecall} search={canSearch && <ResponseKeywordSearch />} />
       </div>
       {responses.isError && (
         <p role="alert" className="text-sm text-red-600">
