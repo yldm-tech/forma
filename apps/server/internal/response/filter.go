@@ -576,7 +576,7 @@ func answerVariants(el *surveydoc.Element, v any) []any {
 	return out
 }
 
-// includesOne is forma2's includesOne, matching a chosen choice in every language. Choosing the "Other" choice of a choice element means "answered with something no predefined label covers": a multi-select answer that is not an ordering of distinct predefined labels, a single-select answer that is none of them, where the labels of the other chosen choices, in any language, count as covered by none. Otherwise a value matches as an element of an array answer or as the whole answer.
+// includesOne is forma2's includesOne, matching a chosen choice in every language. Choosing the "Other" choice of a choice element means "answered with something no predefined label covers": a multi-select answer that is not an ordering of distinct predefined labels, a single-select answer that is none of them, where the labels of the other chosen choices, in any language, count as covered by none. Only an answer counts, as the summary counts it: an absent, empty-string or empty-list answer is skipped, never Other, even when every label is chosen. Otherwise a value matches as an element of an array answer or as the whole answer.
 func includesOne(sv *Survey, key string, values []any) *cond {
 	p := jsonPath{"data", []string{key}}
 	chosen := map[string]bool{}
@@ -607,15 +607,17 @@ func includesOne(sv *Survey, key string, values []any) *cond {
 				}
 			}
 			list.w("]")
+			// The negation of the skipped operator.
+			answered := q("(", p, " IS NOT NULL AND ", p, ` <> '""'::jsonb AND `, p, " <> '[]'::jsonb)")
 			if n == 0 {
-				return q("TRUE")
+				return answered
 			}
 			if el.Type == surveydoc.ElementMultipleChoiceMulti {
-				return q("(", p, " IS NOT NULL AND NOT (jsonb_typeof(", p, ") = 'array' AND jsonb_array_length(", p, ") > 0",
+				return q("(", answered, " AND NOT (jsonb_typeof(", p, ") = 'array'",
 					" AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(", p, ") e WHERE NOT (e.value = ANY (", list, ")))",
 					" AND (SELECT count(*) = count(DISTINCT e.value) FROM jsonb_array_elements(", p, ") e)))")
 			}
-			return q("(", p, " IS NOT NULL AND NOT (", p, " = ANY (", list, ")))")
+			return q("(", answered, " AND NOT (", p, " = ANY (", list, ")))")
 		}
 	}
 	var answers []any

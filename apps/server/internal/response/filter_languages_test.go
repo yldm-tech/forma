@@ -44,6 +44,7 @@ func languageSurvey(t *testing.T, e *env, ws uuid.UUID) (uuid.UUID, map[string]u
 		{"deOther", ptr("de"), `{"ml_best":"Etwas anderes","ml_multi":["Support","Mein Text"]}`},
 		{"en2", nil, `{"ml_best":"Price","ml_mx":{"Speed":"Bad"}}`},
 		{"mixed", ptr("de"), `{"ml_mx":{"Tempo":"Good"}}`},
+		{"skipped", nil, `{"ml_best":"","ml_multi":[]}`},
 	} {
 		responses[r.name] = e.insert(`INSERT INTO responses (survey_id, finished, data, language) VALUES (?, true, ?::jsonb, ?) RETURNING id`, sv, r.data, r.language)
 	}
@@ -71,6 +72,9 @@ func TestAnswerFiltersMatchChoicesInEveryLanguage(t *testing.T) {
 		{"multi choice includesAll is every choice, each in any language", `{"data":{"ml_multi":{"op":"includesAll","value":["Speed","Price"]}}}`, []string{"de", "zh"}},
 		{"multi choice includesAll of a label two languages share", `{"data":{"ml_multi":{"op":"includesAll","value":["Support"]}}}`, []string{"en", "ja", "deOther"}},
 		{"multi choice Other beside a choice", `{"data":{"ml_multi":{"op":"includesOne","value":["Support","Other"]}}}`, []string{"en", "ja", "deOther"}},
+		// With every choice chosen nothing is left to exclude, and a skipped or absent answer is still no answer.
+		{"single choice every choice and Other is every answer", `{"data":{"ml_best":{"op":"includesOne","value":["Speed","Price","Other"]}}}`, []string{"en", "de", "ja", "zh", "deOther", "en2"}},
+		{"multi choice every choice and Other is every answer", `{"data":{"ml_multi":{"op":"includesOne","value":["Speed","Price","Support","Other"]}}}`, []string{"en", "de", "ja", "zh", "deOther"}},
 		// A German row label with the English column label ("mixed") is no cell of either language.
 		{"matrix cell", `{"data":{"ml_mx":{"op":"matrix","value":{"Speed":"Good"}}}}`, []string{"en", "de", "zh"}},
 		{"matrix cell of another column", `{"data":{"ml_mx":{"op":"matrix","value":{"Speed":"Bad"}}}}`, []string{"ja", "en2"}},
