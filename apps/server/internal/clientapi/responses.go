@@ -17,12 +17,14 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/response/answers"
+	"github.com/yldm-tech/forma/apps/server/internal/sdkidentity"
 )
 
-// responseInput is ZResponseInput (v1) or ZResponseInputV2 as validated: v1 names the respondent by userId, v2 by contactId. createdAt and updatedAt are validated but never stored.
+// responseInput is ZResponseInput (v1) or ZResponseInputV2 as validated: v1 names the respondent by userId, with the userHash that verifies it in a workspace that requires verified identities, v2 by contactId, a contact id or the token the SDK was given in its place (sdkidentity.ContactToken). createdAt and updatedAt are validated but never stored.
 type responseInput struct {
 	SurveyID       string
 	UserID         *string
+	UserHash       *string
 	ContactID      *string
 	DisplayID      *string
 	SingleUseID    *string
@@ -47,6 +49,7 @@ func parseResponseInput(body any, text string, v2 bool) (*responseInput, *issues
 	out.SurveyID, _ = is.id("surveyId", in.get("surveyId"), required)
 	if !v2 {
 		out.UserID = is.optString("userId", in.get("userId"), nullish)
+		out.UserHash = is.optString("userHash", in.get("userHash"), nullish)
 	}
 	out.DisplayID = is.optString("displayId", in.get("displayId"), nullish)
 	out.SingleUseID = is.optString("singleUseId", in.get("singleUseId"), nullish)
@@ -62,7 +65,9 @@ func parseResponseInput(body any, text string, v2 bool) (*responseInput, *issues
 	out.TTC = is.ttc("ttc", in.get("ttc"), rawMember(text, "ttc"))
 	out.Meta = is.meta("meta", in.get("meta"))
 	if v2 {
-		if raw, ok := is.id("contactId", in.get("contactId"), nullish); ok {
+		if token, ok := in.get("contactId").(string); ok && sdkidentity.IsContactToken(token) {
+			out.ContactID = &token
+		} else if raw, ok := is.id("contactId", in.get("contactId"), nullish); ok {
 			out.ContactID = &raw
 		}
 	}
@@ -119,6 +124,10 @@ func (h *Handler) createResponseV1(c *gin.Context) {
 	in, is := parseResponseInput(body, text, false)
 	if is.failed() {
 		writeError(c, badRequest(msgInvalidFields, is.details))
+		return
+	}
+	if in.UserID, err = h.verifiedUserID(ctx, ws.ID, in.UserID, in.UserHash); err != nil {
+		h.fail(c, err, msgGeneric)
 		return
 	}
 	sv, err := h.responses.Survey(ctx, in.SurveyID)
@@ -249,8 +258,15 @@ func (h *Handler) writeNewResponse(c *gin.Context, sv *response.Survey, workspac
 		Locale: mailer.MatchLocale(c.GetHeader("Accept-Language")),
 	}
 	if in.ContactID != nil {
-		id, _ := rowid.Parse(*in.ContactID)
-		create.ContactID = &id
+		if sdkidentity.IsContactToken(*in.ContactID) {
+			// A token that names no contact of this workspace records the response without one, as an unknown contact id does.
+			if id, ok := sdkidentity.ParseContactToken(h.cfg, workspaceID, *in.ContactID); ok {
+				create.ContactID = &id
+			}
+		} else {
+			id, _ := rowid.Parse(*in.ContactID)
+			create.ContactID = &id
+		}
 	}
 	result, err := h.responses.Create(ctx, sv, create)
 	if err != nil {

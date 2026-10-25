@@ -1,11 +1,14 @@
 package clientapi
 
 import (
+	"encoding/json"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/google/uuid"
+
+	"github.com/yldm-tech/forma/apps/server/internal/sdkidentity"
 )
 
 func (e *env) identify(t *testing.T, ws uuid.UUID, body any) result {
@@ -21,6 +24,34 @@ func stateData(t *testing.T, r result) map[string]any {
 		t.Fatalf("identify %d %s", r.Status, r.Body)
 	}
 	return r.data(t)["state"].(map[string]any)["data"].(map[string]any)
+}
+
+// contactOf is the contact an identify answer names by token.
+func (e *env) contactOf(t *testing.T, ws uuid.UUID, d map[string]any) uuid.UUID {
+	t.Helper()
+	token, _ := d["contactId"].(string)
+	id, ok := sdkidentity.ParseContactToken(e.cfg, ws, token)
+	if !ok {
+		t.Fatalf("contactId %v is not a contact token of the workspace", d["contactId"])
+	}
+	return id
+}
+
+// testIdentitySecret is the identity secret identitySettings gives a workspace.
+const testIdentitySecret = "identity-secret"
+
+// identitySettings gives ws the identity secret testIdentitySecret, whether verified identities are required, and its protected attribute keys.
+func (e *env) identitySettings(ws uuid.UUID, required bool, protected ...string) {
+	e.t.Helper()
+	sealed, err := e.cipher.Seal([]byte(testIdentitySecret), []byte("workspace-sdk-identity-secret:"+ws.String()))
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	if protected == nil {
+		protected = []string{}
+	}
+	keys, _ := json.Marshal(protected)
+	e.exec(`UPDATE workspaces SET sdk_identity_secret = ?, sdk_identity_required = ?, sdk_protected_attribute_keys = ARRAY(SELECT jsonb_array_elements_text(?::jsonb)) WHERE id = ?`, sealed, required, string(keys), ws)
 }
 
 func (e *env) attribute(contactID any, key string) string {
@@ -41,7 +72,7 @@ func TestIdentifyCreatesTheContactOnce(t *testing.T) {
 	if first["contactId"] != again["contactId"] || first["userId"] != "user-1" {
 		t.Fatalf("first %v, again %v", first, again)
 	}
-	if e.attribute(first["contactId"], "userId") != "user-1" {
+	if !strings.HasPrefix(first["contactId"].(string), "ct1.") || e.attribute(e.contactOf(t, ws, first), "userId") != "user-1" {
 		t.Fatal("the contact does not carry its userId")
 	}
 	if _, ok := first["language"]; ok {
@@ -77,16 +108,16 @@ func TestIdentifyLanguage(t *testing.T) {
 	e.language(ws, "pt-BR", ptr("Brasileiro"))
 
 	d := stateData(t, e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"language": "de", "plan": "pro"}}))
-	if d["language"] != "de" || e.attribute(d["contactId"], "language") != "de-DE" || e.attribute(d["contactId"], "plan") != "pro" {
-		t.Fatalf("legacy code: echoed %v, stored %q", d["language"], e.attribute(d["contactId"], "language"))
+	if d["language"] != "de" || e.attribute(e.contactOf(t, ws, d), "language") != "de-DE" || e.attribute(e.contactOf(t, ws, d), "plan") != "pro" {
+		t.Fatalf("legacy code: echoed %v, stored %q", d["language"], e.attribute(e.contactOf(t, ws, d), "language"))
 	}
 	d = stateData(t, e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"language": "fr-FR"}}))
-	if d["language"] != "fr" || e.attribute(d["contactId"], "language") != "fr-FR" {
+	if d["language"] != "fr" || e.attribute(e.contactOf(t, ws, d), "language") != "fr-FR" {
 		t.Fatalf("canonical code: echoed %v", d["language"])
 	}
 	d = stateData(t, e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"language": "BRASILEIRO"}}))
-	if d["language"] != "Brasileiro" || e.attribute(d["contactId"], "language") != "Brasileiro" {
-		t.Fatalf("alias: echoed %v, stored %q", d["language"], e.attribute(d["contactId"], "language"))
+	if d["language"] != "Brasileiro" || e.attribute(e.contactOf(t, ws, d), "language") != "Brasileiro" {
+		t.Fatalf("alias: echoed %v, stored %q", d["language"], e.attribute(e.contactOf(t, ws, d), "language"))
 	}
 
 	r := e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"language": "klingonese", "plan": "free"}})
@@ -95,7 +126,7 @@ func TestIdentifyLanguage(t *testing.T) {
 	if len(msgs) != 1 || msgs[0] != "Ignored invalid language code 'klingonese'. The existing value was preserved." {
 		t.Fatalf("messages %v", msgs)
 	}
-	if e.attribute(d["contactId"], "language") != "Brasileiro" || e.attribute(d["contactId"], "plan") != "free" {
+	if e.attribute(e.contactOf(t, ws, d), "language") != "Brasileiro" || e.attribute(e.contactOf(t, ws, d), "plan") != "free" {
 		t.Fatal("an invalid language changed the stored one, or the other attributes were not written")
 	}
 	r = e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"language": 0}})
@@ -114,23 +145,24 @@ func TestIdentifyWritesOnlyChanges(t *testing.T) {
 	ws := e.workspace()
 	d := stateData(t, e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"plan": "pro"}}))
 	var before string
-	_ = e.db.Raw(`SELECT updated_at::text FROM contacts WHERE id = ?`, d["contactId"]).Row().Scan(&before)
+	_ = e.db.Raw(`SELECT updated_at::text FROM contacts WHERE id = ?`, e.contactOf(t, ws, d)).Row().Scan(&before)
 	stateData(t, e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"plan": "pro"}}))
 	var after string
-	_ = e.db.Raw(`SELECT updated_at::text FROM contacts WHERE id = ?`, d["contactId"]).Row().Scan(&after)
+	_ = e.db.Raw(`SELECT updated_at::text FROM contacts WHERE id = ?`, e.contactOf(t, ws, d)).Row().Scan(&after)
 	if before != after {
 		t.Fatal("an unchanged identify wrote the contact")
 	}
 }
 
-// The attribute messages: existence-revealing ones are withheld, errors are returned, new keys are reported.
+// The attribute messages: existence-revealing ones are withheld, errors are returned, new keys are reported. The identifies are verified, so that email is written at all.
 func TestIdentifyMessages(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
-	stateData(t, e.identify(t, ws, map[string]any{"userId": "owner", "attributes": map[string]any{"email": "taken@example.com"}}))
-	r := e.identify(t, ws, map[string]any{"userId": "other", "attributes": map[string]any{"email": "taken@example.com", "seats": 3, "Bad Key": "x", "vip": true}})
+	e.identitySettings(ws, false)
+	stateData(t, e.identify(t, ws, map[string]any{"userId": "owner", "userHash": sdkidentity.UserHash(testIdentitySecret, "owner"), "attributes": map[string]any{"email": "taken@example.com"}}))
+	r := e.identify(t, ws, map[string]any{"userId": "other", "userHash": sdkidentity.UserHash(testIdentitySecret, "other"), "attributes": map[string]any{"email": "taken@example.com", "seats": 3, "Bad Key": "x", "vip": true}})
 	d := stateData(t, r)
-	if e.attribute(d["contactId"], "email") != "" {
+	if e.attribute(e.contactOf(t, ws, d), "email") != "" {
 		t.Fatal("an email another contact holds was written")
 	}
 	body := r.data(t)
@@ -143,7 +175,7 @@ func TestIdentifyMessages(t *testing.T) {
 	if len(errs) != 1 || errs[0] != "Skipped creating attribute(s) with invalid key(s): Bad Key. Keys must only contain lowercase letters, numbers, and underscores, and must start with a letter." {
 		t.Fatalf("errors %v", errs)
 	}
-	if e.attribute(d["contactId"], "vip") != "true" || e.attribute(d["contactId"], "seats") != "3" {
+	if e.attribute(e.contactOf(t, ws, d), "vip") != "true" || e.attribute(e.contactOf(t, ws, d), "seats") != "3" {
 		t.Fatal("new attributes were not stored")
 	}
 }
@@ -155,37 +187,48 @@ func TestIdentifyRefusals(t *testing.T) {
 	e.identify(t, ws, []any{"u1"}).expectError(t, 400, "bad_request", "userId is required and must be a string")
 	e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"email": 5}}).expectError(t, 400, "bad_request", "Invalid email format")
 	e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"email": "a@"}}).expectError(t, 400, "bad_request", "Invalid email format")
-	// It passes the route's check but not ZUserEmail.
-	e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"email": "a@b"}}).expectError(t, 400, "bad_request", "Validation failed: Invalid email")
+	// It passes the route's check but not ZUserEmail, which only a verified identify reaches: an unverified one skips the email.
+	e.identitySettings(ws, false)
+	e.identify(t, ws, map[string]any{"userId": "u1", "userHash": sdkidentity.UserHash(testIdentitySecret, "u1"), "attributes": map[string]any{"email": "a@b"}}).expectError(t, 400, "bad_request", "Validation failed: Invalid email")
 	e.identify(t, ws, map[string]any{"userId": "u1", "attributes": map[string]any{"plan": nil}}).expectError(t, 400, "bad_request", "Validation failed: planInvalid input")
 	// userId and id inside the attributes are ignored.
 	d := stateData(t, e.identify(t, ws, map[string]any{"userId": "u2", "attributes": map[string]any{"userId": "spoofed", "id": "x"}}))
-	if e.attribute(d["contactId"], "userId") != "u2" {
+	if e.attribute(e.contactOf(t, ws, d), "userId") != "u2" {
 		t.Fatal("attributes overwrote the userId")
 	}
 }
 
-// The state lists the contact's segments, its displays newest first and the surveys it responded to.
+// The state lists the contact's segments, the keys of the app surveys it was shown, once per display and newest first, and of those it responded to, and when it was last shown any survey. It names neither the contact nor a survey by id, and leaves out surveys of other types.
 func TestIdentifyState(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
 	all := e.segment(ws, "Everyone", `[]`)
 	d := stateData(t, e.identify(t, ws, map[string]any{"userId": "u1"}))
-	contactID := d["contactId"]
-	older, newer := e.survey(ws, "type", "app"), e.survey(ws, "type", "app")
-	e.exec(`INSERT INTO displays (survey_id, contact_id, created_at) VALUES (?, ?, now() - interval '1 day'), (?, ?, now())`, older, contactID, newer, contactID)
-	e.exec(`INSERT INTO responses (survey_id, contact_id) VALUES (?, ?)`, older, contactID)
+	contactID := e.contactOf(t, ws, d)
+	older, newer, link := e.survey(ws, "type", "app"), e.survey(ws, "type", "app"), e.survey(ws)
+	e.exec(`INSERT INTO displays (survey_id, contact_id, created_at) VALUES (?, ?, now() - interval '2 days'), (?, ?, now() - interval '1 day'), (?, ?, now() - interval '1 hour'), (?, ?, '2030-01-02T03:04:05.678Z')`,
+		older, contactID, newer, contactID, newer, contactID, link, contactID)
+	e.exec(`INSERT INTO responses (survey_id, contact_id) VALUES (?, ?), (?, ?)`, older, contactID, link, contactID)
 
-	d = stateData(t, e.identify(t, ws, map[string]any{"userId": "u1"}))
+	r := e.identify(t, ws, map[string]any{"userId": "u1"})
+	d = stateData(t, r)
 	if segments := d["segments"].([]any); len(segments) != 1 || segments[0] != all.String() {
 		t.Fatalf("segments %v", segments)
 	}
-	displays := d["displays"].([]any)
-	if len(displays) != 2 || displays[0].(map[string]any)["surveyId"] != newer.String() || d["lastDisplayAt"] != displays[0].(map[string]any)["createdAt"] {
-		t.Fatalf("displays %v, last %v", displays, d["lastDisplayAt"])
+	newerKey, olderKey := sdkidentity.SurveyKey("u1", newer.String()), sdkidentity.SurveyKey("u1", older.String())
+	if displays := d["displays"].([]any); len(displays) != 3 || displays[0] != newerKey || displays[1] != newerKey || displays[2] != olderKey {
+		t.Fatalf("displays %v, want %s twice then %s", displays, newerKey, olderKey)
 	}
-	if responses := d["responses"].([]any); len(responses) != 1 || responses[0] != older.String() {
-		t.Fatalf("responses %v", responses)
+	if responses := d["responses"].([]any); len(responses) != 1 || responses[0] != olderKey {
+		t.Fatalf("responses %v, want %s", responses, olderKey)
+	}
+	if d["lastDisplayAt"] != "2030-01-02T03:04:05.678Z" {
+		t.Fatalf("lastDisplayAt %v, want the link survey's display", d["lastDisplayAt"])
+	}
+	for _, id := range []uuid.UUID{contactID, older, newer, link} {
+		if strings.Contains(string(r.Body), id.String()) {
+			t.Fatalf("the state names %s by id: %s", id, r.Body)
+		}
 	}
 }
 
@@ -244,7 +287,7 @@ func TestIdentifyTypeMismatchIsAnError(t *testing.T) {
 	if len(errs) != 1 || !strings.HasPrefix(errs[0].(string), "Attribute 'seats' expects a number") || !strings.HasSuffix(errs[0].(string), "(attribute 'seats' has dataType: number)") {
 		t.Fatalf("errors %v", errs)
 	}
-	if got := e.attribute(d["contactId"], "seats"); got != "25" {
+	if got := e.attribute(e.contactOf(t, ws, d), "seats"); got != "25" {
 		t.Fatalf("seats %q, want the stored 25", got)
 	}
 }

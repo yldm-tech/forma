@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-// The contract test replays the exchanges in testdata/contract (see its README) in an order their scenarios need, against the data seedRecording creates, and requires the same status, the listed headers and a body equal to the expected one with its placeholders matched by kind. An id placeholder binds to the first id it meets and must name the same id wherever it appears again.
+// The contract test replays the exchanges in testdata/contract (see its README) in an order their scenarios need, against the data seedRecording creates, and requires the same status, the listed headers and a body equal to the expected one with its placeholders matched by kind. An id or contact token placeholder binds to the first value it meets and must name the same value wherever it appears again.
 
 type recorded struct {
 	Case    string `json:"case"`
@@ -162,6 +162,22 @@ var kinds = map[string]string{
 	"<id:unbound>":   `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`,
 }
 
+// bindingKinds are the placeholders, by prefix, that bind like an id placeholder to the first value they meet: an id, or the token the client API names a contact by in its place.
+var bindingKinds = map[string]string{
+	"<id:":            kinds["<id:unbound>"],
+	"<contact-token:": `ct1\.[A-Za-z0-9_-]+`,
+}
+
+// bindingKind is the pattern a binding placeholder matches, "" for any other placeholder.
+func bindingKind(p string) string {
+	for prefix, pattern := range bindingKinds {
+		if strings.HasPrefix(p, prefix) {
+			return pattern
+		}
+	}
+	return ""
+}
+
 // replay is the state of one replay: the bound placeholders.
 type replay struct {
 	t     *testing.T
@@ -197,8 +213,8 @@ func (r *replay) matchString(want, got string) bool {
 			pattern.WriteString(regexp.QuoteMeta(r.bound[p]))
 		case kinds[p] != "":
 			pattern.WriteString("(?:" + kinds[p] + ")")
-		case strings.HasPrefix(p, "<id:"):
-			pattern.WriteString("(" + kinds["<id:unbound>"] + ")")
+		case bindingKind(p) != "":
+			pattern.WriteString("(" + bindingKind(p) + ")")
 			unbound = append(unbound, p)
 		default:
 			r.t.Fatalf("unknown placeholder %s", p)
