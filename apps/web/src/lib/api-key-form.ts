@@ -47,3 +47,62 @@ export const apiKeyScope = (
     organization: access.write ? "write" : access.read ? "read" : null,
   };
 };
+
+/** The expiries the create form offers: none, a number of days from now, or the end of a chosen day. */
+export type ApiKeyExpiryChoice = "never" | "7" | "30" | "90" | "365" | "custom";
+
+export const API_KEY_EXPIRY_CHOICES: readonly ApiKeyExpiryChoice[] = [
+  "never",
+  "7",
+  "30",
+  "90",
+  "365",
+  "custom",
+];
+
+/** A day, as a date input gives it (YYYY-MM-DD), in the browser's time zone: the start of that day, or null for anything else. */
+const localDay = (day: string): Date | null => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  // new Date rolls an impossible day (02-30) over into the next month; such a day is not a day.
+  return date.getDate() === Number(match[3]) && date.getMonth() === Number(match[2]) - 1 ? date : null;
+};
+
+/** The earliest day the custom expiry may pick: tomorrow, in the browser's time zone, as a date input's min. */
+export const firstCustomExpiryDay = (now: Date = new Date()): string => {
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`;
+};
+
+/** When a key created now with choice stops working: null for never, now plus the days, or the last second of the custom day in the browser's time zone. undefined when the custom day is missing, malformed or not after today, so the form cannot be sent. */
+export const apiKeyExpiry = (
+  choice: ApiKeyExpiryChoice,
+  customDay: string,
+  now: Date = new Date()
+): Date | null | undefined => {
+  if (choice === "never") return null;
+  if (choice !== "custom") return new Date(now.getTime() + Number(choice) * 24 * 60 * 60 * 1000);
+  const day = localDay(customDay);
+  if (!day || customDay < firstCustomExpiryDay(now)) return undefined;
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
+};
+
+/** A key's expiry as the list shows it: none, still working, working for at most another week, or expired. */
+export type ApiKeyExpiryState = "never" | "active" | "soon" | "expired";
+
+const SOON_MS = 7 * 24 * 60 * 60 * 1000;
+
+export const apiKeyExpiryState = (
+  key: Pick<ApiKey, "expiresAt">,
+  now: Date = new Date()
+): ApiKeyExpiryState => {
+  if (!key.expiresAt) return "never";
+  const left = new Date(key.expiresAt).getTime() - now.getTime();
+  if (left <= 0) return "expired";
+  return left <= SOON_MS ? "soon" : "active";
+};
+
+/** A key by its hint, as the list tells keys apart: the prefix every key starts with, an ellipsis, and its last four characters. */
+export const maskedApiKey = (hint: string): string => `fbk_…${hint}`;

@@ -16,11 +16,17 @@ import { Select } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import {
+  API_KEY_EXPIRY_CHOICES,
+  type ApiKeyExpiryChoice,
   type PermissionRow,
+  apiKeyExpiry,
+  apiKeyExpiryState,
   apiKeyScope,
   canSubmitApiKey,
   effectiveAccess,
+  firstCustomExpiryDay,
   hasDuplicateWorkspace,
+  maskedApiKey,
 } from "../../lib/api-key-form";
 import { copyText } from "../../lib/clipboard";
 import { errorMessage } from "../../lib/errors";
@@ -68,6 +74,53 @@ export const disabledReasonLabel = (t: TFunction, reason: ApiKeyDisabledReason):
     case "creator_demoted":
       return t("workspace.api_keys.disabled_reason_creator_demoted");
   }
+};
+
+/** An expiry the create form offers, in the user's language. */
+const expiryChoiceLabel = (t: TFunction, choice: ApiKeyExpiryChoice): string => {
+  switch (choice) {
+    case "never":
+      return t("workspace.api_keys.expiration_never");
+    case "custom":
+      return t("workspace.api_keys.expiration_custom");
+    case "365":
+      return t("workspace.api_keys.expiration_one_year");
+    default:
+      return t("workspace.api_keys.expiration_days", { count: Number(choice) });
+  }
+};
+
+/** A key's state beside its label: disabled (which wins, since it cannot be undone), expired, or expiring within a week. Nothing for a key that works and will for a while. */
+const KeyStatusBadge = ({ apiKey, formatDate }: { apiKey: ApiKey; formatDate: Intl.DateTimeFormat }) => {
+  const { t } = useTranslation();
+  if (apiKey.disabledReason) {
+    return (
+      <Badge
+        type="error"
+        size="tiny"
+        text={t("common.disabled")}
+        title={disabledReasonLabel(t, apiKey.disabledReason)}
+      />
+    );
+  }
+  const state = apiKeyExpiryState(apiKey);
+  if (!apiKey.expiresAt || (state !== "expired" && state !== "soon")) return null;
+  const date = formatDate.format(new Date(apiKey.expiresAt));
+  return state === "expired" ? (
+    <Badge
+      type="error"
+      size="tiny"
+      text={t("common.expired")}
+      title={t("workspace.api_keys.expired_on", { date })}
+    />
+  ) : (
+    <Badge
+      type="warning"
+      size="tiny"
+      text={t("workspace.api_keys.expires_soon")}
+      title={t("workspace.api_keys.expires_on", { date })}
+    />
+  );
 };
 
 /** What a key may reach, in one line: the first workspace grants by name, how many more, and its organization access. */
@@ -162,6 +215,7 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const remove = useDeleteApiKey(organizationId);
   const formatDate = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" });
+  const formatDay = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium" });
   // The keys created on this visit that are still listed: their plaintext, and the v3/MCP note about them, go away once none of them is listed any more, for instance after the user deletes the one they just created.
   const createdKeys = keys.data?.filter((key) => key.id in secrets) ?? [];
 
@@ -201,11 +255,14 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[22%]">{t("common.label")}</TableHead>
-              <TableHead className="hidden w-[28%] md:table-cell">{t("workspace.api_keys.access")}</TableHead>
-              <TableHead className="hidden w-[18%] sm:table-cell">{t("common.created_by")}</TableHead>
-              <TableHead className="w-[14%]">{t("workspace.api_keys.last_used")}</TableHead>
-              <TableHead className="hidden w-[12%] lg:table-cell">{t("common.created_at")}</TableHead>
-              <TableHead className="w-[6%]">
+              <TableHead className="hidden w-[24%] md:table-cell">{t("workspace.api_keys.access")}</TableHead>
+              <TableHead className="hidden w-[15%] sm:table-cell">{t("common.created_by")}</TableHead>
+              <TableHead className="w-[13%]">{t("workspace.api_keys.last_used")}</TableHead>
+              <TableHead className="hidden w-[10%] lg:table-cell">
+                {t("workspace.api_keys.expires")}
+              </TableHead>
+              <TableHead className="hidden w-[11%] xl:table-cell">{t("common.created_at")}</TableHead>
+              <TableHead className="w-[5%]">
                 <span className="sr-only">{t("common.actions")}</span>
               </TableHead>
             </TableRow>
@@ -222,15 +279,13 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
                       onClick={() => setViewed(key)}>
                       {key.label}
                     </button>
-                    {key.disabledReason && (
-                      <Badge
-                        type="error"
-                        size="tiny"
-                        text={t("common.disabled")}
-                        title={disabledReasonLabel(t, key.disabledReason)}
-                      />
-                    )}
+                    <KeyStatusBadge apiKey={key} formatDate={formatDate} />
                   </div>
+                  {key.keyHint && (
+                    <span className="block font-mono text-xs font-normal text-slate-500">
+                      {maskedApiKey(key.keyHint)}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className="hidden text-sm text-slate-600 md:table-cell">
                   {scopeSummary(t, key)}
@@ -247,7 +302,14 @@ const ApiKeyList = ({ organizationId }: { organizationId: string }) => {
                     t("workspace.api_keys.never_used")
                   )}
                 </TableCell>
-                <TableCell className="hidden lg:table-cell">
+                <TableCell className="hidden text-sm text-slate-600 lg:table-cell">
+                  {key.expiresAt ? (
+                    <time dateTime={key.expiresAt}>{formatDay.format(new Date(key.expiresAt))}</time>
+                  ) : (
+                    t("workspace.api_keys.never_expires")
+                  )}
+                </TableCell>
+                <TableCell className="hidden xl:table-cell">
                   {formatDate.format(new Date(key.createdAt))}
                 </TableCell>
                 <TableCell>
@@ -396,17 +458,24 @@ const AddApiKeyModal = ({
   workspaces: Workspace[];
   onCreated: (id: string, key: string) => void;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [label, setLabel] = useState("");
   const [rows, setRows] = useState<PermissionRow[]>([]);
   const [access, setAccess] = useState<OrganizationAccess>(NO_ACCESS);
+  const [expiry, setExpiry] = useState<ApiKeyExpiryChoice>("never");
+  const [customDay, setCustomDay] = useState("");
   const create = useCreateApiKey(organizationId);
   const shown = effectiveAccess(access);
+  // Shown under the choice; the expiry sent is worked out again on submit, from the time of the submit.
+  const expiresAt = apiKeyExpiry(expiry, customDay);
+  const formatDate = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" });
 
   const reset = () => {
     setLabel("");
     setRows([]);
     setAccess(NO_ACCESS);
+    setExpiry("never");
+    setCustomDay("");
   };
   const close = () => {
     setOpen(false);
@@ -419,11 +488,14 @@ const AddApiKeyModal = ({
       toast.error(t("workspace.api_keys.duplicate_access"));
       return;
     }
+    const at = apiKeyExpiry(expiry, customDay);
+    if (at === undefined) return;
     try {
       const created = await create.mutateAsync({
         label,
         workspacePermissions: rows,
         organizationAccess: shown,
+        expiresAt: at ? at.toISOString() : null,
       });
       onCreated(created.id, created.key);
       toast.success(t("workspace.api_keys.api_key_created"));
@@ -525,6 +597,36 @@ const AddApiKeyModal = ({
               readDisabled={access.accessControl.write}
             />
           </fieldset>
+          <div className="border-t border-slate-200" />
+          <div className="space-y-2">
+            <Label htmlFor="api-key-expiry">{t("workspace.api_keys.expiration")}</Label>
+            <Select
+              id="api-key-expiry"
+              value={expiry}
+              onChange={(e) => setExpiry(e.target.value as ApiKeyExpiryChoice)}>
+              {API_KEY_EXPIRY_CHOICES.map((choice) => (
+                <option key={choice} value={choice}>
+                  {expiryChoiceLabel(t, choice)}
+                </option>
+              ))}
+            </Select>
+            {expiry === "custom" && (
+              <Input
+                type="date"
+                aria-label={t("workspace.api_keys.expiration_date")}
+                min={firstCustomExpiryDay()}
+                value={customDay}
+                onChange={(e) => setCustomDay(e.target.value)}
+              />
+            )}
+            {expiresAt !== undefined && (
+              <p className="text-sm text-slate-500">
+                {expiresAt
+                  ? t("workspace.api_keys.expiration_description", { date: formatDate.format(expiresAt) })
+                  : t("workspace.api_keys.expiration_never_description")}
+              </p>
+            )}
+          </div>
           <Alert variant="warning" role="status">
             <AlertTitle>{t("workspace.api_keys.api_key_security_warning")}</AlertTitle>
           </Alert>
@@ -533,7 +635,10 @@ const AddApiKeyModal = ({
           <Button type="button" variant="secondary" onClick={close}>
             {t("common.cancel")}
           </Button>
-          <Button type="submit" disabled={!canSubmitApiKey(label, rows, access)} loading={create.isPending}>
+          <Button
+            type="submit"
+            disabled={!canSubmitApiKey(label, rows, access) || expiresAt === undefined}
+            loading={create.isPending}>
             {t("workspace.api_keys.add_api_key")}
           </Button>
         </DialogFooter>
@@ -618,7 +723,7 @@ const ViewPermissionModal = ({
       </DialogHeader>
       <form onSubmit={submit} className="contents">
         <DialogBody className="space-y-6">
-          {apiKey.disabledReason && apiKey.disabledAt && (
+          {apiKey.disabledReason && apiKey.disabledAt ? (
             <Alert variant="error" role="status">
               <AlertTitle>{disabledReasonLabel(t, apiKey.disabledReason)}</AlertTitle>
               <AlertDescription>
@@ -627,8 +732,26 @@ const ViewPermissionModal = ({
                 })}
               </AlertDescription>
             </Alert>
+          ) : (
+            apiKey.expiresAt &&
+            apiKeyExpiryState(apiKey) === "expired" && (
+              <Alert variant="error" role="status">
+                <AlertTitle>
+                  {t("workspace.api_keys.expired_on", {
+                    date: formatDate.format(new Date(apiKey.expiresAt)),
+                  })}
+                </AlertTitle>
+                <AlertDescription>{t("workspace.api_keys.expired_description")}</AlertDescription>
+              </Alert>
+            )
           )}
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            {apiKey.keyHint && (
+              <>
+                <dt className="font-medium text-slate-800">{t("workspace.api_keys.api_key")}</dt>
+                <dd className="font-mono text-slate-600">{maskedApiKey(apiKey.keyHint)}</dd>
+              </>
+            )}
             <dt className="font-medium text-slate-800">{t("common.created_by")}</dt>
             <dd>
               <CreatedBy createdBy={apiKey.createdBy} />
@@ -638,6 +761,12 @@ const ViewPermissionModal = ({
               {apiKey.lastUsedAt
                 ? formatDate.format(new Date(apiKey.lastUsedAt))
                 : t("workspace.api_keys.never_used")}
+            </dd>
+            <dt className="font-medium text-slate-800">{t("workspace.api_keys.expires")}</dt>
+            <dd className="text-slate-600">
+              {apiKey.expiresAt
+                ? formatDate.format(new Date(apiKey.expiresAt))
+                : t("workspace.api_keys.never_expires")}
             </dd>
           </dl>
           <div className="space-y-2">

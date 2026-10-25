@@ -24,6 +24,10 @@ export interface ApiKey {
   /** Set together once the key was disabled; a disabled key never authenticates again. */
   disabledAt: string | null;
   disabledReason: ApiKeyDisabledReason | null;
+  /** The key's last four characters, kept when it was created; null for a key created before hints were kept. */
+  keyHint: string | null;
+  /** When the key stops working, chosen when it was created; null for a key that works until it is deleted. */
+  expiresAt: string | null;
 }
 
 /** A key as its creation returns it: the only time the plaintext key is ever available. */
@@ -35,6 +39,8 @@ export interface ApiKeyInput {
   label: string;
   workspacePermissions: { workspaceId: string; permission: ApiKeyPermission }[];
   organizationAccess: OrganizationAccess;
+  /** An ISO 8601 time in the future, or null for a key that never expires. */
+  expiresAt: string | null;
 }
 
 export const apiKeyKeys = {
