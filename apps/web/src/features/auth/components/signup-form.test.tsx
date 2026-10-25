@@ -13,8 +13,9 @@ import { Suspense } from "react";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
-import { type AuthOptions, authKeys } from "../api";
-import { SignupForm } from "./signup-form";
+import { type AuthOptions, type InviteStatus, authKeys } from "../api";
+import { LAST_USED_KEY } from "../last-used";
+import { SignupForm, type SignupFormSearch } from "./signup-form";
 
 // forma2's signup-form.tsx: Forma Cloud offers the product update emails where other instances offer the security ones, the choice is sent with the sign-up, and TERMS_URL and PRIVACY_URL are linked under the form when set.
 
@@ -27,6 +28,7 @@ beforeAll(async () => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  localStorage.clear();
   globalThis.history.replaceState(null, "", "/");
 });
 
@@ -56,8 +58,8 @@ const stubSignup = () => {
   return bodies;
 };
 
-/** POST /api/app/auth/signup answering success and POST /api/app/auth/sign-in answering `signIn` (a status, or an error status); the requests are recorded in order. */
-const stubSignupAndSignIn = (signIn: "signed_in" | "two_factor_required" | 401) => {
+/** POST /api/app/auth/signup answering success, POST /api/app/auth/sign-in answering `signIn` (a status, or an error status) and POST /api/app/invites/inspect answering `invite`; the requests are recorded in order. */
+const stubSignupAndSignIn = (signIn: "signed_in" | "two_factor_required" | 401, invite?: InviteStatus) => {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal(
     "fetch",
@@ -66,6 +68,7 @@ const stubSignupAndSignIn = (signIn: "signed_in" | "two_factor_required" | 401) 
       const json = (body: unknown, status = 200) =>
         new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
       if (path === "/api/app/auth/signup") return json({ success: true });
+      if (path === "/api/app/invites/inspect" && invite) return json({ status: invite });
       if (path !== "/api/app/auth/sign-in") throw new Error(`unexpected ${path}`);
       return signIn === 401
         ? json({ code: "invalid_credentials", message: "Invalid email or password" }, 401)
@@ -75,8 +78,8 @@ const stubSignupAndSignIn = (signIn: "signed_in" | "two_factor_required" | 401) 
   return requests;
 };
 
-/** The form on /auth/signup in a router served under the app's base path, as in the browser, beside the root page a sign-in lands on and the two notices a sign-up can end on. */
-const renderForm = (options: Partial<AuthOptions> = {}) => {
+/** The form on /auth/signup in a router served under the app's base path, as in the browser, beside the root page a sign-in lands on, the invite page and the two notices a sign-up can end on. */
+const renderForm = (options: Partial<AuthOptions> = {}, search: SignupFormSearch = {}) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(authKeys.options, { ...OPTIONS, ...options });
   const rootRoute = createRootRoute({ component: Outlet });
@@ -86,7 +89,7 @@ const renderForm = (options: Partial<AuthOptions> = {}) => {
       path: "/auth/signup",
       component: () => (
         <Suspense fallback={null}>
-          <SignupForm search={{}} />
+          <SignupForm search={search} />
         </Suspense>
       ),
     }),
@@ -94,6 +97,11 @@ const renderForm = (options: Partial<AuthOptions> = {}) => {
       getParentRoute: () => rootRoute,
       path: "/",
       component: () => <h1>Home</h1>,
+    }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/invite",
+      component: () => <h1>Invite</h1>,
     }),
     createRoute({
       getParentRoute: () => rootRoute,
@@ -240,6 +248,27 @@ describe("with email verification off", () => {
       "/api/app/auth/sign-in",
     ]);
     expect(requests[1]?.body).toEqual({ email: "ada@example.com", password: "Correct-Horse-1" });
+    // As after a sign-in on the login page, the next visit opens on the email form.
+    expect(localStorage.getItem(LAST_USED_KEY)).toBe("Email");
+  });
+
+  test.each([
+    // The sign-up created the account and redeemed the invite, so its link would only say it is used up.
+    ["not_found", "Home"],
+    // The address already had an account, so the invite still waits to be accepted on its page.
+    ["valid", "Invite"],
+  ] as const)("an invited sign-up whose invite inspects as %s goes to %s", async (invite, page) => {
+    const requests = stubSignupAndSignIn("signed_in", invite);
+    renderForm({ emailVerificationRequired: false }, { inviteToken: "tok" });
+    await fillAndSubmit();
+
+    expect(await screen.findByRole("heading", { name: page })).toBeTruthy();
+    expect(requests.map((request) => request.path)).toEqual([
+      "/api/app/auth/signup",
+      "/api/app/auth/sign-in",
+      "/api/app/invites/inspect",
+    ]);
+    expect(requests[2]?.body).toEqual({ token: "tok" });
   });
 
   test.each(["two_factor_required", 401] as const)(
