@@ -473,7 +473,7 @@ func dataCondition(w *clause, sv *Survey, key string, c Condition) error {
 		if err != nil {
 			return err
 		}
-		w.add(q(dataContains(p.keys, v), " AND ", p, " @> ", jsonb(v), "::jsonb"))
+		w.add(includesAll(sv, key, v.([]any)))
 	case "includesOne":
 		v, err := value("array")
 		if err != nil {
@@ -497,8 +497,7 @@ func dataCondition(w *clause, sv *Survey, key string, c Condition) error {
 			keys = append(keys, k)
 		}
 		slices.Sort(keys)
-		cell := []string{key, keys[0]}
-		w.add(q(dataContains(cell, rows[keys[0]]), " AND ", jsonPath{"data", cell}, " = ", jsonb(rows[keys[0]]), "::jsonb"))
+		w.add(matrixCell(sv, key, keys[0], rows[keys[0]]))
 	case "contains", "doesNotContain", "startsWith", "doesNotStartWith", "endsWith", "doesNotEndWith":
 		v, err := value("string")
 		if err != nil {
@@ -513,20 +512,79 @@ func dataCondition(w *clause, sv *Survey, key string, c Condition) error {
 	return nil
 }
 
-// includesOne is forma2's includesOne. Choosing the "Other" choice of a choice element means "answered with something no predefined label covers": a multi-select answer that is not an ordering of distinct predefined labels, a single-select answer that is none of them. Otherwise a value matches as an element of an array answer or as the whole answer.
+// elementByID is the survey's element answering under key, nil when there is none.
+func elementByID(sv *Survey, key string) *surveydoc.Element {
+	for _, e := range sv.Elements() {
+		if e.ID == key {
+			return &e
+		}
+	}
+	return nil
+}
+
+func isChoiceElement(el *surveydoc.Element) bool {
+	return el != nil && (el.Type == surveydoc.ElementMultipleChoiceMulti || el.Type == surveydoc.ElementMultipleChoiceSingle)
+}
+
+// languageCodes are the languages a label is written in: "default" first, then the others in code order, so the SQL a filter compiles to is the same on every run.
+func languageCodes(l surveydoc.I18nString) []string {
+	codes := make([]string, 0, len(l))
+	for code := range l {
+		if code != "default" {
+			codes = append(codes, code)
+		}
+	}
+	slices.Sort(codes)
+	return append([]string{"default"}, codes...)
+}
+
+// labelVariants are a label's texts in every language it is written in, each once and none empty.
+func labelVariants(l surveydoc.I18nString) []string {
+	var out []string
+	for _, code := range languageCodes(l) {
+		if s := l[code]; s != "" && !slices.Contains(out, s) {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// choiceByDefault is the choice, row or column whose default-language label is label, nil when there is none.
+func choiceByDefault(choices []surveydoc.Choice, label string) *surveydoc.Choice {
+	for i, c := range choices {
+		if c.Label.Default() == label {
+			return &choices[i]
+		}
+	}
+	return nil
+}
+
+// answerVariants are the stored answers a filter value stands for on el. The views name a choice by its default-language label while a response holds the label of the language it was answered in, as the summary reads it, so a value naming a choice of a choice element stands for that choice's label in every language. Any other value stands for itself.
+func answerVariants(el *surveydoc.Element, v any) []any {
+	out := []any{v}
+	s, isString := v.(string)
+	if !isString || !isChoiceElement(el) {
+		return out
+	}
+	if ch := choiceByDefault(el.Choices, s); ch != nil {
+		for _, label := range labelVariants(ch.Label) {
+			if !slices.Contains(out, any(label)) {
+				out = append(out, label)
+			}
+		}
+	}
+	return out
+}
+
+// includesOne is forma2's includesOne, matching a chosen choice in every language. Choosing the "Other" choice of a choice element means "answered with something no predefined label covers": a multi-select answer that is not an ordering of distinct predefined labels, a single-select answer that is none of them, where the labels of the other chosen choices, in any language, count as covered by none. Otherwise a value matches as an element of an array answer or as the whole answer.
 func includesOne(sv *Survey, key string, values []any) *cond {
 	p := jsonPath{"data", []string{key}}
 	chosen := map[string]bool{}
 	for _, v := range values {
 		chosen[jsvalue.String(v)] = true
 	}
-	var el *surveydoc.Element
-	for _, e := range sv.Elements() {
-		if e.ID == key {
-			el = &e
-		}
-	}
-	if el != nil && (el.Type == surveydoc.ElementMultipleChoiceMulti || el.Type == surveydoc.ElementMultipleChoiceSingle) {
+	el := elementByID(sv, key)
+	if isChoiceElement(el) {
 		for _, ch := range el.Choices {
 			if ch.ID != "other" || !chosen[ch.Label.Default()] {
 				continue
@@ -534,7 +592,10 @@ func includesOne(sv *Survey, key string, values []any) *cond {
 			list := q("ARRAY[")
 			n := 0
 			for _, choice := range el.Choices {
-				for _, label := range choice.Label {
+				if chosen[choice.Label.Default()] {
+					continue
+				}
+				for _, label := range labelVariants(choice.Label) {
 					if chosen[label] {
 						continue
 					}
@@ -557,16 +618,86 @@ func includesOne(sv *Survey, key string, values []any) *cond {
 			return q("(", p, " IS NOT NULL AND NOT (", p, " = ANY (", list, ")))")
 		}
 	}
-	if len(values) == 0 {
+	var answers []any
+	for _, v := range values {
+		for _, a := range answerVariants(el, v) {
+			if !slices.Contains(answers, a) {
+				answers = append(answers, a)
+			}
+		}
+	}
+	if len(answers) == 0 {
 		return q("FALSE")
 	}
 	// An array answer holding v, or v itself: both are containments of response.data, which the GIN index answers.
 	c := q("(")
-	for i, v := range values {
+	for i, v := range answers {
 		if i > 0 {
 			c.w(" OR ")
 		}
 		c.w(dataContains(p.keys, []any{v}), " OR ", dataContains(p.keys, v))
+	}
+	return c.w(")")
+}
+
+// includesAll is an array answer holding every value. A value naming a choice of a choice element holds when the answer has that choice in any language: an AND over the values of an OR over each one's labels, every term a containment of response.data, which the GIN index answers.
+func includesAll(sv *Survey, key string, values []any) *cond {
+	p := jsonPath{"data", []string{key}}
+	el := elementByID(sv, key)
+	groups := make([][]any, len(values))
+	translated := false
+	for i, v := range values {
+		groups[i] = answerVariants(el, v)
+		translated = translated || len(groups[i]) > 1
+	}
+	if !translated {
+		return q(dataContains(p.keys, values), " AND ", p, " @> ", jsonb(values), "::jsonb")
+	}
+	c := q("(")
+	for i, group := range groups {
+		if i > 0 {
+			c.w(" AND ")
+		}
+		c.w("(")
+		for j, v := range group {
+			if j > 0 {
+				c.w(" OR ")
+			}
+			c.w(dataContains(p.keys, []any{v}))
+		}
+		c.w(")")
+	}
+	return c.w(")")
+}
+
+// matrixCell is a matrix answer giving column to row, both named by their default-language labels. A response keys its answer by the row label and gives the column label of the language it was answered in, as the summary reads it, so the cell matches under each language's pair of row and column labels; a row or column the element does not have matches only as named.
+func matrixCell(sv *Survey, key, row, column string) *cond {
+	type pair struct{ row, column string }
+	pairs := []pair{{row, column}}
+	if el := elementByID(sv, key); el != nil && el.Type == surveydoc.ElementMatrix {
+		r, c := choiceByDefault(el.Rows, row), choiceByDefault(el.Columns, column)
+		if r != nil && c != nil {
+			for _, code := range languageCodes(r.Label) {
+				lp := pair{r.Label[code], c.Label[code]}
+				if lp.row != "" && lp.column != "" && !slices.Contains(pairs, lp) {
+					pairs = append(pairs, lp)
+				}
+			}
+		}
+	}
+	match := func(lp pair) *cond {
+		cell := []string{key, lp.row}
+		return q(dataContains(cell, lp.column), " AND ", jsonPath{"data", cell}, " = ", jsonb(lp.column), "::jsonb")
+	}
+	if len(pairs) == 1 {
+		return match(pairs[0])
+	}
+	c := q("(")
+	for i, lp := range pairs {
+		if i > 0 {
+			c.w(" OR ")
+		}
+		c.w("(", match(lp), ")")
 	}
 	return c.w(")")
 }
