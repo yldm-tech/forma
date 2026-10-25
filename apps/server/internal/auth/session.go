@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,9 @@ import (
 
 // sessionUpdateAge is Better Auth's updateAge as forma2 configured it: a session is extended once it is this old relative to a full lifetime. forma2 set it to one day, equal to the default SESSION_MAX_AGE, so with defaults a session is never extended before it ends; a longer SESSION_MAX_AGE makes it slide.
 const sessionUpdateAge = 24 * time.Hour
+
+// sessionActivityInterval is how stale a session's updated_at may get while it is in use: a request that finds it older writes the time again, so the sessions list can show when each session was last active without a write on every request.
+const sessionActivityInterval = 5 * time.Minute
 
 // userAgentMaxLength bounds what is stored of the caller's User-Agent header.
 const userAgentMaxLength = 512
@@ -101,7 +105,7 @@ type session struct {
 	refreshed bool
 }
 
-// validate resolves a cookie token to its session. It returns nil for an unknown or expired token and for a user who is deactivated; an expired session is deleted on sight.
+// validate resolves a cookie token to its session. It returns nil for an unknown or expired token and for a user who is deactivated; an expired session is deleted on sight. A session in use has its updated_at kept within sessionActivityInterval of now, which the sessions list shows as its last activity.
 func (s *Sessions) validate(ctx context.Context, token string) (*session, error) {
 	if token == "" {
 		return nil, nil
@@ -110,10 +114,11 @@ func (s *Sessions) validate(ctx context.Context, token string) (*session, error)
 		ID        uuid.UUID
 		UserID    uuid.UUID
 		ExpiresAt time.Time
+		UpdatedAt time.Time
 		IsActive  bool
 	}
 	err := s.db.WithContext(ctx).Raw(
-		`SELECT s.id, s.user_id, s.expires_at, u.is_active FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`,
+		`SELECT s.id, s.user_id, s.expires_at, s.updated_at, u.is_active FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`,
 		secret.HashToken(token),
 	).Scan(&rows).Error
 	if err != nil {
@@ -143,6 +148,10 @@ func (s *Sessions) validate(ctx context.Context, token string) (*session, error)
 			return nil, fmt.Errorf("refresh session: %w", err)
 		}
 		sess.refreshed = true
+	} else if now.Sub(row.UpdatedAt) >= sessionActivityInterval {
+		if err := s.db.WithContext(ctx).Exec(`UPDATE sessions SET updated_at = ? WHERE id = ?`, now, row.ID).Error; err != nil {
+			return nil, fmt.Errorf("record session activity: %w", err)
+		}
 	}
 	return sess, nil
 }
@@ -153,6 +162,52 @@ func (s *Sessions) delete(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("delete session: %w", err)
 	}
 	return nil
+}
+
+// userSession is one of a user's sessions as the sessions list shows it. LastActiveAt is updated_at, which validate keeps within sessionActivityInterval of the session's last request. IPAddress and UserAgent are what the browser sent when the session was created, and are nil when it sent none.
+type userSession struct {
+	ID           uuid.UUID
+	CreatedAt    time.Time
+	LastActiveAt time.Time
+	ExpiresAt    time.Time
+	IPAddress    *string
+	UserAgent    *string
+}
+
+// sessionIPv6PrefixBits is how much of an IPv6 client address httpapi.CanonicalIP keeps, and so the network a session's IPv6 address stands for.
+const sessionIPv6PrefixBits = 64
+
+// listFor returns the user's sessions that have not expired: current (the caller's own) first, then the most recently active. An IPv6 address is stored reduced to its /64, so it is reported as that network ("2001:db8:1:2::/64") rather than as the zero host of it.
+func (s *Sessions) listFor(ctx context.Context, userID, current uuid.UUID) ([]userSession, error) {
+	var rows []userSession
+	err := s.db.WithContext(ctx).Raw(
+		`SELECT id, created_at, updated_at AS last_active_at, expires_at, host(ip_address) AS ip_address, user_agent
+		 FROM sessions WHERE user_id = ? AND expires_at > ?
+		 ORDER BY id = ? DESC, updated_at DESC, id DESC`,
+		userID, s.now(), current,
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("list sessions: %w", err)
+	}
+	for i := range rows {
+		if rows[i].IPAddress == nil {
+			continue
+		}
+		if addr, err := netip.ParseAddr(*rows[i].IPAddress); err == nil && addr.Is6() {
+			network := netip.PrefixFrom(addr, sessionIPv6PrefixBits).Masked().String()
+			rows[i].IPAddress = &network
+		}
+	}
+	return rows, nil
+}
+
+// deleteFor ends one of the user's sessions and reports whether the user had it.
+func (s *Sessions) deleteFor(ctx context.Context, userID, id uuid.UUID) (bool, error) {
+	res := s.db.WithContext(ctx).Exec(`DELETE FROM sessions WHERE id = ? AND user_id = ?`, id, userID)
+	if res.Error != nil {
+		return false, fmt.Errorf("delete session: %w", res.Error)
+	}
+	return res.RowsAffected > 0, nil
 }
 
 // End ends the request's session and clears the browser's session cookie, for a sign-out another module completes: the authorization server's RP-initiated logout.

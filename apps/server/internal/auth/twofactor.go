@@ -130,7 +130,7 @@ const (
 	messageTwoFactorDisabled = "Two factor authentication disabled"
 )
 
-// enable confirms an enrolment with a code from the authenticator app and turns two-factor authentication on.
+// enable confirms an enrolment with a code from the authenticator app and turns two-factor authentication on. Every other session of the user is signed out in the same transaction: a session opened with the password alone, possibly by someone who stole it, would otherwise outlive the switch to a second factor. The current session stays, as in forma2.
 func (t *TwoFactor) enable(ctx context.Context, actor httpapi.Actor, code string) error {
 	err := t.confirmEnrolment(ctx, actor, code)
 	t.logChange(ctx, actor.UserID, "enabled", err)
@@ -173,7 +173,11 @@ func (t *TwoFactor) confirmEnrolment(ctx context.Context, actor httpapi.Actor, c
 		if !ok {
 			return apperr.InvalidInput(CodeInvalidCode, "Invalid code")
 		}
-		return tx.markTOTPVerified(ctx, acc.ID, t.svc.now())
+		if err := tx.markTOTPVerified(ctx, acc.ID, t.svc.now()); err != nil {
+			return err
+		}
+		_, err = t.svc.sessions.RevokeAll(ctx, tx.db, acc.ID, actor.SessionID)
+		return err
 	})
 }
 
