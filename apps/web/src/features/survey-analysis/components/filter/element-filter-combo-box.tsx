@@ -24,6 +24,7 @@ import { cn } from "../../../../lib/cn";
 import { getLocalizedValue } from "../../../../lib/survey/i18n";
 import { useClickOutside } from "../../../../lib/use-click-outside";
 import { OptionsType } from "../../lib/filter-types";
+import { getFilterOperatorLabel, getFilterValueLabel } from "../../lib/filters";
 
 const DEFAULT_LANGUAGE_CODE = "default";
 
@@ -101,14 +102,21 @@ const checkIsMultiple = (
   return isMultiSelectType || isNPSIncludesEither;
 };
 
+// The score elements, whose Submitted and Skipped operators take no value.
+const SCORE_ELEMENT_TYPES = new Set<unknown>([
+  TSurveyElementTypeEnum.NPS,
+  TSurveyElementTypeEnum.Rating,
+  TSurveyElementTypeEnum.CSAT,
+  TSurveyElementTypeEnum.CES,
+]);
+
 // Helper function to check if combo box should be disabled
 const checkIsDisabledComboBox = (
   type: TSurveyElementTypeEnum | Omit<OptionsType, OptionsType.ELEMENTS> | undefined,
   filterValue: string | undefined
 ): boolean => {
-  const isNPSOrRating = type === TSurveyElementTypeEnum.NPS || type === TSurveyElementTypeEnum.Rating;
   const isSubmittedOrSkipped = filterValue === "Submitted" || filterValue === "Skipped";
-  return isNPSOrRating && isSubmittedOrSkipped;
+  return SCORE_ELEMENT_TYPES.has(type) && isSubmittedOrSkipped;
 };
 
 /** forma2's ElementFilterComboBox: a filter row's operator and value, a pick from the observed values or free text by field type. */
@@ -129,6 +137,10 @@ export const ElementFilterComboBox = ({
   const commandRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { t } = useTranslation();
+  // The operators and values are wire constants (see lib/filters); only their labels are translated.
+  const rowType = type === undefined ? undefined : String(type);
+  const operatorLabel = (operator: string) => getFilterOperatorLabel(rowType, operator, t);
+  const valueLabel = (value: string) => getFilterValueLabel(rowType, value, t);
 
   useClickOutside(commandRef, () => setOpen(false));
 
@@ -162,10 +174,10 @@ export const ElementFilterComboBox = ({
   const filteredOptions = useMemo(
     () =>
       options?.filter((o) => {
-        const optionValue = getOptionValue(o);
-        return optionValue.toLowerCase().includes(searchQuery.toLowerCase());
+        const optionLabel = getFilterValueLabel(rowType, getOptionValue(o), t);
+        return optionLabel.toLowerCase().includes(searchQuery.toLowerCase());
       }),
-    [options, searchQuery]
+    [options, searchQuery, rowType, t]
   );
 
   const handleCommandItemSelect = (o: string | TI18nString) => {
@@ -189,7 +201,9 @@ export const ElementFilterComboBox = ({
     if (!filterOptions || filterOptions.length <= 1) {
       return (
         <div className="flex h-9 max-w-fit items-center rounded-md rounded-r-none border-r border-slate-300 bg-white px-2 text-sm text-slate-600">
-          <p className="mr-1 max-w-[50px] truncate sm:max-w-[100px]">{filterValue}</p>
+          <p className="mr-1 max-w-[50px] truncate sm:max-w-[100px]">
+            {filterValue === undefined ? undefined : operatorLabel(filterValue)}
+          </p>
         </div>
       );
     }
@@ -205,7 +219,7 @@ export const ElementFilterComboBox = ({
             disabled ? "opacity-50" : "cursor-pointer hover:bg-slate-50"
           )}>
           {filterValue ? (
-            <p className="max-w-[50px] truncate sm:max-w-[80px]">{filterValue}</p>
+            <p className="max-w-[50px] truncate sm:max-w-[80px]">{operatorLabel(filterValue)}</p>
           ) : (
             <p className="text-slate-400">{t("common.select")}...</p>
           )}
@@ -219,7 +233,7 @@ export const ElementFilterComboBox = ({
                 key={`${optionValue}-${index}`}
                 className="cursor-pointer"
                 onClick={() => onChangeFilterValue(optionValue)}>
-                {optionValue}
+                {operatorLabel(optionValue)}
               </DropdownMenuItem>
             );
           })}
@@ -253,7 +267,7 @@ export const ElementFilterComboBox = ({
       type="button"
       onClick={(e) => handleRemoveTag(e, value)}
       className="flex items-center gap-1 rounded-sm bg-slate-100 px-2 py-1 text-sm whitespace-nowrap text-slate-600 hover:bg-slate-200">
-      {value}
+      {valueLabel(value)}
       <X className="size-3" />
     </button>
   );
@@ -285,7 +299,7 @@ export const ElementFilterComboBox = ({
       return renderMultiSelectTags();
     }
 
-    return <p className="truncate text-sm text-slate-600">{filterComboBoxValue}</p>;
+    return <p className="truncate text-sm text-slate-600">{valueLabel(filterComboBoxValue)}</p>;
   };
 
   return (
@@ -354,7 +368,7 @@ export const ElementFilterComboBox = ({
                         key={optionValue}
                         onSelect={() => handleCommandItemSelect(o)}
                         className="cursor-pointer">
-                        {optionValue}
+                        {valueLabel(optionValue)}
                       </CommandItem>
                     );
                   })}

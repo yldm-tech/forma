@@ -17,7 +17,12 @@ import {
   type TResponseStatus,
 } from "../../lib/filter-types";
 import { countAppliedFilters } from "../../lib/filter-state";
-import { NO_VALUE_FILTER_OPERATORS, generateElementAndFilterOptions } from "../../lib/filters";
+import {
+  NO_VALUE_FILTER_OPERATORS,
+  describeFilterCondition,
+  generateElementAndFilterOptions,
+  getFilterTargetLabel,
+} from "../../lib/filters";
 import { ElementFilterComboBox } from "./element-filter-combo-box";
 import { ElementsComboBox } from "./elements-combo-box";
 import { useResponseFilter } from "./response-filter-context";
@@ -284,13 +289,6 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
   );
 };
 
-/** What one applied condition reads as on its chip: the operator and the value, shown after the target. */
-const describeCondition = (row: SelectedFilterValue["filter"][number]): string => {
-  const value = row.filterType.filterComboBoxValue;
-  const values = Array.isArray(value) ? value.join(", ") : (value ?? "");
-  return [row.filterType.filterValue, values].filter(Boolean).join(" ");
-};
-
 /** The applied conditions as chips beside the filter bar, each removable on its own, so a filtered view says what it is filtered by. */
 export const AppliedFilterChips = () => {
   const { t } = useTranslation();
@@ -303,8 +301,8 @@ export const AppliedFilterChips = () => {
   const chips = [
     ...selectedFilter.filter.map((row, index) => ({
       key: `${row.elementType.id ?? ""}-${index}`,
-      label: row.elementType.label ?? "",
-      condition: describeCondition(row),
+      label: getFilterTargetLabel(row.elementType, t),
+      condition: describeFilterCondition(row, t),
       remove: () =>
         setSelectedFilter((current) => ({
           ...current,

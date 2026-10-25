@@ -104,6 +104,7 @@ export const getSkippedElementGroups = (
     if (shouldSkip) temp.push(element.id);
     else flush(true);
   }
-  flush();
+  // The walk was backwards, so the last run (the one reaching the first element) is reversed too.
+  flush(true);
   return result;
 };

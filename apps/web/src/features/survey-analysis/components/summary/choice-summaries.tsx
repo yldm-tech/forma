@@ -15,6 +15,7 @@ import { Button } from "../../../../components/ui/button";
 import { IdBadge } from "../../../../components/ui/id-badge";
 import { ProgressBar } from "../../../../components/ui/progress-bar";
 import { TooltipRenderer } from "../../../../components/ui/tooltip";
+import { SUMMARY_FILTER_OPERATOR, pictureFilterValue } from "../../lib/filters";
 import { getChoiceIdByValue, getContactIdentifier } from "../../lib/responses";
 import { convertFloatToNDecimal } from "../../lib/summary";
 import { ElementSummaryHeader, SampleTruncationNotice, type SetSummaryFilter } from "./summary-parts";
@@ -49,8 +50,8 @@ export const MultipleChoiceSummary = ({
       elementSummary.element.headline,
       elementSummary.element.type,
       elementSummary.type === TSurveyElementTypeEnum.MultipleChoiceSingle || otherValue === result.value
-        ? t("workspace.surveys.summary.includes_either")
-        : t("workspace.surveys.summary.includes_all"),
+        ? SUMMARY_FILTER_OPERATOR.includesEither
+        : SUMMARY_FILTER_OPERATOR.includesAll,
       [result.value]
     );
   };
@@ -210,8 +211,8 @@ export const PictureChoiceSummary = ({
                   elementSummary.element.id,
                   elementSummary.element.headline,
                   elementSummary.element.type,
-                  t("workspace.surveys.summary.includes_all"),
-                  [t("workspace.surveys.edit.picture_idx", { idx: index + 1 })]
+                  SUMMARY_FILTER_OPERATOR.includesAll,
+                  [pictureFilterValue(index + 1)]
                 )
               }>
               <div className="text flex flex-col justify-between px-2 pb-2 sm:flex-row">

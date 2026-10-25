@@ -42,8 +42,9 @@ describe("Utils Tests", () => {
   });
 
   describe("constructToastMessage", () => {
-    const mockT = vi.fn(
-      (key: string, params: unknown) => `${key} ${JSON.stringify(params)}`
+    // A label lookup (no params) returns its key; a message returns its key and params.
+    const mockT = vi.fn((key: string, params: unknown) =>
+      params === undefined ? key : `${key} ${JSON.stringify(params)}`
     ) as unknown as TFunction;
     const mockSurvey = {
       id: "survey1",
@@ -162,22 +163,37 @@ describe("Utils Tests", () => {
     test("should construct message for non-matrix question with string filterComboBoxValue", () => {
       const message = constructToastMessage(
         TSurveyElementTypeEnum.MultipleChoiceSingle,
-        "is",
+        "Includes either",
         mockSurvey,
         "q2",
         mockT,
         "Choice1"
       );
+      // The operator is named by its label; a choice is the creator's own text.
       expect(mockT).toHaveBeenCalledWith(
         "workspace.surveys.summary.added_filter_for_responses_where_answer_to_question",
         {
           questionIdx: 2,
           filterComboBoxValue: "Choice1",
-          filterValue: "is",
+          filterValue: "workspace.surveys.summary.includes_either",
         }
       );
       expect(message).toBe(
-        'workspace.surveys.summary.added_filter_for_responses_where_answer_to_question {"questionIdx":2,"filterComboBoxValue":"Choice1","filterValue":"is"}'
+        'workspace.surveys.summary.added_filter_for_responses_where_answer_to_question {"questionIdx":2,"filterComboBoxValue":"Choice1","filterValue":"workspace.surveys.summary.includes_either"}'
+      );
+    });
+
+    test("names a fixed value by its label", () => {
+      const message = constructToastMessage(
+        TSurveyElementTypeEnum.Consent,
+        "is",
+        mockSurvey,
+        "q1",
+        mockT,
+        "Accepted"
+      );
+      expect(message).toBe(
+        'workspace.surveys.summary.added_filter_for_responses_where_answer_to_question {"questionIdx":1,"filterComboBoxValue":"common.accepted","filterValue":"workspace.analysis.filter_op.is"}'
       );
     });
 
@@ -218,11 +234,11 @@ describe("Utils Tests", () => {
         {
           questionIdx: 0,
           filterComboBoxValue: "SomeValue",
-          filterValue: "is",
+          filterValue: "workspace.analysis.filter_op.is",
         }
       );
       expect(message).toBe(
-        'workspace.surveys.summary.added_filter_for_responses_where_answer_to_question {"questionIdx":0,"filterComboBoxValue":"SomeValue","filterValue":"is"}'
+        'workspace.surveys.summary.added_filter_for_responses_where_answer_to_question {"questionIdx":0,"filterComboBoxValue":"SomeValue","filterValue":"workspace.analysis.filter_op.is"}'
       );
     });
   });

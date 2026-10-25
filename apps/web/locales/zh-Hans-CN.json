@@ -1672,6 +1672,34 @@
       "your_survey_would_be_shown_on_this_url": "你的问卷会显示在此 URL 上。",
       "your_survey_would_not_be_shown": "你的问卷不会显示。"
     },
+    "analysis": {
+      "filter_op": {
+        "applied": "已添加",
+        "clicked": "已点击",
+        "contains": "包含",
+        "does_not_contain": "不包含",
+        "does_not_end_with": "结尾不是",
+        "does_not_start_with": "开头不是",
+        "ends_with": "结尾是",
+        "equals": "等于",
+        "filled_out": "已填写",
+        "is": "为",
+        "is_after": "晚于",
+        "is_before": "早于",
+        "is_greater_than": "大于",
+        "is_more_than": "大于",
+        "is_not_set": "未设置",
+        "is_set": "已设置",
+        "not_applied": "未添加",
+        "not_equals": "不等于",
+        "not_in_quota": "不在配额内",
+        "screened_in": "已计入配额",
+        "screened_out_overquota": "已排除（超出配额）",
+        "starts_with": "开头是",
+        "submitted": "已作答"
+      },
+      "nps_formula_tooltip": "NPS = 推荐者（9–10 分）占比 − 贬损者（0–6 分）占比，以作答的 {count} 位受访者为基数，不计跳过的回答。"
+    },
     "api_keys": {
       "add_api_key": "添加 API 密钥",
       "api_key": "API 密钥",

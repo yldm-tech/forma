@@ -1672,6 +1672,34 @@
       "your_survey_would_be_shown_on_this_url": "Your survey would be shown on this URL.",
       "your_survey_would_not_be_shown": "Your survey would not be shown."
     },
+    "analysis": {
+      "filter_op": {
+        "applied": "Applied",
+        "clicked": "Clicked",
+        "contains": "Contains",
+        "does_not_contain": "Does not contain",
+        "does_not_end_with": "Does not end with",
+        "does_not_start_with": "Does not start with",
+        "ends_with": "Ends with",
+        "equals": "Equals",
+        "filled_out": "Filled out",
+        "is": "is",
+        "is_after": "Is after",
+        "is_before": "Is before",
+        "is_greater_than": "Is greater than",
+        "is_more_than": "Is more than",
+        "is_not_set": "Is not set",
+        "is_set": "Is set",
+        "not_applied": "Not applied",
+        "not_equals": "Not equals",
+        "not_in_quota": "Not in quota",
+        "screened_in": "Screened in",
+        "screened_out_overquota": "Screened out (overquota)",
+        "starts_with": "Starts with",
+        "submitted": "Submitted"
+      },
+      "nps_formula_tooltip": "NPS = % promoters (9 to 10) minus % detractors (0 to 6), out of the {count, plural, one {# respondent} other {# respondents}} who answered. Skips are not counted."
+    },
     "api_keys": {
       "add_api_key": "Add API Key",
       "api_key": "API Key",

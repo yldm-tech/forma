@@ -190,22 +190,25 @@ export const ViewToggle = ({
   );
 };
 
-/** forma2's RatingScaleLegend: the two ends of a rating scale under its bar. */
+/** forma2's RatingScaleLegend: the two ends of a rating scale under its bar. A number scale's end already shows its number, so only stars and faces get one beside them. */
 export const RatingScaleLegend = ({
   scale,
   range,
 }: {
   scale: "number" | "star" | "smiley";
   range: number;
-}) => (
-  <div className="mt-3 flex w-full items-start justify-between px-1">
-    <div className="flex items-center gap-x-1">
-      <RatingResponse scale={scale} answer={1} range={range} addColors={false} variant="scale" />
-      <span className="text-xs text-slate-500">1</span>
+}) => {
+  const showNumber = scale !== "number";
+  return (
+    <div className="mt-3 flex w-full items-start justify-between px-1">
+      <div className="flex items-center gap-x-1">
+        <RatingResponse scale={scale} answer={1} range={range} addColors={false} variant="scale" />
+        {showNumber && <span className="text-xs text-slate-500">1</span>}
+      </div>
+      <div className="flex items-center gap-x-1">
+        {showNumber && <span className="text-xs text-slate-500">{range}</span>}
+        <RatingResponse scale={scale} answer={range} range={range} addColors={false} variant="scale" />
+      </div>
     </div>
-    <div className="flex items-center gap-x-1">
-      <span className="text-xs text-slate-500">{range}</span>
-      <RatingResponse scale={scale} answer={range} range={range} addColors={false} variant="scale" />
-    </div>
-  </div>
-);
+  );
+};

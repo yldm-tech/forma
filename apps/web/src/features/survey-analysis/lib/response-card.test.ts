@@ -141,4 +141,17 @@ describe("getSkippedElementGroups", () => {
       ["q2"],
     ]);
   });
+
+  test("an unfinished response with no answer lists every element in survey order", () => {
+    expect(getSkippedElementGroups(elements, { finished: false, data: {} })).toEqual([
+      ["q1", "q2", "q3", "q4", "q5"],
+    ]);
+  });
+
+  test("an unfinished response's leading skips stay in survey order", () => {
+    expect(getSkippedElementGroups(elements, { finished: false, data: { q3: "a" } })).toEqual([
+      ["q4", "q5"],
+      ["q1", "q2"],
+    ]);
+  });
 });
