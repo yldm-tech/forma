@@ -14,7 +14,7 @@ import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPl
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
-import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import { TSurvey, TSurveyRecallItem } from "@forma/types/surveys/types";
 import { cn } from "../../../../lib/cn";
 import { FallbackInput } from "../../../../features/survey-editor/components/element-form-input/components/fallback-input";
@@ -117,12 +117,14 @@ export const EditorHistoryPlugin = () => {
 
   useEffect(
     () =>
-      editor.registerUpdateListener(({ editorState, tags }) => {
-        if (!isSeedUpdate(tags)) return;
+      editor.registerUpdateListener(({ editorState, tags, dirtyElements, dirtyLeaves }) => {
+        // A load that changed no node is not a load: RecallPlugin re-runs its tagged recall conversion whenever the survey changes, i.e. after every edit is written back, and when that commits only a selection (after an Undo, for instance) resetting here would wipe the Redo stack.
+        if (!isSeedUpdate(tags) || (dirtyElements.size === 0 && dirtyLeaves.size === 0)) return;
         // Runs before or after the history listener for the same update; either way the loaded state ends up as the only entry, and the history listener skips a state that is already current.
         historyState.undoStack = [];
         historyState.redoStack = [];
-        historyState.current = { editor, editorState };
+        // An empty load (no node, no selection) cannot be restored: Lexical's setEditorState rejects it. Leaving no current entry is how HistoryPlugin itself treats a fresh editor; the first selection in the field becomes the starting point instead.
+        historyState.current = editorState.isEmpty() ? null : { editor, editorState };
       }),
     [editor, historyState]
   );
@@ -139,6 +141,8 @@ export const Editor = (props: TextEditorProps) => {
   const [addFallbackFunction, setAddFallbackFunction] = useState<(() => void) | null>(null);
   const [showRecallItemSelect, setShowRecallItemSelect] = useState(false);
   const [showLinkEditor, setShowLinkEditor] = useState(false);
+  // Stable, because RecallPlugin re-registers its update listener whenever it changes.
+  const hideFallbackInput = useCallback(() => setShowFallbackInput(false), []);
 
   return (
     <>
@@ -213,6 +217,7 @@ export const Editor = (props: TextEditorProps) => {
                   fallbacks={fallbacks}
                   setFallbacks={setFallbacks}
                   onShowFallbackInput={() => setShowFallbackInput(true)}
+                  onHideFallbackInput={hideFallbackInput}
                   setAddFallbackFunction={setAddFallbackFunction}
                   setShowRecallItemSelect={setShowRecallItemSelect}
                   showRecallItemSelect={showRecallItemSelect}
