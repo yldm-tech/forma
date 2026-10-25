@@ -92,6 +92,11 @@ func (a *Authenticator) Authenticate(ctx context.Context, h http.Header, opts Op
 		a.log.WarnContext(ctx, "A disabled API key was used", "apiKeyId", key.ID.String())
 		return nil, nil
 	}
+	// An expired key is refused the same way, from the instant it expires.
+	if key.ExpiresAt.Valid && !a.now().Before(key.ExpiresAt.Time) {
+		a.log.WarnContext(ctx, "An expired API key was used", "apiKeyId", key.ID.String())
+		return nil, nil
+	}
 	if !key.LastUsedAt.Valid || !key.LastUsedAt.Time.After(a.now().Add(-usageWriteInterval)) {
 		now := a.now()
 		// A failed usage write never fails the request it records.

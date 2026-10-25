@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -29,7 +30,7 @@ func bindCreate(t *testing.T, schemas *jsonschema.Validator, body string) (Creat
 	if err := httpapi.BindJSON(c, &req); err != nil {
 		return CreateInput{}, err
 	}
-	return req.input(schemas)
+	return req.input(schemas, time.Now())
 }
 
 func TestCreateRequestValidation(t *testing.T) {

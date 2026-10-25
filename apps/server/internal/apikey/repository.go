@@ -42,13 +42,17 @@ func (r *Repository) workspacesOf(ctx context.Context, organizationID uuid.UUID,
 
 // newKeyRow is what create stores.
 type newKeyRow struct {
-	OrganizationID     uuid.UUID
-	CreatedBy          uuid.UUID
-	Label              string
-	HashedKey          string
-	LookupHash         string
+	OrganizationID uuid.UUID
+	CreatedBy      uuid.UUID
+	Label          string
+	HashedKey      string
+	LookupHash     string
+	// KeyHint is the key's last characters (Hint); "" stores none.
+	KeyHint            string
 	OrganizationAccess []byte
-	Grants             []grantInput
+	// ExpiresAt is when the key stops working; nil for never.
+	ExpiresAt *time.Time
+	Grants    []grantInput
 }
 
 type grantInput struct {
@@ -60,6 +64,7 @@ type grantInput struct {
 type createdKey struct {
 	ID          uuid.UUID
 	CreatedAt   time.Time
+	ExpiresAt   *time.Time
 	CreatorName string
 }
 
@@ -75,9 +80,9 @@ func (r *Repository) create(ctx context.Context, row newKeyRow) (createdKey, err
 			return apperr.Forbidden("Not authorized")
 		}
 		err := tx.Raw(
-			`WITH k AS (INSERT INTO api_keys (organization_id, created_by, label, hashed_key, lookup_hash, organization_access) VALUES (?, ?, ?, ?, ?, ?::jsonb) RETURNING id, created_at, created_by)
-			SELECT k.id, k.created_at, u.name AS creator_name FROM k JOIN users u ON u.id = k.created_by`,
-			row.OrganizationID, row.CreatedBy, row.Label, row.HashedKey, row.LookupHash, string(row.OrganizationAccess),
+			`WITH k AS (INSERT INTO api_keys (organization_id, created_by, label, hashed_key, lookup_hash, organization_access, key_hint, expires_at) VALUES (?, ?, ?, ?, ?, ?::jsonb, NULLIF(?, ''), ?) RETURNING id, created_at, expires_at, created_by)
+			SELECT k.id, k.created_at, k.expires_at, u.name AS creator_name FROM k JOIN users u ON u.id = k.created_by`,
+			row.OrganizationID, row.CreatedBy, row.Label, row.HashedKey, row.LookupHash, string(row.OrganizationAccess), row.KeyHint, row.ExpiresAt,
 		).Scan(&created).Error
 		if err != nil {
 			return fmt.Errorf("insert api key: %w", err)
@@ -100,6 +105,8 @@ type keyRow struct {
 	LastUsedAt         *time.Time
 	DisabledAt         *time.Time
 	DisabledReason     *string
+	KeyHint            *string
+	ExpiresAt          *time.Time
 	CreatorID          *uuid.UUID
 	CreatorName        *string
 	CreatorIsMember    bool
@@ -144,7 +151,7 @@ func oneView(ctx context.Context, db *gorm.DB, organizationID, id uuid.UUID) (*V
 
 func views(ctx context.Context, db *gorm.DB, organizationID uuid.UUID, id *uuid.UUID) ([]View, error) {
 	// The creator is read through users, and whether they still belong to the key's organization through memberships, so a key whose creator left reads as a former member's.
-	query := `SELECT k.id, k.label, k.created_at, k.organization_access, k.last_used_at, k.disabled_at, k.disabled_reason, u.id AS creator_id, u.name AS creator_name,
+	query := `SELECT k.id, k.label, k.created_at, k.organization_access, k.last_used_at, k.disabled_at, k.disabled_reason, k.key_hint, k.expires_at, u.id AS creator_id, u.name AS creator_name,
 		EXISTS (SELECT 1 FROM memberships m WHERE m.user_id = k.created_by AND m.organization_id = k.organization_id) AS creator_is_member
 		FROM api_keys k LEFT JOIN users u ON u.id = k.created_by WHERE k.organization_id = ?`
 	args := []any{organizationID}
@@ -165,7 +172,7 @@ func views(ctx context.Context, db *gorm.DB, organizationID uuid.UUID, id *uuid.
 	for i, k := range keys {
 		out[i] = View{
 			ID: k.ID, Label: k.Label, CreatedAt: k.CreatedAt, OrganizationAccess: storedAccess(k.OrganizationAccess), WorkspacePermissions: []WorkspaceGrant{},
-			LastUsedAt: k.LastUsedAt, CreatedBy: k.creator(), DisabledAt: k.DisabledAt, DisabledReason: k.DisabledReason,
+			LastUsedAt: k.LastUsedAt, CreatedBy: k.creator(), DisabledAt: k.DisabledAt, DisabledReason: k.DisabledReason, KeyHint: k.KeyHint, ExpiresAt: k.ExpiresAt,
 		}
 		index[k.ID] = i
 		ids[i] = k.ID
@@ -221,12 +228,14 @@ type storedKey struct {
 	LastUsedAt         sql.NullTime
 	// DisabledAt is set once the key was disabled; such a key never authenticates.
 	DisabledAt sql.NullTime
+	// ExpiresAt is set for a key that stops working then; from that time on it never authenticates.
+	ExpiresAt sql.NullTime
 }
 
 // byLookupHash finds the key whose lookup_hash is hash, or nil.
 func (r *Repository) byLookupHash(ctx context.Context, hash string) (*storedKey, error) {
 	var rows []storedKey
-	err := r.db.WithContext(ctx).Raw(`SELECT id, organization_id, hashed_key, organization_access, last_used_at, disabled_at FROM api_keys WHERE lookup_hash = ?`, hash).Scan(&rows).Error
+	err := r.db.WithContext(ctx).Raw(`SELECT id, organization_id, hashed_key, organization_access, last_used_at, disabled_at, expires_at FROM api_keys WHERE lookup_hash = ?`, hash).Scan(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("look up api key: %w", err)
 	}
