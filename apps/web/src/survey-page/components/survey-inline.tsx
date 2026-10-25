@@ -1,5 +1,5 @@
 import type { SurveyContainerProps } from "@forma/types/forma-surveys";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { executeRecaptcha, loadRecaptchaScript } from "../lib/recaptcha";
 
 /** The container the runtime renders into; the loading overlay watches it. */
@@ -47,8 +47,12 @@ const awaitSurveyScript = (scriptUrl: string): Promise<void> =>
     }
   });
 
-/** forma2's SurveyInline: loads reCAPTCHA when the survey uses it, waits for the runtime and renders the survey inline. */
-export const SurveyInline = (props: Omit<SurveyContainerProps, "containerId">) => {
+/**
+ * forma2's SurveyInline: loads reCAPTCHA when the survey uses it, waits for the runtime and renders the survey inline.
+ *
+ * Memoized, because every render here hands the runtime a new props object and so renders the survey again. The page re-renders on every card (its title follows the card), and the survey must only be rendered again when one of its props actually changed.
+ */
+export const SurveyInline = memo(function SurveyInline(props: Omit<SurveyContainerProps, "containerId">) {
   const getRecaptchaToken = useCallback(
     () => executeRecaptcha(props.recaptchaSiteKey),
     [props.recaptchaSiteKey]
@@ -98,4 +102,4 @@ export const SurveyInline = (props: Omit<SurveyContainerProps, "containerId">) =
   }, [isScriptLoaded, renderInline]);
 
   return <div id={SURVEY_CONTAINER_ID} className="h-full w-full" />;
-};
+});

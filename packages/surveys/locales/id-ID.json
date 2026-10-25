@@ -36,6 +36,8 @@
     "response_saved_offline": "Respons Anda belum terkirim. Respons akan dikirim secara otomatis setelah Anda kembali online.",
     "retry": "Coba Lagi",
     "retrying": "Mencoba lagi…",
+    "saving_offline": "Anda sedang offline. Anda dapat terus menjawab; jawaban Anda akan disimpan setelah Anda kembali online.",
+    "saving_reconnecting": "Beberapa jawaban belum tersimpan. Kami akan terus mencoba selagi Anda melanjutkan.",
     "scheduling_calendar": "Kalender penjadwalan",
     "scroll_to_bottom": "Gulir ke bawah",
     "search": "Cari...",

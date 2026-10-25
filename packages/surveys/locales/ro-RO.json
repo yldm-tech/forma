@@ -36,6 +36,8 @@
     "response_saved_offline": "Răspunsul tău nu a fost trimis încă. Va fi transmis automat când vei reveni online.",
     "retry": "Reîncearcă",
     "retrying": "Se reîncearcă...",
+    "saving_offline": "Ești offline. Poți continua să răspunzi; răspunsurile tale vor fi salvate când vei reveni online.",
+    "saving_reconnecting": "Unele răspunsuri nu au fost salvate încă. Vom încerca în continuare cât timp continui.",
     "scheduling_calendar": "Calendar de programare",
     "scroll_to_bottom": "Derulează în jos",
     "search": "Căutare...",
