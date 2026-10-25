@@ -296,8 +296,14 @@ func (r *Repository) orgUserByID(ctx context.Context, organizationID, id uuid.UU
 	return &rows[0], nil
 }
 
-// errLastOwner is a change that would leave the organization without an active owner.
-var errLastOwner = errors.New("last owner")
+// errLastOwner is a role change that would leave the organization without an active owner; errLastActiveOwner is the same through deactivating that owner.
+var (
+	errLastOwner       = errors.New("last owner")
+	errLastActiveOwner = errors.New("last active owner")
+)
+
+// errSharedAccount is a change to a user's account (name, isActive) refused because the user also belongs to another organization.
+var errSharedAccount = errors.New("account shared with another organization")
 
 // userPatch is the users API's update: nil leaves a field as it is; Teams, when set, replaces the user's teams in the organization.
 type userPatch struct {
@@ -308,17 +314,34 @@ type userPatch struct {
 	SetTeams bool
 }
 
-// updateOrgUser applies a patch to a member of the organization. Demoting the organization's last active owner is refused (errLastOwner); that check and the write run in one Serializable transaction, so two demotions cannot both pass it.
+// managesTeams is whether the organization role administers every team of the organization (owner, manager).
+func managesTeams(role string) bool { return role == "owner" || role == "manager" }
+
+// updateOrgUser applies a patch to a member of the organization. Demoting or deactivating the organization's last active owner is refused (errLastOwner, errLastActiveOwner), and so is a change to the name or isActive of a user who also belongs to another organization (errSharedAccount): both live on the user's account, which every organization of the user shares. The checks and the write run in one Serializable transaction, so two concurrent changes cannot both pass them. Demotion from owner or manager to a lower role makes the user a contributor of the organization's teams they administered, the reverse of what promotion through the app does; a plain member who is a team admin stays one when their role is sent unchanged.
 func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID, current *orgUser, p userPatch) error {
-	demoting := current.Role == "owner" && current.IsActive && p.Role != nil && *p.Role != "owner"
+	activeOwner := current.Role == "owner" && current.IsActive
+	demoting := activeOwner && p.Role != nil && *p.Role != "owner"
+	deactivating := activeOwner && p.IsActive != nil && !*p.IsActive
 	return database.Serializable(ctx, r.db, func(tx *gorm.DB) error {
-		if demoting {
-			var owners int64
-			if err := tx.Raw(`SELECT count(*) FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.is_active`, organizationID).Scan(&owners).Error; err != nil {
+		if demoting || deactivating {
+			var others int64
+			if err := tx.Raw(`SELECT count(*) FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.is_active AND u.id <> ?`, organizationID, current.ID).Scan(&others).Error; err != nil {
 				return fmt.Errorf("count owners: %w", err)
 			}
-			if owners <= 1 {
-				return errLastOwner
+			if others == 0 {
+				if demoting {
+					return errLastOwner
+				}
+				return errLastActiveOwner
+			}
+		}
+		if p.Name != nil || p.IsActive != nil {
+			var shared bool
+			if err := tx.Raw(`SELECT EXISTS (SELECT 1 FROM memberships WHERE user_id = ? AND organization_id <> ?)`, current.ID, organizationID).Scan(&shared).Error; err != nil {
+				return fmt.Errorf("check other memberships: %w", err)
+			}
+			if shared {
+				return errSharedAccount
 			}
 		}
 		if p.SetTeams {
@@ -342,6 +365,11 @@ func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID
 		if p.Role != nil {
 			if err := tx.Exec(`UPDATE memberships SET role = ?, updated_at = now() WHERE user_id = ? AND organization_id = ?`, *p.Role, current.ID, organizationID).Error; err != nil {
 				return fmt.Errorf("update membership: %w", err)
+			}
+			if managesTeams(current.Role) && !managesTeams(*p.Role) {
+				if err := tx.Exec(`UPDATE team_members SET role = 'contributor', updated_at = now() WHERE user_id = ? AND role = 'admin' AND team_id IN (SELECT id FROM teams WHERE organization_id = ?)`, current.ID, organizationID).Error; err != nil {
+					return fmt.Errorf("demote team memberships: %w", err)
+				}
 			}
 		}
 		return nil

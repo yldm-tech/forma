@@ -513,7 +513,7 @@ func writeManifest(w io.Writer, entries []AttachmentEntry) error {
 	out := &csvWriter{w: bufio.NewWriter(w)}
 	header := make([]any, len(manifestFields))
 	for i, f := range manifestFields {
-		header[i] = defang(f)
+		header[i] = f
 	}
 	if err := out.row(header); err != nil {
 		return err
@@ -524,9 +524,6 @@ func writeManifest(w io.Writer, entries []AttachmentEntry) error {
 			size = float64(*e.Bytes)
 		}
 		cells := []any{e.ZipPath, e.ResponseID.String(), jsvalue.ISOString(e.ResponseCreatedAt), e.ElementID, e.ElementLabel, e.OriginalFileName, size, e.Status}
-		for i, c := range cells {
-			cells[i] = defang(c)
-		}
 		if err := out.row(cells); err != nil {
 			return err
 		}

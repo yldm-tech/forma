@@ -36,6 +36,8 @@
     "response_saved_offline": "您的回覆尚未送出。當您重新連線時，系統會自動提交。",
     "retry": "重試",
     "retrying": "重試中…",
+    "saving_offline": "您已離線。您可以繼續作答，恢復連線後回答將自動儲存。",
+    "saving_reconnecting": "部分回答尚未儲存。您可以繼續作答，我們會持續重試。",
     "scheduling_calendar": "行程日曆",
     "scroll_to_bottom": "捲動至底部",
     "search": "搜尋...",

@@ -36,6 +36,8 @@
     "response_saved_offline": "Phản hồi của bạn chưa được gửi đi. Nó sẽ được gửi tự động khi bạn trực tuyến trở lại.",
     "retry": "Thử lại",
     "retrying": "Đang thử lại…",
+    "saving_offline": "Bạn đang ngoại tuyến. Bạn có thể tiếp tục trả lời; câu trả lời của bạn sẽ được lưu khi bạn trực tuyến trở lại.",
+    "saving_reconnecting": "Một số câu trả lời chưa được lưu. Chúng tôi sẽ tiếp tục thử trong khi bạn tiếp tục.",
     "scheduling_calendar": "Lịch đặt lịch",
     "scroll_to_bottom": "Cuộn xuống cuối",
     "search": "Tìm kiếm...",

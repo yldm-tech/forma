@@ -56,6 +56,23 @@ func (h *Handler) canManageUsers(role string) bool {
 	return role != "" && org.UserManagementAllowed(role, h.cfg.UserManagementMinimumRole)
 }
 
+// Issues of the 403s a key's creator role causes. forma2 answered them bare; the key holder cannot see their creator's role anywhere, so the answer now says which rule refused the request.
+const (
+	issueCreatorGone        = "Key creator is no longer a member of the organization"
+	issueCreatorCannotTeams = "Key creator's current role cannot manage teams"
+	issueCreatorCannotUsers = "Key creator's current role cannot manage users"
+	issueCreatorCannotRole  = "Key creator's current role cannot assign this role"
+	issueCreatorCannotOwner = "Key creator's current role cannot change an owner"
+)
+
+// v2CreatorForbidden is the 403 of a change the key creator's role does not allow, with the rule as the apiKey detail; a creator who left the organization is named as such.
+func v2CreatorForbidden(c *gin.Context, role, issue string) {
+	if role == "" {
+		issue = issueCreatorGone
+	}
+	v2Error(c, http.StatusForbidden, detail("apiKey", issue))
+}
+
 // canAssignRole is forma2's canAssignOrganizationRole: an owner may assign any role, a manager only member and never over an owner, anyone else nothing.
 func canAssignRole(assigner, target, targetCurrent string) bool {
 	if assigner == org.RoleOwner {
@@ -114,7 +131,7 @@ func (h *Handler) v2TeamWrite(c *gin.Context, organizationID uuid.UUID) bool {
 		return false
 	}
 	if !h.canManageUsers(role) {
-		v2Error(c, http.StatusForbidden, nil)
+		v2CreatorForbidden(c, role, issueCreatorCannotTeams)
 		return false
 	}
 	return true
@@ -329,7 +346,7 @@ func (h *Handler) v2UserWrite(c *gin.Context, organizationID uuid.UUID) (string,
 		return "", false
 	}
 	if !h.canManageUsers(role) {
-		v2Error(c, http.StatusForbidden, nil)
+		v2CreatorForbidden(c, role, issueCreatorCannotUsers)
 		return "", false
 	}
 	return role, true
@@ -355,7 +372,7 @@ func (h *Handler) v2CreateUser(c *gin.Context) {
 		return
 	}
 	if !canAssignRole(creator, *in.role, "") {
-		v2Error(c, http.StatusForbidden, nil)
+		v2CreatorForbidden(c, creator, issueCreatorCannotRole)
 		return
 	}
 	ctx := c.Request.Context()
@@ -372,7 +389,8 @@ func (h *Handler) v2CreateUser(c *gin.Context) {
 	}
 	created, err := h.repo.createOrgUser(ctx, organizationID, newOrgUser{Name: *in.name, Email: in.email, Role: *in.role, IsActive: in.isActive, TeamIDs: teamIDs})
 	if errors.Is(err, errEmailTaken) {
-		v2Error(c, http.StatusConflict, detail("email", "A user with this email already exists"))
+		// The same text whether the email's user is a member here or only has an account elsewhere on the instance, so the detail does not say which. The 409 itself still tells the key that the email has an account on the instance, against a 201 for an unused one; closing that needs the invite flow (decision D-AO01).
+		v2Error(c, http.StatusConflict, detail("email", issueEmailUnavailable))
 		return
 	}
 	if err != nil {
@@ -398,7 +416,13 @@ func containsID(ids []uuid.UUID, id uuid.UUID) bool {
 	return false
 }
 
-// v2UpdateUser is forma2's PATCH /users: the member named by email, changed within what the key's creator may do to them (only an owner touches an owner), teams replaced within the organization when given; demoting the last active owner is 409.
+// issueEmailUnavailable is the 409 detail of a new user whose email another user has, wherever that user belongs.
+const issueEmailUnavailable = "A new user cannot be created with this email"
+
+// issueSharedAccount is the 422 detail of a change to a user's account (name, isActive) refused because the user also belongs to another organization: the account is global, and one organization's key must not rename it or lock it out of the others.
+const issueSharedAccount = "The user also belongs to another organization, so this organization cannot change it"
+
+// v2UpdateUser is forma2's PATCH /users: the member named by email, changed within what the key's creator may do to them (only an owner touches an owner), teams replaced within the organization when given; demoting or deactivating the last active owner is 409. The name and isActive belong to the user's account, not the membership: changing them for a user who also belongs to another organization is 422.
 func (h *Handler) v2UpdateUser(c *gin.Context) {
 	body, ok := v2Body(c)
 	if !ok {
@@ -431,11 +455,15 @@ func (h *Handler) v2UpdateUser(c *gin.Context) {
 		currentRole = current.Role
 	}
 	if !h.canManageUsers(creator) {
-		v2Error(c, http.StatusForbidden, nil)
+		v2CreatorForbidden(c, creator, issueCreatorCannotUsers)
 		return
 	}
-	if (creator != org.RoleOwner && currentRole == org.RoleOwner) || (in.role != nil && !canAssignRole(creator, *in.role, currentRole)) {
-		v2Error(c, http.StatusForbidden, nil)
+	if creator != org.RoleOwner && currentRole == org.RoleOwner {
+		v2CreatorForbidden(c, creator, issueCreatorCannotOwner)
+		return
+	}
+	if in.role != nil && !canAssignRole(creator, *in.role, currentRole) {
+		v2CreatorForbidden(c, creator, issueCreatorCannotRole)
 		return
 	}
 	if current == nil {
@@ -448,7 +476,14 @@ func (h *Handler) v2UpdateUser(c *gin.Context) {
 		return
 	}
 	h.v2Record(c, current.ID.String(), *current, nil)
-	patch := userPatch{Name: in.name, IsActive: in.isActive, Role: in.role, SetTeams: in.hasTeams}
+	// Only a value that changes is written: a client that sends the user's current name or isActive back is not refused for a user shared with another organization.
+	patch := userPatch{Role: in.role, SetTeams: in.hasTeams}
+	if in.name != nil && *in.name != current.Name {
+		patch.Name = in.name
+	}
+	if in.isActive != nil && *in.isActive != current.IsActive {
+		patch.IsActive = in.isActive
+	}
 	var teamNames []string
 	if in.hasTeams {
 		if patch.TeamIDs, err = h.repo.teamsByName(ctx, organizationID, in.teams); err != nil {
@@ -462,8 +497,22 @@ func (h *Handler) v2UpdateUser(c *gin.Context) {
 		}
 	}
 	if err := h.repo.updateOrgUser(ctx, organizationID, current, patch); err != nil {
-		if errors.Is(err, errLastOwner) {
+		switch {
+		case errors.Is(err, errLastOwner):
 			v2Error(c, http.StatusConflict, detail("role", "Cannot remove the last owner of the organization"))
+			return
+		case errors.Is(err, errLastActiveOwner):
+			v2Error(c, http.StatusConflict, detail("isActive", "Cannot deactivate the last active owner of the organization"))
+			return
+		case errors.Is(err, errSharedAccount):
+			var details []v2Detail
+			if patch.Name != nil {
+				details = append(details, v2Detail{Field: "name", Issue: issueSharedAccount})
+			}
+			if patch.IsActive != nil {
+				details = append(details, v2Detail{Field: "isActive", Issue: issueSharedAccount})
+			}
+			v2Error(c, http.StatusUnprocessableEntity, details)
 			return
 		}
 		h.v2Unexpected(c, err)
@@ -557,14 +606,14 @@ func parseWorkspaceTeamInput(body map[string]any) (workspaceTeamInput, *issues) 
 	return in, &is
 }
 
-// v2WorkspaceTeamGuard is what every workspace-team change checks once its input parsed: a workspace named (400, before anything else), write access to the organization (401), and the team and the workspace both of it (404).
+// v2WorkspaceTeamGuard is what every workspace-team change checks once its input parsed: a workspace named (400, before anything else), write access to the organization (401), a creator who may manage users (403, as for every team change: a grant changes which workspaces the team's members reach), and the team and the workspace both of it (404).
 func (h *Handler) v2WorkspaceTeamGuard(c *gin.Context, organizationID uuid.UUID, teamID uuid.UUID, workspaceID *uuid.UUID) bool {
 	if workspaceID == nil {
 		v2Error(c, http.StatusBadRequest, detail("workspaceId", "Either workspaceId or projectId must be provided"))
 		return false
 	}
 	h.v2Record(c, workspaceID.String()+"-"+teamID.String(), nil, nil)
-	if !h.v2OrgAccess(c, organizationID, "write") {
+	if !h.v2TeamWrite(c, organizationID) {
 		return false
 	}
 	ok, err := h.repo.teamAndWorkspaceInOrganization(c.Request.Context(), organizationID, teamID, *workspaceID)

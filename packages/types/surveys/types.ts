@@ -4123,6 +4123,7 @@ export const ZSurveyElementSummaryNps = z.object({
   element: ZSurveyNPSElement,
   responseCount: z.number(),
   total: z.number(),
+  answered: z.number(),
   score: z.number(),
   promoters: z.object({
     count: z.number(),
