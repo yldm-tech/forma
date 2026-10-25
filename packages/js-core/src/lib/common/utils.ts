@@ -1,3 +1,4 @@
+import { SAMPLING_ID_STORAGE_KEY } from "@/lib/common/constants";
 import type {
   TSurveyStyling,
   TUserState,
@@ -197,10 +198,65 @@ export const getSecureRandom = (): number => {
   return u32[0] / 2 ** 32; // Normalized to [0, 1)
 };
 
-export const shouldDisplayBasedOnPercentage = (displayPercentage: number): boolean => {
-  const randomNum = Math.floor(getSecureRandom() * 10000) / 100;
-  return randomNum <= displayPercentage;
+/**
+ * Stable 32-bit hash of a string: FNV-1a over the UTF-16 code units, finished with murmur3's fmix32 so that ids differing only in their last characters still spread across the whole range (plain FNV-1a is weak in its low bits, which is exactly what `% 10000` reads).
+ */
+export const hashString = (value: string): number => {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
+  return hash >>> 0;
 };
+
+/** The user's sampling bucket for one survey, in [0, 9999]. The survey id is part of the key so that a 10% survey and another 10% survey do not reach the exact same 10% of users. */
+export const getSamplingBucket = (samplingId: string, surveyId: string): number =>
+  hashString(`${samplingId}:${surveyId}`) % 10000;
+
+/**
+ * Whether this user falls inside a survey's "show to X% of targeted users" sample.
+ *
+ * Deterministic on purpose: the same user (contact id, or the persisted anonymous id) and survey always land in the same bucket, so the answer is the same on every trigger, page load and session. A per-trigger coin flip would let a 10% survey reach 65% of users who hit its trigger ten times. `displayPercentage` has up to two decimals, hence the 10000 buckets.
+ */
+export const shouldDisplayBasedOnPercentage = (
+  displayPercentage: number,
+  samplingId: string,
+  surveyId: string
+): boolean => getSamplingBucket(samplingId, surveyId) < Math.round(displayPercentage * 100);
+
+// Held for the page's lifetime when localStorage is unavailable (blocked storage, some private modes): sampling then stays stable for this page view at least, instead of re-rolling on every trigger.
+let inMemorySamplingId: string | null = null;
+
+const createSamplingId = (): string => {
+  const bytes = new Uint32Array(4);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (n) => n.toString(16).padStart(8, "0")).join("");
+};
+
+/**
+ * The anonymous visitor's sampling id: random, created once and kept in localStorage under its own key, so `resetConfig()` (logout, a workspace switch, an error state) does not re-roll the visitor's sample. It never leaves the browser.
+ */
+export const getAnonymousSamplingId = (): string => {
+  try {
+    const stored = localStorage.getItem(SAMPLING_ID_STORAGE_KEY);
+    if (stored) return stored;
+    const created = createSamplingId();
+    localStorage.setItem(SAMPLING_ID_STORAGE_KEY, created);
+    return created;
+  } catch {
+    inMemorySamplingId ??= createSamplingId();
+    return inMemorySamplingId;
+  }
+};
+
+/** Strips surrounding whitespace and trailing slashes, so an `appUrl` pasted from the address bar (`https://forma.example.com/`) does not produce `//api/...` request paths. */
+export const normalizeAppUrl = (appUrl: string): string => appUrl.trim().replace(/\/+$/, "");
 
 export const isNowExpired = (expirationDate: Date): boolean => new Date() >= expirationDate;
 
@@ -264,6 +320,32 @@ export const handleUrlFilters = (
   return isMatch;
 };
 
+const INTERACTIVE_ANCESTOR_SELECTOR = "button, a, [role='button']";
+
+const normalizeText = (text: string | null | undefined): string => (text ?? "").replace(/\s+/g, " ").trim();
+
+/**
+ * Whether a click matches a click action's "Inner Text" value.
+ *
+ * The editor describes the field as the text of the clicked button, so the comparison is on whitespace-normalized `textContent`: of the clicked element, of its nearest button / link / `role=button` ancestor (a click on the `<svg>` inside `<button><svg/> Buy now</button>` lands on the svg), and of the element the CSS selector resolved to. Exact `innerHTML` equality on the resolved element is kept as a fallback, because actions saved under the old behaviour may store markup that a text comparison would never equal.
+ */
+const matchesClickText = (
+  targetElement: HTMLElement,
+  matchedElement: HTMLElement,
+  value: string
+): boolean => {
+  if (matchedElement.innerHTML === value) return true;
+
+  const expected = normalizeText(value);
+  if (!expected) return false;
+
+  const interactiveAncestor = targetElement.closest(INTERACTIVE_ANCESTOR_SELECTOR);
+
+  return [targetElement, interactiveAncestor, matchedElement].some(
+    (element) => element !== null && normalizeText(element.textContent) === expected
+  );
+};
+
 export const evaluateNoCodeConfigClick = (
   targetElement: HTMLElement,
   action: TWorkspaceStateActionClass
@@ -303,8 +385,7 @@ export const evaluateNoCodeConfigClick = (
     }
   }
 
-  // Check innerHtml against the resolved element, not the raw click target
-  if (innerHtml && matchedElement.innerHTML !== innerHtml) return false;
+  if (innerHtml && !matchesClickText(targetElement, matchedElement, innerHtml)) return false;
 
   const connector = action.noCodeConfig.urlFiltersConnector ?? "or";
   const isValidUrl = handleUrlFilters(urlFilters, connector);

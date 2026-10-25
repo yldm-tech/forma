@@ -34,8 +34,8 @@ export const BUDGETS = [
   },
   {
     path: "apps/web/public/js/forma.umd.cjs",
-    maxGzipBytes: 11_600,
-    measuredBytes: 10_474, // 2026-10-23
+    maxGzipBytes: 12_300,
+    measuredBytes: 11_724, // 2026-10-25
     builtBy: "pnpm --filter @forma/js-core build",
   },
 ];

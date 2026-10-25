@@ -77,8 +77,7 @@ describe("copyCompiledAssetsPlugin duplicateSuffixes", () => {
 
     await run(copyCompiledAssetsPlugin({ filename: "forma", distDir: dist }), root);
 
-    // js-core's embed SDK is loaded by third-party pages under its published name; it must not grow
-    // an alias just because the surveys bundle needed one.
+    // Only the configured suffixes are duplicated: a package that asks for none gets exactly its own files.
     expect((await readdir(out)).sort()).toEqual(["forma.js", "forma.umd.cjs"]);
   });
 

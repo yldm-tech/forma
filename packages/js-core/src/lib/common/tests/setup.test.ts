@@ -163,12 +163,18 @@ describe("setup.ts", () => {
       expect(window.dataLayer).toBeUndefined();
     });
 
-    test("a failed setup (missing field) does not emit forma_setup_successful", async () => {
+    test("a failed setup (missing field) emits forma_setup_failed, not forma_setup_successful", async () => {
       delete (window as { dataLayer?: unknown }).dataLayer;
       const result = await setup({ appUrl: "https://my.url" });
 
       expect(result.ok).toBe(false);
-      expect(window.dataLayer).toBeUndefined();
+      expect(window.dataLayer).toEqual([
+        {
+          event: "forma_setup_failed",
+          forma: expect.objectContaining({ workspaceId: null, code: "missing_field" }) as unknown,
+        },
+      ]);
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining("setup() needs a workspaceId"));
     });
 
     test("fails if no environmentId or workspaceId is provided", async () => {
@@ -242,6 +248,8 @@ describe("setup.ts", () => {
             responseId: null,
             finished: null,
             action: null,
+            code: null,
+            message: null,
           },
         },
       ]);
@@ -301,28 +309,153 @@ describe("setup.ts", () => {
       );
     });
 
-    test("skips setup if existing config is in error state and not expired (debug mode)", async () => {
+    test("debug mode resets an unexpired error state and continues the setup", async () => {
       (getIsDebug as unknown as Mock).mockReturnValue(true);
       const mockConfig = {
         get: vi.fn().mockReturnValue({
-          workspaceId: "env_123",
+          workspaceId: "ws_123",
           appUrl: "https://my.url",
-          workspace: {},
-          user: { data: {}, expiresAt: null },
           status: { value: "error", expiresAt: new Date(Date.now() + 10000) },
         }),
         resetConfig: vi.fn(),
+        update: vi.fn(),
       };
 
       getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
 
       (isNowExpired as unknown as Mock).mockReturnValue(false); // Not expired
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: { data: { surveys: [] }, expiresAt: new Date() },
+      });
+      (filterSurveys as unknown as Mock).mockReturnValue([]);
 
       const result = await setup({ workspaceId: "ws_123", appUrl: "https://my.url" });
       expect(result.ok).toBe(true);
       expect(mockLogger.debug).toHaveBeenCalledWith(
         "Forma is in error state, but debug mode is active. Resetting config and continuing."
       );
+      expect(fetchWorkspaceState).toHaveBeenCalledWith({ appUrl: "https://my.url", workspaceId: "ws_123" });
+      expect(mockConfig.update).toHaveBeenCalledWith(expect.objectContaining({ workspaceId: "ws_123" }));
+    });
+
+    // AS-03: the cool-down belongs to the setup that failed, so a corrected workspaceId or appUrl runs at once.
+    test.each([
+      ["a different workspaceId", { workspaceId: "ws_typo", appUrl: "https://my.url" }],
+      ["a different appUrl", { workspaceId: "ws_123", appUrl: "https://wrong.host" }],
+      ["no recorded setup (written by an older SDK)", {}],
+    ])("ignores an unexpired error state recorded for %s", async (_label, failedSetup) => {
+      (getIsDebug as unknown as Mock).mockReturnValue(false);
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          ...failedSetup,
+          status: { value: "error", expiresAt: new Date(Date.now() + 10 * 60000) },
+        }),
+        resetConfig: vi.fn(),
+        update: vi.fn(),
+      };
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      (isNowExpired as unknown as Mock).mockReturnValue(false);
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: { data: { surveys: [] }, expiresAt: new Date() },
+      });
+      (filterSurveys as unknown as Mock).mockReturnValue([]);
+
+      const result = await setup({ workspaceId: "ws_123", appUrl: "https://my.url" });
+
+      expect(result.ok).toBe(true);
+      expect(mockConfig.resetConfig).toHaveBeenCalled();
+      expect(fetchWorkspaceState).toHaveBeenCalledWith({ appUrl: "https://my.url", workspaceId: "ws_123" });
+      expect(addEventListeners).toHaveBeenCalled();
+    });
+
+    test("a wrong workspaceId followed by the correct one sets up on the very next load", async () => {
+      // Load 1: the wrong id. The server answers 404, which is a configuration error.
+      const firstLoad = { get: vi.fn().mockReturnValue(undefined), resetConfig: vi.fn(), update: vi.fn() };
+      getInstanceConfigMock.mockReturnValue(firstLoad as unknown as Config);
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: "network_error",
+          status: 404,
+          message: "Error syncing with backend",
+          responseMessage: "Workspace not found",
+        },
+      });
+
+      await expect(setup({ workspaceId: "ws_typo", appUrl: "https://my.url" })).rejects.toThrow(
+        "Could not set up forma"
+      );
+      expect(setItemMock).not.toHaveBeenCalledWith(
+        JS_LOCAL_STORAGE_KEY,
+        expect.stringContaining('"value":"error"')
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('rejected workspaceId "ws_typo" (404: Workspace not found)')
+      );
+
+      // Load 2: the fixed id. Nothing was cached, so setup runs.
+      setIsSetup(false);
+      const secondLoad = { get: vi.fn().mockReturnValue(undefined), resetConfig: vi.fn(), update: vi.fn() };
+      getInstanceConfigMock.mockReturnValue(secondLoad as unknown as Config);
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: { data: { surveys: [] }, expiresAt: new Date() },
+      });
+      (filterSurveys as unknown as Mock).mockReturnValue([]);
+
+      const result = await setup({ workspaceId: "ws_123", appUrl: "https://my.url" });
+      expect(result.ok).toBe(true);
+      expect(secondLoad.update).toHaveBeenCalledWith(expect.objectContaining({ workspaceId: "ws_123" }));
+    });
+
+    test("strips a trailing slash from appUrl before requesting and storing it", async () => {
+      const mockConfig = { get: vi.fn().mockReturnValue(undefined), resetConfig: vi.fn(), update: vi.fn() };
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: { data: { surveys: [] }, expiresAt: new Date() },
+      });
+      (filterSurveys as unknown as Mock).mockReturnValue([]);
+
+      const result = await setup({ workspaceId: "ws_123", appUrl: "http://localhost:3800/" });
+
+      expect(result.ok).toBe(true);
+      expect(fetchWorkspaceState).toHaveBeenCalledWith({
+        appUrl: "http://localhost:3800",
+        workspaceId: "ws_123",
+      });
+      expect(mockConfig.update).toHaveBeenCalledWith(
+        expect.objectContaining({ appUrl: "http://localhost:3800" })
+      );
+    });
+
+    test("an error state still cooling down for the same setup emits forma_setup_failed", async () => {
+      delete (window as { dataLayer?: unknown }).dataLayer;
+      (getIsDebug as unknown as Mock).mockReturnValue(false);
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          workspaceId: "ws_123",
+          appUrl: "https://my.url",
+          status: { value: "error", expiresAt: new Date(Date.now() + 10000) },
+        }),
+        resetConfig: vi.fn(),
+      };
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      (isNowExpired as unknown as Mock).mockReturnValue(false);
+
+      // The trailing slash is the same setup once normalized.
+      const result = await setup({ workspaceId: "ws_123", appUrl: "https://my.url/" });
+
+      expect(result.ok).toBe(true);
+      expect(fetchWorkspaceState).not.toHaveBeenCalled();
+      expect(window.dataLayer).toEqual([
+        {
+          event: "forma_setup_failed",
+          forma: expect.objectContaining({ workspaceId: "ws_123", code: "error_state" }) as unknown,
+        },
+      ]);
     });
 
     test("skips initialization if error state is active (not expired)", async () => {
@@ -969,12 +1102,59 @@ describe("setup.ts", () => {
   });
 
   describe("handleErrorOnFirstSetup()", () => {
-    test("stores error state in AsyncStorage, throws error", async () => {
-      // We import the function directly
-      const errorObj = { code: "forbidden", responseMessage: "No access" };
+    const failedSetup = { workspaceId: "ws_123", appUrl: "https://my.url" };
+
+    test("stores an error state for a network or server error, keyed to the setup that failed", async () => {
+      delete (window as { dataLayer?: unknown }).dataLayer;
+      const errorObj = { code: "network_error", status: 500, responseMessage: "Network error" };
 
       await expect(async () => {
-        await handleErrorOnFirstSetup(errorObj);
+        await handleErrorOnFirstSetup(errorObj, failedSetup);
+      }).rejects.toThrow("Could not set up forma");
+
+      expect(setItemMock).toHaveBeenCalledWith(
+        JS_LOCAL_STORAGE_KEY,
+        expect.stringContaining('"value":"error"')
+      );
+      const stored = JSON.parse((setItemMock.mock.calls.at(-1) as [string, string])[1]) as Partial<TConfig>;
+      expect(stored).toMatchObject(failedSetup);
+      expect(window.dataLayer).toEqual([
+        {
+          event: "forma_setup_failed",
+          forma: expect.objectContaining({ workspaceId: "ws_123", code: "network_error" }) as unknown,
+        },
+      ]);
+    });
+
+    test.each([
+      [{ code: "network_error", status: 404, responseMessage: "Workspace not found" }],
+      [{ code: "network_error", status: 400, responseMessage: "Invalid ID format" }],
+      [{ code: "forbidden", responseMessage: "No access" }],
+    ])("does not store an error state for a configuration error (%o)", async (errorObj) => {
+      delete (window as { dataLayer?: unknown }).dataLayer;
+
+      await expect(async () => {
+        await handleErrorOnFirstSetup(errorObj, failedSetup);
+      }).rejects.toThrow("Could not set up forma");
+
+      expect(setItemMock).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining("Check the workspaceId and appUrl passed to forma.setup()")
+      );
+      expect(window.dataLayer).toEqual([
+        {
+          event: "forma_setup_failed",
+          forma: expect.objectContaining({ workspaceId: "ws_123", code: "invalid_config" }) as unknown,
+        },
+      ]);
+    });
+
+    test("stores an error state when the server rate-limits (429)", async () => {
+      await expect(async () => {
+        await handleErrorOnFirstSetup(
+          { code: "network_error", status: 429, responseMessage: "Too many requests" },
+          failedSetup
+        );
       }).rejects.toThrow("Could not set up forma");
 
       expect(setItemMock).toHaveBeenCalledWith(

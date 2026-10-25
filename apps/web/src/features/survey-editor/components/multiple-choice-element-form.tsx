@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next";
 import { getLanguageLabel } from "@forma/i18n-utils/utils";
 import {
   TMultipleChoiceOptionDisplayType,
-  TSurveyElement,
   TSurveyElementChoice,
   TSurveyElementTypeEnum,
   TSurveyMultipleChoiceElement,
@@ -17,6 +16,7 @@ import {
 import { TShuffleOption, TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
 import { createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
+import type { TElementUpdate, TUpdateElement } from "../types/editor";
 import { ElementFormInput } from "./element-form-input/index";
 import { BulkEditOptionsModal } from "./bulk-edit-options-modal";
 import { ElementOptionChoice } from "./element-option-choice";
@@ -31,7 +31,7 @@ interface MultipleChoiceElementFormProps {
   localSurvey: TSurvey;
   element: TSurveyMultipleChoiceElement;
   elementIdx: number;
-  updateElement: (elementIdx: number, updatedAttributes: Partial<TSurveyElement>) => void;
+  updateElement: TUpdateElement;
   selectedLanguageCode: string;
   isInvalid: boolean;
   locale: TUserLocale;
@@ -88,18 +88,25 @@ export const MultipleChoiceElementForm = ({
     { value: "dropdown", label: t("workspace.surveys.edit.dropdown") },
   ];
 
-  const updateChoice = (choiceIdx: number, updatedAttributes: Partial<TSurveyElementChoice>) => {
-    let newChoices: TSurveyElementChoice[] = [];
-    if (element.choices) {
-      newChoices = element.choices.map((choice, idx) => {
-        if (idx !== choiceIdx) return choice;
-        return { ...choice, ...updatedAttributes };
-      });
-    }
+  // Choice edits are computed from the element's latest choices, not this render's: an option's label is committed 100 ms after its last keystroke, after Enter may already have added the next row.
+  const updateCurrentElement = (compute: (current: TSurveyMultipleChoiceElement) => TElementUpdate) =>
+    updateElement(elementIdx, (current) =>
+      current.type === TSurveyElementTypeEnum.MultipleChoiceSingle ||
+      current.type === TSurveyElementTypeEnum.MultipleChoiceMulti
+        ? compute(current)
+        : {}
+    );
 
-    updateElement(elementIdx, {
-      choices: newChoices,
-    });
+  const updateChoice = (choiceIdx: number, updatedAttributes: Partial<TSurveyElementChoice>) => {
+    // The index is this render's; the choice it names is found by id in the latest choices.
+    const choiceId = element.choices[choiceIdx]?.id;
+    if (!choiceId) return;
+
+    updateCurrentElement((current) => ({
+      choices: current.choices.map((choice) =>
+        choice.id === choiceId ? { ...choice, ...updatedAttributes } : choice
+      ),
+    }));
   };
 
   const regularChoices = useMemo(
@@ -137,23 +144,29 @@ export const MultipleChoiceElementForm = ({
   const addChoice = (choiceIdx?: number) => {
     setIsNew(false);
 
+    // Created outside the updater, which React may call more than once.
     const newChoice = {
       id: createId(),
       label: createI18nString("", surveyLanguageCodes),
     };
+    // The new row goes below the choice the author is on (found by id), or at the end of the regular choices.
+    const afterChoiceId = choiceIdx === undefined ? undefined : element.choices[choiceIdx]?.id;
 
-    if (choiceIdx !== undefined) {
-      regularChoices.splice(choiceIdx + 1, 0, newChoice);
-    } else {
-      regularChoices.push(newChoice);
-    }
+    updateCurrentElement((current) => {
+      const regular = current.choices.filter((c) => c.id !== "other" && c.id !== "none");
+      const afterIdx = afterChoiceId === undefined ? -1 : regular.findIndex((c) => c.id === afterChoiceId);
+      const withNew =
+        afterIdx === -1
+          ? [...regular, newChoice]
+          : [...regular.slice(0, afterIdx + 1), newChoice, ...regular.slice(afterIdx + 1)];
 
-    const newChoices = ensureSpecialChoicesOrder([
-      ...regularChoices,
-      ...element.choices.filter((c) => c.id === "other" || c.id === "none"),
-    ]);
-
-    updateElement(elementIdx, { choices: newChoices });
+      return {
+        choices: ensureSpecialChoicesOrder([
+          ...withNew,
+          ...current.choices.filter((c) => c.id === "other" || c.id === "none"),
+        ]),
+      };
+    });
   };
 
   const addSpecialChoice = (choiceId: "other" | "none", labelText: string) => {
@@ -164,23 +177,25 @@ export const MultipleChoiceElementForm = ({
       label: createI18nString(labelText, surveyLanguageCodes),
     };
 
-    const newChoices = ensureSpecialChoicesOrder([...element.choices, newChoice]);
+    updateCurrentElement((current) => {
+      if (current.choices.some((c) => c.id === choiceId)) return {};
 
-    updateElement(elementIdx, {
-      choices: newChoices,
-      ...(choiceId === "other" &&
-        !element.otherOptionPlaceholder && {
-          otherOptionPlaceholder: createI18nString(
-            t("workspace.surveys.edit.please_specify"),
-            surveyLanguageCodes
-          ),
+      return {
+        choices: ensureSpecialChoicesOrder([...current.choices, newChoice]),
+        ...(choiceId === "other" &&
+          !current.otherOptionPlaceholder && {
+            otherOptionPlaceholder: createI18nString(
+              t("workspace.surveys.edit.please_specify"),
+              surveyLanguageCodes
+            ),
+          }),
+        ...(current.shuffleOption === shuffleOptionsTypes.all.id && {
+          shuffleOption: shuffleOptionsTypes.exceptLast.id,
         }),
-      ...(element.shuffleOption === shuffleOptionsTypes.all.id && {
-        shuffleOption: shuffleOptionsTypes.exceptLast.id,
-      }),
-      ...(element.shuffleOption === shuffleOptionsTypes.reverseOrderOccasionally.id && {
-        shuffleOption: shuffleOptionsTypes.reverseOrderExceptLast.id,
-      }),
+        ...(current.shuffleOption === shuffleOptionsTypes.reverseOrderOccasionally.id && {
+          shuffleOption: shuffleOptionsTypes.reverseOrderExceptLast.id,
+        }),
+      };
     });
   };
 
@@ -200,24 +215,26 @@ export const MultipleChoiceElementForm = ({
       }
     }
 
-    const newChoices = !element.choices ? [] : element.choices.filter((_, idx) => idx !== choiceIdx);
     const choiceValue = element.choices[choiceIdx]?.label[selectedLanguageCode];
     if (isInvalidValue === choiceValue) {
       setisInvalidValue(null);
     }
 
-    const hasRemainingSpecialChoices = newChoices.some((c) => c.id === "other" || c.id === "none");
+    updateCurrentElement((current) => {
+      const newChoices = current.choices.filter((c) => c.id !== choiceToDelete);
+      const hasRemainingSpecialChoices = newChoices.some((c) => c.id === "other" || c.id === "none");
 
-    updateElement(elementIdx, {
-      choices: newChoices,
-      ...(!hasRemainingSpecialChoices &&
-        element.shuffleOption === "reverseOrderExceptLast" && {
-          shuffleOption: "reverseOrderOccasionally",
-        }),
-      ...(!hasRemainingSpecialChoices &&
-        element.shuffleOption === "exceptLast" && {
-          shuffleOption: "all",
-        }),
+      return {
+        choices: newChoices,
+        ...(!hasRemainingSpecialChoices &&
+          current.shuffleOption === "reverseOrderExceptLast" && {
+            shuffleOption: "reverseOrderOccasionally",
+          }),
+        ...(!hasRemainingSpecialChoices &&
+          current.shuffleOption === "exceptLast" && {
+            shuffleOption: "all",
+          }),
+      };
     });
   };
 
@@ -425,11 +442,12 @@ export const MultipleChoiceElementForm = ({
         onClose={() => setIsBulkEditOpen(false)}
         regularChoices={regularChoices}
         onSave={(updatedChoices) => {
-          const newChoices = ensureSpecialChoicesOrder([
-            ...updatedChoices,
-            ...element.choices.filter((c) => c.id === "other" || c.id === "none"),
-          ]);
-          updateElement(elementIdx, { choices: newChoices });
+          updateCurrentElement((current) => ({
+            choices: ensureSpecialChoicesOrder([
+              ...updatedChoices,
+              ...current.choices.filter((c) => c.id === "other" || c.id === "none"),
+            ]),
+          }));
         }}
         element={element}
         localSurvey={localSurvey}

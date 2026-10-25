@@ -1,5 +1,6 @@
 // utils.test.ts
-import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { type Mock, afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { SAMPLING_ID_STORAGE_KEY } from "@/lib/common/constants";
 import { mockSurveyId } from "@/lib/common/tests/__mocks__/config.mock";
 import {
   checkUrlMatch,
@@ -9,10 +10,13 @@ import {
   getDefaultLanguageCode,
   getIsDebug,
   getLanguageCode,
+  getAnonymousSamplingId,
+  getSamplingBucket,
   getSecureRandom,
   getStyling,
   handleUrlFilters,
   isNowExpired,
+  normalizeAppUrl,
   shouldDisplayBasedOnPercentage,
   wrapThrows,
   wrapThrowsAsync,
@@ -482,28 +486,87 @@ describe("utils.ts", () => {
   // shouldDisplayBasedOnPercentage
   // ---------------------------------------------------------------------------------
   describe("shouldDisplayBasedOnPercentage()", () => {
-    test("returns true if random number <= displayPercentage", () => {
-      const mockGetRandomValues = vi
-        .spyOn(crypto, "getRandomValues")
-        .mockImplementation(<T extends ArrayBufferView | null>(array: T): T => {
-          if (array instanceof Uint32Array) {
-            array[0] = Math.floor((20 / 100) * 2 ** 32);
-            return array;
-          }
-          return array;
-        });
-      expect(shouldDisplayBasedOnPercentage(30)).toBe(true);
+    test("gives the same user the same answer on every trigger", () => {
+      const first = shouldDisplayBasedOnPercentage(10, "contact_1", mockSurveyId1);
+      for (let i = 0; i < 100; i++) {
+        expect(shouldDisplayBasedOnPercentage(10, "contact_1", mockSurveyId1)).toBe(first);
+      }
+    });
 
-      mockGetRandomValues.mockImplementation(<T extends ArrayBufferView | null>(array: T): T => {
-        if (array instanceof Uint32Array) {
-          array[0] = Math.floor((80 / 100) * 2 ** 32);
-          return array;
-        }
-        return array;
+    test("samples roughly the configured share of users", () => {
+      let shown = 0;
+      for (let i = 0; i < 10000; i++) {
+        if (shouldDisplayBasedOnPercentage(30, `contact_${i.toString()}`, mockSurveyId1)) shown++;
+      }
+      expect(shown / 10000).toBeGreaterThan(0.28);
+      expect(shown / 10000).toBeLessThan(0.32);
+    });
+
+    test("buckets the same user independently per survey", () => {
+      const users = Array.from({ length: 1000 }, (_, i) => `contact_${i.toString()}`);
+      const inFirst = users.filter((u) => shouldDisplayBasedOnPercentage(50, u, mockSurveyId1));
+      const inBoth = inFirst.filter((u) => shouldDisplayBasedOnPercentage(50, u, mockSurveyId2));
+      // Independent 50% samples overlap on about half of the first sample, not all of it.
+      expect(inBoth.length / inFirst.length).toBeGreaterThan(0.4);
+      expect(inBoth.length / inFirst.length).toBeLessThan(0.6);
+    });
+
+    test("shows to everyone at 100% and nobody below the smallest bucket", () => {
+      for (let i = 0; i < 200; i++) {
+        expect(shouldDisplayBasedOnPercentage(100, `contact_${i.toString()}`, mockSurveyId1)).toBe(true);
+        expect(shouldDisplayBasedOnPercentage(0.001, `contact_${i.toString()}`, mockSurveyId1)).toBe(false);
+      }
+    });
+
+    test("matches the bucket boundary exactly", () => {
+      const bucket = getSamplingBucket("contact_1", mockSurveyId1);
+      expect(bucket).toBeGreaterThanOrEqual(0);
+      expect(bucket).toBeLessThan(10000);
+      expect(shouldDisplayBasedOnPercentage((bucket + 1) / 100, "contact_1", mockSurveyId1)).toBe(true);
+      expect(shouldDisplayBasedOnPercentage(bucket / 100, "contact_1", mockSurveyId1)).toBe(false);
+    });
+  });
+
+  // ---------------------------------------------------------------------------------
+  // getAnonymousSamplingId
+  // ---------------------------------------------------------------------------------
+  describe("getAnonymousSamplingId()", () => {
+    afterEach(() => {
+      vi.mocked(localStorage.getItem).mockReset();
+      vi.mocked(localStorage.setItem).mockReset();
+    });
+
+    test("creates the id once and reuses the stored one afterwards", () => {
+      const store = new Map<string, string>();
+      vi.mocked(localStorage.getItem).mockImplementation((key: string) => store.get(key) ?? null);
+      vi.mocked(localStorage.setItem).mockImplementation((key: string, value: string) => {
+        store.set(key, value);
       });
-      expect(shouldDisplayBasedOnPercentage(30)).toBe(false);
 
-      mockGetRandomValues.mockRestore();
+      const first = getAnonymousSamplingId();
+      expect(first).toMatch(/^[0-9a-f]{32}$/);
+      expect(store.get(SAMPLING_ID_STORAGE_KEY)).toBe(first);
+      expect(getAnonymousSamplingId()).toBe(first);
+    });
+
+    test("keeps one id for the page when localStorage throws", () => {
+      vi.mocked(localStorage.getItem).mockImplementation(() => {
+        throw new Error("SecurityError");
+      });
+
+      const first = getAnonymousSamplingId();
+      expect(getAnonymousSamplingId()).toBe(first);
+    });
+  });
+
+  // ---------------------------------------------------------------------------------
+  // normalizeAppUrl
+  // ---------------------------------------------------------------------------------
+  describe("normalizeAppUrl()", () => {
+    test("strips trailing slashes and surrounding whitespace", () => {
+      expect(normalizeAppUrl("http://localhost:3800/")).toBe("http://localhost:3800");
+      expect(normalizeAppUrl(" https://forma.yldm.ai// ")).toBe("https://forma.yldm.ai");
+      expect(normalizeAppUrl("https://example.com/forma")).toBe("https://example.com/forma");
     });
   });
 
@@ -874,9 +937,86 @@ describe("utils.ts", () => {
       expect(result).toBe(false);
     });
 
+    // Elements here are plain stand-ins (the suite runs without a DOM): `closest` answers for the nearest button / link / role=button ancestor the matcher asks for.
+    const makeElement = (
+      textContent: string,
+      innerHTML: string,
+      interactiveAncestor: HTMLElement | null = null
+    ): HTMLElement =>
+      ({
+        textContent,
+        innerHTML,
+        matches: vi.fn(() => false),
+        closest: vi.fn(() => interactiveAncestor),
+      }) as unknown as HTMLElement;
+
+    const clickAction = (innerHtml: string, cssSelector?: string): TWorkspaceStateActionClass => ({
+      id: "clabc123abc",
+      name: "Buy click",
+      type: "noCode",
+      key: null,
+      noCodeConfig: {
+        type: "click",
+        urlFilters: [],
+        elementSelector: { innerHtml, ...(cssSelector && { cssSelector }) },
+      },
+    });
+
+    test("matches the visible text of a button that also holds an icon", () => {
+      // <button><svg/> Buy now</button>
+      const button = makeElement(" Buy now", '<svg viewBox="0 0 16 16"></svg> Buy now');
+      (button.closest as Mock).mockReturnValue(button);
+
+      expect(evaluateNoCodeConfigClick(button, clickAction("Buy now"))).toBe(true);
+    });
+
+    test("matches when the click lands on the icon inside the button", () => {
+      const button = makeElement(" Buy now", '<svg viewBox="0 0 16 16"></svg> Buy now');
+      const svg = makeElement("", "", button);
+
+      expect(evaluateNoCodeConfigClick(svg, clickAction("Buy now"))).toBe(true);
+    });
+
+    test("ignores surrounding whitespace and line breaks in server-rendered markup", () => {
+      const link = makeElement("\n      Buy\n      now\n    ", "\n      Buy\n      now\n    ");
+      (link.closest as Mock).mockReturnValue(link);
+
+      expect(evaluateNoCodeConfigClick(link, clickAction("  Buy now "))).toBe(true);
+    });
+
+    test("does not match a different text", () => {
+      const button = makeElement("Buy later", "Buy later");
+      (button.closest as Mock).mockReturnValue(button);
+
+      expect(evaluateNoCodeConfigClick(button, clickAction("Buy now"))).toBe(false);
+    });
+
+    test("does not match a container that merely contains the text", () => {
+      // A click on a card's padding: neither the card nor any button ancestor has exactly that text.
+      const card = makeElement("Pro plan Buy now", "<h3>Pro plan</h3><button>Buy now</button>");
+
+      expect(evaluateNoCodeConfigClick(card, clickAction("Buy now"))).toBe(false);
+    });
+
+    test("still matches an action saved with markup by exact innerHTML", () => {
+      const button = makeElement("Buy now", "<span>Buy</span> now");
+
+      expect(evaluateNoCodeConfigClick(button, clickAction("<span>Buy</span> now"))).toBe(true);
+    });
+
+    test("matches the text of the element the CSS selector resolved to", () => {
+      const button = makeElement("Buy now", '<svg viewBox="0 0 16 16"></svg>Buy now');
+      const icon = makeElement("", "<path />", null);
+      (icon.closest as Mock).mockImplementation((selector: string) => (selector === ".buy" ? button : null));
+
+      expect(evaluateNoCodeConfigClick(icon, clickAction("Buy now", ".buy"))).toBe(true);
+    });
+
     test("returns false if innerHtml does not match", () => {
       const targetElement = document.createElement("div");
       targetElement.innerHTML = "Test";
+      targetElement.textContent = "Test";
+      targetElement.closest = vi.fn(() => null);
 
       const action: TWorkspaceStateActionClass = {
         id: "clabc123abc",

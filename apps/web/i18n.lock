@@ -1635,6 +1635,7 @@ checksums:
     workspace/app-connection/app_connection_description: 37cc98d52b99f9369c66980a412b420b
     workspace/app-connection/cache_update_delay_description: 14b0ec8d102a843e354245d2347d3b16
     workspace/app-connection/cache_update_delay_title: 60e4a0fcfbd8850bddf29b5c3f59550c
+    workspace/app-connection/coming_soon: ee2b0671e00972773210c5be5a9ccb89
     workspace/app-connection/forma_sdk_connected: 283a75b3130bc5b39de8cb4671f010e4
     workspace/app-connection/forma_sdk_not_connected: 5521e99a2b37eb01edd2e3e7a2c2ff1e
     workspace/app-connection/forma_sdk_not_connected_description: 77c28dd2c2e477ec05ff07715322c7b2
@@ -1688,6 +1689,14 @@ checksums:
     workspace/app-connection/invite_banner_button: fe8b820b010a3fa419451fba5a593338
     workspace/app-connection/invite_banner_description: feab52c4ade77966f4601600427a478a
     workspace/app-connection/invite_banner_title: 12820f65c25cdf6cc7d8d9fda4bf5d35
+    workspace/app-connection/loader_docs_description: d0f689860ef84aaa76aa0aa5beef089e
+    workspace/app-connection/loader_docs_link: 1fd208a889f405c4f32e8ac23ccfa8bf
+    workspace/app-connection/loader_nextjs_step_1: 60b9ba700f6c6bf9168a1a5701fcd749
+    workspace/app-connection/loader_nextjs_step_2: 11605f358f28fb60e856700c9120c330
+    workspace/app-connection/loader_react_step: 645978e35ec843e3d64deccda0e53262
+    workspace/app-connection/loader_usage_step: 0138743b6c475c7c905f46029fe12a1c
+    workspace/app-connection/loader_vue_step: 13f701ba67f622d43eebb8efb0e3f6dd
+    workspace/app-connection/loader_wordpress_description: 640062dffce7231151d9fdb299afb41b
     workspace/app-connection/receiving_data: 9f2a48c0b0278861add70b526061264c
     workspace/app-connection/recheck: f95f2bbe6990a123d60255c87bdd59f7
     workspace/app-connection/webapp_url: d64d8cc3c4c4ecce780d94755f7e4de9
@@ -2118,6 +2127,7 @@ checksums:
     workspace/segments/delete_segment: 7dd5b27c80d5748c50d17d7ad8a96113
     workspace/segments/desktop: 0a43dae170adffd6e82fc484440a2af7
     workspace/segments/device: c009f849d689c745de9e38ad17644c7a
+    workspace/segments/device_filter_hint: 09dba3652881746d08d9beaa0cd3869c
     workspace/segments/devices: 81ffaad660fc8167ff97557a53b5a565
     workspace/segments/edit_segment: ab06450c9e16f0b6ccf11e930fdf83aa
     workspace/segments/error_resetting_filters: 770c6b2886cbf779f8217478af9da75c

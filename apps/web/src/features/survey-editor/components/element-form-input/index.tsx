@@ -275,11 +275,31 @@ export const ElementFormInput = ({
     ]
   );
 
+  // One timer for the life of the field: recreating the debounce on every render left the previous timer running, and it still fired with the copy of the element its render had. Each call carries the handleUpdate of the render the text was typed in, which names the row and language it was typed for; the list itself is updated from the editor's latest state.
+  const debouncedHandleUpdate = useMemo(
+    () => debounce((update: (value: string) => void, value: string) => update(value), 100),
+    []
+  );
+
+  // A label typed just before the field unmounts is committed rather than dropped.
+  useEffect(() => () => debouncedHandleUpdate.flush(), [debouncedHandleUpdate]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Enter adds or moves to the next row at once, so what was typed is committed first.
+      if (e.key === "Enter") debouncedHandleUpdate.flush();
       if (onKeyDown) onKeyDown(e);
     },
-    [onKeyDown]
+    [onKeyDown, debouncedHandleUpdate]
+  );
+
+  const handleBlur = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      // Leaving the field (another row, a button, the language switch) commits what was typed in it.
+      debouncedHandleUpdate.flush();
+      if (onBlur) onBlur(e);
+    },
+    [onBlur, debouncedHandleUpdate]
   );
 
   const getFileUrl = (): string | undefined => {
@@ -295,11 +315,6 @@ export const ElementFormInput = ({
       if (endingCard && endingCard.type === "endScreen") return endingCard.videoUrl;
     } else return currentElement?.videoUrl;
   };
-
-  const debouncedHandleUpdate = useMemo(
-    () => debounce((value: string) => handleUpdate(value), 100),
-    [handleUpdate]
-  );
 
   const [animationParent] = useAutoAnimate();
   const [internalFirstRender, setInternalFirstRender] = useState(true);
@@ -390,9 +405,9 @@ export const ElementFormInput = ({
           recallItems && fallbacks ? headlineToRecall(newValue, recallItems, fallbacks) : newValue,
       };
       setText(updatedValue);
-      debouncedHandleUpdate(updatedValue[usedLanguageCode] ?? "");
+      debouncedHandleUpdate(handleUpdate, updatedValue[usedLanguageCode] ?? "");
     },
-    [text, usedLanguageCode, debouncedHandleUpdate]
+    [text, usedLanguageCode, debouncedHandleUpdate, handleUpdate]
   );
 
   const useRichTextEditor = id === "headline" || id === "subheader" || id === "html";
@@ -589,7 +604,7 @@ export const ElementFormInput = ({
                     aria-label={label}
                     maxLength={maxLength}
                     ref={inputRef}
-                    onBlur={onBlur}
+                    onBlur={handleBlur}
                     className={`absolute top-0 text-black caret-black ${className}`}
                     isInvalid={
                       isInvalid &&

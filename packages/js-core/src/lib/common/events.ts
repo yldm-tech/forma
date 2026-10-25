@@ -25,12 +25,18 @@
  * No PII: payloads carry ids and the `finished` boolean, never response content or scores.
  */
 
+export type TSetupFailureCode = "missing_field" | "invalid_config" | "network_error" | "error_state";
+
 /**
  * What each event carries. The single source of truth for both surfaces, so the dataLayer push and
  * the `on()` handler types cannot drift apart.
  */
 export interface TFormaEventPayloads {
   forma_setup_successful: { workspaceId: string };
+  /**
+   * setup() did not complete, so every later SDK call is dropped until a setup succeeds. setup() itself still resolves (existing `await forma.setup()` callers must not start rejecting), so this event is how the host learns about it. `code` is one of `missing_field` (no workspaceId or appUrl passed), `invalid_config` (the server rejected the workspaceId or appUrl with a 4xx; nothing is cached, so the next page load retries), `network_error` (unreachable or a server error; retried after a 10-minute cool-down) and `error_state` (that cool-down, from an earlier failure for the same workspaceId and appUrl, is still running). `message` is a human-readable explanation for logs. `workspaceId` is null when none was passed.
+   */
+  forma_setup_failed: { workspaceId: string | null; code: TSetupFailureCode; message: string };
   forma_action_tracked: { action: string };
   forma_survey_shown: { surveyId: string };
   /**
@@ -50,6 +56,7 @@ export type TFormaEventName = keyof TFormaEventPayloads;
 
 export const FORMA_EVENTS = {
   setupSuccessful: "forma_setup_successful",
+  setupFailed: "forma_setup_failed",
   actionTracked: "forma_action_tracked",
   surveyShown: "forma_survey_shown",
   responseSubmitted: "forma_response_submitted",
@@ -70,6 +77,8 @@ const EMPTY_DATALAYER_PAYLOAD: Record<string, null> = {
   responseId: null,
   finished: null,
   action: null,
+  code: null,
+  message: null,
 };
 
 // Handlers are stored type-erased: a Set cannot hold differently-parameterised function types, and
