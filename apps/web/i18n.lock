@@ -1654,7 +1654,7 @@ checksums:
     workspace/api_keys/api_key_security_warning: 7c52e973ec6eaaa847beea823b506229
     workspace/api_keys/api_key_updated: 0e03754eb33742b4ee8d5fdad64c9b3f
     workspace/api_keys/api_reference: e7c0bc41e2bcc45582e0ea9879937070
-    workspace/api_keys/check_key_hint: c0463ae21703459876246e572c478a70
+    workspace/api_keys/check_key_hint: 79516091eaa1dc83e6fa3f88c355ff7b
     workspace/api_keys/delete_api_key_confirmation: 05a784c03236093df32a902a795ed781
     workspace/api_keys/disabled_description: f77524c6030c1f8f33804c56e30bd7e1
     workspace/api_keys/disabled_reason_creator_deleted: 4ff9247d52d11ed2ef80bc7bfb0dbf1e
@@ -1669,6 +1669,7 @@ checksums:
     workspace/api_keys/new_key_title: 4bade0fcd5109303b67dbb33cff85afc
     workspace/api_keys/no_api_keys_yet: 58593ed9f7e507dcd7ca7fe069add599
     workspace/api_keys/no_workspace_permissions_found: 1d719624828a9d3e433cdf6b387549f3
+    workspace/api_keys/openapi_document_hint: 75430122922ed982c014c264954332e3
     workspace/api_keys/organization_access: 96a92fa907b15e0c0e47e33cac15be88
     workspace/api_keys/organization_access_cloud_note: 7fa313f79b98a749dd2ca557f92a71f8
     workspace/api_keys/organization_access_description: e9b856a868875efbee35016d9c5986f2
