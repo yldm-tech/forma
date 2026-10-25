@@ -3,7 +3,7 @@ import { type Mock, afterEach, beforeEach, describe, expect, test, vi } from "vi
 import { Config } from "@/lib/common/config";
 import { JS_LOCAL_STORAGE_KEY } from "@/lib/common/constants";
 import type { TConfig, TConfigUpdateInput } from "@/types/config";
-import { mockConfig } from "./__mocks__/config.mock";
+import { mockConfig, mockSurveyId } from "./__mocks__/config.mock";
 
 // Define mocks outside of any describe block
 const getItemMock = localStorage.getItem as unknown as Mock;
@@ -54,6 +54,26 @@ describe("Config", () => {
     }
 
     expect(getItemMock).toHaveBeenCalledWith(JS_LOCAL_STORAGE_KEY);
+  });
+
+  test("loadFromStorage() reads a user history an older SDK stored, by survey id, as survey keys", () => {
+    const legacy = {
+      ...mockConfig,
+      user: {
+        ...mockConfig.user,
+        data: {
+          ...mockConfig.user.data,
+          displays: [{ surveyId: mockSurveyId, createdAt: "2025-01-01T10:00:00Z" }],
+          responses: [mockSurveyId],
+        },
+      },
+    };
+    getItemMock.mockReturnValueOnce(JSON.stringify(legacy));
+
+    const result = configInstance.loadFromLocalStorage();
+
+    expect(result.ok && result.data.user.data.displays).toEqual(mockConfig.user.data.displays);
+    expect(result.ok && result.data.user.data.responses).toEqual(mockConfig.user.data.responses);
   });
 
   test("loadFromStorage() returns err if config is not saved", () => {

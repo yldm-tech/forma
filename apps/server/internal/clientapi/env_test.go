@@ -157,7 +157,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	recaptcha := NewRecaptcha(cfg, log)
 	recaptcha.endpoint = e.google.URL
 
-	e.h = NewHandler(cfg, e.db, e.cache, limiter, workspace.NewRepository(e.db, log), responses, contacts, storage.NewService(bucket), recaptcha, log)
+	e.h = NewHandler(cfg, e.db, e.cache, limiter, workspace.NewRepository(e.db, log), responses, contacts, storage.NewService(bucket), recaptcha, e.cipher, log)
 	e.h.now = e.clock.Now
 	web, err := webui.NewFromFS(fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}, "js/surveys.umd.cjs": {Data: []byte("/* surveys */")}})
 	if err != nil {

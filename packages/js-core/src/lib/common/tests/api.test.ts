@@ -193,10 +193,10 @@ describe("api.ts", () => {
               expiresAt: new Date("2023-01-01"),
               data: {
                 userId: "user123",
-                contactId: "contact123",
+                contactId: "ct1.contact123",
                 segments: ["segment1"],
-                displays: [{ surveyId: "survey1", createdAt: new Date() }],
-                responses: ["response1"],
+                displays: ["1a2b3c4d"],
+                responses: ["1a2b3c4d"],
                 lastDisplayAt: new Date(),
               },
             },
@@ -227,6 +227,19 @@ describe("api.ts", () => {
         expect(result.data.state.data.userId).toBe("user123");
         expect(result.data.messages).toEqual(["User updated successfully"]);
       }
+    });
+
+    test("sends the userHash with the userId when there is one", async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({ data: { state: {} } }) });
+
+      await apiClient.createOrUpdateUser({ userId: "user123", userHash: "abc123", attributes: {} });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://example.com/api/v2/client/env123/user",
+        expect.objectContaining({
+          body: JSON.stringify({ userId: "user123", userHash: "abc123", attributes: {} }),
+        })
+      );
     });
 
     test("creates or updates user with error", async () => {

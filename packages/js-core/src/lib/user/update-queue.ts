@@ -19,16 +19,19 @@ export class UpdateQueue {
     return UpdateQueue.instance;
   }
 
-  public updateUserId(userId: string): void {
+  /** Queue an identify of userId. A userHash given here replaces the one stored for the user; without one, the stored hash of the same user is sent (see processUpdates). */
+  public updateUserId(userId: string, userHash?: string): void {
     if (!this.updates) {
       this.updates = {
         userId,
+        ...(userHash && { userHash }),
         attributes: {},
       };
     } else {
       this.updates = {
         ...this.updates,
         userId,
+        ...(userHash && { userHash }),
       };
     }
   }
@@ -151,9 +154,15 @@ export class UpdateQueue {
               const isNewUser = currentUpdates.userId && currentUpdates.userId !== previousUserId;
               const hasAttributes = Object.keys(currentUpdates.attributes ?? {}).length > 0;
 
+              // The hash proves one userId: the stored one is sent only for the user it was given for.
+              const userHash =
+                currentUpdates.userHash ??
+                (effectiveUserId === previousUserId ? config.get().user.data.userHash : undefined);
+
               const result = await sendUpdates({
                 updates: {
                   userId: effectiveUserId,
+                  ...(userHash && { userHash }),
                   attributes: currentUpdates.attributes ?? {},
                 },
               });

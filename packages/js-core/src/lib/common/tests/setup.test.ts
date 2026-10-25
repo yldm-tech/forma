@@ -13,15 +13,15 @@ import { JS_LOCAL_STORAGE_KEY } from "@/lib/common/constants";
 import { addCleanupEventListeners, addEventListeners } from "@/lib/common/event-listeners";
 import { Logger } from "@/lib/common/logger";
 import { handleErrorOnFirstSetup, setup, tearDown } from "@/lib/common/setup";
-import { setIsSetup } from "@/lib/common/status";
+import { getIsSetup, setIsSetup } from "@/lib/common/status";
 import { TimeoutStack } from "@/lib/common/timeout-stack";
-import { filterSurveys, getIsDebug, isNowExpired } from "@/lib/common/utils";
+import { filterSurveys, getIsDebug, getSurveyKey, isNowExpired } from "@/lib/common/utils";
 import type * as Utils from "@/lib/common/utils";
 import { addLiveRegionContainer } from "@/lib/survey/widget";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
 import { sendUpdatesToBackend } from "@/lib/user/update";
 import { fetchWorkspaceState } from "@/lib/workspace/state";
-import type { TConfig, TConfigUpdateInput } from "@/types/config";
+import type { TConfig, TConfigUpdateInput, TUserState } from "@/types/config";
 
 const setItemMock = localStorage.setItem as unknown as Mock;
 
@@ -74,6 +74,8 @@ vi.mock("@/lib/common/utils", async (importOriginal) => {
 // 7) Mock user/update
 vi.mock("@/lib/user/update", () => ({
   sendUpdatesToBackend: vi.fn(),
+  withUserHash: (state: TUserState, userHash?: string) =>
+    userHash ? { ...state, data: { ...state.data, userHash } } : state,
 }));
 
 // 8) Mock checkPageUrl
@@ -570,6 +572,72 @@ describe("setup.ts", () => {
       );
     });
 
+    // A workspace that requires verified identities refuses a stored user whose userHash is missing or was made with a regenerated secret. Setup must still complete, logged out, so the page's setUserId with the new hash runs instead of being dropped on every load.
+    test("finishes setup with an anonymous user when the server refuses the stored identity (403)", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          workspaceId: "ws_123",
+          appUrl: "https://my.url",
+          workspace: { expiresAt: new Date(Date.now() + 60_000), data: { actionClasses: [], surveys: [] } },
+          user: {
+            data: { userId: "user_abc", userHash: "old_hash", contactId: "ct1.x", segments: ["seg_1"] },
+            expiresAt: new Date(Date.now() - 5000), // expired, so setup re-identifies
+          },
+          status: { value: "success", expiresAt: null },
+        }),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      (isNowExpired as unknown as Mock).mockImplementation(
+        (date: Date) => new Date(date).getTime() < Date.now()
+      );
+      (sendUpdatesToBackend as unknown as Mock).mockResolvedValueOnce({
+        ok: false,
+        error: { code: "forbidden", status: 403, responseMessage: "Identity verification failed" },
+      });
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
+
+      const result = await setup({ workspaceId: "ws_123", appUrl: "https://my.url" });
+
+      expect(result.ok).toBe(true);
+      expect(getIsSetup()).toBe(true);
+      expect(sendUpdatesToBackend).toHaveBeenCalledWith(
+        expect.objectContaining({ updates: { userId: "user_abc", userHash: "old_hash" } })
+      );
+      expect(mockConfig.update).toHaveBeenCalledWith(
+        expect.objectContaining({ user: DEFAULT_USER_STATE_NO_USER_ID })
+      );
+    });
+
+    test("still fails setup when re-identifying the stored user fails for another reason", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({
+          workspaceId: "ws_123",
+          appUrl: "https://my.url",
+          workspace: { expiresAt: new Date(Date.now() + 60_000), data: { actionClasses: [], surveys: [] } },
+          user: { data: { userId: "user_abc" }, expiresAt: new Date(Date.now() - 5000) },
+          status: { value: "success", expiresAt: null },
+        }),
+        update: vi.fn(),
+      };
+
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      (isNowExpired as unknown as Mock).mockImplementation(
+        (date: Date) => new Date(date).getTime() < Date.now()
+      );
+      (sendUpdatesToBackend as unknown as Mock).mockResolvedValueOnce({
+        ok: false,
+        error: { code: "network_error", status: 500, responseMessage: "boom" },
+      });
+
+      const result = await setup({ workspaceId: "ws_123", appUrl: "https://my.url" });
+
+      expect(result.ok).toBe(false);
+      expect(getIsSetup()).toBe(false);
+      expect(mockConfig.update).not.toHaveBeenCalled();
+    });
+
     test("resets config if no valid config found, fetches workspace state, sets default user", async () => {
       const mockConfig = {
         get: () => {
@@ -954,6 +1022,86 @@ describe("setup.ts", () => {
         expect.objectContaining({ updates: { userId: "user_1" } })
       );
       expect(mockConfig.read()?.user.data.segments).toEqual(["seg_1"]);
+    });
+
+    test("re-syncs an identified user with the userHash it was identified with, and keeps it", async () => {
+      (localStorage.getItem as unknown as Mock).mockReturnValueOnce(
+        JSON.stringify({
+          appUrl: "https://urlX",
+          environmentId: "ws_123",
+          environment: {
+            expiresAt: new Date(Date.now() + 60000).toISOString(),
+            data: { surveys: [], settings: {} },
+          },
+          user: {
+            expiresAt: new Date(Date.now() + 60000).toISOString(),
+            // segments missing, so the state is repaired and re-synced
+            data: { userId: "user_1", userHash: "hash_1", contactId: "ct1.x", displays: [], responses: [] },
+          },
+        })
+      );
+
+      const mockConfig = createStatefulConfigMock();
+
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      (isNowExpired as unknown as Mock).mockImplementation(
+        (date: Date) => new Date(date).getTime() < Date.now()
+      );
+      (sendUpdatesToBackend as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: {
+          state: {
+            expiresAt: new Date(Date.now() + 60000),
+            data: { userId: "user_1", segments: ["seg_1"], displays: [], responses: [] },
+          },
+        },
+      });
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
+
+      const result = await setup({ workspaceId: "ws_123", appUrl: "https://urlX" });
+
+      expect(result.ok).toBe(true);
+      expect(sendUpdatesToBackend).toHaveBeenCalledWith(
+        expect.objectContaining({ updates: { userId: "user_1", userHash: "hash_1" } })
+      );
+      expect(mockConfig.read()?.user.data.userHash).toBe("hash_1");
+    });
+
+    test("reads a legacy user's history, which named surveys by id, as survey keys", async () => {
+      (localStorage.getItem as unknown as Mock).mockReturnValueOnce(
+        JSON.stringify({
+          appUrl: "https://urlX",
+          environmentId: "ws_123",
+          user: {
+            data: {
+              userId: "user_1",
+              segments: [],
+              displays: [{ surveyId: "survey_1", createdAt: "2025-01-01T00:00:00Z" }],
+              responses: ["survey_1"],
+            },
+          },
+        })
+      );
+
+      const mockConfig = createStatefulConfigMock();
+
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      (fetchWorkspaceState as unknown as Mock).mockResolvedValueOnce({
+        ok: true,
+        data: { data: { surveys: [], expiresAt: new Date(Date.now() + 60000) } },
+      });
+      (sendUpdatesToBackend as unknown as Mock).mockResolvedValueOnce({
+        ok: false,
+        error: { code: "network_error", responseMessage: "boom" },
+      });
+      (filterSurveys as unknown as Mock).mockReturnValueOnce([]);
+
+      await setup({ workspaceId: "ws_123", appUrl: "https://urlX" });
+
+      const [migrated] = mockConfig.update.mock.calls[0] as [TConfigUpdateInput];
+      const key = getSurveyKey("user_1", "survey_1");
+      expect(migrated.user.data.displays).toEqual([key]);
+      expect(migrated.user.data.responses).toEqual([key]);
     });
 
     test("completes a legacy user whose data is present but empty", async () => {

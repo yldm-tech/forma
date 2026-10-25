@@ -35,7 +35,7 @@
       "data": {
         "state": {
           "data": {
-            "contactId": "<id:contact:user2>",
+            "contactId": "<contact-token:user2>",
             "userId": "contract-user-2",
             "segments": [
               "<id:segment:app>"

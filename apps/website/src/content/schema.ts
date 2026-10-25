@@ -167,7 +167,7 @@ const sdk = obj({
   reference: obj({
     title: text,
     lead: text,
-    identify: obj({ title: text, facts: z.tuple([fact, fact, fact, fact]) }),
+    identify: obj({ title: text, facts: z.tuple([fact, fact, fact, fact, fact]) }),
     actions: obj({ title: text, facts: z.tuple([fact, fact, fact]) }),
     events: obj({ title: text, body: text, facts: z.tuple([fact, fact, fact, fact, fact, fact]) }),
     debugging: obj({ title: text, facts: z.tuple([fact, fact, fact]) }),
