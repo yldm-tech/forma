@@ -9,6 +9,38 @@ import (
 	"gorm.io/gorm"
 )
 
+// whereOf compiles a filter given as JSON.
+func whereOf(t *testing.T, sv *Survey, filter string) Clause {
+	t.Helper()
+	var f Criteria
+	if err := json.Unmarshal([]byte(filter), &f); err != nil {
+		t.Fatal(err)
+	}
+	clause, err := Where(sv, &f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return clause
+}
+
+// expectDataIndex checks that, with sequential scans off, the planner reaches the rows clause matches through the GIN index on responses.data.
+func expectDataIndex(t *testing.T, e *env, filter string, clause Clause) {
+	t.Helper()
+	var plan []string
+	err := e.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`SET LOCAL enable_seqscan = off`).Error; err != nil {
+			return err
+		}
+		return tx.Raw("EXPLAIN SELECT r.id FROM responses r WHERE "+clause.SQL, clause.Args...).Scan(&plan).Error
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text := strings.Join(plan, "\n"); !strings.Contains(text, "responses_data_idx") {
+		t.Errorf("%s does not use the data index:\n%s", filter, text)
+	}
+}
+
 // Answer filters are containments of responses.data, which the GIN index (jsonb_path_ops) answers: with sequential scans off, the planner reaches the matching rows through it.
 func TestAnswerFiltersCanUseTheDataIndex(t *testing.T) {
 	e := newEnv(t)
@@ -26,27 +58,7 @@ func TestAnswerFiltersCanUseTheDataIndex(t *testing.T) {
 		`{"data":{"q1":{"op":"clicked"}}}`,
 		`{"data":{"m":{"op":"matrix","value":{"Row":"Col"}}}}`,
 	} {
-		var f Criteria
-		if err := json.Unmarshal([]byte(filter), &f); err != nil {
-			t.Fatal(err)
-		}
-		clause, err := Where(sv, &f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var plan []string
-		err = e.db.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Exec(`SET LOCAL enable_seqscan = off`).Error; err != nil {
-				return err
-			}
-			return tx.Raw("EXPLAIN SELECT r.id FROM responses r WHERE "+clause.SQL, clause.Args...).Scan(&plan).Error
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if text := strings.Join(plan, "\n"); !strings.Contains(text, "responses_data_idx") {
-			t.Errorf("%s does not use the data index:\n%s", filter, text)
-		}
+		expectDataIndex(t, e, filter, whereOf(t, sv, filter))
 	}
 }
 
