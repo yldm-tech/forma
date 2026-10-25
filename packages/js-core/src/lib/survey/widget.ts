@@ -9,6 +9,7 @@ import {
   getAnonymousSamplingId,
   getLanguageCode,
   getStyling,
+  getSurveyKey,
   shouldDisplayBasedOnPercentage,
   surveyHasSegmentFilters,
 } from "@/lib/common/utils";
@@ -66,9 +67,9 @@ export const triggerSurvey = async (
 ): Promise<void> => {
   const logger = Logger.getInstance();
 
-  // Check if the survey should be displayed based on displayPercentage. The sample is per user, not per trigger: an identified user is bucketed by contact id, an anonymous visitor by the id persisted in this browser.
+  // Check if the survey should be displayed based on displayPercentage. The sample is per user, not per trigger: an identified user is bucketed by userId, an anonymous visitor by the id persisted in this browser. Not by the state's contactId: that token is sealed under the server's encryption key and records whether the identify was verified, so it changes with either and would move the user in or out of running samples.
   if (survey.displayPercentage) {
-    const samplingId = Config.getInstance().get().user.data.contactId ?? getAnonymousSamplingId();
+    const samplingId = Config.getInstance().get().user.data.userId ?? getAnonymousSamplingId();
     const shouldDisplaySurvey = shouldDisplayBasedOnPercentage(
       survey.displayPercentage,
       samplingId,
@@ -216,8 +217,8 @@ export const renderWidget = async (
       getRecaptchaToken,
       onDisplayCreated: () => {
         const existingDisplays = config.get().user.data.displays;
-        const newDisplay = { surveyId: survey.id, createdAt: new Date() };
-        const displays = existingDisplays.length ? [...existingDisplays, newDisplay] : [newDisplay];
+        const newDisplay = getSurveyKey(config.get().user.data.userId, survey.id);
+        const displays = [...existingDisplays, newDisplay];
         const previousConfig = config.get();
 
         const updatedUserState: TUserState = {
@@ -245,12 +246,12 @@ export const renderWidget = async (
         refreshSegmentsAfterInteraction(previousConfig.user.data.userId, survey, "onDisplay");
       },
       onResponseCreated: (responseId?: string) => {
-        const responses = config.get().user.data.responses;
+        const { responses, userId } = config.get().user.data;
         const newPersonState: TUserState = {
           ...config.get().user,
           data: {
             ...config.get().user.data,
-            responses: responses.length ? [...responses, survey.id] : [survey.id],
+            responses: [...responses, getSurveyKey(userId, survey.id)],
           },
         };
 

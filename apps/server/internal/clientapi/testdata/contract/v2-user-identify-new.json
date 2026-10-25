@@ -1,6 +1,6 @@
 {
   "case": "v2-user-identify-new",
-  "description": "js-core setUserId for an unknown userId: creates the contact.",
+  "description": "js-core setUserId for an unknown userId: creates the contact. The state names the contact by an opaque token, never by its id.",
   "request": {
     "method": "POST",
     "path": "/api/v2/client/<id:workspace>/user",
@@ -32,7 +32,7 @@
       "data": {
         "state": {
           "data": {
-            "contactId": "<id:contact:user1>",
+            "contactId": "<contact-token:user1>",
             "userId": "contract-user-1",
             "segments": [
               "<id:segment:app>"

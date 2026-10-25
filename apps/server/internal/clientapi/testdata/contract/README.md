@@ -36,7 +36,7 @@ The cases run in the order `replayOrder` gives (identify before a contact's disp
 
 ## Placeholders
 
-Values that differ on every run are placeholders that keep the JSON type (always a string where the value is a string) and, inside longer strings such as URLs and storage keys, the surrounding text. An id placeholder binds to the first id it meets and must name the same id wherever it appears again.
+Values that differ on every run are placeholders that keep the JSON type (always a string where the value is a string) and, inside longer strings such as URLs and storage keys, the surrounding text. An id or contact token placeholder binds to the first value it meets and must name the same value wherever it appears again.
 
 | Placeholder | Stands for |
 | --- | --- |
@@ -47,7 +47,7 @@ Values that differ on every run are placeholders that keep the JSON type (always
 | `<id:segment:app>` | The private segment of the app survey. |
 | `<id:block:app>` | The app survey's block id (a 24-character cuid2). |
 | `<id:quota>` | The link survey's quota. |
-| `<id:contact:user1>`, `<id:contact:user2>` | Contacts created by identifying `contract-user-1` and `contract-user-2`. |
+| `<contact-token:user1>`, `<contact-token:user2>` | The opaque tokens the client API names the contacts created by identifying `contract-user-1` and `contract-user-2` by, in place of their ids (`ct1.` and base64url). A contact always gets the same token, and the display and response routes accept it as `contactId`. |
 | `<id:display:anonymous>`, `<id:display:contact>`, `<id:display:v1>`, `<id:display:anonymous-unused>` | Display ids returned by the display cases; `anonymous-unused` is a display created only to be referenced by `v2-responses-create-invalid-meta-action`. |
 | `<id:response:...>` | Response ids returned by the response cases, named after the case that created them (`partial`, `finished`, `v1`, `contact`, `quota1`, `quota2`, `quota3`, `requiredOmitted`, `ratingOutOfRange`, `singleUse`). |
 | `<id:singleUse>` | The canonical single-use id: the decrypted value of the link's `suId`, which the survey page hands to the runtime as `singleUseId`. |
@@ -63,6 +63,7 @@ Ids that start with `cl` and end in `aaa…` followed by a digit (for example `c
 
 ## Behaviour the cases pin
 
+- The identify state and the display creates never name a contact by its id, only by its token, and the state's `displays` and `responses` hold survey keys (`sdkidentity.SurveyKey`), never survey ids. The SDK writes `email` only on a verified identify (`v2-user-attributes-update` skips it with an error); the identity verification rules themselves are covered by `identity_test.go`, since the contract's workspace has no identity secret.
 - The environment state's survey `segment` reports the workspace id as both `environmentId` and `workspaceId`.
 - `v2-responses-create-required-element-omitted` and `v2-responses-create-rating-out-of-range` are accepted: only elements whose key is present in `data` are validated, and a rating is not checked against its range. `v2-responses-create-missing-required` shows the error for a required element sent empty, in the survey's default language for a response in `default`.
 - `meta.action: null` is rejected on response create (`v2-responses-create-invalid-meta-action`); the key must be a string or absent.

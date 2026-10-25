@@ -1,8 +1,10 @@
 package response
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -21,6 +23,35 @@ type Condition struct {
 	Value json.RawMessage `json:"value,omitempty"`
 }
 
+// Conditions are the conditions on one key of a criteria group, all of which must hold. The JSON is one condition as an object, or several as an array, which is how the views put a range on one field (a rating above 2 and below 8). An empty array is malformed.
+type Conditions []Condition
+
+// UnmarshalJSON reads one condition object or an array of them.
+func (cs *Conditions) UnmarshalJSON(b []byte) error {
+	if trimmed := bytes.TrimSpace(b); len(trimmed) > 0 && trimmed[0] == '[' {
+		var list []Condition
+		if err := json.Unmarshal(trimmed, &list); err != nil {
+			return err
+		}
+		*cs = list
+		return nil
+	}
+	var c Condition
+	if err := json.Unmarshal(b, &c); err != nil {
+		return err
+	}
+	*cs = Conditions{c}
+	return nil
+}
+
+// MarshalJSON writes a single condition as an object, the shape every client sent before ranges, and several as an array.
+func (cs Conditions) MarshalJSON() ([]byte, error) {
+	if len(cs) == 1 {
+		return json.Marshal(cs[0])
+	}
+	return json.Marshal([]Condition(cs))
+}
+
 // Range bounds the creation time; either end may be open.
 type Range struct {
 	Min *time.Time `json:"min"`
@@ -33,19 +64,20 @@ type TagFilter struct {
 	NotApplied []string `json:"notApplied"`
 }
 
-// Criteria is forma2's TResponseFilterCriteria, what the response views filter by.
+// Criteria is forma2's TResponseFilterCriteria, what the response views filter by. Every keyed group takes one condition or several per key (Conditions). Search is a keyword the response's free-text answers must contain.
 type Criteria struct {
-	Finished          *bool                   `json:"finished"`
-	ResponseIDs       []uuid.UUID             `json:"responseIds"`
-	CreatedAt         *Range                  `json:"createdAt"`
-	ContactAttributes map[string]Condition    `json:"contactAttributes"`
-	Data              map[string]Condition    `json:"data"`
-	Variables         map[string]Condition    `json:"variables"`
-	Reserved          map[string]Condition    `json:"reserved"`
-	Tags              *TagFilter              `json:"tags"`
-	Others            map[string]Condition    `json:"others"`
-	Meta              map[string]Condition    `json:"meta"`
-	Quotas            map[uuid.UUID]Condition `json:"quotas"`
+	Finished          *bool                    `json:"finished"`
+	ResponseIDs       []uuid.UUID              `json:"responseIds"`
+	CreatedAt         *Range                   `json:"createdAt"`
+	ContactAttributes map[string]Conditions    `json:"contactAttributes"`
+	Data              map[string]Conditions    `json:"data"`
+	Variables         map[string]Conditions    `json:"variables"`
+	Reserved          map[string]Conditions    `json:"reserved"`
+	Tags              *TagFilter               `json:"tags"`
+	Others            map[string]Conditions    `json:"others"`
+	Meta              map[string]Conditions    `json:"meta"`
+	Quotas            map[uuid.UUID]Conditions `json:"quotas"`
+	Search            *string                  `json:"search"`
 }
 
 // clause is a conjunction of SQL conditions on the response row `r`, with their arguments in order.
@@ -157,17 +189,18 @@ func jsonb(v any) arg {
 
 var textOps = []string{"contains", "doesNotContain", "startsWith", "doesNotStartWith", "endsWith", "doesNotEndWith"}
 
-// textCondition is Prisma's string_contains, string_starts_with and string_ends_with on a JSON path, negated by the doesNot operators: the value is a string that contains, starts or ends with s. Matched literally, without LIKE wildcards.
+// textCondition is Prisma's string_contains, string_starts_with and string_ends_with on a JSON path, negated by the doesNot operators: the value is a string that contains, starts or ends with s. Matched literally, without LIKE wildcards, and ignoring case, as the segment filters' ILIKE does: someone searching answers for "onboarding" means "Onboarding" too.
 func textCondition(p jsonPath, op string, s string) *cond {
-	text := q(p, " #>> '{}'")
+	text := q("lower(", p, " #>> '{}')")
+	needle := q("lower(", arg{s}, ")")
 	var test *cond
 	switch op {
 	case "contains", "doesNotContain":
-		test = q("strpos(", text, ", ", arg{s}, ") > 0")
+		test = q("strpos(", text, ", ", needle, ") > 0")
 	case "startsWith", "doesNotStartWith":
-		test = q("starts_with(", text, ", ", arg{s}, ")")
+		test = q("starts_with(", text, ", ", needle, ")")
 	default:
-		test = q("right(", text, ", char_length(", arg{s}, ")) = ", arg{s})
+		test = q("right(", text, ", char_length(", needle, ")) = ", needle)
 	}
 	c := q("(jsonb_typeof(", p, ") = 'string' AND ", test, ")")
 	if strings.HasPrefix(op, "doesNot") {
@@ -297,75 +330,89 @@ func where(sv *Survey, f *Criteria) (*clause, error) {
 			w.add(q("NOT EXISTS (SELECT 1 FROM response_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.response_id = r.id AND t.name IN ", arg{f.Tags.NotApplied}, ")"))
 		}
 	}
-	for key, c := range f.ContactAttributes {
-		v, ok := jsonValue(c.Value, "string", "number")
-		p := jsonPath{"contact_attributes", []string{key}}
-		switch {
-		case !ok:
-			return nil, invalidFilter("contactAttributes")
-		case c.Op == "equals":
-			w.add(q(p, " = ", jsonb(v), "::jsonb"))
-		case c.Op == "notEquals":
-			// An absent attribute, or no contact at all, counts as not equal.
-			w.add(q("(", p, " <> ", jsonb(v), "::jsonb OR ", p, " IS NULL)"))
-		default:
+	for key, cs := range f.ContactAttributes {
+		if len(cs) == 0 {
 			return nil, invalidFilter("contactAttributes")
 		}
+		for _, c := range cs {
+			condition, ok := attributeCondition(jsonPath{"contact_attributes", []string{key}}, c)
+			if !ok {
+				return nil, invalidFilter("contactAttributes")
+			}
+			w.add(condition)
+		}
 	}
-	for key, c := range f.Meta {
+	for key, cs := range f.Meta {
+		if len(cs) == 0 {
+			return nil, invalidFilter("meta")
+		}
 		p := jsonPath{"meta", []string{key}}
 		if key == "browser" || key == "os" || key == "device" {
 			p.keys = []string{"userAgent", key}
 		}
-		switch {
-		case c.Op == "equals" || c.Op == "notEquals":
-			v, ok := jsonValue(c.Value, "string", "number", "boolean")
-			if !ok {
+		for _, c := range cs {
+			switch {
+			case c.Op == "equals" || c.Op == "notEquals":
+				v, ok := jsonValue(c.Value, "string", "number", "boolean")
+				if !ok {
+					return nil, invalidFilter("meta")
+				}
+				op := " = "
+				if c.Op == "notEquals" {
+					op = " <> "
+				}
+				w.add(q(p, op, jsonb(v), "::jsonb"))
+			case slices.Contains(textOps, c.Op):
+				v, ok := jsonValue(c.Value, "string")
+				if !ok {
+					return nil, invalidFilter("meta")
+				}
+				w.add(textCondition(p, c.Op, v.(string)))
+			default:
 				return nil, invalidFilter("meta")
 			}
-			op := " = "
-			if c.Op == "notEquals" {
-				op = " <> "
-			}
-			w.add(q(p, op, jsonb(v), "::jsonb"))
-		case slices.Contains(textOps, c.Op):
-			v, ok := jsonValue(c.Value, "string")
-			if !ok {
-				return nil, invalidFilter("meta")
-			}
-			w.add(textCondition(p, c.Op, v.(string)))
-		default:
-			return nil, invalidFilter("meta")
 		}
 	}
-	for key, c := range f.Others {
+	for key, cs := range f.Others {
 		// forma2 used the lowercased key as a column name; the response views only ever filter the language.
-		if strings.ToLower(key) != "language" {
+		if strings.ToLower(key) != "language" || len(cs) == 0 {
 			return nil, invalidFilter("others")
 		}
-		v, ok := jsonValue(c.Value, "string", "number")
-		if !ok {
-			return nil, invalidFilter("others")
-		}
-		text := fmt.Sprint(v)
-		if n, isNumber := v.(float64); isNumber {
-			text = jsvalue.FormatNumber(n)
-		}
-		switch c.Op {
-		case "equals":
-			w.add(q("r.language = ", arg{text}))
-		case "notEquals":
-			w.add(q("r.language <> ", arg{text}))
-		default:
-			return nil, invalidFilter("others")
+		for _, c := range cs {
+			v, ok := jsonValue(c.Value, "string", "number")
+			if !ok {
+				return nil, invalidFilter("others")
+			}
+			text := fmt.Sprint(v)
+			if n, isNumber := v.(float64); isNumber {
+				text = jsvalue.FormatNumber(n)
+			}
+			switch c.Op {
+			case "equals":
+				w.add(q("r.language = ", arg{text}))
+			case "notEquals":
+				w.add(q("r.language <> ", arg{text}))
+			default:
+				return nil, invalidFilter("others")
+			}
 		}
 	}
 	if err := reservedAndVariables(w, sv, f); err != nil {
 		return nil, err
 	}
-	for key, c := range f.Data {
-		if err := dataCondition(w, sv, key, c); err != nil {
-			return nil, err
+	for key, cs := range f.Data {
+		if len(cs) == 0 {
+			return nil, invalidFilter("data")
+		}
+		for _, c := range cs {
+			if err := dataCondition(w, sv, key, c); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if f.Search != nil {
+		if keyword := strings.TrimSpace(*f.Search); keyword != "" {
+			w.add(searchCondition(sv, keyword))
 		}
 	}
 	if f.ResponseIDs != nil {
@@ -375,17 +422,114 @@ func where(sv *Survey, f *Criteria) (*clause, error) {
 			w.add(q("r.id IN ", arg{f.ResponseIDs}))
 		}
 	}
-	for quotaID, c := range f.Quotas {
-		switch c.Op {
-		case statusScreenedIn, statusScreenedOut:
-			w.add(q("EXISTS (SELECT 1 FROM response_quota_links l WHERE l.response_id = r.id AND l.quota_id = ", arg{quotaID}, " AND l.status = ", arg{c.Op}, ")"))
-		case "screenedOutNotInQuota":
-			w.add(q("NOT EXISTS (SELECT 1 FROM response_quota_links l WHERE l.response_id = r.id AND l.quota_id = ", arg{quotaID}, ")"))
-		default:
+	for quotaID, cs := range f.Quotas {
+		if len(cs) == 0 {
 			return nil, invalidFilter("quotas")
+		}
+		for _, c := range cs {
+			switch c.Op {
+			case statusScreenedIn, statusScreenedOut:
+				w.add(q("EXISTS (SELECT 1 FROM response_quota_links l WHERE l.response_id = r.id AND l.quota_id = ", arg{quotaID}, " AND l.status = ", arg{c.Op}, ")"))
+			case "screenedOutNotInQuota":
+				w.add(q("NOT EXISTS (SELECT 1 FROM response_quota_links l WHERE l.response_id = r.id AND l.quota_id = ", arg{quotaID}, ")"))
+			default:
+				return nil, invalidFilter("quotas")
+			}
 		}
 	}
 	return w, nil
+}
+
+// searchElementTypes are the elements whose answers are the respondent's own words, what the keyword search reads: an open text answer, and the fields of an address or contact info answer.
+var searchElementTypes = []string{surveydoc.ElementOpenText, surveydoc.ElementAddress, surveydoc.ElementContactInfo}
+
+// searchCondition is a response one of whose free-text answers contains keyword, ignoring case as the text operators do: a text answer containing it, or a list answer (address, contact info) one of whose fields does. A survey without such elements has nothing to find.
+func searchCondition(sv *Survey, keyword string) *cond {
+	var keys []string
+	for _, e := range sv.Elements() {
+		if slices.Contains(searchElementTypes, e.Type) {
+			keys = append(keys, e.ID)
+		}
+	}
+	if len(keys) == 0 {
+		return q("FALSE")
+	}
+	needle := q("lower(", arg{keyword}, ")")
+	// CASE, unlike AND, fixes the evaluation order, so jsonb_array_elements_text only ever reads an array.
+	return q("EXISTS (SELECT 1 FROM jsonb_each(r.data) a WHERE a.key IN ", arg{keys}, " AND CASE jsonb_typeof(a.value)",
+		" WHEN 'string' THEN strpos(lower(a.value #>> '{}'), ", needle, ") > 0",
+		" WHEN 'array' THEN EXISTS (SELECT 1 FROM jsonb_array_elements_text(a.value) f WHERE strpos(lower(f), ", needle, ") > 0)",
+		" ELSE FALSE END)")
+}
+
+// attributeNumberPattern is text a contact attribute snapshot holds for a number: the response stores every attribute as text, a number as JavaScript's String(n) prints it.
+const attributeNumberPattern = `^-?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][-+]?[0-9]+)?$`
+
+// attributeDatePattern is the start of a date attribute's text, Date#toISOString's YYYY-MM-DD; dateValuePattern is a date the views compare it with.
+const (
+	attributeDatePattern = `^[0-9]{4}-[0-9]{2}-[0-9]{2}`
+	dateValuePattern     = attributeDatePattern + `$`
+)
+
+var dateValue = regexp.MustCompile(dateValuePattern)
+
+// attributeNumber is a contact attribute's value as a number: a JSON number as it is (responses imported from forma2 hold some), text that reads as a number cast to one, NULL for anything else. CASE keeps the cast from text that would not parse.
+func attributeNumber(p jsonPath) *cond {
+	return q("(CASE jsonb_typeof(", p, ") WHEN 'number' THEN (", p, ")::numeric WHEN 'string' THEN CASE WHEN (", p, " #>> '{}') ~ ", arg{attributeNumberPattern},
+		" THEN (", p, " #>> '{}')::numeric END END)")
+}
+
+// attributeDay is a date contact attribute's day, the YYYY-MM-DD its ISO text starts with (UTC, as toISOString writes it), NULL for a value that is no date.
+func attributeDay(p jsonPath) *cond {
+	return q("(CASE WHEN jsonb_typeof(", p, ") = 'string' AND (", p, " #>> '{}') ~ ", arg{attributeDatePattern}, " THEN left(", p, " #>> '{}', 10) END)")
+}
+
+// attributeCondition is one condition on the contact attribute snapshot a response holds, by the attribute's type, which the operator and the value's kind name: a string value compares as text (equals, notEquals and the text operators), a number value as a number (equals, notEquals and the comparisons), a YYYY-MM-DD value with isBefore, isAfter or isSameDay as a day. Every negative operator (notEquals, the doesNot text operators, isNotSet) counts an absent attribute, or no contact at all, as a match. ok is false for a malformed condition.
+func attributeCondition(p jsonPath, c Condition) (*cond, bool) {
+	switch c.Op {
+	case "isSet":
+		return q(p, " IS NOT NULL"), true
+	case "isNotSet":
+		return q(p, " IS NULL"), true
+	case "isBefore", "isAfter", "isSameDay":
+		v, ok := jsonValue(c.Value, "string")
+		if !ok || !dateValue.MatchString(v.(string)) {
+			return nil, false
+		}
+		cmp := map[string]string{"isBefore": " < ", "isAfter": " > ", "isSameDay": " = "}[c.Op]
+		return q(attributeDay(p), cmp, arg{v}), true
+	}
+	if slices.Contains(textOps, c.Op) {
+		v, ok := jsonValue(c.Value, "string")
+		if !ok {
+			return nil, false
+		}
+		test := textCondition(p, c.Op, v.(string))
+		if strings.HasPrefix(c.Op, "doesNot") {
+			// NOT over an absent value is NULL, which would drop the response; an absent attribute does not contain the text, as it does not equal a value.
+			return q("(", test, " OR ", p, " IS NULL)"), true
+		}
+		return test, true
+	}
+	v, ok := jsonValue(c.Value, "string", "number")
+	if !ok {
+		return nil, false
+	}
+	n, isNumber := v.(float64)
+	switch {
+	case c.Op == "equals" && isNumber:
+		return q(attributeNumber(p), " = ", arg{n}), true
+	case c.Op == "notEquals" && isNumber:
+		return q("(", attributeNumber(p), " <> ", arg{n}, " OR ", attributeNumber(p), " IS NULL)"), true
+	case c.Op == "equals":
+		return q(p, " = ", jsonb(v), "::jsonb"), true
+	case c.Op == "notEquals":
+		return q("(", p, " <> ", jsonb(v), "::jsonb OR ", p, " IS NULL)"), true
+	}
+	if cmp, isComparison := comparisons[c.Op]; isComparison && isNumber {
+		return q(attributeNumber(p), " "+cmp+" ", arg{n}), true
+	}
+	return nil, false
 }
 
 func reservedAndVariables(w *clause, sv *Survey, f *Criteria) error {
@@ -393,43 +537,53 @@ func reservedAndVariables(w *clause, sv *Survey, f *Criteria) error {
 	for _, name := range embeddeddata.ShadowingNames(sv.Fields, sv.ElementIDs()) {
 		shadowed[name] = true
 	}
-	for name, c := range f.Reserved {
+	for name, cs := range f.Reserved {
+		if len(cs) == 0 {
+			return invalidFilter("reserved")
+		}
 		if shadowed[name] {
 			continue
 		}
-		var condition *cond
-		var ok bool
-		if name == "durationSeconds" {
-			condition, ok = durationCondition(c)
-		} else {
-			keys, known := reservedLocators[name]
-			if !known {
-				continue
-			}
-			dataType := embeddeddata.TypeString
-			for _, e := range embeddeddata.ReservedCatalog {
-				if e.Name == name {
-					dataType = e.DataType
-				}
-			}
-			condition, ok = typedCondition(jsonPath{"meta", keys}, c, dataType)
+		keys, known := reservedLocators[name]
+		if !known && name != "durationSeconds" {
+			continue
 		}
-		if !ok {
-			return invalidFilter("reserved")
+		dataType := embeddeddata.TypeString
+		for _, e := range embeddeddata.ReservedCatalog {
+			if e.Name == name {
+				dataType = e.DataType
+			}
 		}
-		w.add(condition)
+		for _, c := range cs {
+			var condition *cond
+			var ok bool
+			if name == "durationSeconds" {
+				condition, ok = durationCondition(c)
+			} else {
+				condition, ok = typedCondition(jsonPath{"meta", keys}, c, dataType)
+			}
+			if !ok {
+				return invalidFilter("reserved")
+			}
+			w.add(condition)
+		}
 	}
 	computed := embeddeddata.OfSource(sv.Fields, embeddeddata.SourceComputed)
-	for key, c := range f.Variables {
+	for key, cs := range f.Variables {
+		if len(cs) == 0 {
+			return invalidFilter("variables")
+		}
 		field := embeddeddata.FindComputed(computed, key)
 		if field == nil {
 			continue
 		}
-		condition, ok := typedCondition(jsonPath{"variables", []string{key}}, c, field.DataType)
-		if !ok {
-			return invalidFilter("variables")
+		for _, c := range cs {
+			condition, ok := typedCondition(jsonPath{"variables", []string{key}}, c, field.DataType)
+			if !ok {
+				return invalidFilter("variables")
+			}
+			w.add(condition)
 		}
-		w.add(condition)
 	}
 	return nil
 }

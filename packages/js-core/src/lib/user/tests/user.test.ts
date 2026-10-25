@@ -86,6 +86,26 @@ describe("user.ts", () => {
       expect(mockUpdateQueue.processUpdates).not.toHaveBeenCalled();
     });
 
+    test("passes the userHash on, and identifies the same user again when it comes with a new one", async () => {
+      const mockConfig = {
+        get: vi.fn().mockReturnValue({ user: { data: { userId: mockUserId, userHash: "old-hash" } } }),
+      };
+      const mockUpdateQueue = { updateUserId: vi.fn(), processUpdates: vi.fn() };
+      getInstanceConfigMock.mockReturnValue(mockConfig as unknown as Config);
+      getInstanceLoggerMock.mockReturnValue({ debug: vi.fn(), error: vi.fn() } as unknown as Logger);
+      getInstanceUpdateQueueMock.mockReturnValue(mockUpdateQueue as unknown as UpdateQueue);
+
+      await setUserId(mockUserId, { userHash: "old-hash" });
+      expect(mockUpdateQueue.updateUserId).not.toHaveBeenCalled();
+
+      await setUserId(mockUserId, { userHash: "new-hash" });
+      expect(mockUpdateQueue.updateUserId).toHaveBeenCalledWith(mockUserId, "new-hash");
+      expect(mockUpdateQueue.processUpdates).toHaveBeenCalled();
+
+      await setUserId("another-user", { userHash: "another-hash" });
+      expect(mockUpdateQueue.updateUserId).toHaveBeenLastCalledWith("another-user", "another-hash");
+    });
+
     test("tears down previous state and sets new userId when different userId is set", async () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue({
@@ -118,7 +138,7 @@ describe("user.ts", () => {
         "Different userId is being set, cleaning up previous user state"
       );
       expect(tearDown).toHaveBeenCalled();
-      expect(mockUpdateQueue.updateUserId).toHaveBeenCalledWith(mockUserId);
+      expect(mockUpdateQueue.updateUserId).toHaveBeenCalledWith(mockUserId, undefined);
       expect(mockUpdateQueue.processUpdates).toHaveBeenCalled();
     });
 
@@ -150,7 +170,7 @@ describe("user.ts", () => {
 
       expect(result.ok).toBe(true);
       expect(tearDown).not.toHaveBeenCalled();
-      expect(mockUpdateQueue.updateUserId).toHaveBeenCalledWith(mockUserId);
+      expect(mockUpdateQueue.updateUserId).toHaveBeenCalledWith(mockUserId, undefined);
       expect(mockUpdateQueue.processUpdates).toHaveBeenCalled();
     });
 

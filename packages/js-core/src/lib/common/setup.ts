@@ -5,10 +5,17 @@ import { FORMA_EVENTS, type TSetupFailureCode, emitFormaEvent } from "@/lib/comm
 import { Logger } from "@/lib/common/logger";
 import { getIsSetup, setIsSetup } from "@/lib/common/status";
 import { TimeoutStack } from "@/lib/common/timeout-stack";
-import { filterSurveys, getIsDebug, isNowExpired, normalizeAppUrl, wrapThrows } from "@/lib/common/utils";
+import {
+  filterSurveys,
+  getIsDebug,
+  isNowExpired,
+  normalizeAppUrl,
+  toSurveyKeys,
+  wrapThrows,
+} from "@/lib/common/utils";
 import { addLiveRegionContainer, closeSurvey, prefetchSurveysScript } from "@/lib/survey/widget";
 import { DEFAULT_USER_STATE_NO_USER_ID } from "@/lib/user/state";
-import { sendUpdatesToBackend } from "@/lib/user/update";
+import { sendUpdatesToBackend, withUserHash } from "@/lib/user/update";
 import { fetchWorkspaceState } from "@/lib/workspace/state";
 import {
   type TConfig,
@@ -102,8 +109,9 @@ const completeLegacyUserState = (legacyUser: TLegacyConfig["user"]): TUserState 
       ...defaults,
       ...legacyData,
       segments: Array.isArray(legacyData.segments) ? legacyData.segments : defaults.segments,
-      displays: Array.isArray(legacyData.displays) ? legacyData.displays : defaults.displays,
-      responses: Array.isArray(legacyData.responses) ? legacyData.responses : defaults.responses,
+      // Legacy states name surveys by id; the state names them by survey key now.
+      displays: toSurveyKeys(legacyData.userId ?? null, legacyData.displays),
+      responses: toSurveyKeys(legacyData.userId ?? null, legacyData.responses),
     },
   };
 };
@@ -275,16 +283,24 @@ export const setup = async (
         }
 
         if (userState.data.userId) {
+          const { userHash } = userState.data;
           const updatesResponse = await sendUpdatesToBackend({
             appUrl,
             workspaceId: effectiveId,
             updates: {
               userId: userState.data.userId,
+              ...(userHash && { userHash }),
             },
           });
 
           if (updatesResponse.ok) {
-            userState = updatesResponse.data.state;
+            userState = withUserHash(updatesResponse.data.state, userHash);
+          } else if (isIdentifyRefused(updatesResponse.error)) {
+            // The workspace refuses this stored identity: it requires verified identities and the stored userHash is missing or was made with a secret since regenerated. Failing setup here would drop the page's own setUserId, the one call that can bring a valid hash, on every load until storage is cleared. Setup goes on with the user logged out, and that setUserId identifies again.
+            logger.error(
+              `The stored user ${userState.data.userId} was refused (${updatesResponse.error.responseMessage ?? updatesResponse.error.code}); continuing as an anonymous user until setUserId() identifies again.`
+            );
+            userState = DEFAULT_USER_STATE_NO_USER_ID;
           } else {
             const message = `Error updating user state: ${updatesResponse.error.code} - ${updatesResponse.error.responseMessage ?? ""}`;
             logger.error(message);
@@ -466,6 +482,10 @@ const ERROR_STATE_DURATION_MS = 10 * 60000;
  */
 const isConfigurationError = (e: { code: string; status?: number }): boolean =>
   e.code === "forbidden" || (e.status !== undefined && e.status >= 400 && e.status < 500 && e.status !== 429);
+
+/** An identify the server refused with 403: the workspace requires verified identities and the userHash sent with it does not verify the userId. */
+const isIdentifyRefused = (e: { code: string; status?: number }): boolean =>
+  e.code === "forbidden" || e.status === 403;
 
 const failureCodeFor = (e: { code: string; status?: number }): TSetupFailureCode =>
   isConfigurationError(e) ? "invalid_config" : "network_error";

@@ -57,6 +57,18 @@ export interface TwoFactorSetup {
   backupCodes: string[];
 }
 
+/** One of the user's sessions, GET /api/app/auth/sessions. ipAddress and userAgent are what the browser sent when it signed in. */
+export interface UserSession {
+  id: string;
+  /** The session of this browser. */
+  current: boolean;
+  createdAt: string;
+  lastActiveAt: string;
+  expiresAt: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+}
+
 export type SignOutReason =
   | "user_initiated"
   | "account_deletion"
@@ -69,6 +81,7 @@ export const authKeys = {
   me: ["auth", "me"] as const,
   options: ["auth", "options"] as const,
   notifications: ["auth", "notifications"] as const,
+  sessions: ["auth", "sessions"] as const,
 };
 
 export const meQuery = queryOptions({
@@ -88,6 +101,13 @@ export const notificationsQuery = queryOptions({
     api
       .get<{ organizations: NotificationOrganization[] }>("/api/app/auth/me/notifications", { signal })
       .then((res) => res.organizations),
+});
+
+/** The user's unexpired sessions, the current one first. */
+export const sessionsQuery = queryOptions({
+  queryKey: authKeys.sessions,
+  queryFn: ({ signal }) =>
+    api.get<{ sessions: UserSession[] }>("/api/app/auth/sessions", { signal }).then((res) => res.sessions),
 });
 
 /**
@@ -119,6 +139,34 @@ export const useRequestEmailChange = () =>
       api.post<undefined>("/api/app/auth/email/change", input),
   });
 
+/** Replaces the password after checking the current one. The server signs every other session out, so the sessions list is refetched. */
+export const useChangePassword = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { currentPassword: string; newPassword: string }) =>
+      api.post<undefined>("/api/app/auth/password/change", input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: authKeys.sessions }),
+  });
+};
+
+/** Signs one of the user's other sessions out. */
+export const useRevokeSession = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<undefined>(`/api/app/auth/sessions/${encodeURIComponent(id)}`),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: authKeys.sessions }),
+  });
+};
+
+/** Signs every session but this browser's out. */
+export const useRevokeOtherSessions = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ revoked: number }>("/api/app/auth/sessions/revoke-others"),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: authKeys.sessions }),
+  });
+};
+
 export const useRequestPasswordResetLink = () =>
   useMutation({ mutationFn: () => api.post<{ success: boolean }>("/api/app/auth/password/reset-link") });
 
@@ -141,7 +189,12 @@ export const useEnableTwoFactor = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (code: string) => api.post<{ message: string }>("/api/app/auth/two-factor/enable", { code }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: authKeys.me }),
+    // Enabling signs every other session out.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: authKeys.me }),
+        queryClient.invalidateQueries({ queryKey: authKeys.sessions }),
+      ]),
   });
 };
 

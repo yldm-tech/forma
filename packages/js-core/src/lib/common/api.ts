@@ -69,6 +69,7 @@ export class ApiClient {
 
   async createOrUpdateUser(userUpdateInput: {
     userId: string;
+    userHash?: string;
     attributes?: Record<string, string | number>;
   }): Promise<Result<CreateOrUpdateUserResponse, ApiErrorResponse>> {
     // Pass attributes as-is to preserve number types
@@ -79,6 +80,7 @@ export class ApiClient {
       "POST",
       {
         userId: userUpdateInput.userId,
+        ...(userUpdateInput.userHash && { userHash: userUpdateInput.userHash }),
         attributes: userUpdateInput.attributes,
       },
       this.isDebug

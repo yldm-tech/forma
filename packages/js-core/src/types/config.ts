@@ -138,9 +138,14 @@ export interface TUserState {
   expiresAt: Date | null;
   data: {
     userId: string | null;
+    /** An opaque token the server gives the contact in place of its id; the display and response routes accept it as `contactId`. Null for an anonymous visitor. */
     contactId: string | null;
+    /** The userHash given to setUserId(), sent again with every identify of this user. Kept by the SDK only; the server never returns it. */
+    userHash?: string;
     segments: string[];
-    displays: { surveyId: string; createdAt: Date }[];
+    /** The survey key (`getSurveyKey`) of every display of an app survey, newest first: the server names no survey by id. */
+    displays: string[];
+    /** The survey keys of the app surveys the user responded to. */
     responses: string[];
     lastDisplayAt: Date | null;
     language?: string;
@@ -268,7 +273,15 @@ export interface TSurveyStyling extends TBaseStyling {
 
 export interface TUpdates {
   userId: string;
+  /** The userHash that verifies userId, for a workspace with identity verification. */
+  userHash?: string;
   attributes?: TAttributes;
+}
+
+/** The options of setUserId(). */
+export interface TSetUserIdOptions {
+  /** HMAC-SHA256 of the userId under the workspace's identity secret, in hex, computed by your server. Required when the workspace requires verified identities; it also lets the SDK set the email. */
+  userHash?: string;
 }
 
 export interface TLegacyConfigInput {
