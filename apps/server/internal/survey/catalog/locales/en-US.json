@@ -171,6 +171,7 @@
   "templates.csat_survey_question_2_placeholder": "Type your answer here…",
   "templates.csat_upper_label": "Very satisfied",
   "templates.cta_description": "Display information and prompt users to take a specific action",
+  "templates.custom_survey_default_name": "Untitled survey",
   "templates.custom_survey_description": "Create a survey without template.",
   "templates.custom_survey_name": "Start from scratch",
   "templates.custom_survey_question_1_headline": "What would you like to know?",

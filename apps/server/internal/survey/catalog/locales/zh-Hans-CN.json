@@ -171,6 +171,7 @@
   "templates.csat_survey_question_2_placeholder": "在此输入您的答案...",
   "templates.csat_upper_label": "非常满意",
   "templates.cta_description": "显示信息并提示用户采取特定行动",
+  "templates.custom_survey_default_name": "未命名问卷",
   "templates.custom_survey_description": "创建一个没有模板的问卷。",
   "templates.custom_survey_name": "从零开始",
   "templates.custom_survey_question_1_headline": "您想知道什么？",

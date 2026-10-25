@@ -4,7 +4,7 @@
     "name": "{{templates.custom_survey_name}}",
     "description": "{{templates.custom_survey_description}}",
     "preset": {
-      "name": "{{templates.custom_survey_name}}",
+      "name": "{{templates.custom_survey_default_name}}",
       "welcomeCard": {
         "enabled": false,
         "headline": {

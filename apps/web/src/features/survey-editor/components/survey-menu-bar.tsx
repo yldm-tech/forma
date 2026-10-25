@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import { ArrowLeftIcon, SettingsIcon, TriangleAlertIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,6 +29,7 @@ import { analysisKeys } from "../../survey-analysis/api";
 import { useCreateSegment } from "../../segments/api";
 import { type SurveySaveInput, saveSurvey, surveyEditorKeys } from "../api";
 import { ZEditorSurvey } from "../lib/editor-schema";
+import { surveyNameFocusFrom } from "../lib/name-focus";
 import { type PublishWarning, getPublishWarnings } from "../lib/publish-warnings";
 import { parseSurveyModifiedElsewhereError } from "../lib/save-conflict";
 import {
@@ -116,6 +117,17 @@ export const SurveyMenuBar = ({
   const lastSavedSurveyRef = useRef<TSurvey | null>(null);
   // Set once a save is refused because the survey moved on, and holds the stored version the server named. Two things hang off it: autosave stops while it is set, so a conflict cannot be resolved silently in the loser's favour, and the next explicit save sends it as the precondition, which is what lets the editor deliberately overwrite. Cleared by the save that succeeds.
   const saveConflictVersionRef = useRef<Date | null>(null);
+  const focusName = useRouterState({ select: (state) => surveyNameFocusFrom(state.location.state) });
+
+  // A survey just created from scratch opens with its placeholder name selected, ready to type over; a name the author already changed is left alone.
+  useEffect(() => {
+    const input = nameInputRef.current;
+    if (!focusName || !input || input.value !== survey.name) return;
+    input.focus();
+    input.select();
+    // Only on mount: the request belongs to the navigation that opened the editor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (audiencePrompt && activeId === "settings") {

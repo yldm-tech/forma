@@ -69,21 +69,24 @@ export const OnboardingBackLink = ({ organizationId }: { organizationId: string 
   );
 };
 
-/** forma2's onboarding step: a headline over a grid of options, with a way back on the later steps. It fills the onboarding layout under its header. */
+/** forma2's onboarding step: a headline over a grid of options, with a way back on the later steps and, on the first step, the fields the options act on (intro). It fills the onboarding layout under its header. */
 export const OnboardingOptions = ({
   title,
   options,
   back,
+  intro,
 }: {
   title: string;
   options: OnboardingOption[];
   back?: ReactNode;
+  intro?: ReactNode;
 }) => (
   <main className="flex w-full flex-1 flex-col items-center justify-center gap-y-12 p-6">
     <div className="flex flex-col items-center gap-y-4">
       {back}
       <h1 className="text-center text-4xl font-medium text-balance text-slate-800">{title}</h1>
     </div>
+    {intro}
     <div className="grid w-full max-w-5xl grid-cols-1 gap-8 text-center sm:grid-cols-2 lg:grid-cols-3">
       {options.map((option) => (
         <div key={option.title} className="flex h-full flex-col items-center gap-2">

@@ -102,34 +102,42 @@ describe("getSurveyPagePosition", () => {
 });
 
 describe("hasSurveyInstructions", () => {
-  test("is true when the welcome card has a subheader", () => {
-    expect(hasSurveyInstructions(makeSurvey({ welcomeCardSubheader: { default: "Take a minute." } }))).toBe(
-      true
-    );
+  test("is true when the enabled welcome card has a subheader", () => {
+    expect(
+      hasSurveyInstructions(
+        makeSurvey({ welcomeCardEnabled: true, welcomeCardSubheader: { default: "Take a minute." } })
+      )
+    ).toBe(true);
   });
 
   test("is false when the survey has no subheader at all", () => {
-    expect(hasSurveyInstructions(makeSurvey())).toBe(false);
+    expect(hasSurveyInstructions(makeSurvey({ welcomeCardEnabled: true }))).toBe(false);
   });
 
   test("is false for a subheader that is present but blank", () => {
-    expect(hasSurveyInstructions(makeSurvey({ welcomeCardSubheader: { default: "   " } }))).toBe(false);
+    expect(
+      hasSurveyInstructions(
+        makeSurvey({ welcomeCardEnabled: true, welcomeCardSubheader: { default: "   " } })
+      )
+    ).toBe(false);
   });
 
   test("is true when only a translation is filled in", () => {
     // A survey may leave the default empty and translate only the languages it ships.
     expect(
-      hasSurveyInstructions(makeSurvey({ welcomeCardSubheader: { default: "", "de-DE": "Kurz." } }))
+      hasSurveyInstructions(
+        makeSurvey({ welcomeCardEnabled: true, welcomeCardSubheader: { default: "", "de-DE": "Kurz." } })
+      )
     ).toBe(true);
   });
 
-  test("does not depend on the welcome card being enabled", () => {
-    // The instructions are exposed on every page, so they outlive the card that authored them.
+  test("is false when the welcome card is disabled, even with a subheader", () => {
+    // Every template carries a default subheader; a disabled card's text was never shown to, or written by, the creator.
     expect(
       hasSurveyInstructions(
         makeSurvey({ welcomeCardEnabled: false, welcomeCardSubheader: { default: "Take a minute." } })
       )
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 

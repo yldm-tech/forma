@@ -123,6 +123,7 @@
     "saml_connection_error": "問題が発生しました。詳細については、アプリのコンソールを確認してください。",
     "signup": {
       "captcha_failed": "CAPTCHAに失敗しました",
+      "check_your_account": "アカウントをご確認ください",
       "company_email_required": "会社のメールアドレスで登録してください。",
       "have_an_account": "すでにアカウントをお持ちですか？",
       "log_in": "ログイン",
@@ -693,6 +694,11 @@
     "verification_security_notice": "このメールアドレスの変更をリクエストしていない場合は、このメールを無視するか、すぐにサポートに連絡してください。",
     "verified_link_survey_email_subject": "フォームへの回答準備ができました。"
   },
+  "onboarding": {
+    "product_name_description": "ワークスペース名として使われ、アンケートテンプレートの質問文にも入ります。後からワークスペース設定で変更できます。",
+    "product_name_label": "製品名または会社名を教えてください",
+    "product_name_placeholder": "例：Acme"
+  },
   "organizations": {
     "landing": {
       "no_workspaces_warning_subtitle": "ワークスペースへのアクセスを取得するには、組織のオーナーに連絡してください。または、独自の組織を作成して開始することもできます。",
@@ -953,6 +959,7 @@
     "csat_survey_question_2_placeholder": "ここに回答を入力してください...",
     "csat_upper_label": "非常に満足",
     "cta_description": "情報を表示し、特定の行動を促す",
+    "custom_survey_default_name": "無題のアンケート",
     "custom_survey_description": "テンプレートを使わずにアンケートを作成する。",
     "custom_survey_name": "最初から始める",
     "custom_survey_question_1_headline": "何を知りたいですか？",
@@ -3169,6 +3176,12 @@
         "link_survey_description": "フォームページへのリンクを共有するか、ウェブページやメールに埋め込みます。",
         "list": "リスト",
         "load_segment": "セグメントを読み込み",
+        "logic": {
+          "action_options": "アクションのオプション",
+          "condition_group_options": "条件グループのオプション",
+          "condition_options": "条件のオプション",
+          "rule_options": "ロジックルールのオプション"
+        },
         "logic_error_warning": "変更するとロジックエラーが発生します",
         "logic_error_warning_text": "質問の種類を変更すると、この質問のロジック条件が削除されます",
         "logo_settings": "ロゴ設定",
