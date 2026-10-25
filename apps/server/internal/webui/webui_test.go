@@ -200,7 +200,7 @@ func TestServePublicAssets(t *testing.T) {
 	})
 
 	const (
-		favicon    = "public, max-age=2592000, s-maxage=31536000, immutable"
+		favicon    = "public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400"
 		animated   = "public, max-age=604800, s-maxage=31536000, immutable"
 		background = "public, max-age=86400, s-maxage=2592000, stale-while-revalidate=86400"
 		csv        = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600"

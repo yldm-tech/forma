@@ -111,9 +111,9 @@ export const Document = ({
           : null}
         {page ? <link rel="alternate" hrefLang="x-default" href={absoluteUrl(pagePath("en", page))} /> : null}
         {/* /favicon.ico is the server's (apps/web/public/favicon.ico, the same icon): the ingress sends it there. */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/_site/icons/favicon-32x32.png" />
-        <link rel="apple-touch-icon" href="/_site/icons/apple-touch-icon.png" />
+        <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/_site/icons/favicon-32x32.png?v=2" />
+        <link rel="apple-touch-icon" href="/_site/icons/apple-touch-icon.png?v=2" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Forma" />
         <meta property="og:title" content={meta.title} />

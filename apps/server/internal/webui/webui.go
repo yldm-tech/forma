@@ -229,9 +229,9 @@ func (h *Handler) serveFile(c *gin.Context, name string) bool {
 		if ext := path.Ext(name); ext == ".js" || ext == ".cjs" {
 			c.Header("Content-Type", "application/javascript; charset=UTF-8")
 		}
-	// The favicons rarely change. Same headers forma2 sent (apps/web/next.config.mjs), as are the folders below.
+	// The favicons keep fixed names (browsers request /favicon.ico on their own), so they must not be cached as immutable: forma2's "s-maxage=31536000, immutable" kept the old icon at the CDN after the 2026-10-25 rebrand. A day at most, served stale while it revalidates; index.html also links them with a ?v= query to switch at once. The folders below keep forma2's headers.
 	case name == "favicon.ico" || strings.HasPrefix(name, "favicon/"):
-		c.Header("Cache-Control", "public, max-age=2592000, s-maxage=31536000, immutable")
+		c.Header("Cache-Control", "public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400")
 		c.Header("Access-Control-Allow-Origin", "*")
 	// Surveys and workspaces store these paths as their background; emails and customer pages load them cross-origin.
 	case strings.HasPrefix(name, "image-backgrounds/"):
