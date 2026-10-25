@@ -54,6 +54,18 @@ export interface ResponseTagChange {
   tagId: string;
 }
 
+/** POST /api/app/surveys/{id}/responses/tags/{add,remove}: how many of the survey's responses matched the filter when the change ran, and how many of them gained or lost the tag. */
+export interface BulkTagResult {
+  tagId: string;
+  matched: number;
+  changed: number;
+}
+
+export type BulkTagOperation = "add" | "remove";
+
+/** The server's bound on the response ids of one bulk tag change (MaxBulkTagResponseIDs in apps/server/internal/response/bulk_tags.go). */
+export const BULK_TAG_MAX_RESPONSE_IDS = 1000;
+
 /** One link of POST /api/app/surveys/{id}/single-use-links. */
 export interface SingleUseLink {
   suId: string;
@@ -259,6 +271,17 @@ export const analysisApi = {
     api.post<ResponseTagChange>(`/api/app/responses/${responseId}/tags`, { tagId }),
   removeTag: (responseId: string, tagId: string) =>
     api.delete<ResponseTagChange>(`/api/app/responses/${responseId}/tags/${tagId}`),
+  /** Adds the tag to, or removes it from, every response of the survey matching the criteria: a selection is its responseIds (at most BULK_TAG_MAX_RESPONSE_IDS), "all matching" the view's filter. */
+  bulkTag: (
+    surveyId: string,
+    operation: BulkTagOperation,
+    tagId: string,
+    criteria: TResponseFilterCriteria
+  ) =>
+    api.post<BulkTagResult>(`${surveyPath(surveyId)}/responses/tags/${operation}`, {
+      tagId,
+      filterCriteria: criteria,
+    }),
   createTag: (workspaceId: string, name: string) =>
     api
       .post<Stamped<TTag>>(`/api/app/workspaces/${workspaceId}/tags`, { name })

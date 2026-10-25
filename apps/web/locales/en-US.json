@@ -3699,6 +3699,17 @@
         "an_error_occurred_deleting_the_tag": "An error occurred deleting the tag",
         "attachments_download_started": "Download started: {fileCount, plural, one {{fileCount} file} other {{fileCount} files}}. Large exports can take a few minutes.",
         "browser": "Browser",
+        "bulk": {
+          "add_tag": "Add tag",
+          "all_matching_selected": "All {count, plural, one {# matching response} other {# matching responses}} selected",
+          "create_tag": "Create tag “{name}”",
+          "no_tags_to_remove": "The selected responses have no tags",
+          "remove_tag": "Remove tag",
+          "select_all_matching": "Select all {count, number} matching",
+          "tag_added": "Added “{tag}” to {count, plural, one {# response} other {# responses}}",
+          "tag_removed": "Removed “{tag}” from {count, plural, one {# response} other {# responses}}",
+          "type_to_create_tag": "Type a name to create a tag"
+        },
         "bulk_delete_response_quotas": "The responses are part of quotas for this survey. How do you want to handle the quotas?",
         "city": "City",
         "column_options": "Column options",

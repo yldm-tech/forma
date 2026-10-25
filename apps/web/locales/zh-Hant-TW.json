@@ -3699,6 +3699,17 @@
         "an_error_occurred_deleting_the_tag": "刪除標籤時發生錯誤",
         "attachments_download_started": "下載已開始：{fileCount, plural, other {{fileCount} 個檔案}}。大型匯出可能需要幾分鐘時間。",
         "browser": "瀏覽器",
+        "bulk": {
+          "add_tag": "新增標籤",
+          "all_matching_selected": "已選取全部 {count, number} 筆符合條件的回覆",
+          "create_tag": "建立標籤「{name}」",
+          "no_tags_to_remove": "所選回覆沒有標籤",
+          "remove_tag": "移除標籤",
+          "select_all_matching": "選取全部 {count, number} 筆符合條件的回覆",
+          "tag_added": "已為 {count, number} 筆回覆新增「{tag}」",
+          "tag_removed": "已從 {count, number} 筆回覆移除「{tag}」",
+          "type_to_create_tag": "輸入名稱即可建立標籤"
+        },
         "bulk_delete_response_quotas": "這些回應屬於此問卷的配額。你想如何處理配額？",
         "city": "城市",
         "column_options": "欄位選項",

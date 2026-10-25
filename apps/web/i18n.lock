@@ -3550,6 +3550,15 @@ checksums:
     workspace/surveys/responses/an_error_occurred_deleting_the_tag: c63f28ac2a4cda558423ea7f975d5b8b
     workspace/surveys/responses/attachments_download_started: b948e9c08cdcd043e8107d7921fc725c
     workspace/surveys/responses/browser: e58e554eb7b0761ede25f2425173d31f
+    workspace/surveys/responses/bulk/add_tag: c2699d3238aa3a1ee974382648d04dea
+    workspace/surveys/responses/bulk/all_matching_selected: e81d276600fc6c74d423ea43fb48b77c
+    workspace/surveys/responses/bulk/create_tag: 597cd62a5db3b8dc1212a378eda1f923
+    workspace/surveys/responses/bulk/no_tags_to_remove: 8ac0d0a5f9edfc93117319c886d79db8
+    workspace/surveys/responses/bulk/remove_tag: f94aca7c44ca17cfd21dd250954f5d61
+    workspace/surveys/responses/bulk/select_all_matching: cb0c45f7169e491617a0ee16b7b07652
+    workspace/surveys/responses/bulk/tag_added: ed475ab668cf66e69f445f5af757d916
+    workspace/surveys/responses/bulk/tag_removed: 8c23b8eea0c72629e580b9ac24dd8e0c
+    workspace/surveys/responses/bulk/type_to_create_tag: fb687680d6f7b267d8dcad6c69cbcc2a
     workspace/surveys/responses/bulk_delete_response_quotas: ae1b3a7684c53ea681a3de6c7f911e70
     workspace/surveys/responses/city: 1831f32e1babbb29af27fac3053504a2
     workspace/surveys/responses/column_options: 7890dfa2407d12d41ecf9cc4c7c2bd09
