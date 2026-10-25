@@ -246,7 +246,7 @@ export const zh: SiteContent = {
       },
       webhooks: {
         title: "Webhook",
-        body: "回答创建、更新或完成时，向你的接口发送 HTTP 请求。",
+        body: "回答创建、更新或完成时，向你的接口发送 HTTP 请求。每个 Webhook 都会显示投递是否成功，保留最近的投递记录，并可重新发送其中任意一条。",
       },
       automation: {
         title: "自动化工具",

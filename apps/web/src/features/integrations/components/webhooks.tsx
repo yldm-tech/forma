@@ -1,11 +1,12 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { CheckIcon, CopyIcon, TrashIcon, WebhookIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, KeyRoundIcon, ListIcon, TrashIcon, WebhookIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Checkbox } from "../../../components/ui/checkbox";
+import { ConfirmationModal } from "../../../components/ui/confirmation-modal";
 import { DeleteDialog } from "../../../components/ui/delete-dialog";
 import {
   Dialog,
@@ -28,6 +29,7 @@ import {
   testWebhookEndpoint,
   useCreateWebhook,
   useDeleteWebhook,
+  useRegenerateWebhookSecret,
   useUpdateWebhook,
   webhookSurveysQuery,
   webhooksQuery,
@@ -45,16 +47,20 @@ import {
   webhookSurveyNames,
 } from "../webhooks";
 import { BackToIntegrations } from "./shared";
+import { WebhookDeliveriesSheet, WebhookHealthBadge, WebhookHealthSummary } from "./webhook-deliveries";
 
 type SurveyOption = { id: string; name: string };
 
-/** forma2's webhooks page: the workspace's webhooks, newest first, and adding one when the caller may write to the workspace. */
+/** forma2's webhooks page: the workspace's webhooks, newest first, each with its delivery health, and adding one when the caller may write to the workspace. A webhook's delivery log opens from its overview. */
 export const WebhooksPage = ({ workspaceId, isReadOnly }: { workspaceId: string; isReadOnly: boolean }) => {
   const { t } = useTranslation();
   const { data } = useSuspenseQuery(webhooksQuery(workspaceId));
   const surveys = useQuery(webhookSurveysQuery(workspaceId)).data ?? [];
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [active, setActive] = useState<Webhook | null>(null);
+  // The webhook whose delivery log is open, by id, so its health follows the list as it refreshes.
+  const [deliveriesId, setDeliveriesId] = useState<string | null>(null);
+  const deliveriesOf = data.webhooks.find((webhook) => webhook.id === deliveriesId);
 
   return (
     <PageContentWrapper>
@@ -99,13 +105,26 @@ export const WebhooksPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
           isReadOnly={isReadOnly}
           allowInternalUrls={data.allowInternalUrls}
           onClose={() => setActive(null)}
+          onShowDeliveries={() => {
+            setActive(null);
+            setDeliveriesId(active.id);
+          }}
+        />
+      )}
+      {deliveriesOf && (
+        <WebhookDeliveriesSheet
+          workspaceId={workspaceId}
+          webhook={deliveriesOf}
+          isReadOnly={isReadOnly}
+          open
+          onOpenChange={(open) => !open && setDeliveriesId(null)}
         />
       )}
     </PageContentWrapper>
   );
 };
 
-// Below lg the source and surveys columns give way, so the name, triggers and update time keep their room: 3 + 2 + 2 of 7 columns, and 3 + 1 + 4 + 2 + 2 of 12 from lg.
+// Below lg the source, surveys and update time columns give way, so the name, triggers and delivery health keep their room: 3 + 2 + 2 of 7 columns, and 3 + 1 + 2 + 2 + 2 + 2 of 12 from lg.
 const WebhookTableHeading = () => {
   const { t } = useTranslation();
   return (
@@ -115,9 +134,10 @@ const WebhookTableHeading = () => {
       <div className="hidden text-center lg:col-span-1 lg:block">
         {t("workspace.integrations.webhooks.source")}
       </div>
-      <div className="hidden text-center lg:col-span-4 lg:block">{t("common.surveys")}</div>
+      <div className="hidden text-center lg:col-span-2 lg:block">{t("common.surveys")}</div>
       <div className="col-span-2 text-center">{t("workspace.integrations.webhooks.triggers")}</div>
-      <div className="col-span-2 text-center">{t("common.updated")}</div>
+      <div className="col-span-2 text-center">{t("common.status")}</div>
+      <div className="hidden text-center lg:col-span-2 lg:block">{t("common.updated")}</div>
     </div>
   );
 };
@@ -158,7 +178,7 @@ const WebhookRow = ({ webhook, surveys }: { webhook: Webhook; surveys: readonly 
       <div className="my-auto hidden text-center text-sm text-slate-800 lg:col-span-1 lg:block">
         <Badge type="gray" size="tiny" text={webhookSourceLabel(t, webhook.source)} />
       </div>
-      <div className="my-auto hidden min-w-0 px-2 text-center text-sm text-slate-800 lg:col-span-4 lg:block">
+      <div className="my-auto hidden min-w-0 px-2 text-center text-sm text-slate-800 lg:col-span-2 lg:block">
         {surveysText === null ? (
           <p className="text-slate-400">-</p>
         ) : (
@@ -174,7 +194,10 @@ const WebhookRow = ({ webhook, surveys }: { webhook: Webhook; surveys: readonly 
             : triggersText(t, webhook.triggers)}
         </p>
       </div>
-      <div className="col-span-2 my-auto text-center text-sm whitespace-nowrap text-slate-500">
+      <div className="col-span-2 my-auto text-center text-sm">
+        <WebhookHealthBadge health={webhook.health} />
+      </div>
+      <div className="my-auto hidden text-center text-sm whitespace-nowrap text-slate-500 lg:col-span-2 lg:block">
         {timeSince(webhook.updatedAt, locale)}
       </div>
     </div>
@@ -475,6 +498,32 @@ export const AddWebhookModal = ({
 /** forma2's WebhookCreatedModal: the signing secret, shown this once. */
 export const WebhookCreatedModal = ({ webhook, onClose }: { webhook: Webhook; onClose: () => void }) => {
   const { t } = useTranslation();
+  return (
+    <SigningSecretModal
+      title={t("workspace.integrations.webhooks.webhook_created")}
+      description={t("workspace.integrations.webhooks.copy_secret_now")}
+      warning={t("workspace.integrations.webhooks.secret_copy_warning")}
+      secret={webhook.secret ?? ""}
+      onClose={onClose}
+    />
+  );
+};
+
+/** A signing secret shown once, with a copy button: a new webhook's, or a regenerated one. */
+const SigningSecretModal = ({
+  title,
+  description,
+  warning,
+  secret,
+  onClose,
+}: {
+  title: string;
+  description: string;
+  warning: string;
+  secret: string;
+  onClose: () => void;
+}) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -484,7 +533,7 @@ export const WebhookCreatedModal = ({ webhook, onClose }: { webhook: Webhook; on
   }, [copied]);
 
   const copy = async () => {
-    await navigator.clipboard.writeText(webhook.secret ?? "");
+    await navigator.clipboard.writeText(secret);
     setCopied(true);
     toast.success(t("common.copied_to_clipboard"));
   };
@@ -493,20 +542,14 @@ export const WebhookCreatedModal = ({ webhook, onClose }: { webhook: Webhook; on
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogHeader>
         <CheckIcon className="size-6 text-green-500" />
-        <DialogTitle>{t("workspace.integrations.webhooks.webhook_created")}</DialogTitle>
-        <DialogDescription>{t("workspace.integrations.webhooks.copy_secret_now")}</DialogDescription>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogBody className="space-y-4 pb-4">
         <div>
           <Label htmlFor="webhook-secret">{t("workspace.integrations.webhooks.signing_secret")}</Label>
           <div className="mt-1 flex">
-            <Input
-              id="webhook-secret"
-              type="text"
-              readOnly
-              value={webhook.secret ?? ""}
-              className="font-mono text-sm"
-            />
+            <Input id="webhook-secret" type="text" readOnly value={secret} className="font-mono text-sm" />
             <Button
               type="button"
               variant="secondary"
@@ -525,9 +568,7 @@ export const WebhookCreatedModal = ({ webhook, onClose }: { webhook: Webhook; on
               )}
             </Button>
           </div>
-          <p className="mt-2 text-xs text-slate-500">
-            {t("workspace.integrations.webhooks.secret_copy_warning")}
-          </p>
+          <p className="mt-2 text-xs text-slate-500">{warning}</p>
         </div>
       </DialogBody>
       <DialogFooter>
@@ -539,19 +580,22 @@ export const WebhookCreatedModal = ({ webhook, onClose }: { webhook: Webhook; on
   );
 };
 
-/** forma2's WebhookModal: a webhook's overview, and its settings. */
+/** forma2's WebhookModal: a webhook's overview, with its delivery health and the way to its delivery log, and its settings. */
 export const WebhookDetailModal = ({
   webhook,
   surveys,
   isReadOnly,
   allowInternalUrls,
   onClose,
+  onShowDeliveries,
 }: {
   webhook: Webhook;
   surveys: readonly SurveyOption[];
   isReadOnly: boolean;
   allowInternalUrls: boolean;
   onClose: () => void;
+  /** Closes the modal and opens the webhook's delivery log. */
+  onShowDeliveries: () => void;
 }) => {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"overview" | "settings">("overview");
@@ -590,7 +634,7 @@ export const WebhookDetailModal = ({
           </div>
           <div className="flex-1 overflow-y-auto pt-4">
             {tab === "overview" ? (
-              <WebhookOverview webhook={webhook} surveys={surveys} />
+              <WebhookOverview webhook={webhook} surveys={surveys} onShowDeliveries={onShowDeliveries} />
             ) : (
               <WebhookSettings
                 webhook={webhook}
@@ -607,7 +651,15 @@ export const WebhookDetailModal = ({
   );
 };
 
-const WebhookOverview = ({ webhook, surveys }: { webhook: Webhook; surveys: readonly SurveyOption[] }) => {
+const WebhookOverview = ({
+  webhook,
+  surveys,
+  onShowDeliveries,
+}: {
+  webhook: Webhook;
+  surveys: readonly SurveyOption[];
+  onShowDeliveries: () => void;
+}) => {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? "en-US";
   return (
@@ -652,21 +704,33 @@ const WebhookOverview = ({ webhook, surveys }: { webhook: Webhook; surveys: read
           ))}
         </div>
       </div>
-      <div className="col-span-1 space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-2">
-        <div>
-          <Label className="text-xs font-normal text-slate-500">{t("common.created_at")}</Label>
-          <p className="text-xs text-slate-700">{formatDateTimeForDisplay(webhook.createdAt, locale)}</p>
+      <div className="col-span-1 space-y-3">
+        <div className="space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-2">
+          <Label className="text-xs font-normal text-slate-500">
+            {t("workspace.integrations.webhooks.deliveries.delivery_status")}
+          </Label>
+          <WebhookHealthSummary health={webhook.health} />
+          <Button type="button" size="sm" variant="secondary" className="w-full" onClick={onShowDeliveries}>
+            <ListIcon className="size-4" />
+            {t("workspace.integrations.webhooks.deliveries.view_recent_deliveries")}
+          </Button>
         </div>
-        <div>
-          <Label className="text-xs font-normal text-slate-500">{t("common.updated_at")}</Label>
-          <p className="text-xs text-slate-700">{formatDateTimeForDisplay(webhook.updatedAt, locale)}</p>
+        <div className="space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-2">
+          <div>
+            <Label className="text-xs font-normal text-slate-500">{t("common.created_at")}</Label>
+            <p className="text-xs text-slate-700">{formatDateTimeForDisplay(webhook.createdAt, locale)}</p>
+          </div>
+          <div>
+            <Label className="text-xs font-normal text-slate-500">{t("common.updated_at")}</Label>
+            <p className="text-xs text-slate-700">{formatDateTimeForDisplay(webhook.updatedAt, locale)}</p>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-/** forma2's WebhookSettingsTab: edit (the endpoint is tested again, signed with the stored secret) or delete. A webhook a third party created keeps its URL, triggers and surveys. */
+/** forma2's WebhookSettingsTab: edit (the endpoint is tested again, signed with the stored secret), delete, or replace the signing secret. A webhook a third party created keeps its URL, triggers, surveys and secret. */
 const WebhookSettings = ({
   webhook,
   surveys,
@@ -818,6 +882,7 @@ const WebhookSettings = ({
           )}
         </div>
       </form>
+      {!isReadOnly && <SigningSecretSection webhook={webhook} />}
       <DeleteDialog
         open={isDeleteOpen}
         setOpen={setIsDeleteOpen}
@@ -825,6 +890,73 @@ const WebhookSettings = ({
         text={t("workspace.integrations.webhooks.webhook_delete_confirmation")}
         onDelete={() => void deleteWebhook()}
       />
+    </div>
+  );
+};
+
+/** The settings tab's signing secret: a new one replaces it at once, after a confirmation, and is shown this once. A webhook an automation platform created keeps the secret the platform received. */
+const SigningSecretSection = ({ webhook }: { webhook: Webhook }) => {
+  const { t } = useTranslation();
+  const regenerate = useRegenerateWebhookSecret(webhook.workspaceId);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [secret, setSecret] = useState<string | null>(null);
+  const isThirdParty = webhook.source !== "user";
+
+  const confirm = async () => {
+    try {
+      setSecret(await regenerate.mutateAsync(webhook.id));
+      setIsConfirmOpen(false);
+    } catch (error) {
+      setIsConfirmOpen(false);
+      toast.error(webhookErrorMessage(t, error));
+    }
+  };
+
+  return (
+    <div className="mt-6 border-t border-slate-200 pt-4">
+      <Label>{t("workspace.integrations.webhooks.signing_secret")}</Label>
+      <div className="mt-1 flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <p className="text-xs text-slate-600">
+          {isThirdParty
+            ? t("workspace.integrations.webhooks.regenerate_secret.third_party", {
+                platform: webhookSourceLabel(t, webhook.source),
+              })
+            : t("workspace.integrations.webhooks.regenerate_secret.hint")}
+        </p>
+        {!isThirdParty && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="whitespace-nowrap"
+            onClick={() => setIsConfirmOpen(true)}>
+            <KeyRoundIcon className="size-4" />
+            {t("workspace.integrations.webhooks.regenerate_secret.button")}
+          </Button>
+        )}
+      </div>
+      <ConfirmationModal
+        open={isConfirmOpen}
+        setOpen={setIsConfirmOpen}
+        title={t("workspace.integrations.webhooks.regenerate_secret.title")}
+        body={
+          <p className="text-sm text-slate-600">
+            {t("workspace.integrations.webhooks.regenerate_secret.description")}
+          </p>
+        }
+        buttonText={t("workspace.integrations.webhooks.regenerate_secret.confirm")}
+        buttonLoading={regenerate.isPending}
+        onConfirm={() => void confirm()}
+      />
+      {secret !== null && (
+        <SigningSecretModal
+          title={t("workspace.integrations.webhooks.regenerate_secret.done_title")}
+          description={t("workspace.integrations.webhooks.regenerate_secret.done_description")}
+          warning={t("workspace.integrations.webhooks.regenerate_secret.done_warning")}
+          secret={secret}
+          onClose={() => setSecret(null)}
+        />
+      )}
     </div>
   );
 };

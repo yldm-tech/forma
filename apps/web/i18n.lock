@@ -2025,6 +2025,45 @@ checksums:
     workspace/integrations/webhooks/copy_secret_now: 23d6da66a541e7c22eb06729b6eac376
     workspace/integrations/webhooks/created_by_third_party: b40197eabbbce500b80b44268b8b1ee9
     workspace/integrations/webhooks/created_by_third_party_no: 8c708225830b06df2d1141c536f2a0d6
+    workspace/integrations/webhooks/deliveries/attempts_label: c17e337fe7be198e386cfdfb7a7c4793
+    workspace/integrations/webhooks/deliveries/card_failing: 9914c198e858001342d761f03681dc28
+    workspace/integrations/webhooks/deliveries/card_lost: 45965232ebad6dfa697a59fe9c94b9b5
+    workspace/integrations/webhooks/deliveries/card_retrying: d22661323ba745e32d61aa371e56b3e3
+    workspace/integrations/webhooks/deliveries/delivery_status: b4baa8dff8e026afbb35ac56982eda73
+    workspace/integrations/webhooks/deliveries/duration: bf6ed0974fdd4eb9d8bd3f4f8c4bd5ae
+    workspace/integrations/webhooks/deliveries/duration_ms: f25f12433c79d3a8e39a49982cbc688c
+    workspace/integrations/webhooks/deliveries/empty: 63374c26c738b4de4efc1f0d0199b472
+    workspace/integrations/webhooks/deliveries/failing_since_label: 1b723e515cd5e7e911a14b52d06c863c
+    workspace/integrations/webhooks/deliveries/failure_redirect: af36943a4b271a875b2781dee96ae770
+    workspace/integrations/webhooks/deliveries/failure_refused: 8778a603871319eb37d1fd354dc622e3
+    workspace/integrations/webhooks/deliveries/failure_status: 74d9f6bce329227a564f34144ff3b767
+    workspace/integrations/webhooks/deliveries/failure_timeout: f0df622940cd201939df83f9b6a75308
+    workspace/integrations/webhooks/deliveries/failure_unreachable: a9db1d7d96b239c59038489671e04f96
+    workspace/integrations/webhooks/deliveries/first_failure: 01cb687c68780faa9462166ebd853f29
+    workspace/integrations/webhooks/deliveries/health_failing: 9f9ccc4955cb6001636d0e1be9e38ad6
+    workspace/integrations/webhooks/deliveries/health_healthy: a16896be3f594e1def8245fae1c9d93c
+    workspace/integrations/webhooks/deliveries/health_lost: 9b84a5bf3f59ba0af7b3fbfcbc71ecd0
+    workspace/integrations/webhooks/deliveries/health_none: 5f1e6ea9fe822d332baddc4234b95953
+    workspace/integrations/webhooks/deliveries/health_retrying: 5ba339b181d4bf39e81826635828adff
+    workspace/integrations/webhooks/deliveries/last_attempt: 6ab57ddf5f6f16e249af0c31c547d227
+    workspace/integrations/webhooks/deliveries/last_delivered: ac6be633f60a297dcaa547a9a6102e99
+    workspace/integrations/webhooks/deliveries/last_error: a0ff525c6db595892f69fd95760b1928
+    workspace/integrations/webhooks/deliveries/last_success: f17f209649ba3b084e3ea426df349ae2
+    workspace/integrations/webhooks/deliveries/lost_label: 686959256ca2c702ac82bbe0c9765039
+    workspace/integrations/webhooks/deliveries/lost_to_resend: 493ba48819cbf80d1a7644898ae944c4
+    workspace/integrations/webhooks/deliveries/message_id: 77edf011f0bbd93a29fb3d6d30d43e5c
+    workspace/integrations/webhooks/deliveries/never: 975007d8aae7e3af47897721a6961be8
+    workspace/integrations/webhooks/deliveries/next_attempt: f2279abf04af3dd63635a4a5c5757a26
+    workspace/integrations/webhooks/deliveries/recent_deliveries: 315736a2b68c10aae301501f3fa95474
+    workspace/integrations/webhooks/deliveries/resend: f420d288f862ba079434362ddb2e4e4e
+    workspace/integrations/webhooks/deliveries/resend_failed: fee7715dd6bce3bce7342d8b2e62d694
+    workspace/integrations/webhooks/deliveries/resend_succeeded: 57ad3eb01c2447b49cf24a059c9d105b
+    workspace/integrations/webhooks/deliveries/response_code: 96948db3e5bacb5463ddb9f7b8a33bf2
+    workspace/integrations/webhooks/deliveries/retry_policy: 9ffafc49a2b66224dcde7b0c9a0c2f5c
+    workspace/integrations/webhooks/deliveries/status_failed: 99f87615af1fffa2b8802866b096705a
+    workspace/integrations/webhooks/deliveries/status_retrying: 5ba339b181d4bf39e81826635828adff
+    workspace/integrations/webhooks/deliveries/status_succeeded: e1f613d50db60d2493b0a715a10aab85
+    workspace/integrations/webhooks/deliveries/view_recent_deliveries: d2c06fc8b58980b27156dbba892c8866
     workspace/integrations/webhooks/discord_webhook_not_supported: 23432534f908b2ba63a517fb1f9bbe0e
     workspace/integrations/webhooks/empty_webhook_message: 4c4d8709576a38cb8eb59866331d2405
     workspace/integrations/webhooks/endpoint_bad_gateway_error: 48ab17e9a77030b289ec22f497f50b63
@@ -2038,6 +2077,15 @@ checksums:
     workspace/integrations/webhooks/no_triggers: 6b68cddfc45b3f7e20644a24a1bbea69
     workspace/integrations/webhooks/please_check_console: 7b1787e82a0d762df02c011ebb1650ea
     workspace/integrations/webhooks/please_enter_a_url: c24c74d0ce7ed3a6b858aadbc82108fe
+    workspace/integrations/webhooks/regenerate_secret/button: ff28f5b39f9399a56cba9b1f37ac2a8b
+    workspace/integrations/webhooks/regenerate_secret/confirm: 79bc737effc16d0546c048c6aa2ec415
+    workspace/integrations/webhooks/regenerate_secret/description: baaa9330cfae6d3e1efc0a2c54f27fc6
+    workspace/integrations/webhooks/regenerate_secret/done_description: 2151fd15d4e5be4d973326224dbc39d0
+    workspace/integrations/webhooks/regenerate_secret/done_title: 6fcb5b30a30b69b3a5218df53fed7d87
+    workspace/integrations/webhooks/regenerate_secret/done_warning: 31fabbbfa98bd277086ba4af2b110273
+    workspace/integrations/webhooks/regenerate_secret/hint: 876693f1256d9093a3811817ed0a4b74
+    workspace/integrations/webhooks/regenerate_secret/third_party: 6619c269d3fc00d8437b2a5ae7859625
+    workspace/integrations/webhooks/regenerate_secret/title: b0ad34606ddbcc7e2968276690ff2f0a
     workspace/integrations/webhooks/response_created: 8c43b1b6d748f6096f6f8d9232a3c469
     workspace/integrations/webhooks/response_finished: 71764de45369a08aacc290af629fa298
     workspace/integrations/webhooks/response_updated: 0b178ffeb39b615db0db036a685f118b

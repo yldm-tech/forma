@@ -72,7 +72,7 @@ func retryDelay(attempt int) time.Duration {
 	return retrySchedule[min(max(attempt, 1), len(retrySchedule))-1]
 }
 
-// Work delivers the event to the webhook as it is now: its current URL and secret, and only while it still exists and subscribes to the event for the survey, so a webhook deleted or narrowed during the retries stops receiving it. A response deleted during the retries, or its survey, stops it too, so its data is not sent on after an erasure.
+// Work delivers the event to the webhook as it is now: its current URL and secret, and only while it still exists and subscribes to the event for the survey, so a webhook deleted or narrowed during the retries stops receiving it. A response deleted during the retries, or its survey, stops it too, so its data is not sent on after an erasure, and so does a resend from the webhooks page that delivered it in the meantime. Every attempt is recorded in the webhook's delivery log; a failure to record it is logged and does not fail the job, which would deliver the event again.
 func (w *deliverWorker) Work(ctx context.Context, job *river.Job[DeliverArgs]) error {
 	a := job.Args
 	log := w.log.With("job_id", job.ID, "attempt", job.Attempt, "max_attempts", job.MaxAttempts, "webhook_id", a.WebhookID, "event", a.Event,
@@ -89,16 +89,49 @@ func (w *deliverWorker) Work(ctx context.Context, job *river.Job[DeliverArgs]) e
 	if err != nil {
 		return err
 	}
+	messageID := MessageID(a.JobKey, a.WebhookID, a.Event)
 	i := slices.IndexFunc(hooks, func(h *Webhook) bool { return h.ID == a.WebhookID })
 	if i < 0 {
 		log.InfoContext(ctx, "Webhook delivery skipped: the webhook was deleted or no longer subscribes to the event")
+		if err := w.deliverer.repo.abandon(ctx, a.WebhookID, messageID); err != nil {
+			log.ErrorContext(ctx, "Failed to record the end of a webhook delivery's retries", "err", err)
+		}
 		return nil
 	}
-	err = w.deliverer.Deliver(ctx, hooks[i], a.Event, a.JobKey, json.RawMessage(a.Data))
+	delivered, err := w.deliverer.repo.deliveredAlready(ctx, a.WebhookID, messageID)
+	if err != nil {
+		return err
+	}
+	if delivered {
+		log.InfoContext(ctx, "Webhook delivery skipped: a resend delivered it")
+		return nil
+	}
+	hook := hooks[i]
+	attempt, err := w.deliverer.attempt(ctx, hook, a.Event, messageID, json.RawMessage(a.Data))
+	if err != nil {
+		return err
+	}
+	rec := deliveryRecord{
+		WebhookID: a.WebhookID, ResponseID: a.ResponseID, SurveyID: a.SurveyID, Event: a.Event, MessageID: messageID, Payload: a.Data,
+		Status: DeliverySucceeded, At: w.deliverer.now().UTC(), Attempt: attempt,
+	}
+	final := job.Attempt >= job.MaxAttempts
+	switch {
+	case attempt.OK():
+	case final:
+		rec.Status = DeliveryFailed
+	default:
+		next := rec.At.Add(retryDelay(job.Attempt))
+		rec.Status, rec.NextAttemptAt = DeliveryRetrying, &next
+	}
+	if err := w.deliverer.repo.recordAttempt(ctx, rec); err != nil {
+		log.ErrorContext(ctx, "Failed to record a webhook delivery attempt", "err", err)
+	}
+	err = attempt.err(hook)
 	switch {
 	case err == nil:
 		return nil
-	case job.Attempt >= job.MaxAttempts:
+	case final:
 		log.ErrorContext(ctx, "Webhook delivery failed; retries exhausted", "err", err)
 	default:
 		log.WarnContext(ctx, "Webhook delivery failed; it will be retried", "err", err, "retry_in", retryDelay(job.Attempt).String())
