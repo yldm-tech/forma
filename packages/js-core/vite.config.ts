@@ -38,6 +38,8 @@ export default defineConfig({
       filename: "forma",
       distDir: resolve(__dirname, "dist"),
       skipDirectoryCheck: true, // Skip checking for subdirectories that might not exist
+      // `.cjs` is not on Cloudflare's cacheable-extension list, so the install snippets load `forma.umd.js`; the `.cjs` name stays for the snippets customers installed before.
+      duplicateSuffixes: { ".umd.cjs": ".umd.js" },
     }) as VitestPluginOption,
   ]),
   test: {

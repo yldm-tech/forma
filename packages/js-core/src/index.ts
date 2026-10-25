@@ -12,7 +12,7 @@ import { EmbeddedDataStore, type TEmbeddedDataInput } from "@/lib/survey/embedde
 import { checkPageUrl } from "@/lib/survey/no-code-action";
 import * as Attribute from "@/lib/user/attribute";
 import * as User from "@/lib/user/user";
-import { type TConfigInput, type TLegacyConfigInput } from "@/types/config";
+import { type TAttributeValue, type TConfigInput, type TLegacyConfigInput } from "@/types/config";
 import { type TTrackProperties } from "@/types/survey";
 
 const queue = CommandQueue.getInstance();
@@ -59,11 +59,15 @@ const setEmail = async (email: string): Promise<void> => {
   await queue.add(Attribute.setAttributes, CommandType.UserAction, true, { email });
 };
 
-const setAttribute = async (key: string, value: string): Promise<void> => {
+/**
+ * Set one attribute on the identified user. The value's type decides the attribute's type when the key is new: a string, a number, or a Date (sent as an ISO 8601 string). An existing key only accepts values of its type; a mismatch is rejected by the server and logged as an error.
+ */
+const setAttribute = async (key: string, value: TAttributeValue): Promise<void> => {
   await queue.add(Attribute.setAttributes, CommandType.UserAction, true, { [key]: value });
 };
 
-const setAttributes = async (attributes: Record<string, string>): Promise<void> => {
+/** Set several attributes at once. Same value types and rules as setAttribute(). */
+const setAttributes = async (attributes: Record<string, TAttributeValue>): Promise<void> => {
   await queue.add(Attribute.setAttributes, CommandType.UserAction, true, attributes);
 };
 
@@ -187,5 +191,6 @@ const forma = {
 
 type TForma = typeof forma;
 export type { TForma };
-export type { TFormaEventName, TFormaEventPayloads } from "@/lib/common/events";
+export type { TAttributeValue } from "@/types/config";
+export type { TFormaEventName, TFormaEventPayloads, TSetupFailureCode } from "@/lib/common/events";
 export default forma;

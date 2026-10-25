@@ -122,7 +122,7 @@ describe("UpdateQueue", () => {
 
     (sendUpdates as Mock).mockReturnValue({
       ok: true,
-      data: { hasWarnings: false },
+      data: { skippedAttributeKeys: new Set<string>() },
     });
 
     updateQueue.updateAttributes({ name: mockAttributes.name });
@@ -137,6 +137,49 @@ describe("UpdateQueue", () => {
 
     // Should only be called once with the merged updates
     expect(sendUpdates).toHaveBeenCalledTimes(1);
+  });
+
+  test("processUpdates names only the attributes the server actually wrote in its success log", async () => {
+    loggerMock.mockReturnValue(mockLogger as unknown as Logger);
+    (sendUpdates as Mock).mockResolvedValue({
+      ok: true,
+      data: { skippedAttributeKeys: new Set(["seats"]) },
+    });
+
+    updateQueue.updateAttributes({ seats: "30", plan: "pro" });
+    await updateQueue.processUpdates();
+
+    expect(mockLogger.debug).toHaveBeenCalledWith("Attributes successfully set: plan");
+    expect(mockLogger.debug).not.toHaveBeenCalledWith(expect.stringContaining("seats"));
+  });
+
+  test("processUpdates does not claim any key was written when the server hit the attribute limit", async () => {
+    loggerMock.mockReturnValue(mockLogger as unknown as Logger);
+    (sendUpdates as Mock).mockResolvedValue({
+      ok: true,
+      data: { skippedAttributeKeys: new Set<string>(), attributeLimitExceeded: true },
+    });
+
+    updateQueue.updateAttributes({ plan: "pro", brand_new: "x" });
+    await updateQueue.processUpdates();
+
+    expect(mockLogger.debug).not.toHaveBeenCalledWith(expect.stringContaining("Attributes successfully set"));
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      "Attributes sent: plan, brand_new. New keys among them were not created: attribute limit reached."
+    );
+  });
+
+  test("processUpdates logs no success when the server skipped every attribute", async () => {
+    loggerMock.mockReturnValue(mockLogger as unknown as Logger);
+    (sendUpdates as Mock).mockResolvedValue({
+      ok: true,
+      data: { skippedAttributeKeys: new Set(["seats"]) },
+    });
+
+    updateQueue.updateAttributes({ seats: "30" });
+    await updateQueue.processUpdates();
+
+    expect(mockLogger.debug).not.toHaveBeenCalledWith(expect.stringContaining("Attributes successfully set"));
   });
 
   test("processUpdates handles language attribute specially when no userId", async () => {
@@ -182,7 +225,7 @@ describe("UpdateQueue", () => {
   test("hasPendingWork returns true while processUpdates flush is in flight", () => {
     (sendUpdates as Mock).mockReturnValue({
       ok: true,
-      data: { hasWarnings: false },
+      data: { skippedAttributeKeys: new Set<string>() },
     });
 
     updateQueue.updateUserId(mockUserId1);
@@ -200,7 +243,7 @@ describe("UpdateQueue", () => {
   test("waitForPendingWork returns true when processUpdates succeeds", async () => {
     (sendUpdates as Mock).mockReturnValue({
       ok: true,
-      data: { hasWarnings: false },
+      data: { skippedAttributeKeys: new Set<string>() },
     });
 
     updateQueue.updateUserId(mockUserId1);
@@ -252,7 +295,7 @@ describe("UpdateQueue", () => {
   test("processUpdates reuses pending flush instead of creating orphaned promises", async () => {
     (sendUpdates as Mock).mockReturnValue({
       ok: true,
-      data: { hasWarnings: false },
+      data: { skippedAttributeKeys: new Set<string>() },
     });
 
     updateQueue.updateUserId(mockUserId1);

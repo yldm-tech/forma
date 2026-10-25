@@ -5,6 +5,7 @@ import {
   CheckIcon,
   ChevronDownIcon,
   CopyIcon,
+  ExternalLinkIcon,
   GlobeIcon,
   RotateCcwIcon,
   SmartphoneIcon,
@@ -14,6 +15,7 @@ import {
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { IdBadge } from "../../components/ui/id-badge";
 import { LoadingBlock, PageContentWrapper, PageHeader, SettingsCard } from "../../components/ui/page";
@@ -22,7 +24,7 @@ import { cn } from "../../lib/cn";
 import { errorMessage } from "../../lib/errors";
 import { organizationSettingsPath } from "../../lib/navigation";
 import { type AppConnection, type WorkspaceDetail, appConnectionQuery } from "../../lib/queries/workspaces";
-import { sdkSnippets } from "../../lib/sdk-snippets";
+import { sdkReferenceUrl, sdkSnippets } from "../../lib/sdk-snippets";
 
 /** forma2's app connection page: whether the SDK has reached the workspace, the ids it is set up with, and how to install it. */
 export const AppConnectionPage = ({ workspace }: { workspace: WorkspaceDetail }) => {
@@ -170,25 +172,28 @@ const CodeBlock = ({ children }: { children: string }) => {
   );
 };
 
-interface InstallOption {
-  id: string;
-  label: string;
-  steps: string[];
+interface InstallStep {
+  text: string;
   snippet?: string;
 }
 
-const Steps = ({ option }: { option: InstallOption }) => {
-  return (
-    <div className="space-y-4">
-      <ol className="list-inside list-decimal space-y-1 text-sm text-slate-700">
-        {option.steps.map((step) => (
-          <li key={step}>{step}</li>
-        ))}
-      </ol>
-      {option.snippet && <CodeBlock>{option.snippet}</CodeBlock>}
-    </div>
-  );
-};
+interface InstallOption {
+  id: string;
+  label: string;
+  steps: InstallStep[];
+}
+
+/** Numbered steps, each followed by the code it asks to paste. */
+const Steps = ({ steps }: { steps: InstallStep[] }) => (
+  <ol className="list-inside list-decimal space-y-3 text-sm text-slate-700">
+    {steps.map((step) => (
+      <li key={step.text} className="space-y-2">
+        <span>{step.text}</span>
+        {step.snippet && <CodeBlock>{step.snippet}</CodeBlock>}
+      </li>
+    ))}
+  </ol>
+);
 
 /** One install method: either its own steps, or a choice of frameworks each with theirs. */
 const SubMethods = ({ options }: { options: InstallOption[] }) => {
@@ -213,18 +218,31 @@ const SubMethods = ({ options }: { options: InstallOption[] }) => {
           </button>
         ))}
       </div>
-      <Steps option={selected} />
+      <Steps steps={selected.steps} />
     </div>
   );
 };
 
-/** forma2's InstallMethodCards, without the AI prompt forma2 showed only behind a PostHog experiment. */
+interface InstallMethod {
+  id: string;
+  icon: ReactNode;
+  title: string;
+  description: string;
+  /** Absent for a method that is not available yet: its card says so and does not open. */
+  body?: ReactNode;
+}
+
+/** How to install the SDK. Every working method loads it with the same script tag from this instance; nothing is published on npm, for mobile or for WordPress yet, so those cards say "coming soon" and give no install command. */
 const InstallMethods = ({ workspaceId, appUrl }: { workspaceId: string; appUrl: string }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState<string | null>(null);
   const snippets = sdkSnippets(workspaceId, appUrl);
   const step = (key: string) => t(`workspace.app-connection.install_method_${key}`);
-  const methods: { id: string; icon: ReactNode; title: string; description: string; body: ReactNode }[] = [
+  const usageStep: InstallStep = {
+    text: t("workspace.app-connection.loader_usage_step"),
+    snippet: snippets.usage,
+  };
+  const methods: InstallMethod[] = [
     {
       id: "website",
       icon: <GlobeIcon className="size-6" />,
@@ -236,62 +254,32 @@ const InstallMethods = ({ workspaceId, appUrl }: { workspaceId: string; appUrl: 
             {
               id: "html",
               label: step("html"),
-              steps: [step("html_step_1"), step("html_step_2")],
-              snippet: snippets.html,
+              steps: [{ text: step("html_step_1"), snippet: snippets.html }, { text: step("html_step_2") }],
             },
             {
               id: "react",
               label: step("react"),
-              steps: [step("react_step_1"), step("react_step_2")],
-              snippet: snippets.react,
+              steps: [
+                { text: t("workspace.app-connection.loader_react_step"), snippet: snippets.html },
+                usageStep,
+              ],
             },
             {
               id: "nextjs",
               label: step("nextjs"),
-              steps: [step("nextjs_step_1"), step("nextjs_step_2"), step("nextjs_step_3")],
-              snippet: snippets.nextjs,
+              steps: [
+                { text: t("workspace.app-connection.loader_nextjs_step_1"), snippet: snippets.nextjs },
+                { text: t("workspace.app-connection.loader_nextjs_step_2") },
+                usageStep,
+              ],
             },
             {
               id: "vue",
               label: step("vue"),
-              steps: [step("vue_step_1"), step("vue_step_2")],
-              snippet: snippets.vue,
-            },
-          ]}
-        />
-      ),
-    },
-    {
-      id: "mobile",
-      icon: <SmartphoneIcon className="size-6" />,
-      title: step("mobile"),
-      description: step("mobile_description"),
-      body: (
-        <SubMethods
-          options={[
-            {
-              id: "react-native",
-              label: step("react_native"),
-              steps: [step("react_native_step_1"), step("react_native_step_2")],
-              snippet: snippets.reactNative,
-            },
-            {
-              id: "swift",
-              label: step("swift"),
-              steps: [step("swift_step_1"), step("swift_step_2")],
-              snippet: snippets.swift,
-            },
-            {
-              id: "android",
-              label: step("android"),
-              steps: [step("android_step_1"), step("android_step_2")],
-              snippet: snippets.android,
-            },
-            {
-              id: "flutter",
-              label: step("flutter"),
-              steps: [step("flutter_step_1"), step("flutter_step_2")],
-              snippet: snippets.flutter,
+              steps: [
+                { text: t("workspace.app-connection.loader_vue_step"), snippet: snippets.html },
+                usageStep,
+              ],
             },
           ]}
         />
@@ -304,40 +292,53 @@ const InstallMethods = ({ workspaceId, appUrl }: { workspaceId: string; appUrl: 
       description: step("gtm_description"),
       body: (
         <Steps
-          option={{
-            id: "gtm",
-            label: step("gtm"),
-            steps: [step("gtm_step_1"), step("gtm_step_2"), step("gtm_step_3"), step("gtm_step_4")],
-            snippet: snippets.html,
-          }}
+          steps={[
+            { text: step("gtm_step_1") },
+            { text: step("gtm_step_2"), snippet: snippets.html },
+            { text: step("gtm_step_3") },
+            { text: step("gtm_step_4") },
+          ]}
         />
       ),
+    },
+    {
+      id: "mobile",
+      icon: <SmartphoneIcon className="size-6" />,
+      title: step("mobile"),
+      description: step("mobile_description"),
     },
     {
       id: "wordpress",
       icon: <WrenchIcon className="size-6" />,
       title: step("wordpress"),
-      description: step("wordpress_description"),
-      body: (
-        <Steps
-          option={{
-            id: "wordpress",
-            label: step("wordpress"),
-            steps: [
-              step("wordpress_step_1"),
-              step("wordpress_step_2"),
-              step("wordpress_step_3"),
-              step("wordpress_step_4"),
-            ],
-          }}
-        />
-      ),
+      description: t("workspace.app-connection.loader_wordpress_description"),
     },
   ];
 
   return (
     <div className="space-y-3">
       {methods.map((method) => {
+        const header = (
+          <>
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700">
+              {method.icon}
+            </div>
+            <div className="grow">
+              <p className="text-base font-semibold text-slate-800">{method.title}</p>
+              <p className="text-sm text-slate-500">{method.description}</p>
+            </div>
+          </>
+        );
+        if (!method.body) {
+          return (
+            <div
+              key={method.id}
+              className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-5">
+              {header}
+              <Badge text={t("workspace.app-connection.coming_soon")} type="gray" className="shrink-0" />
+            </div>
+          );
+        }
         const isOpen = open === method.id;
         return (
           <div key={method.id} className="rounded-lg border border-slate-200 bg-white">
@@ -346,13 +347,7 @@ const InstallMethods = ({ workspaceId, appUrl }: { workspaceId: string; appUrl: 
               aria-expanded={isOpen}
               onClick={() => setOpen(isOpen ? null : method.id)}
               className="flex w-full cursor-pointer items-center gap-4 p-5 text-left">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700">
-                {method.icon}
-              </div>
-              <div className="grow">
-                <p className="text-base font-semibold text-slate-800">{method.title}</p>
-                <p className="text-sm text-slate-500">{method.description}</p>
-              </div>
+              {header}
               <ChevronDownIcon
                 className={cn(
                   "size-5 shrink-0 text-slate-400 transition-transform duration-200",
@@ -366,6 +361,17 @@ const InstallMethods = ({ workspaceId, appUrl }: { workspaceId: string; appUrl: 
           </div>
         );
       })}
+      <p className="text-sm text-slate-600">
+        {t("workspace.app-connection.loader_docs_description")}{" "}
+        <a
+          href={sdkReferenceUrl(i18n.language)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-medium text-slate-800 underline underline-offset-2">
+          {t("workspace.app-connection.loader_docs_link")}
+          <ExternalLinkIcon className="size-3.5" aria-hidden="true" />
+        </a>
+      </p>
     </div>
   );
 };

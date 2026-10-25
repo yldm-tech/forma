@@ -13,6 +13,7 @@ import {
   DevelopersPage,
   IntegrationsPage,
   NotFoundPage,
+  SdkPage,
   SecurityPage,
   SelfHostingPage,
 } from "./pages/MorePages";
@@ -28,6 +29,7 @@ const PAGE_COMPONENTS: Record<PageId, RouteComponent> = {
   inAppSurvey: InAppSurveyPage,
   integrations: IntegrationsPage,
   developers: DevelopersPage,
+  sdk: SdkPage,
   selfHosting: SelfHostingPage,
   security: SecurityPage,
 };

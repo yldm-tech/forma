@@ -295,6 +295,7 @@ jobs:
           curl -fsS http://localhost:3000/app/ | grep -qi '<!doctype html>'
           test "$(curl -fsS -o /dev/null -w '%{redirect_url}' http://localhost:3000/)" = "http://localhost:3000/app/"
           curl -fsS -o /dev/null http://localhost:3000/js/forma.umd.cjs
+          curl -fsS -o /dev/null http://localhost:3000/js/forma.umd.js
           curl -fsS -o /dev/null http://localhost:3000/js/surveys.umd.cjs
 
           # The server gzips the survey runtime and the SPA's scripts for a client that accepts gzip, under the same names and cache headers. A GET, not a HEAD: the server decides on the body it writes.

@@ -100,6 +100,34 @@ describe("prerendered pages", () => {
     }
   });
 
+  // The app's Web & Mobile SDK page links here (apps/web/src/lib/sdk-snippets.ts sdkReferenceUrl), and so does the developers page.
+  it("renders the SDK reference at the path the app links to, linked from the developers page", async () => {
+    for (const locale of LOCALES) {
+      const sdk = ROUTES.find((r) => r.locale === locale && r.page === "sdk");
+      expect(sdk?.path).toBe(locale === "en" ? "/developers/sdk/" : `/${locale}/developers/sdk/`);
+      const html = await renderPath(sdk?.path ?? "/developers/sdk/", assets);
+      for (const method of [
+        "setUserId",
+        "setAttributes",
+        "setLanguage",
+        "track",
+        "logout",
+        "registerRouteChange",
+        "setEmbeddedData",
+        "setNonce",
+        "formaDebug",
+        "forma_setup_successful",
+      ]) {
+        expect(html).toContain(method);
+      }
+      expect(html).toContain("/js/forma.umd.js");
+      const developers = ROUTES.find((r) => r.locale === locale && r.page === "developers");
+      expect(await renderPath(developers?.path ?? "/developers/", assets)).toContain(
+        `href="${sdk?.path ?? ""}"`
+      );
+    }
+  });
+
   it("keeps the anchor the app links to on the security page", async () => {
     const html = await renderPath("/security/", assets);
     expect(html).toContain('id="stay-informed-with-forma-security-updates"');
@@ -107,10 +135,10 @@ describe("prerendered pages", () => {
 });
 
 describe("sitemap, robots and redirects", () => {
-  it("lists 24 URLs with alternates", () => {
+  it("lists 27 URLs with alternates", () => {
     const sitemap = buildSitemap();
-    expect(sitemap.match(/<url>/g)).toHaveLength(24);
-    expect(sitemap.match(/hreflang="x-default"/g)).toHaveLength(24);
+    expect(sitemap.match(/<url>/g)).toHaveLength(27);
+    expect(sitemap.match(/hreflang="x-default"/g)).toHaveLength(27);
     expect(sitemap).toContain("<loc>https://forma.yldm.ai/ja/security/</loc>");
     expect(sitemap).not.toContain("<lastmod>");
   });

@@ -3,7 +3,9 @@ package clientapi
 import (
 	"encoding/json"
 	"net/url"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -35,12 +37,12 @@ func (e *env) flushState(ws uuid.UUID) {
 	e.cache.Del(e.t.Context(), "fb:env:"+ws.String()+":state")
 }
 
-// forma2's getWorkspaceStateData: only live app surveys, newest first, at most 30, never archived ones.
+// forma2's getWorkspaceStateData: only live app surveys, newest first, at most maxStateSurveys, never archived ones. The ones the cap leaves out are counted under truncated and logged.
 func TestStateListsLiveAppSurveys(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
 	var newest uuid.UUID
-	for i := range 31 {
+	for i := range maxStateSurveys + 2 {
 		newest = e.survey(ws, "type", "app", "name", "App "+string(rune('a'+i)))
 		e.exec(`UPDATE surveys SET created_at = now() + make_interval(secs => ?) WHERE id = ?`, i, newest)
 	}
@@ -49,9 +51,16 @@ func TestStateListsLiveAppSurveys(t *testing.T) {
 	archived := e.survey(ws, "type", "app")
 	e.exec(`UPDATE surveys SET archived_at = now(), created_at = now() + interval '1 hour' WHERE id IN (?, ?)`, archived, draft)
 
-	surveys := surveysOf(e.state(t, ws.String()))
+	state := e.state(t, ws.String())
+	surveys := surveysOf(state)
 	if len(surveys) != maxStateSurveys {
 		t.Fatalf("%d surveys, want %d", len(surveys), maxStateSurveys)
+	}
+	if state["truncated"] != float64(2) {
+		t.Fatalf("truncated %v, want 2", state["truncated"])
+	}
+	if logs := e.logs.String(); !strings.Contains(logs, "workspace state truncated") || !strings.Contains(logs, `"truncated":2`) {
+		t.Fatalf("no truncation warning in %s", logs)
 	}
 	if surveys[0]["id"] != newest.String() {
 		t.Fatalf("first survey %v, want the newest %s", surveys[0]["id"], newest)
@@ -216,6 +225,9 @@ func TestStateComposition(t *testing.T) {
 		if _, ok := st["recaptchaSiteKey"]; ok {
 			t.Fatal("a site key without reCAPTCHA configured")
 		}
+		if _, ok := st["truncated"]; ok {
+			t.Fatal("truncated on a state within the cap")
+		}
 		if surveysOf(st)[0]["displayPercentage"] != nil {
 			t.Fatalf("a display percentage of 0 is null: %v", surveysOf(st)[0]["displayPercentage"])
 		}
@@ -267,5 +279,23 @@ func TestIDFormat(t *testing.T) {
 	details := e.do("GET", "/api/v2/client/clunknownaaaaaaaaaaaaaa1/environment", nil).expectError(t, 404, "not_found", "Workspace not found")
 	if details["resource_id"] != "clunknownaaaaaaaaaaaaaa1" || details["resource_type"] != "Workspace" {
 		t.Fatalf("details %v", details)
+	}
+}
+
+// The SDK is told to fetch the state again five minutes from now, so a paused survey or a new action reaches returning visitors within minutes; the server itself rebuilds it every minute.
+func TestStateExpiresInFiveMinutes(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	e.clock.nextWindow()
+	res := e.do("GET", "/api/v1/client/"+ws.String()+"/environment", nil)
+	if res.Status != 200 {
+		t.Fatalf("environment %d %s", res.Status, res.Body)
+	}
+	got, err := time.Parse(time.RFC3339Nano, res.data(t)["expiresAt"].(string))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := e.clock.Now().Add(5 * time.Minute); !got.Equal(want) {
+		t.Fatalf("expiresAt %v, want %v", got, want)
 	}
 }

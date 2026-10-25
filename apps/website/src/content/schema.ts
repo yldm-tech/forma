@@ -24,6 +24,7 @@ const common = obj({
     inAppSurveys: text,
     integrations: text,
     developers: text,
+    sdk: text,
     selfHosting: text,
     github: text,
     openMenu: text,
@@ -139,7 +140,7 @@ const developers = obj({
   meta,
   title: text,
   sub: text,
-  snippet: section,
+  snippet: linkedSection,
   api: linkedSection,
   mcp: linkedSection,
   webhooks: linkedSection,
@@ -154,6 +155,22 @@ const developers = obj({
       resources: z.tuple([text, text, text, text]),
     }),
     mcp: obj({ title: text, facts: z.tuple([fact, fact, fact]) }),
+  }),
+});
+
+// The SDK reference: the only documentation of the browser SDK besides packages/js-core/README.md, which says the same in English.
+const sdk = obj({
+  meta,
+  title: text,
+  sub: text,
+  install: obj({ title: text, body: text, frameworks: text, queue: text }),
+  reference: obj({
+    title: text,
+    lead: text,
+    identify: obj({ title: text, facts: z.tuple([fact, fact, fact, fact]) }),
+    actions: obj({ title: text, facts: z.tuple([fact, fact, fact]) }),
+    events: obj({ title: text, body: text, facts: z.tuple([fact, fact, fact, fact, fact, fact]) }),
+    debugging: obj({ title: text, facts: z.tuple([fact, fact, fact]) }),
   }),
 });
 
@@ -190,6 +207,7 @@ export const siteContentSchema = obj({
     inAppSurvey,
     integrations,
     developers,
+    sdk,
     selfHosting,
     security,
   }),

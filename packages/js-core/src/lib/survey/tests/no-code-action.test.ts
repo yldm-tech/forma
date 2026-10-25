@@ -25,6 +25,7 @@ import {
   removeExitIntentListener,
   removePageUrlEventListeners,
   removeScrollDepthListener,
+  resetLastCheckedPageUrl,
   setIsHistoryPatched,
 } from "@/lib/survey/no-code-action";
 import { setIsSurveyRunning } from "@/lib/survey/widget";
@@ -122,6 +123,7 @@ describe("no-code-event-listeners file", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetLastCheckedPageUrl();
     getInstanceConfigMock = vi.spyOn(Config, "getInstance");
     getInstanceTimeoutStackMock = vi.spyOn(TimeoutStack, "getInstance");
   });
@@ -531,6 +533,7 @@ describe("checkPageUrl additional cases", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetLastCheckedPageUrl();
     getInstanceConfigMock = vi.spyOn(Config, "getInstance");
     getInstanceTimeoutStackMock = vi.spyOn(TimeoutStack, "getInstance");
   });
@@ -703,6 +706,7 @@ describe("time on page action handling", () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     clearTimeOnPageTimers();
+    resetLastCheckedPageUrl();
     getInstanceConfigMock = vi.spyOn(Config, "getInstance");
     getInstanceTimeoutStackMock = vi.spyOn(TimeoutStack, "getInstance");
     (checkSetup as Mock).mockReturnValue({ ok: true });
@@ -817,6 +821,10 @@ describe("time on page action handling", () => {
     await vi.advanceTimersByTimeAsync(3000);
     expect(trackNoCodeAction).not.toHaveBeenCalled();
 
+    vi.stubGlobal("window", {
+      location: { href: "https://example.com/settings" },
+      setTimeout: globalThis.setTimeout,
+    });
     (handleUrlFilters as Mock).mockReturnValue(false);
     await checkPageUrl();
 
@@ -892,11 +900,19 @@ describe("time on page action handling", () => {
     await checkPageUrl();
     await vi.advanceTimersByTimeAsync(2000);
 
+    vi.stubGlobal("window", {
+      location: { href: "https://example.com/settings" },
+      setTimeout: globalThis.setTimeout,
+    });
     (handleUrlFilters as Mock).mockReturnValue(false);
     await checkPageUrl();
 
     expect(trackNoCodeAction).not.toHaveBeenCalled();
 
+    vi.stubGlobal("window", {
+      location: { href: "https://example.com/dashboard" },
+      setTimeout: globalThis.setTimeout,
+    });
     (handleUrlFilters as Mock).mockReturnValue(true);
     await checkPageUrl();
 
@@ -967,10 +983,100 @@ describe("time on page action handling", () => {
 
     await checkPageUrl();
 
+    vi.stubGlobal("window", {
+      location: { href: "https://example.com/settings" },
+      setTimeout: globalThis.setTimeout,
+    });
     (handleUrlFilters as Mock).mockReturnValue(false);
     await checkPageUrl();
 
     expect(mockTimeoutStack.remove).toHaveBeenCalledWith(999);
     expect(setIsSurveyRunning).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("checkPageUrl evaluates each page once", () => {
+  const createPageViewConfig = (): { get: Mock; update: Mock } => ({
+    get: vi.fn().mockReturnValue({
+      workspace: {
+        data: {
+          actionClasses: [
+            {
+              name: "Host page view",
+              type: "noCode",
+              noCodeConfig: { type: "pageView", urlFilters: [] },
+            },
+          ],
+        },
+      },
+    }),
+    update: vi.fn(),
+  });
+
+  // The tracked action runs through the command queue, which may still be finishing the previous one.
+  const settle = (): Promise<void> =>
+    new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+  const stubHref = (href: string): void => {
+    vi.stubGlobal("window", { location: { href }, setTimeout: globalThis.setTimeout });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetLastCheckedPageUrl();
+    vi.spyOn(Config, "getInstance").mockReturnValue(createPageViewConfig() as unknown as Config);
+    vi.spyOn(TimeoutStack, "getInstance").mockReturnValue({
+      getTimeouts: vi.fn().mockReturnValue([]),
+      remove: vi.fn(),
+      add: vi.fn(),
+    } as unknown as TimeoutStack);
+    (handleUrlFilters as Mock).mockReturnValue(true);
+    (trackNoCodeAction as Mock).mockResolvedValue({ ok: true });
+    (checkSetup as Mock).mockReturnValue({ ok: true });
+  });
+
+  test("pushState followed by registerRouteChange tracks one page view", async () => {
+    stubHref("https://example.com/");
+    await checkPageUrl();
+    await settle();
+    expect(trackNoCodeAction).toHaveBeenCalledTimes(1);
+
+    // history.pushState("/docs") fires the patched "pushstate" event, then the integrator's router hook calls registerRouteChange(): both reach checkPageUrl for the same href.
+    stubHref("https://example.com/docs");
+    await Promise.all([checkPageUrl(), checkPageUrl()]);
+    await settle();
+
+    expect(trackNoCodeAction).toHaveBeenCalledTimes(2);
+  });
+
+  test("replaceState with an unchanged URL does not track a page view again", async () => {
+    stubHref("https://example.com/pricing");
+    await checkPageUrl();
+    await checkPageUrl();
+    await settle();
+
+    expect(trackNoCodeAction).toHaveBeenCalledTimes(1);
+  });
+
+  test("a hash change is a new page", async () => {
+    stubHref("https://example.com/pricing");
+    await checkPageUrl();
+    stubHref("https://example.com/pricing#faq");
+    await checkPageUrl();
+    await settle();
+
+    expect(trackNoCodeAction).toHaveBeenCalledTimes(2);
+  });
+
+  test("after resetLastCheckedPageUrl the same page is evaluated again", async () => {
+    stubHref("https://example.com/pricing");
+    await checkPageUrl();
+    resetLastCheckedPageUrl();
+    await checkPageUrl();
+    await settle();
+
+    expect(trackNoCodeAction).toHaveBeenCalledTimes(2);
   });
 });
