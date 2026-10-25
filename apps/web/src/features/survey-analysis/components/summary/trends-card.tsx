@@ -2,7 +2,7 @@ import type { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { DownloadIcon, TrendingUpIcon } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { type KeyboardEvent, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../../components/ui/button";
 import {
@@ -37,6 +37,7 @@ import {
   formatTrendValue,
   labelledBuckets,
   metricScale,
+  tooltipPosition,
   trendData,
   viewElement,
 } from "../../lib/trends";
@@ -53,7 +54,7 @@ const yPercent = (value: number, scale: TrendScale) =>
 
 type ValueKind = "count" | "percentage" | "nps" | "satisfied" | "average";
 
-/** The chart: bars of responses split into completed and not completed, or a line of a rate or score with a gap where a bucket has none. Axis text is HTML so it keeps its size at any width; only the line is drawn in a stretched SVG. Hovering a bucket shows its tooltip; the same numbers are in the table below for screen readers. */
+/** The chart: bars of responses split into completed and not completed, or a line of a rate or score with a gap where a bucket has none; a partial period is drawn muted. Axis text is HTML so it keeps its size at any width; only the line is drawn in a stretched SVG. Hovering a bucket shows its tooltip, as does focusing the plot, a slider over the buckets whose arrow keys move between them; the same numbers are in the table below for screen readers. */
 const TrendChart = ({
   data,
   scale,
@@ -74,19 +75,50 @@ const TrendChart = ({
   const n = data.length;
   const labelled = labelledBuckets(n, MAX_X_LABELS);
   const bars = kind === "count";
-  // The line runs through the buckets' centres, broken where a bucket has no value; a lone value shows as its dot.
-  const segments: string[] = [];
-  let current: string[] = [];
+  // The line runs through the buckets' centres, broken where a bucket has no value, and muted on a step to or from a partial period; a lone value shows as its dot.
+  const segments: { key: number; points: string; muted: boolean }[] = [];
   data.forEach((datum, i) => {
-    if (datum.value === null) {
-      if (current.length > 1) segments.push(current.join(" "));
-      current = [];
-      return;
-    }
-    current.push(`${i + 0.5},${yPercent(datum.value, scale)}`);
+    const before = data[i - 1];
+    if (before === undefined || datum.value === null || before.value === null) return;
+    segments.push({
+      key: i,
+      points: `${i - 0.5},${yPercent(before.value, scale)} ${i + 0.5},${yPercent(datum.value, scale)}`,
+      muted: before.bucket.partial || datum.bucket.partial,
+    });
   });
-  if (current.length > 1) segments.push(current.join(" "));
   const activeDatum = active === null ? undefined : data[active];
+  const last = n - 1;
+  // The bucket the slider is on: the active one, the latest until one is.
+  const current = Math.min(active ?? last, last);
+  const currentDatum = data[current];
+  // A bucket as the slider reads it out: its days, partial or not, and its value.
+  const valueText = (datum: TrendDatum) => {
+    const period = bucketRangeLabel(datum.bucket, locale);
+    return t("workspace.analysis.trends.bucket_value", {
+      period: datum.bucket.partial ? t("workspace.analysis.trends.partial_row", { period }) : period,
+      value: bars
+        ? t("workspace.analysis.trends.responses_count", { count: datum.value ?? 0 })
+        : datum.value === null
+          ? t("workspace.analysis.trends.no_data")
+          : formatTrendValue(datum.value, kind, locale),
+    });
+  };
+  // The arrow keys move the tooltip between the buckets while the plot has focus.
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const next =
+      event.key === "ArrowLeft"
+        ? Math.max(0, current - 1)
+        : event.key === "ArrowRight"
+          ? Math.min(last, current + 1)
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? last
+              : undefined;
+    if (next === undefined) return;
+    event.preventDefault();
+    setActive(next);
+  };
 
   return (
     <div className="flex gap-2">
@@ -101,7 +133,19 @@ const TrendChart = ({
         ))}
       </div>
       <div className="min-w-0 flex-1">
-        <div role="img" aria-label={label} className="relative h-48" onMouseLeave={() => setActive(null)}>
+        <div
+          role="slider"
+          aria-label={label}
+          aria-valuemin={0}
+          aria-valuemax={last}
+          aria-valuenow={current}
+          aria-valuetext={currentDatum ? valueText(currentDatum) : undefined}
+          tabIndex={0}
+          className="focus-visible:ring-ring relative h-48 rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
+          onMouseLeave={() => setActive(null)}
+          onFocus={() => setActive((current) => current ?? n - 1)}
+          onBlur={() => setActive(null)}
+          onKeyDown={onKeyDown}>
           {scale.ticks.map((tick) => (
             <div
               key={tick}
@@ -122,7 +166,10 @@ const TrendChart = ({
                 onMouseEnter={() => setActive(i)}>
                 {bars && datum.value !== null && datum.value > 0 && (
                   <div
-                    className="absolute inset-x-[15%] bottom-0 flex flex-col justify-end gap-0.5"
+                    className={cn(
+                      "absolute inset-x-[15%] bottom-0 flex flex-col justify-end gap-0.5",
+                      datum.bucket.partial && "opacity-40"
+                    )}
                     style={{ height: `${100 - yPercent(datum.value, scale)}%` }}>
                     {datum.value - (datum.completed ?? 0) > 0 && (
                       <div
@@ -147,14 +194,14 @@ const TrendChart = ({
               className="pointer-events-none absolute inset-0 size-full overflow-visible"
               viewBox={`0 0 ${Math.max(n, 1)} 100`}
               preserveAspectRatio="none">
-              {segments.map((points) => (
+              {segments.map((segment) => (
                 <polyline
-                  key={points}
-                  points={points}
+                  key={segment.key}
+                  points={segment.points}
                   fill="none"
-                  className="stroke-slate-700"
+                  className={segment.muted ? "stroke-slate-400" : "stroke-slate-700"}
                   strokeWidth={2}
-                  strokeLinejoin="round"
+                  strokeLinecap="round"
                   vectorEffect="non-scaling-stroke"
                 />
               ))}
@@ -166,7 +213,10 @@ const TrendChart = ({
                 <div key={datum.bucket.start} className="relative h-full flex-1">
                   {datum.value !== null && (
                     <span
-                      className="absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-700 ring-2 ring-white"
+                      className={cn(
+                        "absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white",
+                        datum.bucket.partial ? "border-2 border-slate-500 bg-white" : "bg-slate-700"
+                      )}
                       style={{ top: `${yPercent(datum.value, scale)}%` }}
                     />
                   )}
@@ -177,8 +227,12 @@ const TrendChart = ({
           {activeDatum && active !== null && (
             <div
               role="tooltip"
-              className="pointer-events-none absolute top-0 z-10 w-max max-w-56 -translate-x-1/2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-md"
-              style={{ left: `${Math.min(Math.max(((active + 0.5) / n) * 100, 15), 85)}%` }}>
+              className="pointer-events-none absolute z-10 w-max max-w-56 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-md"
+              style={tooltipPosition(
+                active,
+                n,
+                activeDatum.value === null ? null : yPercent(activeDatum.value, scale)
+              )}>
               <p className="font-semibold text-slate-900">{bucketRangeLabel(activeDatum.bucket, locale)}</p>
               {bars ? (
                 <>
@@ -202,6 +256,9 @@ const TrendChart = ({
                       : t("workspace.analysis.trends.answers_count", { count: activeDatum.answered })}
                   </p>
                 </>
+              )}
+              {activeDatum.bucket.partial && (
+                <p className="mt-1 text-slate-500">{t("workspace.analysis.trends.partial_tooltip")}</p>
               )}
             </div>
           )}
@@ -253,7 +310,13 @@ const TrendTable = ({
       <tbody>
         {data.map((datum) => (
           <tr key={datum.bucket.start}>
-            <th scope="row">{bucketRangeLabel(datum.bucket, locale)}</th>
+            <th scope="row">
+              {datum.bucket.partial
+                ? t("workspace.analysis.trends.partial_row", {
+                    period: bucketRangeLabel(datum.bucket, locale),
+                  })
+                : bucketRangeLabel(datum.bucket, locale)}
+            </th>
             <td>
               {datum.value === null
                 ? t("workspace.analysis.trends.no_data")
@@ -282,6 +345,8 @@ export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string
   });
   const trends: SurveyTrends | undefined = query.data;
   const shownInterval = trends?.interval ?? chosenInterval ?? "day";
+  // The radios show the user's pick at once, while the chart keeps the interval of the data it draws until the new data arrives.
+  const checkedInterval = chosenInterval ?? shownInterval;
 
   const elementTypes = useMemo(() => getElementTypes(t), [t]);
   const surveyElements = useMemo(() => getElementsFromBlocks(survey.blocks), [survey.blocks]);
@@ -334,6 +399,12 @@ export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string
             ? t("workspace.analysis.trends.hint_satisfied")
             : t("workspace.analysis.trends.hint_average");
   const tooManyBuckets = query.error instanceof ApiError && query.error.code === TREND_TOO_MANY_BUCKETS;
+  // Only an interval the user picked can be refused for its length, so the advice follows it: a longer interval while there is one, a shorter date range by month.
+  const tooManyBucketsMessage = {
+    day: t("workspace.analysis.trends.too_many_buckets_day"),
+    week: t("workspace.analysis.trends.too_many_buckets_week"),
+    month: t("workspace.analysis.trends.too_many_buckets_month"),
+  }[chosenInterval ?? "month"];
   const intervalLabels: Record<TrendInterval, string> = {
     day: t("workspace.analysis.trends.interval_day"),
     week: t("workspace.analysis.trends.interval_week"),
@@ -351,7 +422,7 @@ export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string
     } catch (error) {
       toast.error(
         error instanceof ApiError && error.code === TREND_TOO_MANY_BUCKETS
-          ? t("workspace.analysis.trends.too_many_buckets")
+          ? tooManyBucketsMessage
           : t("workspace.analysis.trends.download_error")
       );
     } finally {
@@ -366,7 +437,7 @@ export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string
     if (query.isError && !trends) {
       return (
         <p role="alert" className="py-12 text-center text-sm text-slate-600">
-          {tooManyBuckets ? t("workspace.analysis.trends.too_many_buckets") : errorMessage(t, query.error)}
+          {tooManyBuckets ? tooManyBucketsMessage : errorMessage(t, query.error)}
         </p>
       );
     }
@@ -379,7 +450,7 @@ export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string
       <>
         {query.isError && (
           <p role="alert" className="mb-2 text-sm text-red-600">
-            {tooManyBuckets ? t("workspace.analysis.trends.too_many_buckets") : errorMessage(t, query.error)}
+            {tooManyBuckets ? tooManyBucketsMessage : errorMessage(t, query.error)}
           </p>
         )}
         <TrendChart
@@ -415,6 +486,19 @@ export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string
                 {t("workspace.analysis.trends.not_completed")}
               </span>
             </>
+          )}
+          {data.some((datum) => datum.bucket.partial) && (
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className={
+                  kind === "count"
+                    ? "size-2.5 rounded-sm bg-slate-700 opacity-40"
+                    : "size-2 rounded-full border-2 border-slate-500 bg-white"
+                }
+              />
+              {t("workspace.analysis.trends.partial")}
+            </span>
           )}
           {hint && <span>{hint}</span>}
         </div>
@@ -462,18 +546,22 @@ export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string
             aria-label={t("workspace.analysis.trends.interval_label")}
             className="inline-flex items-center rounded-lg bg-slate-100 p-1 text-slate-500">
             {INTERVALS.map((option) => (
-              <button
+              <label
                 key={option}
-                type="button"
-                role="radio"
-                aria-checked={shownInterval === option}
-                onClick={() => setChosenInterval(option)}
                 className={cn(
-                  "rounded-md px-3 py-1 text-sm font-medium",
-                  shownInterval === option ? "bg-white text-slate-900 shadow-xs" : "hover:text-slate-700"
+                  "cursor-pointer rounded-md px-3 py-1 text-sm font-medium has-focus-visible:ring-2 has-focus-visible:ring-ring",
+                  checkedInterval === option ? "bg-white text-slate-900 shadow-xs" : "hover:text-slate-700"
                 )}>
+                <input
+                  type="radio"
+                  name={`${selectId}-interval`}
+                  value={option}
+                  checked={checkedInterval === option}
+                  onChange={() => setChosenInterval(option)}
+                  className="sr-only"
+                />
                 {intervalLabels[option]}
-              </button>
+              </label>
             ))}
           </div>
           <DropdownMenu>

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey } from "@forma/types/surveys/types";
 import type { i18n as I18n } from "i18next";
@@ -49,8 +49,22 @@ const trends = (interval: SurveyTrends["interval"]): SurveyTrends => ({
   interval,
   timeZone: "Asia/Tokyo",
   buckets: [
-    { start: "2026-03-01", end: "2026-03-01", responses: 3, completed: 2, completionPercentage: 66.67 },
-    { start: "2026-03-02", end: "2026-03-02", responses: 0, completed: 0, completionPercentage: 0 },
+    {
+      start: "2026-03-01",
+      end: "2026-03-01",
+      partial: false,
+      responses: 3,
+      completed: 2,
+      completionPercentage: 66.67,
+    },
+    {
+      start: "2026-03-02",
+      end: "2026-03-02",
+      partial: false,
+      responses: 0,
+      completed: 0,
+      completionPercentage: 0,
+    },
   ],
   elements: [
     {
@@ -84,6 +98,8 @@ const stubTrends = (answer: (body: { interval?: string }) => Response) => {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
+const radio = (name: string) => screen.getByRole("radio", { name }) as HTMLInputElement;
+
 const renderCard = () =>
   render(
     <I18nextProvider i18n={i18n}>
@@ -100,17 +116,16 @@ describe("TrendsCard", () => {
     await waitFor(() => expect(screen.getAllByTestId("trend-bucket")).toHaveLength(2));
     expect(bodies[0]).toEqual({ filterCriteria: { finished: true } });
     expect(screen.getByText("Responses over time in Asia/Tokyo, following the current filter")).toBeTruthy();
-    expect(screen.getByRole("radio", { name: "Day" }).getAttribute("aria-checked")).toBe("true");
+    expect(radio("Day").checked).toBe(true);
     // The table for screen readers carries the bars' numbers.
     const table = screen.getByRole("table");
     expect(within(table).getByRole("rowheader", { name: "Mar 1, 2026" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("radio", { name: "Week" }));
+    fireEvent.click(radio("Week"));
+    // The pick shows at once, before the week's trend arrives.
+    expect(radio("Week").checked).toBe(true);
     await waitFor(() =>
       expect(bodies.at(-1)).toEqual({ filterCriteria: { finished: true }, interval: "week" })
-    );
-    await waitFor(() =>
-      expect(screen.getByRole("radio", { name: "Week" }).getAttribute("aria-checked")).toBe("true")
     );
   });
 
@@ -130,12 +145,59 @@ describe("TrendsCard", () => {
     expect(cells.map((cell) => cell.textContent)).toEqual(["+33", "3", "No data", "0"]);
   });
 
-  test("says when the range is too long for the interval", async () => {
-    stubTrends(() => json({ code: "trend_too_many_buckets", message: "too many" }, 400));
+  test("says when the responses span too many buckets, with advice that fits the interval picked", async () => {
+    stubTrends((body) =>
+      body.interval
+        ? json({ code: "trend_too_many_buckets", message: "too many" }, 400)
+        : json(trends("week"))
+    );
     renderCard();
+    await waitFor(() => expect(screen.getAllByTestId("trend-bucket")).toHaveLength(2));
+    fireEvent.click(radio("Day"));
     expect(
-      await screen.findByText("This range has too many periods to show at once. Group by week or month.")
+      await screen.findByText("These responses span too many days to show at once. Group by week or month.")
     ).toBeTruthy();
+    fireEvent.click(radio("Month"));
+    // Month is the longest interval: the advice is a shorter range, not another interval.
+    expect(
+      await screen.findByText(
+        "These responses span too many months to show at once. Choose a shorter date range."
+      )
+    ).toBeTruthy();
+  });
+
+  test("the plot shows a bucket's numbers from the keyboard", async () => {
+    stubTrends(() => json(trends("day")));
+    renderCard();
+    // The plot is one tab stop, a slider over the buckets.
+    const plot = await screen.findByRole("slider", { name: "Responses, grouped by Day" });
+    expect(plot.tabIndex).toBe(0);
+    expect(plot.getAttribute("aria-valuetext")).toBe("Mar 2, 2026: 0 responses");
+    // Focus opens the latest bucket's tooltip; the arrow keys move it.
+    act(() => plot.focus());
+    expect(screen.getByRole("tooltip").textContent).toContain("Mar 2, 2026");
+    fireEvent.keyDown(plot, { key: "ArrowLeft" });
+    expect(screen.getByRole("tooltip").textContent).toContain("Mar 1, 2026");
+    expect(screen.getByRole("tooltip").textContent).toContain("3 responses");
+    expect(plot.getAttribute("aria-valuenow")).toBe("0");
+    expect(plot.getAttribute("aria-valuetext")).toBe("Mar 1, 2026: 3 responses");
+    fireEvent.keyDown(plot, { key: "End" });
+    expect(screen.getByRole("tooltip").textContent).toContain("Mar 2, 2026");
+    act(() => plot.blur());
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  test("marks a partial period", async () => {
+    const partial = trends("day");
+    partial.buckets[0] = { ...partial.buckets[0]!, partial: true };
+    stubTrends(() => json(partial));
+    renderCard();
+    expect(await screen.findByText("Partial period")).toBeTruthy();
+    expect(
+      within(screen.getByRole("table")).getByRole("rowheader", { name: "Mar 1, 2026 (partial)" })
+    ).toBeTruthy();
+    fireEvent.mouseEnter(screen.getAllByTestId("trend-bucket")[0]!);
+    expect(screen.getByRole("tooltip").textContent).toContain("only part of it is in the range");
   });
 
   test("says when there are no responses to chart", async () => {

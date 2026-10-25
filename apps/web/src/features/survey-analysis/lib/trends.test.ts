@@ -8,12 +8,14 @@ import {
   labelledBuckets,
   metricScale,
   niceCeil,
+  tooltipPosition,
   trendData,
 } from "./trends";
 
 const firstDay: TrendBucket = {
   start: "2026-03-01",
   end: "2026-03-01",
+  partial: false,
   responses: 2,
   completed: 1,
   completionPercentage: 50,
@@ -24,7 +26,14 @@ const trends: SurveyTrends = {
   timeZone: "Asia/Tokyo",
   buckets: [
     firstDay,
-    { start: "2026-03-02", end: "2026-03-02", responses: 0, completed: 0, completionPercentage: 0 },
+    {
+      start: "2026-03-02",
+      end: "2026-03-02",
+      partial: false,
+      responses: 0,
+      completed: 0,
+      completionPercentage: 0,
+    },
   ],
   elements: [
     {
@@ -108,5 +117,25 @@ describe("labels", () => {
     const many = labelledBuckets(30, 8);
     expect(many.size).toBeLessThanOrEqual(8);
     expect(many.has(0)).toBe(true);
+  });
+});
+
+describe("tooltipPosition", () => {
+  test("puts the tooltip beside the bucket's column, on the side with more room", () => {
+    // The second of four buckets ends at half the plot: the tooltip starts right of it.
+    expect(tooltipPosition(1, 4, 10)).toEqual({ left: "calc(50% + 0.5rem)", top: "10%" });
+    // The third starts at half the plot: the tooltip ends left of it.
+    expect(tooltipPosition(2, 4, 10)).toEqual({ right: "calc(50% + 0.5rem)", top: "10%" });
+  });
+
+  test("keeps level with the value and inside the plot", () => {
+    // A value near the top, as a high NPS is, has the tooltip grow down from it; one near the bottom, up from it.
+    expect(tooltipPosition(0, 4, 5)).toMatchObject({ top: "5%" });
+    expect(tooltipPosition(0, 4, 80)).toMatchObject({ bottom: "20%" });
+    expect(tooltipPosition(0, 4, null)).toMatchObject({ top: "0%" });
+  });
+
+  test("a lone bucket's tooltip stays inside the plot", () => {
+    expect(tooltipPosition(0, 1, 10)).toEqual({ left: "0.5rem", top: "10%" });
   });
 });

@@ -72,6 +72,8 @@ export type TrendMetric = "nps" | "satisfied" | "average";
 export interface TrendBucket {
   start: string;
   end: string;
+  /** The responses read cover only part of the period: the filter's window starts or ends inside it, or it has not ended yet, so its counts are not comparable with a whole period's. */
+  partial: boolean;
   responses: number;
   completed: number;
   completionPercentage: number;

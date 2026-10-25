@@ -137,3 +137,25 @@ export const labelledBuckets = (count: number, maxLabels: number): Set<number> =
   if (count > 0 && !out.has(count - 1) && (count - 1) % step > step / 2) out.add(count - 1);
   return out;
 };
+
+/** Where a bucket's tooltip sits in the plot, as CSS offsets. */
+export interface TooltipPosition {
+  left?: string;
+  right?: string;
+  top?: string;
+  bottom?: string;
+}
+
+/** The tooltip of bucket index of count beside the bucket's column, so it never covers the bar or point it describes: right of the column in the left half of the plot, left of it in the right half. It is level with the value (y, a percentage from the top of the plot), growing down from a value in the upper half and up from one in the lower half so it stays inside the plot; without a value it sits at the top. */
+export const tooltipPosition = (index: number, count: number, y: number | null): TooltipPosition => {
+  const gap = "0.5rem";
+  // A lone bucket fills the plot, so its tooltip goes inside it, at the left edge, the bar and point being centred.
+  const horizontal: TooltipPosition =
+    count === 1
+      ? { left: gap }
+      : (index + 0.5) / count <= 0.5
+        ? { left: `calc(${((index + 1) / count) * 100}% + ${gap})` }
+        : { right: `calc(${((count - index) / count) * 100}% + ${gap})` };
+  if (y === null) return { ...horizontal, top: "0%" };
+  return y < 50 ? { ...horizontal, top: `${y}%` } : { ...horizontal, bottom: `${100 - y}%` };
+};

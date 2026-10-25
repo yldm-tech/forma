@@ -1650,6 +1650,7 @@ checksums:
     workspace/analysis/search/placeholder: 10d646cd0c34d524946bcde9c1405b6f
     workspace/analysis/trends/answers: 7589736dea1320be93d96dd3652250ee
     workspace/analysis/trends/answers_count: ec7e0a767e7d1d7c8023259ffda0530d
+    workspace/analysis/trends/bucket_value: d86fb917e6655564c78fa7cb81ae90aa
     workspace/analysis/trends/chart_label: e790e7054da7a7e371f49181c8aa483d
     workspace/analysis/trends/completed: 0e4bbce9985f25eb673d9a054c8d5334
     workspace/analysis/trends/completed_count: a4ddedd805285b4aa85d7732cc8c72a0
@@ -1669,10 +1670,15 @@ checksums:
     workspace/analysis/trends/interval_week: 436fdd694160827dd6ea4644cdd0a8f8
     workspace/analysis/trends/no_data: 81e91b979968615c55f9c0701fa9bbe3
     workspace/analysis/trends/not_completed: d011b1ae92a1a8a2676a5d6999bbe6d4
+    workspace/analysis/trends/partial: a10ce5fd60ed1b40415f38dd127f561a
+    workspace/analysis/trends/partial_row: 841eec7263f21aef3bc2ad194d3694b1
+    workspace/analysis/trends/partial_tooltip: 927f58e996683c96c4f03586eb97eb1e
     workspace/analysis/trends/period: 779afbd6a307574efb9bd957e9622428
     workspace/analysis/trends/responses_count: 437e022825c7a08481d8f7e56926742d
     workspace/analysis/trends/title: 90d281f05269f691670c78658097c7ae
-    workspace/analysis/trends/too_many_buckets: fa1ac91ad39d408bc71c11eca80f134f
+    workspace/analysis/trends/too_many_buckets_day: 45f4a3d91d8f4aa2310b3fb72ed0ef1b
+    workspace/analysis/trends/too_many_buckets_month: c162820946ba807cf93ecaf00d5e8672
+    workspace/analysis/trends/too_many_buckets_week: 2ca5751355682b04e368e6f90b2f5497
     workspace/analysis/trends/view_completion: ed55888cecfeffb013863701974f9917
     workspace/analysis/trends/view_element: 9d61b0a8177232d42996e14971e346b0
     workspace/analysis/trends/view_label: 283d6f78bf0b1c6c74c0fe77bd2c07f7
