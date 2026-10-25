@@ -13,6 +13,12 @@ import {
 } from "../../../../components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../components/ui/popover";
 
+const CREATE_VALUE = "_create";
+
+/** Whether a tag name matches the search: a case-insensitive substring, the way the response card's tag picker matches. */
+const matchesTagName = (name: string, search: string) =>
+  name.toLowerCase().includes(search.trim().toLowerCase());
+
 /** A toolbar button that opens a searchable list of tags and hands the chosen one back; with onCreate, a search that names no tag offers to create it. */
 export const BulkTagPicker = ({
   label,
@@ -62,8 +68,12 @@ export const BulkTagPicker = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[220px] p-0" align="start">
-        {/* cmdk names its input after the command's label, which it renders hidden. */}
-        <Command label={t("workspace.tags.search_tags")}>
+        {/* cmdk names its input after the command's label, which it renders hidden. Its default filter scores a fuzzy match on the item's value and keywords, so a tag would match on the letters of its id: the search matches the tag name alone, and the create item, which must stay registered for its group to show, always matches. */}
+        <Command
+          label={t("workspace.tags.search_tags")}
+          filter={(value, search, keywords) =>
+            value === CREATE_VALUE || matchesTagName(keywords?.[0] ?? "", search) ? 1 : 0
+          }>
           <div className="px-1 pt-1">
             <CommandInput
               placeholder={t("workspace.tags.search_tags")}
@@ -93,8 +103,7 @@ export const BulkTagPicker = ({
               ))}
               {canCreate && (
                 <CommandItem
-                  forceMount
-                  value="_create"
+                  value={CREATE_VALUE}
                   onSelect={() => {
                     close();
                     onCreate(name);

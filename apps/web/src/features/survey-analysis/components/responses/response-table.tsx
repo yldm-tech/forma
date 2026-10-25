@@ -21,7 +21,6 @@ import type { TTag } from "@forma/types/tags";
 import {
   type Cell,
   type Row,
-  type RowSelectionState,
   type VisibilityState,
   flexRender,
   getCoreRowModel,
@@ -50,6 +49,7 @@ import {
 import { ResponseCardModal } from "./response-card-modal";
 import { generateResponseTableColumns, getDefaultHiddenColumnIds } from "./response-table-columns";
 import { SelectedRowSettings } from "./selected-row-settings";
+import { useResponseSelection } from "./use-response-selection";
 
 /** Keeps a dragged column on its row, as dnd-kit's restrictToHorizontalAxis did in forma2. */
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
@@ -181,11 +181,6 @@ export const ResponseTable = ({
   const [savedVisibility, setSavedVisibility] = useState<VisibilityState>(
     () => readJson<VisibilityState>(visibilityKey) ?? {}
   );
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  // "Select all N matching" holds for the filter it was chosen under: a change of filter ends it without an effect.
-  const criteriaKey = JSON.stringify(filterCriteria);
-  const [allMatchingFor, setAllMatchingFor] = useState<string | null>(null);
-  const allMatching = allMatchingFor === criteriaKey;
   const [isTableSettingsModalOpen, setIsTableSettingsModalOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(() => readJson<boolean>(expandKey) ?? false);
   const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null);
@@ -249,12 +244,7 @@ export const ResponseTable = ({
     [columns, isFetchingFirstPage]
   );
 
-  // Every loaded row reads as ticked while all matching responses are selected, rows loaded after the choice included.
-  const allRowsSelected = useMemo<RowSelectionState>(
-    () => Object.fromEntries(data.map((row) => [row.responseId, true])),
-    [data]
-  );
-  const effectiveRowSelection = allMatching ? allRowsSelected : rowSelection;
+  const selection = useResponseSelection(JSON.stringify(filterCriteria), data);
 
   // The SPA is not built with the React Compiler, so nothing memoizes the table's functions.
   // oxlint-disable-next-line react/incompatible-library -- see above
@@ -267,11 +257,7 @@ export const ResponseTable = ({
       const next = typeof updater === "function" ? updater(columnVisibility) : updater;
       setSavedVisibility((saved) => recordVisibilityChange(saved, columnVisibility, next));
     },
-    // Ticking or unticking a row narrows "all matching" back to the rows.
-    onRowSelectionChange: (updater) => {
-      setRowSelection(typeof updater === "function" ? updater(effectiveRowSelection) : updater);
-      setAllMatchingFor(null);
-    },
+    onRowSelectionChange: selection.onRowSelectionChange,
     onColumnOrderChange: (updater) =>
       setSavedOrder((current) =>
         typeof updater === "function"
@@ -285,7 +271,7 @@ export const ResponseTable = ({
     state: {
       columnOrder,
       columnVisibility,
-      rowSelection: effectiveRowSelection,
+      rowSelection: selection.rowSelection,
       columnPinning: { left: PINNED_COLUMN_IDS },
     },
   });
@@ -313,8 +299,7 @@ export const ResponseTable = ({
   };
 
   const handleDeleted = (responseIds: string[]) => {
-    setRowSelection({});
-    setAllMatchingFor(null);
+    selection.clear();
     onResponsesDeleted(responseIds);
   };
 
@@ -335,12 +320,9 @@ export const ResponseTable = ({
               <SelectedRowSettings
                 table={table}
                 matchingCount={totalCount}
-                allMatching={allMatching}
+                allMatching={selection.allMatching}
                 filterCriteria={filterCriteria}
-                onSelectAllMatching={() => {
-                  setRowSelection(allRowsSelected);
-                  setAllMatchingFor(criteriaKey);
-                }}
+                onSelectAllMatching={selection.selectAllMatching}
                 environmentTags={environmentTags}
                 onDeleted={handleDeleted}
                 deleteResponse={(responseId, decrementQuotas) =>

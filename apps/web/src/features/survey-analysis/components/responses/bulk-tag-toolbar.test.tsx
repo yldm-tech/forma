@@ -38,9 +38,11 @@ const tag = (id: string, name: string): TTag => ({
   createdAt: new Date(0),
   updatedAt: new Date(0),
 });
-const VIP = tag("t-vip", "vip");
-const CHURN = tag("t-churn", "churn");
-const REFUND = tag("t-refund", "refund");
+// Real tag ids are UUIDs, whose hex letters and digits a search must not match.
+const VIP = tag("0b1c2d3e-4f50-4a6b-8c7d-9e0fa1b2c3d4", "vip");
+const CHURN = tag("5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9", "churn");
+const REFUND = tag("a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", "refund");
+const TAGS = [CHURN, REFUND, VIP];
 
 const row = (responseId: string, tags: TTag[]) =>
   ({ responseId, tags, quotas: [] }) as unknown as TResponseTableData;
@@ -56,6 +58,7 @@ type ChangeTag = (
 const Harness = ({
   selected,
   allMatching,
+  environmentTags,
   changeTag,
   createTag,
   onTagsChanged,
@@ -63,6 +66,7 @@ const Harness = ({
 }: {
   selected: RowSelectionState;
   allMatching: boolean;
+  environmentTags: TTag[];
   changeTag: ChangeTag;
   createTag: (name: string) => Promise<TTag>;
   onTagsChanged: () => void;
@@ -86,7 +90,7 @@ const Harness = ({
       allMatching={allMatching}
       filterCriteria={FILTER}
       onSelectAllMatching={onSelectAllMatching}
-      environmentTags={[CHURN, REFUND, VIP]}
+      environmentTags={environmentTags}
       onDeleted={vi.fn()}
       deleteResponse={vi.fn()}
       downloadResponses={vi.fn()}
@@ -97,7 +101,7 @@ const Harness = ({
   );
 };
 
-const renderToolbar = (selected: RowSelectionState, allMatching = false) => {
+const renderToolbar = (selected: RowSelectionState, allMatching = false, environmentTags = TAGS) => {
   const changeTag = vi.fn<ChangeTag>((_operation, tagId, criteria) =>
     Promise.resolve({
       tagId,
@@ -113,6 +117,7 @@ const renderToolbar = (selected: RowSelectionState, allMatching = false) => {
       <Harness
         selected={selected}
         allMatching={allMatching}
+        environmentTags={environmentTags}
         changeTag={changeTag}
         createTag={createTag}
         onTagsChanged={onTagsChanged}
@@ -124,6 +129,12 @@ const renderToolbar = (selected: RowSelectionState, allMatching = false) => {
 };
 
 const toastMessages = () => toast.getSnapshot().map((shown) => shown.message);
+
+// The options a user can see: getByText would also find those in a group cmdk has hidden.
+const visibleOptions = () => screen.queryAllByRole("option").map((option) => option.textContent?.trim());
+
+const search = (value: string) =>
+  fireEvent.change(screen.getByRole("combobox", { name: "Search Tags…" }), { target: { value } });
 
 describe("bulk tagging of ticked rows", () => {
   test("adds the picked tag to the ticked rows by id", async () => {
@@ -146,13 +157,47 @@ describe("bulk tagging of ticked rows", () => {
     expect(changeTag).toHaveBeenCalledWith("remove", VIP.id, { responseIds: ["r1", "r3"] });
   });
 
+  test("searches the tag names, not their ids", () => {
+    renderToolbar({ r1: true });
+    fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
+    expect(visibleOptions()).toEqual(["churn", "refund", "vip"]);
+    search("E");
+    expect(visibleOptions()).toEqual(["refund", "+ Create tag “E”"]);
+    search("2");
+    expect(visibleOptions()).toEqual(["+ Create tag “2”"]);
+    search("bad");
+    expect(visibleOptions()).toEqual(["+ Create tag “bad”"]);
+  });
+
+  test("shows the create option for a name no tag has, also when the workspace has no tags", () => {
+    renderToolbar({ r1: true });
+    fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
+    search("urgent");
+    expect(visibleOptions()).toEqual(["+ Create tag “urgent”"]);
+    cleanup();
+    renderToolbar({ r1: true }, false, []);
+    fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
+    expect(screen.getByText("Type a name to create a tag")).toBeTruthy();
+    search("urgent");
+    expect(visibleOptions()).toEqual(["+ Create tag “urgent”"]);
+  });
+
+  test("says when no tag to remove matches the search", () => {
+    renderToolbar({ r1: true, r2: true });
+    fireEvent.click(screen.getByRole("button", { name: "Remove tag" }));
+    expect(visibleOptions()).toEqual(["churn", "vip"]);
+    search("c");
+    expect(visibleOptions()).toEqual(["churn"]);
+    search("urgent");
+    expect(visibleOptions()).toEqual([]);
+    expect(screen.getByText(i18n.t("workspace.tags.no_tag_found"))).toBeTruthy();
+  });
+
   test("creates a tag from the search and adds it", async () => {
     const { changeTag, createTag, onTagsChanged } = renderToolbar({ r2: true });
     fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
-    fireEvent.change(screen.getByRole("combobox", { name: "Search Tags…" }), {
-      target: { value: "  urgent " },
-    });
-    fireEvent.click(screen.getByText("+ Create tag “urgent”"));
+    search("  urgent ");
+    fireEvent.click(screen.getByRole("option", { name: "+ Create tag “urgent”" }));
     await waitFor(() => expect(onTagsChanged).toHaveBeenCalled());
     expect(createTag).toHaveBeenCalledWith("urgent");
     expect(changeTag).toHaveBeenCalledWith("add", "t-new", { responseIds: ["r2"] });
