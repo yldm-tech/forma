@@ -43,6 +43,8 @@ describe("emitFormaEvent", () => {
           surveyId: "survey_1",
           responseId: "response_1",
           finished: true,
+          code: null,
+          message: null,
         },
       },
     ]);
@@ -64,6 +66,8 @@ describe("emitFormaEvent", () => {
         responseId: null,
         finished: null,
         action: "clicked_demo",
+        code: null,
+        message: null,
       },
     });
   });
@@ -86,6 +90,8 @@ describe("emitFormaEvent", () => {
         surveyId: "survey_1",
         responseId: null,
         finished: true,
+        code: null,
+        message: null,
       },
     });
   });

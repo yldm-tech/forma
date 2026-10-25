@@ -6,6 +6,7 @@ import { executeRecaptcha, loadRecaptchaScript } from "@/lib/common/recaptcha";
 import { TimeoutStack } from "@/lib/common/timeout-stack";
 import {
   filterSurveys,
+  getAnonymousSamplingId,
   getLanguageCode,
   getStyling,
   shouldDisplayBasedOnPercentage,
@@ -65,9 +66,14 @@ export const triggerSurvey = async (
 ): Promise<void> => {
   const logger = Logger.getInstance();
 
-  // Check if the survey should be displayed based on displayPercentage
+  // Check if the survey should be displayed based on displayPercentage. The sample is per user, not per trigger: an identified user is bucketed by contact id, an anonymous visitor by the id persisted in this browser.
   if (survey.displayPercentage) {
-    const shouldDisplaySurvey = shouldDisplayBasedOnPercentage(survey.displayPercentage);
+    const samplingId = Config.getInstance().get().user.data.contactId ?? getAnonymousSamplingId();
+    const shouldDisplaySurvey = shouldDisplayBasedOnPercentage(
+      survey.displayPercentage,
+      samplingId,
+      survey.id
+    );
     if (!shouldDisplaySurvey) {
       logger.debug(`Survey display of "${survey.id}" skipped based on displayPercentage.`);
       return; // skip displaying the survey

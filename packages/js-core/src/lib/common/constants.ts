@@ -1,4 +1,6 @@
 export const JS_LOCAL_STORAGE_KEY = "forma-js";
+// Separate from JS_LOCAL_STORAGE_KEY on purpose: that blob is wiped by every resetConfig(), and the anonymous sampling id must survive it.
+export const SAMPLING_ID_STORAGE_KEY = "forma-sampling-id";
 export const CONTAINER_ID = "forma-modal-container";
 // Shipped id contract with the surveys renderer (packages/surveys/src/lib/live-region.ts) — old SDKs
 // stay on the wire for years, so this value must never change.
