@@ -280,9 +280,13 @@ func (r *Repository) membershipCount(ctx context.Context, userID uuid.UUID) (int
 	return n, nil
 }
 
-// updateRole sets a member's role and reports whether the membership exists. Promotion to owner or manager makes the user admin of every team of the organization they belong to, as forma2's updateMembership did.
+// updateRole sets a member's role and reports whether the membership exists. Promotion to owner or manager makes the user admin of every team of the organization they belong to, as forma2's updateMembership did; demotion from owner or manager to member or billing makes them a contributor of those teams again, so a former manager keeps no team admin seat they only held through their role. A plain member's role sent unchanged leaves the team admin seats they were given alone.
 func (r *Repository) updateRole(ctx context.Context, userID, organizationID uuid.UUID, role string) (bool, error) {
 	db := r.db.WithContext(ctx)
+	var previous []string
+	if err := db.Raw(`SELECT role FROM memberships WHERE user_id = ? AND organization_id = ?`, userID, organizationID).Scan(&previous).Error; err != nil {
+		return false, fmt.Errorf("load membership role: %w", err)
+	}
 	res := db.Exec(`UPDATE memberships SET role = ?, updated_at = now() WHERE user_id = ? AND organization_id = ?`, role, userID, organizationID)
 	if res.Error != nil {
 		return false, fmt.Errorf("update membership: %w", res.Error)
@@ -290,16 +294,27 @@ func (r *Repository) updateRole(ctx context.Context, userID, organizationID uuid
 	if res.RowsAffected == 0 {
 		return false, nil
 	}
-	if role == RoleOwner || role == RoleManager {
+	switch {
+	case managesTeams(role):
 		if err := db.Exec(
 			`UPDATE team_members SET role = 'admin', updated_at = now() WHERE user_id = ? AND role <> 'admin' AND team_id IN (SELECT id FROM teams WHERE organization_id = ?)`,
 			userID, organizationID,
 		).Error; err != nil {
 			return false, fmt.Errorf("promote team memberships: %w", err)
 		}
+	case len(previous) > 0 && managesTeams(previous[0]):
+		if err := db.Exec(
+			`UPDATE team_members SET role = 'contributor', updated_at = now() WHERE user_id = ? AND role = 'admin' AND team_id IN (SELECT id FROM teams WHERE organization_id = ?)`,
+			userID, organizationID,
+		).Error; err != nil {
+			return false, fmt.Errorf("demote team memberships: %w", err)
+		}
 	}
 	return true, nil
 }
+
+// managesTeams is whether the organization role administers every team of the organization.
+func managesTeams(role string) bool { return role == RoleOwner || role == RoleManager }
 
 // deleteMembership removes the user from the organization and from every team of it.
 func (r *Repository) deleteMembership(ctx context.Context, userID, organizationID uuid.UUID) error {

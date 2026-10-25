@@ -161,10 +161,8 @@ func TestV2UsersFollowTheCreatorsRole(t *testing.T) {
 	users := "/api/v2/organizations/" + org + "/users"
 
 	expectStatus(t, "manager adds a member", e.do("POST", users, map[string]any{"name": "New Member", "email": "new@example.com", "role": "member"}, "x-api-key", managerKey), 201)
-	if body := expectStatus(t, "manager adds an owner", e.do("POST", users, map[string]any{"name": "New Owner", "email": "owner2@example.com", "role": "owner"}, "x-api-key", managerKey), 403); body["error"].(map[string]any)["details"] != nil {
-		t.Errorf("a 403 carries no details: %v", body)
-	}
-	expectStatus(t, "manager renames the owner", e.do("PATCH", users, map[string]any{"email": "admin@example.com", "name": "Renamed"}, "x-api-key", managerKey), 403)
+	expectDetail(t, expectStatus(t, "manager adds an owner", e.do("POST", users, map[string]any{"name": "New Owner", "email": "owner2@example.com", "role": "owner"}, "x-api-key", managerKey), 403), "apiKey", "Key creator's current role cannot assign this role")
+	expectDetail(t, expectStatus(t, "manager renames the owner", e.do("PATCH", users, map[string]any{"email": "admin@example.com", "name": "Renamed"}, "x-api-key", managerKey), 403), "apiKey", "Key creator's current role cannot change an owner")
 	body := expectStatus(t, "last owner", e.do("PATCH", users, map[string]any{"email": "admin@example.com", "role": "manager"}, "x-api-key", s.bound["<api-key:manage>"]), 409)
 	if d := body["error"].(map[string]any)["details"].([]any)[0].(map[string]any); d["field"] != "role" || d["issue"] != "Cannot remove the last owner of the organization" {
 		t.Errorf("last owner = %v", body)
@@ -172,7 +170,176 @@ func TestV2UsersFollowTheCreatorsRole(t *testing.T) {
 	expectStatus(t, "manager creates a team", e.do("POST", "/api/v2/organizations/"+org+"/teams", map[string]any{"name": "Team"}, "x-api-key", managerKey), 201)
 	e.exec(`UPDATE memberships SET role = 'member' WHERE user_id = ?`, manager)
 	e.deliver()
-	expectStatus(t, "member's key creates a team", e.do("POST", "/api/v2/organizations/"+org+"/teams", map[string]any{"name": "Other team"}, "x-api-key", managerKey), 403)
+	expectDetail(t, expectStatus(t, "member's key creates a team", e.do("POST", "/api/v2/organizations/"+org+"/teams", map[string]any{"name": "Other team"}, "x-api-key", managerKey), 403), "apiKey", "Key creator's current role cannot manage teams")
+	expectDetail(t, expectStatus(t, "member's key adds a user", e.do("POST", users, map[string]any{"name": "Another", "email": "another@example.com", "role": "member"}, "x-api-key", managerKey), 403), "apiKey", "Key creator's current role cannot manage users")
+	e.exec(`DELETE FROM memberships WHERE user_id = ?`, manager)
+	e.deliver()
+	expectDetail(t, expectStatus(t, "removed creator's key creates a team", e.do("POST", "/api/v2/organizations/"+org+"/teams", map[string]any{"name": "Other team"}, "x-api-key", managerKey), 403), "apiKey", "Key creator is no longer a member of the organization")
+}
+
+// expectDetail checks that an error body carries exactly the one detail given.
+func expectDetail(t *testing.T, body map[string]any, field, issue string) {
+	t.Helper()
+	details, _ := body["error"].(map[string]any)["details"].([]any)
+	if len(details) != 1 {
+		t.Fatalf("details = %v, want [{%s %s}]", body, field, issue)
+	}
+	if d := details[0].(map[string]any); d["field"] != field || d["issue"] != issue {
+		t.Errorf("detail = %v, want {%s %s}", d, field, issue)
+	}
+}
+
+// A team's workspace grants decide which workspaces its members reach, so changing them takes the same creator role as every other team change: a key whose creator was demoted to member, or left, grants nothing.
+func TestV2WorkspaceTeamsFollowTheCreatorsRole(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	org := s.bound["<id:organization>"]
+	ws := s.bound["<id:workspace>"]
+	manager := e.user("Manager", "manager@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'manager', true)`, manager, org)
+	managerKey, _ := e.apiKey(uuid.MustParse(org), manager, "manager", true, true)
+	team := e.insert(`INSERT INTO teams (organization_id, name) VALUES (?, 'Team') RETURNING id`, org)
+	e.deliver()
+	grants := "/api/v2/organizations/" + org + "/workspace-teams"
+	grant := map[string]any{"teamId": team.String(), "workspaceId": ws, "permission": "read"}
+
+	expectStatus(t, "manager grants", e.do("POST", grants, grant, "x-api-key", managerKey), 200)
+	e.exec(`UPDATE memberships SET role = 'member' WHERE user_id = ?`, manager)
+	e.deliver()
+	manage := map[string]any{"teamId": team.String(), "workspaceId": ws, "permission": "manage"}
+	expectDetail(t, expectStatus(t, "member's key raises the grant", e.do("PUT", grants, manage, "x-api-key", managerKey), 403), "apiKey", "Key creator's current role cannot manage teams")
+	expectDetail(t, expectStatus(t, "member's key deletes the grant", e.do("DELETE", grants+"?teamId="+team.String()+"&workspaceId="+ws, nil, "x-api-key", managerKey), 403), "apiKey", "Key creator's current role cannot manage teams")
+	e.exec(`DELETE FROM workspace_teams WHERE team_id = ?`, team)
+	expectDetail(t, expectStatus(t, "member's key grants", e.do("POST", grants, manage, "x-api-key", managerKey), 403), "apiKey", "Key creator's current role cannot manage teams")
+	var n int64
+	if err := e.db.Raw(`SELECT count(*) FROM workspace_teams WHERE team_id = ?`, team).Scan(&n).Error; err != nil || n != 0 {
+		t.Fatalf("grants after the refused requests = %d (%v)", n, err)
+	}
+	expectStatus(t, "owner's key grants", e.do("POST", grants, manage, "x-api-key", s.bound["<api-key:manage>"]), 200)
+}
+
+// A user's name and isActive live on their account, which every organization they belong to shares: one organization's key changes them only for a user who belongs to it alone. Their role and teams in the organization stay its own to change.
+func TestV2UsersCannotChangeASharedAccount(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	org, key := s.bound["<id:organization>"], s.bound["<api-key:manage>"]
+	users := "/api/v2/organizations/" + org + "/users"
+	other := e.insert(`INSERT INTO organizations (name) VALUES ('Their own organization') RETURNING id`)
+	shared := e.user("Shared User", "shared@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'owner', true)`, shared, other)
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'member', true)`, shared, org)
+	e.deliver()
+
+	issue := "The user also belongs to another organization, so this organization cannot change it"
+	expectDetail(t, expectStatus(t, "deactivate", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "isActive": false}, "x-api-key", key), 422), "isActive", issue)
+	expectDetail(t, expectStatus(t, "rename", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Renamed by another org"}, "x-api-key", key), 422), "name", issue)
+	body := expectStatus(t, "both", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Renamed", "isActive": false, "role": "manager"}, "x-api-key", key), 422)
+	if details := body["error"].(map[string]any)["details"].([]any); len(details) != 2 || details[0].(map[string]any)["field"] != "name" || details[1].(map[string]any)["field"] != "isActive" {
+		t.Errorf("both = %v", body)
+	}
+	var account struct {
+		Name     string
+		IsActive bool
+	}
+	var role string
+	if err := e.db.Raw(`SELECT name, is_active FROM users WHERE id = ?`, shared).Scan(&account).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := e.db.Raw(`SELECT role FROM memberships WHERE user_id = ? AND organization_id = ?`, shared, org).Scan(&role).Error; err != nil {
+		t.Fatal(err)
+	}
+	if account.Name != "Shared User" || !account.IsActive || role != "member" {
+		t.Fatalf("after the refused changes: %+v, role %s", account, role)
+	}
+
+	data := expectStatus(t, "unchanged values and a role", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Shared User", "isActive": true, "role": "manager"}, "x-api-key", key), 200)["data"].(map[string]any)
+	if data["role"] != "manager" || data["name"] != "Shared User" || data["isActive"] != true {
+		t.Errorf("role change = %v", data)
+	}
+
+	e.exec(`DELETE FROM memberships WHERE user_id = ? AND organization_id = ?`, shared, other)
+	data = expectStatus(t, "only here", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Renamed", "isActive": false}, "x-api-key", key), 200)["data"].(map[string]any)
+	if data["name"] != "Renamed" || data["isActive"] != false {
+		t.Errorf("change of a user of this organization only = %v", data)
+	}
+}
+
+// Deactivating an owner is refused when it would leave the organization without an active owner, as demoting one is.
+func TestV2UsersKeepAnActiveOwner(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	org, key := s.bound["<id:organization>"], s.bound["<api-key:manage>"]
+	users := "/api/v2/organizations/" + org + "/users"
+	second := e.user("Second Owner", "owner2@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'owner', true)`, second, org)
+	e.deliver()
+
+	expectStatus(t, "deactivate one of two owners", e.do("PATCH", users, map[string]any{"email": "owner2@example.com", "isActive": false}, "x-api-key", key), 200)
+	expectDetail(t, expectStatus(t, "deactivate the last active owner", e.do("PATCH", users, map[string]any{"email": "admin@example.com", "isActive": false}, "x-api-key", key), 409), "isActive", "Cannot deactivate the last active owner of the organization")
+	expectDetail(t, expectStatus(t, "demote the last active owner", e.do("PATCH", users, map[string]any{"email": "admin@example.com", "role": "manager", "isActive": false}, "x-api-key", key), 409), "role", "Cannot remove the last owner of the organization")
+	var active bool
+	if err := e.db.Raw(`SELECT is_active FROM users WHERE email = 'admin@example.com'`).Scan(&active).Error; err != nil || !active {
+		t.Fatalf("the last active owner is_active = %v (%v)", active, err)
+	}
+	expectStatus(t, "inactive owner demoted", e.do("PATCH", users, map[string]any{"email": "owner2@example.com", "role": "member"}, "x-api-key", key), 200)
+}
+
+// An email that already has an account gets the same 409 body whether its user is a member of the organization or only has an account elsewhere on the instance. This makes the text uniform only: 409 against 201 still shows that the email has an account (D-AO01).
+func TestV2CreateUserDuplicateEmailIsNeutral(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	org, key := s.bound["<id:organization>"], s.bound["<api-key:manage>"]
+	users := "/api/v2/organizations/" + org + "/users"
+	elsewhere := e.insert(`INSERT INTO organizations (name) VALUES ('Elsewhere') RETURNING id`)
+	outsider := e.user("Outsider", "outsider@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'owner', true)`, outsider, elsewhere)
+	e.deliver()
+
+	member := e.do("POST", users, map[string]any{"name": "Dup", "email": "admin@example.com", "role": "member"}, "x-api-key", key)
+	outside := e.do("POST", users, map[string]any{"name": "Dup", "email": "outsider@example.com", "role": "member"}, "x-api-key", key)
+	expectDetail(t, expectStatus(t, "member's email", member, 409), "email", "A new user cannot be created with this email")
+	expectStatus(t, "outsider's email", outside, 409)
+	if !bytes.Equal(member.Body, outside.Body) {
+		t.Errorf("outsider's email = %s, member's email = %s", outside.Body, member.Body)
+	}
+}
+
+// Demoting an owner or manager below manager through the users API takes back the team admin seats the role carried, in this organization only.
+func TestV2UsersDemotionEndsTeamAdmin(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	org, key := s.bound["<id:organization>"], s.bound["<api-key:manage>"]
+	users := "/api/v2/organizations/" + org + "/users"
+	manager := e.user("Manager", "manager@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'manager', true)`, manager, org)
+	team := e.insert(`INSERT INTO teams (organization_id, name) VALUES (?, 'Team') RETURNING id`, org)
+	e.exec(`INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'admin')`, team, manager)
+	elsewhere := e.insert(`INSERT INTO organizations (name) VALUES ('Elsewhere') RETURNING id`)
+	foreign := e.insert(`INSERT INTO teams (organization_id, name) VALUES (?, 'Foreign team') RETURNING id`, elsewhere)
+	e.exec(`INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'admin')`, foreign, manager)
+	plain := e.user("Plain", "plain@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'member', true)`, plain, org)
+	e.exec(`INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'admin')`, team, plain)
+	e.deliver()
+
+	expectStatus(t, "demote the manager", e.do("PATCH", users, map[string]any{"email": "manager@example.com", "role": "member"}, "x-api-key", key), 200)
+	expectStatus(t, "member's role sent unchanged", e.do("PATCH", users, map[string]any{"email": "plain@example.com", "role": "member"}, "x-api-key", key), 200)
+	teamRole := func(team, user uuid.UUID) string {
+		var role string
+		if err := e.db.Raw(`SELECT role FROM team_members WHERE team_id = ? AND user_id = ?`, team, user).Scan(&role).Error; err != nil {
+			t.Fatal(err)
+		}
+		return role
+	}
+	if got := teamRole(team, manager); got != "contributor" {
+		t.Errorf("demoted manager's team role = %s, want contributor", got)
+	}
+	if got := teamRole(foreign, manager); got != "admin" {
+		t.Errorf("another organization's team role = %s, want admin", got)
+	}
+	if got := teamRole(team, plain); got != "admin" {
+		t.Errorf("plain member's team admin seat = %s, want admin", got)
+	}
 }
 
 // A bulk upload creates the keys it introduces, updates contacts it matches by email, and skips a contact whose userId another contact holds.
