@@ -56,6 +56,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/unsplash"
 	"github.com/yldm-tech/forma/apps/server/internal/usagereport"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/v3api/discovery"
 	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 	"github.com/yldm-tech/forma/apps/server/internal/webui"
 	"github.com/yldm-tech/forma/apps/server/internal/workflow"
@@ -147,10 +148,11 @@ var surveySet = wire.NewSet(
 	survey.NewHandler,
 )
 
-// v3Set is the /api/v3 conventions of action classes and tags: authentication by session or API key, the api:v3 rate limit and audit events.
+// v3Set is the /api/v3 conventions of action classes and tags: authentication by session or API key, the api:v3 rate limit and audit events; and the v3 discovery routes, GET /api/v3/me and the OpenAPI document.
 var v3Set = wire.NewSet(
 	v3api.NewMiddleware,
 	v3api.NewAuditor,
+	discovery.NewHandler,
 )
 
 // surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.

@@ -39,6 +39,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
+	"github.com/yldm-tech/forma/apps/server/internal/v3api/openapi/openapitest"
 )
 
 func TestMain(m *testing.M) {
@@ -108,6 +109,8 @@ type env struct {
 	meter      *meterRecorder
 	runner     *Runner
 	reconciler *Reconciler
+	// openapi checks every /api/v3 answer the published OpenAPI document describes.
+	openapi *openapitest.Document
 }
 
 func newEnv(t *testing.T) *env {
@@ -128,7 +131,7 @@ func newEnv(t *testing.T) *env {
 	}
 	sqlDB, _ := db.DB()
 	t.Cleanup(func() { _ = sqlDB.Close() })
-	e := &env{t: t, cfg: cfg, dsn: dsn, db: db, authz: authztest.New(t, cfg, db), mail: &mailertest.Transport{}, logs: &syncBuffer{}}
+	e := &env{t: t, cfg: cfg, dsn: dsn, db: db, authz: authztest.New(t, cfg, db), mail: &mailertest.Transport{}, logs: &syncBuffer{}, openapi: openapitest.New(t, V3OpenAPI())}
 	e.log = slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	if e.mailer, err = mailer.NewWithTransport(cfg, e.mail, e.log); err != nil {
 		t.Fatal(err)
@@ -268,6 +271,9 @@ func (e *env) request(method, path string, body any, headers map[string]string) 
 	}
 	rec := httptest.NewRecorder()
 	e.engine.ServeHTTP(rec, req)
+	if strings.HasPrefix(path, "/api/v3/") && e.openapi.Describes(method, path) {
+		e.openapi.Check(e.t, method, path, rec)
+	}
 	return rec
 }
 

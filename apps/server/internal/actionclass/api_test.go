@@ -9,6 +9,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/v3api/openapi/openapitest"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api/v3apitest"
 )
 
@@ -152,6 +153,9 @@ func TestListActionClassesV3(t *testing.T) {
 	var page v3List
 	rec := e.Do(v3apitest.Request{Method: http.MethodGet, Path: path, User: owner})
 	e.OK(rec, http.StatusOK, &page)
+	// The answers are the ones the published OpenAPI document describes.
+	doc := openapitest.New(t, V3OpenAPI())
+	doc.Check(t, http.MethodGet, "/api/v3/action-classes", rec)
 	if len(page.Data) != 4 || page.Meta.Limit != 50 || page.Meta.NextCursor != nil || rec.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("page %+v", page)
 	}
@@ -193,6 +197,8 @@ func TestListActionClassesV3(t *testing.T) {
 	e.Problem(e.Do(v3apitest.Request{Method: http.MethodGet, Path: path, User: outsider}), http.StatusForbidden, "forbidden", "You are not authorized to access this resource")
 	e.Problem(e.Do(v3apitest.Request{Method: http.MethodGet, Path: "/api/v3/action-classes?workspaceId=" + uuid.NewString(), User: owner}), http.StatusForbidden, "forbidden", "You are not authorized to access this resource")
 
+	doc.Check(t, http.MethodGet, "/api/v3/action-classes", e.Do(v3apitest.Request{Method: http.MethodGet, Path: path}))
+	doc.Check(t, http.MethodGet, "/api/v3/action-classes", e.Do(v3apitest.Request{Method: http.MethodGet, Path: path, User: outsider}))
 	p := e.Problem(e.Do(v3apitest.Request{Method: http.MethodGet, Path: path + "&cursor=%25%25", User: owner}), http.StatusBadRequest, "bad_request", "Invalid pagination cursor")
 	if len(p.InvalidParams) != 1 || p.InvalidParams[0].Name != "cursor" {
 		t.Fatalf("cursor problem %+v", p)

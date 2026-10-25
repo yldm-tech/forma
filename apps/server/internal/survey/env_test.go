@@ -34,6 +34,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
+	"github.com/yldm-tech/forma/apps/server/internal/v3api/openapi/openapitest"
 )
 
 func TestMain(m *testing.M) {
@@ -96,6 +97,8 @@ type env struct {
 	svc    *Service
 	engine *gin.Engine
 	logs   *syncBuffer
+	// openapi checks every /api/v3 answer the published OpenAPI document describes.
+	openapi *openapitest.Document
 }
 
 func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
@@ -110,7 +113,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 		f(&cfg)
 	}
 	db := pgtest.GORM(t)
-	e := &env{t: t, cfg: cfg, db: db, authz: authztest.New(t, cfg, db), logs: &syncBuffer{}}
+	e := &env{t: t, cfg: cfg, db: db, authz: authztest.New(t, cfg, db), logs: &syncBuffer{}, openapi: openapitest.New(t, V3OpenAPI())}
 	log := slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	schemas, err := jsonschema.New()
 	if err != nil {
@@ -243,6 +246,9 @@ func (e *env) request(method, path string, body any, headers map[string]string) 
 	}
 	rec := httptest.NewRecorder()
 	e.engine.ServeHTTP(rec, req)
+	if strings.HasPrefix(path, "/api/v3/") && e.openapi.Describes(method, path) {
+		e.openapi.Check(e.t, method, path, rec)
+	}
 	return rec
 }
 
