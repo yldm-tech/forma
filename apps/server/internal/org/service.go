@@ -57,8 +57,10 @@ type Created struct {
 }
 
 // Create is forma2's createOrganizationAction, the same in the setup flow and the organization switcher: the organization with its default billing, the caller as its accepted owner, the default workspace, and the caller opted out of per-response alerts for it. Any signed-in user may create organizations (multiple organizations are always enabled). Unlike forma2, the steps share one transaction, so a failure cannot leave an organization without its owner or workspace.
-func (s *Service) Create(ctx context.Context, userID uuid.UUID, name string) (*Created, error) {
-	created, err := s.create(ctx, userID, name)
+//
+// timeZone, when set, is a valid IANA zone that becomes both the organization's display zone and its survey scheduling zone, so a creator outside the instance's zone does not get surveys that open and close at the instance's midnight. Nil keeps the defaults (UTC display, the instance's scheduling zone).
+func (s *Service) Create(ctx context.Context, userID uuid.UUID, name string, timeZone *string) (*Created, error) {
+	created, err := s.create(ctx, userID, name, timeZone)
 	id := ""
 	var newObject any
 	if created != nil {
@@ -68,11 +70,11 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, name string) (*C
 	return created, err
 }
 
-func (s *Service) create(ctx context.Context, userID uuid.UUID, name string) (*Created, error) {
+func (s *Service) create(ctx context.Context, userID uuid.UUID, name string, timeZone *string) (*Created, error) {
 	var orgID, workspaceID uuid.UUID
 	err := s.repo.transaction(ctx, func(tx *Repository) error {
 		var err error
-		if orgID, err = tx.insertOrganization(ctx, name, s.cfg.IsFormaCloud); err != nil {
+		if orgID, err = tx.insertOrganization(ctx, name, timeZone, s.cfg.IsFormaCloud); err != nil {
 			return err
 		}
 		if err := tx.insertMembership(ctx, orgID, userID, RoleOwner, true); err != nil {

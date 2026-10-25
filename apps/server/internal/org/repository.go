@@ -133,10 +133,12 @@ func (r *Repository) listed(ctx context.Context, userID uuid.UUID, ids []uuid.UU
 	return out, nil
 }
 
-// insertOrganization creates the organization with its default billing row, as forma2's createOrganization did in one statement.
-func (r *Repository) insertOrganization(ctx context.Context, name string, isFormaCloud bool) (uuid.UUID, error) {
+// insertOrganization creates the organization with its default billing row, as forma2's createOrganization did in one statement. timeZone, when set, is stored as both the display and the survey scheduling zone; nil leaves both NULL (UTC and the instance's zone).
+func (r *Repository) insertOrganization(ctx context.Context, name string, timeZone *string, isFormaCloud bool) (uuid.UUID, error) {
 	var id uuid.UUID
-	if err := r.db.WithContext(ctx).Raw(`INSERT INTO organizations (name) VALUES (?) RETURNING id`, name).Row().Scan(&id); err != nil {
+	if err := r.db.WithContext(ctx).Raw(
+		`INSERT INTO organizations (name, display_time_zone, survey_scheduling_time_zone) VALUES (?, ?, ?) RETURNING id`, name, timeZone, timeZone,
+	).Row().Scan(&id); err != nil {
 		return uuid.Nil, fmt.Errorf("create organization: %w", err)
 	}
 	if err := r.db.WithContext(ctx).Exec(
