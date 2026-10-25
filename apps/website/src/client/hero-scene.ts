@@ -129,9 +129,9 @@ void main() {
   radius = mix(radius, aRadius.x * aScatter.w, release);
 
   vec3 color = kind == ${KIND.answer.toFixed(1)} ? mix(aColor, CRIMSON, answered) : aColor;
-  // A chip takes its logo colour only once it is nearly in the mark, and gives it back before it leaves: mixing white and ink (or ink and crimson) while a chip travels would show a detached grey square or a muddy bar, and in place the same mix reads as the mark fading in and out.
+  // A chip takes its logo colour only once it is nearly in the mark, and every chip gives it back together in the last moment of the hold, before the first one leaves (release eases out, so a chip covers a quarter of its way in its first tenth): mixing white and ink (or ink and crimson) while a chip travels would show a detached grey square or a muddy bar, and in place the same mix reads as the mark fading in and out.
   color = mix(color, aLogoColor, smoothstep(0.5, 1.0, condense));
-  vColor = mix(color, aColor, smoothstep(0.0, 0.35, release));
+  vColor = mix(color, aColor, smoothstep(10.2, 10.5, t));
   vEdge = aMeta.w * (1.0 - condense) + aMeta.w * release;
 
   place(center, size, radius);
