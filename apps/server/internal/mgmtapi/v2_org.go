@@ -9,7 +9,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/org"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
 )
 
@@ -502,7 +502,7 @@ func resolveOptional(raw *string) *uuid.UUID {
 	if raw == nil {
 		return nil
 	}
-	id, _ := legacyid.Resolve(*raw)
+	id, _ := rowid.Parse(*raw)
 	return &id
 }
 
@@ -550,7 +550,7 @@ func parseWorkspaceTeamInput(body map[string]any) (workspaceTeamInput, *issues) 
 	var in workspaceTeamInput
 	workspaceID := optionalID(&is, "workspaceId", o.get("workspaceId"))
 	team, _ := is.id("teamId", o.get("teamId"), required)
-	in.teamID, _ = legacyid.Resolve(team)
+	in.teamID, _ = rowid.Parse(team)
 	in.permission, _ = is.enum("permission", o.get("permission"), required, workspaceTeamPermissions)
 	projectID := optionalID(&is, "projectId", o.get("projectId"))
 	in.workspaceID = resolveOptional(projectAlias(workspaceID, projectID))
@@ -652,7 +652,7 @@ func (h *Handler) v2DeleteWorkspaceTeam(c *gin.Context) {
 		v2Error(c, http.StatusUnprocessableEntity, is.v2Details())
 		return
 	}
-	teamID, _ := legacyid.Resolve(team)
+	teamID, _ := rowid.Parse(team)
 	target := resolveOptional(projectAlias(workspaceID, projectID))
 	organizationID, ok := v2OrgParam(c)
 	if !ok || !h.v2Limit(c) || !h.v2WorkspaceTeamGuard(c, organizationID, teamID, target) {

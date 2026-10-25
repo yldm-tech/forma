@@ -1,0 +1,167 @@
+{
+  "case": "v1-environment-after-identify",
+  "description": "Environment state after contacts exist; shape is unchanged.",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/client/<id:workspace>/environment",
+    "query": {},
+    "headers": {
+      "origin": "https://customer.example",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cache-Control",
+      "access-control-allow-methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+      "access-control-allow-origin": "*",
+      "cache-control": "public, s-maxage=60, max-age=60, stale-while-revalidate=60, stale-if-error=60",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "data": {
+          "surveys": [
+            {
+              "id": "<id:survey:app>",
+              "welcomeCard": {
+                "enabled": false,
+                "timeToFinish": true,
+                "showResponseCount": false
+              },
+              "questions": [],
+              "blocks": [
+                {
+                  "id": "<id:block:app>",
+                  "name": "Main",
+                  "elements": [
+                    {
+                      "id": "checkout_feedback",
+                      "type": "openText",
+                      "headline": {
+                        "default": "How was checkout?"
+                      },
+                      "required": false,
+                      "charLimit": {
+                        "enabled": false
+                      },
+                      "inputType": "text",
+                      "insightsEnabled": false
+                    }
+                  ]
+                }
+              ],
+              "variables": [],
+              "type": "app",
+              "showLanguageSwitch": null,
+              "languages": [
+                {
+                  "default": true,
+                  "enabled": true,
+                  "language": {
+                    "id": "<id:language:en-US>",
+                    "code": "en-US",
+                    "alias": null,
+                    "createdAt": "<timestamp>",
+                    "updatedAt": "<timestamp>",
+                    "workspaceId": "<id:workspace>",
+                    "projectId": "<id:workspace>"
+                  }
+                }
+              ],
+              "endings": [
+                {
+                  "id": "clendscreenappaaaaaaaaaa3",
+                  "type": "endScreen",
+                  "headline": {
+                    "default": "Thanks!"
+                  }
+                }
+              ],
+              "autoClose": null,
+              "styling": null,
+              "status": "inProgress",
+              "recaptcha": {
+                "enabled": false,
+                "threshold": 0.1
+              },
+              "recontactDays": null,
+              "displayLimit": null,
+              "displayOption": "displayMultiple",
+              "hiddenFields": {
+                "enabled": false
+              },
+              "isBackButtonHidden": false,
+              "isAutoProgressingEnabled": false,
+              "triggers": [
+                {
+                  "actionClass": {
+                    "name": "Checkout"
+                  }
+                }
+              ],
+              "displayPercentage": null,
+              "delay": 0,
+              "workspaceOverwrites": null,
+              "segment": {
+                "id": "<id:segment:app>",
+                "title": "[deprecated] segment title omitted from public API - will be removed soon",
+                "description": null,
+                "isPrivate": true,
+                "filters": [],
+                "environmentId": "<id:workspace>",
+                "workspaceId": "<id:workspace>",
+                "createdAt": "<timestamp>",
+                "updatedAt": "<timestamp>",
+                "surveys": [],
+                "hasFilters": false
+              },
+              "embeddedFields": [],
+              "name": "[deprecated] survey name omitted from public API - will be removed soon",
+              "projectOverwrites": null
+            }
+          ],
+          "actionClasses": [
+            {
+              "id": "<id:actionClass:checkout>",
+              "type": "code",
+              "name": "Checkout",
+              "key": "checkout",
+              "noCodeConfig": null
+            }
+          ],
+          "workspace": {
+            "id": "<id:workspace>",
+            "recontactDays": 7,
+            "clickOutsideClose": true,
+            "overlay": "none",
+            "placement": "bottomRight",
+            "inAppSurveyBranding": true,
+            "styling": {
+              "allowStyleOverwrite": true
+            }
+          },
+          "project": {
+            "id": "<id:workspace>",
+            "recontactDays": 7,
+            "clickOutsideClose": true,
+            "overlay": "none",
+            "placement": "bottomRight",
+            "inAppSurveyBranding": true,
+            "styling": {
+              "allowStyleOverwrite": true
+            }
+          }
+        },
+        "expiresAt": "<timestamp>"
+      }
+    }
+  }
+}

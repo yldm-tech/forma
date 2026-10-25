@@ -9,8 +9,8 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 )
 
@@ -86,14 +86,14 @@ func (h *OAuthHandler) fail(c *gin.Context, err error) {
 	}
 }
 
-// headerWorkspace reads the workspaceId header the pages sent: a UUID, or a forma2 id of a migrated workspace. One that names nothing cannot be authorized, which forma2 answered with 401 too.
+// headerWorkspace reads the workspaceId header the pages sent, a UUID. One that names nothing cannot be authorized: 401.
 func (h *OAuthHandler) headerWorkspace(c *gin.Context) (uuid.UUID, bool) {
 	raw := c.GetHeader("workspaceId")
 	if raw == "" {
 		v1api.BadRequest(c, "workspaceId is missing", nil, false)
 		return uuid.Nil, false
 	}
-	id, ok := legacyid.Resolve(raw)
+	id, ok := rowid.Parse(raw)
 	if !ok {
 		v1api.Unauthorized(c)
 		return uuid.Nil, false

@@ -53,7 +53,7 @@ func TestWorkerDeletesResponseFiles(t *testing.T) {
 	if err := db.Raw(`INSERT INTO organizations (name) VALUES ('Acme') RETURNING id`).Row().Scan(&org); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Raw(`INSERT INTO workspaces (organization_id, name, legacy_environment_id) VALUES (?, 'Main', 'clenvaaaaaaaaaaaaaaaaaaa1') RETURNING id`, org).Row().Scan(&ws); err != nil {
+	if err := db.Raw(`INSERT INTO workspaces (organization_id, name) VALUES (?, 'Main') RETURNING id`, org).Row().Scan(&ws); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Raw(`INSERT INTO workspaces (organization_id, name) VALUES (?, 'Other') RETURNING id`, org).Row().Scan(&other); err != nil {
@@ -61,11 +61,10 @@ func TestWorkerDeletesResponseFiles(t *testing.T) {
 	}
 	const dir = "/private/surveys/s1/elements/f/"
 	keys := map[string]bool{
-		ws.String() + dir + "a b--fid--1.pdf":                 false,
-		"clenvaaaaaaaaaaaaaaaaaaa1" + dir + "old--fid--2.png": false,
-		ws.String() + "/private/x--fid--3.pdf":                false,
-		other.String() + dir + "theirs--fid--4.pdf":           true,
-		ws.String() + dir + "unreferenced--fid--5.pdf":        true,
+		ws.String() + dir + "a b--fid--1.pdf":          false,
+		ws.String() + "/private/x--fid--3.pdf":         false,
+		other.String() + dir + "theirs--fid--4.pdf":    true,
+		ws.String() + dir + "unreferenced--fid--5.pdf": true,
 	}
 	for key := range keys {
 		put(t, s3, key, "application/pdf", "file")
@@ -77,7 +76,6 @@ func TestWorkerDeletesResponseFiles(t *testing.T) {
 	}
 	res, err := inserter.Insert(t.Context(), response.DeleteFilesArgs{WorkspaceID: ws, FileURLs: []string{
 		"/storage/" + ws.String() + dir + "a%20b--fid--1.pdf",
-		"/storage/clenvaaaaaaaaaaaaaaaaaaa1" + dir + "old--fid--2.png",
 		"https://app.example.com/storage/" + ws.String() + "/private/x--fid--3.pdf?download=1",
 		// Another workspace's file, named directly and through a path that climbs out of this workspace's directory.
 		"/storage/" + other.String() + dir + "theirs--fid--4.pdf",

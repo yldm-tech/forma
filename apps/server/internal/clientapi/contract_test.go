@@ -1,6 +1,7 @@
 package clientapi
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -11,11 +12,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
-// The contract test replays the exchanges recorded against forma2 (testdata/forma2, see its README) in an order their scenarios need, against data equivalent to what the recorder created, and requires the same status, the recorded headers and a body equal to the recorded one with its placeholders matched by kind. An id placeholder binds to the first id it meets and must name the same id wherever it appears again; ids are the rewrite's UUIDs where forma2 had cuids.
+// The contract test replays the exchanges in testdata/contract (see its README) in an order their scenarios need, against the data seedRecording creates, and requires the same status, the listed headers and a body equal to the expected one with its placeholders matched by kind. An id placeholder binds to the first id it meets and must name the same id wherever it appears again.
 
 type recorded struct {
 	Case    string `json:"case"`
@@ -34,17 +33,17 @@ type recorded struct {
 	} `json:"response"`
 }
 
-// coveredElsewhere are fixtures of the same recording whose routes other modules serve and replay: the survey pages and the OG image (internal/linksurvey/contract_test.go).
+// coveredElsewhere are exchanges whose routes other modules serve and replay: the survey pages and the OG image (internal/linksurvey/contract_test.go).
 var coveredElsewhere = regexp.MustCompile(`^(page-|v1-og-image)`)
 
-// replayOrder is the order the recorder's scenarios need: identify before a contact's displays, a display before the response that references it, the first quota response before the one that finds the quota full. The rate-limit cases come last, each after its window has been exhausted.
+// replayOrder is the order the scenarios need: identify before a contact's displays, a display before the response that references it, the first quota response before the one that finds the quota full. The rate-limit cases come last, each after its window has been exhausted.
 var replayOrder = []string{
 	"v1-environment-options", "v1-displays-options", "v2-displays-options", "v1-responses-options", "v2-responses-options",
 	"v1-storage-options", "v2-user-options",
 	"js-surveys-umd",
 	"v1-environment-invalid-id", "v1-environment-unknown-workspace", "v1-environment", "v2-environment",
-	"v1-environment-legacy-environment-id", "v2-environment-legacy-environment-id", "v1-environment-debug-no-cache",
-	"v2-user-identify-new", "v2-user-identify-existing", "v2-user-attributes-update", "v1-user-legacy-environment-id",
+	"v1-environment-debug-no-cache",
+	"v2-user-identify-new", "v2-user-identify-existing", "v2-user-attributes-update",
 	"v1-user-identify-new", "v1-user-unknown-workspace", "v2-user-attributes-invalid-email", "v2-user-malformed-json", "v2-user-missing-userid",
 	"v1-environment-after-identify",
 	"v2-displays-create-anonymous", "v1-display-response-options", "v1-display-response-none", "v2-displays-create-contact", "v1-displays-create-userid",
@@ -68,25 +67,12 @@ var replayOrder = []string{
 	"v1-environment-rate-limited", "v1-responses-rate-limited", "v2-displays-rate-limited", "v2-responses-rate-limited",
 }
 
-// deviations are the recorded answers the rewrite gives differently on purpose; each rewrites the expected body and says why.
-var deviations = map[string]struct {
-	reason string
-	expect func(body string) string
-}{
-	"v2-responses-create-missing-required": {
-		reason: `The response's language is "default", which forma2's server resolved through a process-wide i18next instance whose language the previous request had set (de-DE here), so the message's language depended on unrelated traffic. The rewrite writes "default" messages in the survey's default language (en-US here).`,
-		expect: func(body string) string {
-			return strings.Replace(body, "Bitte füllen Sie dieses Feld aus", "Please fill out this field", 1)
-		},
-	},
-}
-
-// singleUseID is the canonical single-use id of the recorded single-use link.
+// singleUseID is the canonical single-use id of the contract's single-use link.
 const singleUseID = "clsingleuseaaaaaaaaaaaaa1"
 
-// seedRecording creates the recorder's data (testdata/forma2/README.md) and returns the placeholders it already binds.
+// seedRecording creates the contract's data (testdata/contract/README.md) and returns the placeholders it already binds.
 func (e *env) seedRecording(t *testing.T) map[string]string {
-	ws := e.workspace("legacy_environment_id", "clegacyenvaaaaaaaaaaaaaa1")
+	ws := e.workspace()
 	enUS := e.language(ws, "en-US", nil)
 	deDE := e.language(ws, "de-DE", nil)
 	e.exec(`INSERT INTO contact_attribute_keys (workspace_id, key, name, type, data_type) VALUES (?, 'plan', 'Plan', 'custom', 'string')`, ws)
@@ -134,10 +120,12 @@ func (e *env) seedRecording(t *testing.T) map[string]string {
 		{"id":"attachment","type":"fileUpload","headline":{"default":"Attach a file"},"required":false,"allowMultipleFiles":false,"allowedFileExtensions":["png","pdf"],"maxSizeInMB":5}]}]`)
 	unused := e.insert(`INSERT INTO displays (survey_id) VALUES (?) RETURNING id`, link)
 
-	token, err := secret.EncryptForma2(singleUseID, e.cfg.EncryptionKey)
+	// The encrypted suId of a single-use link: the id sealed under ENCRYPTION_KEY for its survey, as the survey editor issues it.
+	sealed, err := e.cipher.Seal([]byte(singleUseID), []byte("survey-single-use:"+singleUse.String()))
 	if err != nil {
 		t.Fatal(err)
 	}
+	token := base64.RawURLEncoding.EncodeToString(sealed)
 	return map[string]string{
 		"<id:workspace>": ws.String(), "<id:language:en-US>": enUS.String(), "<id:actionClass:checkout>": checkout.String(),
 		"<id:survey:app>": app.String(), "<id:segment:app>": appSegment.String(), "<id:block:app>": blockID,
@@ -150,7 +138,7 @@ func (e *env) seedRecording(t *testing.T) map[string]string {
 
 func loadRecorded(t *testing.T, name string) recorded {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join("testdata", "forma2", name+".json"))
+	b, err := os.ReadFile(filepath.Join("testdata", "contract", name+".json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,17 +306,13 @@ func (r *replay) check(f recorded, res result) {
 	}
 	for _, name := range []string{"Access-Control-Allow-Origin", "X-Frame-Options", "Allow"} {
 		if _, recorded := f.Response.Headers[strings.ToLower(name)]; !recorded && res.Header.Get(name) != "" {
-			t.Errorf("header %s %q was not sent by forma2", name, res.Header.Get(name))
+			t.Errorf("header %s %q is sent but not listed", name, res.Header.Get(name))
 		}
 	}
 	switch f.Response.BodyFormat {
 	case "json":
-		expected := string(f.Response.Body)
-		if d, ok := deviations[f.Case]; ok {
-			expected = d.expect(expected)
-		}
 		var want, got any
-		if err := json.Unmarshal([]byte(expected), &want); err != nil {
+		if err := json.Unmarshal(f.Response.Body, &want); err != nil {
 			t.Fatal(err)
 		}
 		if err := json.Unmarshal(res.Body, &got); err != nil {
@@ -344,10 +328,10 @@ func (r *replay) check(f recorded, res result) {
 	}
 }
 
-// The client API answers every request recorded against forma2 as forma2 did.
-func TestReplaysRecordedForma2Exchanges(t *testing.T) {
+// The client API answers every contract exchange as it is written down.
+func TestContractExchanges(t *testing.T) {
 	e := newEnv(t)
-	files, err := filepath.Glob(filepath.Join("testdata", "forma2", "*.json"))
+	files, err := filepath.Glob(filepath.Join("testdata", "contract", "*.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +345,7 @@ func TestReplaysRecordedForma2Exchanges(t *testing.T) {
 	slices.Sort(ordered)
 	slices.Sort(all)
 	if !slices.Equal(ordered, all) {
-		t.Fatalf("the replay order lists %v, the recording has %v", ordered, all)
+		t.Fatalf("the replay order lists %v, testdata/contract has %v", ordered, all)
 	}
 
 	r := &replay{t: t, bound: e.seedRecording(t)}
@@ -393,8 +377,5 @@ func TestReplaysRecordedForma2Exchanges(t *testing.T) {
 			sub := &replay{t: t, bound: r.bound}
 			sub.check(f, res)
 		})
-	}
-	for name, d := range deviations {
-		t.Logf("%s deviates from forma2 on purpose: %s", name, d.reason)
 	}
 }

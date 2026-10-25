@@ -73,7 +73,7 @@ func newBackupCodes() ([]string, error) {
 	return codes, nil
 }
 
-// normalizeBackupCode drops the hyphens a code is displayed with (xxxxx-xxxxx); codes are stored without them, so a code is accepted with or without its hyphen, as forma2's disable check did. Case matters: codes migrated from Better Auth mix upper and lower case.
+// normalizeBackupCode drops the hyphens a code is displayed with (xxxxx-xxxxx); codes are stored without them, so a code is accepted with or without its hyphen, as forma2's disable check did. Case matters.
 func normalizeBackupCode(code string) string {
 	return strings.ReplaceAll(code, "-", "")
 }
@@ -101,7 +101,7 @@ func totpSealContext(column string, userID uuid.UUID) []byte {
 	return []byte("user_totp." + column + ":" + userID.String())
 }
 
-// SealTOTP returns what a user_totp row stores for m: secret_ciphertext and backup_codes_ciphertext. The data migration writes the rows it carries over from forma2 with it.
+// SealTOTP returns what a user_totp row stores for m: secret_ciphertext and backup_codes_ciphertext.
 func SealTOTP(c *secret.Cipher, userID uuid.UUID, m TOTPMaterial) (secretCiphertext, backupCodesCiphertext []byte, err error) {
 	if secretCiphertext, err = c.Seal(m.Key, totpSealContext("secret", userID)); err != nil {
 		return nil, nil, err
@@ -112,7 +112,7 @@ func SealTOTP(c *secret.Cipher, userID uuid.UUID, m TOTPMaterial) (secretCiphert
 	return secretCiphertext, backupCodesCiphertext, nil
 }
 
-// OpenTOTP is the inverse of SealTOTP: the material a user_totp row holds. The data migration compares it with what it would write, so a re-run leaves a row whose material has not changed as it is.
+// OpenTOTP is the inverse of SealTOTP: the material a user_totp row holds.
 func OpenTOTP(c *secret.Cipher, userID uuid.UUID, secretCiphertext, backupCodesCiphertext []byte) (TOTPMaterial, error) {
 	key, err := openTOTPKey(c, userID, secretCiphertext)
 	if err != nil {
@@ -181,54 +181,4 @@ func enrolmentLinks(key []byte, account string) (keyURI, dataURI string, err err
 		return "", "", fmt.Errorf("encode qr code: %w", err)
 	}
 	return k.URL(), "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
-}
-
-// ImportBetterAuthTwoFactor decrypts a forma2 TwoFactor row, Better Auth's secret and backupCodes columns, into the material of a user_totp row. Better Auth keyed the HMAC with the UTF-8 bytes of the decrypted secret string: a secret it generated is 32 random characters, and a secret forma2 re-encoded from its legacy columns is the original key bytes read as Latin-1, all below 0x80 because otplib masked them to ASCII, so its UTF-8 bytes are the original key. Either way the bytes are the key the user's authenticator app holds. Only a row Better Auth marked verified (verified not false) was an enabled second factor; the caller stores the material as verified for those rows alone.
-func ImportBetterAuthTwoFactor(secrets secret.BetterAuthSecrets, secretCiphertext, backupCodesCiphertext string) (TOTPMaterial, error) {
-	s, err := secret.DecryptBetterAuth(secrets, secretCiphertext)
-	if err != nil {
-		return TOTPMaterial{}, fmt.Errorf("decrypt two-factor secret: %w", err)
-	}
-	raw, err := secret.DecryptBetterAuth(secrets, backupCodesCiphertext)
-	if err != nil {
-		return TOTPMaterial{}, fmt.Errorf("decrypt backup codes: %w", err)
-	}
-	var codes []string
-	if err := json.Unmarshal([]byte(raw), &codes); err != nil {
-		return TOTPMaterial{}, fmt.Errorf("decode backup codes: %w", err)
-	}
-	for i, c := range codes {
-		codes[i] = normalizeBackupCode(c)
-	}
-	return TOTPMaterial{Key: []byte(s), BackupCodes: codes}, nil
-}
-
-// ImportForma2TwoFactor decrypts forma2's legacy User.twoFactorSecret and User.backupCodes (lib/crypto.ts under ENCRYPTION_KEY, legacy CBC included, as forma2 read them at rest) for a user who has no TwoFactor row, the case forma2 healed at sign-in. backupCodesCiphertext is empty when the column was null. The secret is otplib's base32; a used backup code was a null slot, and is dropped.
-func ImportForma2TwoFactor(encryptionKey []byte, secretCiphertext, backupCodesCiphertext string) (TOTPMaterial, error) {
-	s, err := secret.DecryptForma2(secretCiphertext, encryptionKey, true)
-	if err != nil {
-		return TOTPMaterial{}, fmt.Errorf("decrypt two-factor secret: %w", err)
-	}
-	key, err := base32NoPadding.DecodeString(strings.TrimRight(strings.ToUpper(s), "="))
-	if err != nil {
-		return TOTPMaterial{}, fmt.Errorf("decode two-factor secret: %w", err)
-	}
-	m := TOTPMaterial{Key: key, BackupCodes: []string{}}
-	if backupCodesCiphertext == "" {
-		return m, nil
-	}
-	raw, err := secret.DecryptForma2(backupCodesCiphertext, encryptionKey, true)
-	if err != nil {
-		return TOTPMaterial{}, fmt.Errorf("decrypt backup codes: %w", err)
-	}
-	var slots []*string
-	if err := json.Unmarshal([]byte(raw), &slots); err != nil {
-		return TOTPMaterial{}, fmt.Errorf("decode backup codes: %w", err)
-	}
-	for _, c := range slots {
-		if c != nil {
-			m.BackupCodes = append(m.BackupCodes, normalizeBackupCode(*c))
-		}
-	}
-	return m, nil
 }

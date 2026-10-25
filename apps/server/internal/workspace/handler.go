@@ -31,7 +31,6 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/workspaces/:workspaceId", h.get)
 	g.PATCH("/workspaces/:workspaceId", h.update)
 	g.POST("/workspaces/:workspaceId/delete", h.delete)
-	g.GET("/environments/:environmentId", h.environment)
 	g.GET("/workspaces/:workspaceId/app-connection", h.appConnection)
 	g.POST("/workspaces/:workspaceId/languages", h.createLanguage)
 	g.PATCH("/workspaces/:workspaceId/languages/:languageId", h.updateLanguage)
@@ -253,19 +252,6 @@ func (h *Handler) delete(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, res)
-}
-
-type environmentResponse struct {
-	WorkspaceID uuid.UUID `json:"workspaceId"`
-}
-
-func (h *Handler) environment(c *gin.Context) {
-	id, err := h.svc.ResolveEnvironment(c.Request.Context(), userID(c), c.Param("environmentId"))
-	if err != nil {
-		httpapi.Fail(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, environmentResponse{WorkspaceID: id})
 }
 
 func (h *Handler) appConnection(c *gin.Context) {

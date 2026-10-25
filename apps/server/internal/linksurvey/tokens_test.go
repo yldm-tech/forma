@@ -12,20 +12,15 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
-// Tokens shaped exactly like jsonwebtoken's ({"alg":"HS256","typ":"JWT"}, base64url, HMAC-SHA256), made on Node with forma2's claims, secrets and its AES-GCM cipher under the hex key of 32 bytes of 7.
+// Personal link tokens shaped exactly like jsonwebtoken's ({"alg":"HS256","typ":"JWT"}, base64url, HMAC-SHA256), made on Node with jsonwebtoken and the AES-GCM link value cipher under the hex key of 32 bytes of 7, so verification is checked against an independent implementation.
 const (
-	forma2Survey     = "clsurveyaaaaaaaaaaaaaaa1"
-	forma2Contact    = "clcontactaaaaaaaaaaaaaa1"
-	forma2PinToken   = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdXJ2ZXlJZCI6ImNsc3VydmV5YWFhYWFhYWFhYWFhYWFhMSIsInB1cnBvc2UiOiJsaW5rX3N1cnZleV9waW4iLCJpYXQiOjE3NjAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMH0.lVV9DUJRwGm4R2-4Kp89uTPKL5pCl17UEHWywEJp1hk"
-	forma2EmailToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IjcwNjBlMjI0OWNmNzljZjkyZGRjMDNhZWJjYzMyNjExOjY5ZmU2YjA3OGZiMGRhMDlhZWE5MGU1NTU0MzY3OTBiMjc6NmEzZDM1OTYzMDYxN2VjOTQ1ZDAxYzI4YjYxNjdmMTIiLCJzdXJ2ZXlJZCI6ImNsc3VydmV5YWFhYWFhYWFhYWFhYWFhMSIsInB1cnBvc2UiOiJsaW5rX3N1cnZleV9lbWFpbF92ZXJpZmljYXRpb24iLCJpYXQiOjE3NjAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMH0.aTVAgx8hfbVgcFiNfLM4vm0oJ9SzO9YGqsWF7grJeXs"
-	// Signed with NEXTAUTH_SECRET followed by the survey's forma2 id, without a survey claim, and with the address in plain text: forma2's oldest form.
-	forma2LegacyEmailToken    = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXIxQGV4YW1wbGUuY29tIiwiaWF0IjoxNzYwMDAwMDAwLCJleHAiOjQxMDI0NDQ4MDB9.sLk_3Bo-AWtBDMgO2BK1cHPA0hWJ3N6eFx3uTcVygeY"
-	forma2ContactToken        = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb250YWN0SWQiOiIwZTlkZGI2Y2VhOTUzYmM3MGUyNmY1NDNjMDQzMDc0MzpjYWM3NWU0NjQ1YzdlOGE0YzAzMTUzNjUzZjhiOWQ2NGJjZmI0N2U1MWFhZjVhNGQ6MjRjM2RhMGZhYTQwYmFhN2YxY2Q1MjVmYmY3YjIxYmUiLCJzdXJ2ZXlJZCI6IjE2YzI1MWNiZmJmN2ZhZTg5MjZhYmIwZmVhNDE5N2I3OjQ5MDFiNmVlNzM1NzI4YWZhM2RlMjg3NWEyMzBiZDBmZjY2NzlhZDFiZmE4ZGNlODo4NjVkNGYwNDA1NzY3ODU3NDE1MzhiNzI5MDE3MmRhZCIsImlhdCI6MTc2MDAwMDAwMH0.j5A5V4Q996uQL7c9pN7zTqc5dCNhFNnBiDr7X3mye5o"
-	forma2ExpiredContactToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb250YWN0SWQiOiJjMDJiYWNjOTRjNGFlOWM5Y2QyMmI2MzIzNDZhYjllYjowZGZmZWJhMjE1N2U5MWEyZDdmZDM1ODNjMDE3NDQ2ZTAxMDQzYzZjYjVmMDYzNGQ6MjQ5ZGE1OGJmNjg1NWQ2OTlmYTFhODBlYmNlYzY1NWQiLCJzdXJ2ZXlJZCI6IjM5ZGZmZmU2ODI3YmYwZmQzYTE5NzRhZjAyZjBkNWE3OjJmZWNiYTNlZWYxOGFlMmRiMmVkNGU2YzE3MTY5NDgwYmEyOTE3NWRkMzk0MWQwNToyMDY0YjQyNmMwNzIzNGZiYjQ3NDQ0MDdiMTQ2ZjNmZiIsImlhdCI6MTAwMCwiZXhwIjoyMDAwfQ.zzAqAH6CCjg70w5g6oDP28X7yR_8NFemAjA_WGUk_LU"
+	nodeSurvey              = "clsurveyaaaaaaaaaaaaaaa1"
+	nodeContact             = "clcontactaaaaaaaaaaaaaa1"
+	nodeContactToken        = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb250YWN0SWQiOiIwZTlkZGI2Y2VhOTUzYmM3MGUyNmY1NDNjMDQzMDc0MzpjYWM3NWU0NjQ1YzdlOGE0YzAzMTUzNjUzZjhiOWQ2NGJjZmI0N2U1MWFhZjVhNGQ6MjRjM2RhMGZhYTQwYmFhN2YxY2Q1MjVmYmY3YjIxYmUiLCJzdXJ2ZXlJZCI6IjE2YzI1MWNiZmJmN2ZhZTg5MjZhYmIwZmVhNDE5N2I3OjQ5MDFiNmVlNzM1NzI4YWZhM2RlMjg3NWEyMzBiZDBmZjY2NzlhZDFiZmE4ZGNlODo4NjVkNGYwNDA1NzY3ODU3NDE1MzhiNzI5MDE3MmRhZCIsImlhdCI6MTc2MDAwMDAwMH0.j5A5V4Q996uQL7c9pN7zTqc5dCNhFNnBiDr7X3mye5o"
+	nodeExpiredContactToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb250YWN0SWQiOiJjMDJiYWNjOTRjNGFlOWM5Y2QyMmI2MzIzNDZhYjllYjowZGZmZWJhMjE1N2U5MWEyZDdmZDM1ODNjMDE3NDQ2ZTAxMDQzYzZjYjVmMDYzNGQ6MjQ5ZGE1OGJmNjg1NWQ2OTlmYTFhODBlYmNlYzY1NWQiLCJzdXJ2ZXlJZCI6IjM5ZGZmZmU2ODI3YmYwZmQzYTE5NzRhZjAyZjBkNWE3OjJmZWNiYTNlZWYxOGFlMmRiMmVkNGU2YzE3MTY5NDgwYmEyOTE3NWRkMzk0MWQwNToyMDY0YjQyNmMwNzIzNGZiYjQ3NDQ0MDdiMTQ2ZjNmZiIsImlhdCI6MTAwMCwiZXhwIjoyMDAwfQ.zzAqAH6CCjg70w5g6oDP28X7yR_8NFemAjA_WGUk_LU"
 
 	testNextAuthSecret   = "next-secret-0123456789abcdefghijklmnop"
 	testBetterAuthSecret = "better-secret-0123456789abcdefghijklmnop"
@@ -42,6 +37,16 @@ func tokenConfig() config.Config {
 
 var testNow = time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
 
+// sign2 signs claims with secret, failing the test when it cannot.
+func sign2(t *testing.T, secret string, claims any) string {
+	t.Helper()
+	s, err := sign(secret, claims)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
 func tamper(token string) string {
 	parts := strings.Split(token, ".")
 	payload, _ := base64.RawURLEncoding.DecodeString(parts[1])
@@ -49,7 +54,7 @@ func tamper(token string) string {
 	return parts[0] + "." + base64.RawURLEncoding.EncodeToString(payload) + "." + parts[2]
 }
 
-// forma2's pin-token.test.ts.
+// A PIN token proves the PIN for its survey only, for an hour.
 func TestPinToken(t *testing.T) {
 	cfg := tokenConfig()
 	surveyID := uuid.New()
@@ -74,8 +79,6 @@ func TestPinToken(t *testing.T) {
 		{"empty", "", surveyID, testNow, false},
 		{"another purpose", other, surveyID, testNow, false},
 		{"expired", token, surveyID, testNow.Add(pinTokenTTL + time.Second), false},
-		{"forma2 token for the migrated survey", forma2PinToken, legacyid.ID(forma2Survey), testNow, true},
-		{"forma2 token for another survey", forma2PinToken, surveyID, testNow, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -103,11 +106,10 @@ func TestPinTokenSecretPrecedence(t *testing.T) {
 	}
 }
 
-// forma2's jwt.test.ts (verifyTokenForLinkSurvey).
+// An email token proves its address for its survey only, for seven days, and only with the address encrypted.
 func TestEmailToken(t *testing.T) {
 	cfg := tokenConfig()
 	surveyID := uuid.New()
-	migrated := legacyid.ID(forma2Survey)
 	token, err := newEmailToken(cfg, surveyID, "user1@example.com", testNow)
 	if err != nil {
 		t.Fatal(err)
@@ -124,41 +126,36 @@ func TestEmailToken(t *testing.T) {
 	}
 	future := jwt.Claims{Expiry: jwt.NewNumericDate(testNow.Add(time.Hour))}
 	id, inviteish, purpose := surveyID.String(), "email_verification", emailTokenPurpose
-	encrypted, _ := secret.EncryptForma2("other@example.com", cfg.EncryptionKey)
+	encrypted, _ := secret.EncryptLinkValue("other@example.com", cfg.EncryptionKey)
 	cases := []struct {
-		name         string
-		token        string
-		survey       uuid.UUID
-		linkSurveyID string
-		now          time.Time
-		want         string
+		name   string
+		token  string
+		survey uuid.UUID
+		now    time.Time
+		want   string
 	}{
-		{"valid", token, surveyID, surveyID.String(), testNow, "user1@example.com"},
-		{"another survey", token, uuid.New(), "", testNow, ""},
-		{"expired", token, surveyID, surveyID.String(), testNow.Add(emailTokenTTL + time.Second), ""},
-		{"tampered", tamper(token), surveyID, surveyID.String(), testNow, ""},
-		{"garbage", "not-a-token", surveyID, surveyID.String(), testNow, ""},
-		{"no survey claim under the plain secret", claims(emailClaims{Email: "user1@example.com", Claims: future}), surveyID, surveyID.String(), testNow, ""},
-		{"another flow's purpose", claims(emailClaims{Email: encrypted, SurveyID: &id, Purpose: &inviteish, Claims: future}), surveyID, surveyID.String(), testNow, ""},
-		{"no email", claims(emailClaims{SurveyID: &id, Purpose: &purpose, Claims: future}), surveyID, surveyID.String(), testNow, ""},
-		{"plain-text address", claims(emailClaims{Email: "plain@example.com", SurveyID: &id, Claims: future}), surveyID, surveyID.String(), testNow, "plain@example.com"},
-		{"forma2 token", forma2EmailToken, migrated, forma2Survey, testNow, "user1@example.com"},
-		{"forma2 token reached by the new id", forma2EmailToken, migrated, migrated.String(), testNow, "user1@example.com"},
-		{"forma2 legacy token by the forma2 id", forma2LegacyEmailToken, migrated, forma2Survey, testNow, "user1@example.com"},
-		// The legacy key is the secret followed by the id the link was sent with; the new id cannot reproduce it.
-		{"forma2 legacy token by the new id", forma2LegacyEmailToken, migrated, migrated.String(), testNow, ""},
-		{"forma2 legacy token for another survey", forma2LegacyEmailToken, surveyID, forma2Survey, testNow, ""},
+		{"valid", token, surveyID, testNow, "user1@example.com"},
+		{"another survey", token, uuid.New(), testNow, ""},
+		{"expired", token, surveyID, testNow.Add(emailTokenTTL + time.Second), ""},
+		{"tampered", tamper(token), surveyID, testNow, ""},
+		{"garbage", "not-a-token", surveyID, testNow, ""},
+		{"no survey claim", claims(emailClaims{Email: encrypted, Claims: future}), surveyID, testNow, ""},
+		{"signed with the secret followed by the survey id", sign2(t, testNextAuthSecret+surveyID.String(), emailClaims{Email: encrypted, Claims: future}), surveyID, testNow, ""},
+		{"another flow's purpose", claims(emailClaims{Email: encrypted, SurveyID: &id, Purpose: &inviteish, Claims: future}), surveyID, testNow, ""},
+		{"no email", claims(emailClaims{SurveyID: &id, Purpose: &purpose, Claims: future}), surveyID, testNow, ""},
+		{"plain-text address", claims(emailClaims{Email: "plain@example.com", SurveyID: &id, Claims: future}), surveyID, testNow, ""},
+		{"encrypted address of another token", claims(emailClaims{Email: encrypted, SurveyID: &id, Claims: future}), surveyID, testNow, "other@example.com"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := VerifyEmailToken(cfg, tc.token, tc.survey, tc.linkSurveyID, tc.now); got != tc.want {
+			if got := VerifyEmailToken(cfg, tc.token, tc.survey, tc.now); got != tc.want {
 				t.Fatalf("VerifyEmailToken = %q, want %q", got, tc.want)
 			}
 		})
 	}
 }
 
-// Without NEXTAUTH_SECRET the token is signed with the derived secret, and forma2's secret-plus-id fallback does not exist.
+// Without NEXTAUTH_SECRET the token is signed with the derived secret.
 func TestEmailTokenWithoutNextAuthSecret(t *testing.T) {
 	cfg := tokenConfig()
 	cfg.NextAuthSecret = ""
@@ -167,35 +164,32 @@ func TestEmailTokenWithoutNextAuthSecret(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := VerifyEmailToken(cfg, token, surveyID, surveyID.String(), testNow); got != "user1@example.com" {
+	if got := VerifyEmailToken(cfg, token, surveyID, testNow); got != "user1@example.com" {
 		t.Fatalf("VerifyEmailToken = %q", got)
-	}
-	if got := VerifyEmailToken(cfg, forma2LegacyEmailToken, legacyid.ID(forma2Survey), forma2Survey, testNow); got != "" {
-		t.Fatalf("a legacy token verified without NEXTAUTH_SECRET: %q", got)
 	}
 }
 
-// forma2's contact-survey-link.test.ts (verifyContactSurveyToken).
+// verifyContactSurveyToken: a personal link token made by jsonwebtoken verifies, and returns its ids as they were issued.
 func TestContactToken(t *testing.T) {
 	cfg := tokenConfig()
-	contactID, surveyID, err := verifyContactToken(cfg, forma2ContactToken, testNow)
-	if err != nil || contactID != forma2Contact || surveyID != forma2Survey {
+	contactID, surveyID, err := verifyContactToken(cfg, nodeContactToken, testNow)
+	if err != nil || contactID != nodeContact || surveyID != nodeSurvey {
 		t.Fatalf("verifyContactToken = %q, %q, %v", contactID, surveyID, err)
 	}
-	if _, _, err := verifyContactToken(cfg, forma2ExpiredContactToken, testNow); !errors.Is(err, errContactTokenExpired) {
+	if _, _, err := verifyContactToken(cfg, nodeExpiredContactToken, testNow); !errors.Is(err, errContactTokenExpired) {
 		t.Fatalf("expired token: %v", err)
 	}
-	plainIDs, _ := sign(string(cfg.EncryptionKeyText), contactClaims{ContactID: forma2Contact, SurveyID: forma2Survey})
-	encContact, _ := secret.EncryptForma2(forma2Contact, cfg.EncryptionKey)
+	plainIDs, _ := sign(string(cfg.EncryptionKeyText), contactClaims{ContactID: nodeContact, SurveyID: nodeSurvey})
+	encContact, _ := secret.EncryptLinkValue(nodeContact, cfg.EncryptionKey)
 	missingSurvey, _ := sign(string(cfg.EncryptionKeyText), contactClaims{ContactID: encContact})
 	otherKey := cfg
 	otherKey.EncryptionKeyText = config.Secret(strings.Repeat("08", 32))
 	for name, token := range map[string]string{
-		"tampered":              tamper(forma2ContactToken),
+		"tampered":              tamper(nodeContactToken),
 		"garbage":               "abc",
 		"ids not encrypted":     plainIDs,
 		"survey id missing":     missingSurvey,
-		"signed by another key": forma2ContactToken,
+		"signed by another key": nodeContactToken,
 	} {
 		t.Run(name, func(t *testing.T) {
 			c := cfg

@@ -1705,8 +1705,6 @@
       "app_connection_description": "在您的網頁或行動應用程式上設定 Forma。",
       "cache_update_delay_description": "當您更新問卷、聯絡人、動作或其他資料時，這些變更最多可能需要 1 分鐘才會反映在執行 Forma SDK 的本地應用程式中。",
       "cache_update_delay_title": "因快取機制，變更約 1 分鐘後才會反映",
-      "environment_id_legacy": "環境 ID（舊版）",
-      "environment_id_legacy_alert": "你現有的 SDK 設定可能仍在使用舊版環境 ID。",
       "forma_sdk_connected": "Forma SDK 已連線",
       "forma_sdk_not_connected": "Forma SDK 尚未連線。",
       "forma_sdk_not_connected_description": "將 Forma SDK 加入您的網頁或行動應用程式，以連接 Forma",

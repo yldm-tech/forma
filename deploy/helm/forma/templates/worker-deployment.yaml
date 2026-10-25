@@ -1,6 +1,6 @@
 {{- if .Values.worker.enabled }}
 ---
-# The background job worker, `forma worker`: the response pipeline, webhooks, emails, integrations, workflows, the SpiceDB projection and the periodic tasks. forma2 ran these inside the web pods; the Go server runs them in a process of its own, with the server's image, configuration and Secrets.
+# The background job worker, `forma worker`: the response pipeline, webhooks, emails, integrations, workflows, the SpiceDB projection and the periodic tasks. They run in a process of their own, with the server's image, configuration and Secrets.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -14,7 +14,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
 )
 
@@ -405,7 +404,7 @@ func TestNotionCreatesThePage(t *testing.T) {
 	}
 }
 
-// forma2's handleIntegrations: every integration is tried, one failing does not stop the others or the pipeline, and its failure is logged with forma2's label; a link for another survey writes nothing. Links made in forma2 name their survey by its old id.
+// forma2's handleIntegrations: every integration is tried, one failing does not stop the others or the pipeline, and its failure is logged with forma2's label; a link for another survey writes nothing.
 func TestFailuresAreLoggedAndIsolated(t *testing.T) {
 	e := newEnv(t)
 	_, ws := e.organization(e.user())
@@ -417,8 +416,6 @@ func TestFailuresAreLoggedAndIsolated(t *testing.T) {
 	e.connect(ws, TypeSlack, map[string]any{"access_token": "xoxb-1"}, "", []SlackLink{{LinkBase: base(sv), Elements: elements("q1"), ChannelID: "C1"}})
 	other := base(sv)
 	other.SurveyID = uuid.NewString()
-	legacy := base(sv)
-	legacy.SurveyID = "clsurvey0000000000000001"
 	e.connect(ws, TypeAirtable, freshAirtableKey(e.now), "a@example.com", []AirtableLink{
 		{LinkBase: other, Elements: elements("q2"), BaseID: "base1", TableID: "other"},
 		{LinkBase: base(sv), Elements: elements("q2"), BaseID: "base1", TableID: "table1"},
@@ -438,13 +435,14 @@ func TestFailuresAreLoggedAndIsolated(t *testing.T) {
 		t.Error("airtable did not write exactly the matching link")
 	}
 
-	// A link made in forma2 names the survey by its old id, which resolves to the migrated survey's id.
-	migrated := e.insert(`INSERT INTO surveys (id, workspace_id, name, status, blocks) VALUES (?, ?, 'Old', 'inProgress', ?::jsonb) RETURNING id`, legacyid.ID(legacy.SurveyID), ws, surveyBlocks)
-	answers, err := responsemail.Decode(&e.respond(ws, migrated, `null`).Response)
+	// A link names its survey by the survey's id; a cuid2 names none.
+	answers, err := responsemail.Decode(&e.respond(ws, sv, `null`).Response)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !forSurvey(legacy, &submission{answers: answers}) {
-		t.Error("a forma2 survey id did not match its migrated survey")
+	cuid := base(sv)
+	cuid.SurveyID = "clsurvey0000000000000001"
+	if !forSurvey(base(sv), &submission{answers: answers}) || forSurvey(cuid, &submission{answers: answers}) {
+		t.Error("forSurvey does not match exactly the response's survey")
 	}
 }

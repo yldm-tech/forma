@@ -1,6 +1,6 @@
 // Package seed writes the contributor and CI seed data, forma2's packages/database/src/seed.ts: a demo organization with an owner, a manager and a member who can sign in, a workspace with forma2's four demo surveys (one of them carrying every element type) and their responses, demo workflows with run history, and on request an API key.
 //
-// Every seeded row has a fixed id, the uuidv5 legacyid derives from forma2's seed id (SEED_IDS), so a second seed rewrites the same rows instead of adding more, forma2's ids still resolve in URLs, and Clear can remove exactly what a seed wrote. Rows are written with SQL in one transaction, so the authorization triggers enqueue the SpiceDB projection of every organization, membership, workspace and API key exactly as the services' writes do; the worker (or `forma authz outbox drain`) delivers it. The services themselves are not used: they authorize an actor through SpiceDB, which knows nothing about data that does not exist yet.
+// Every seeded row has a fixed id, a uuidv5 of its seed name (seedID), so a second seed rewrites the same rows instead of adding more and Clear can remove exactly what a seed wrote. Rows are written with SQL in one transaction, so the authorization triggers enqueue the SpiceDB projection of every organization, membership, workspace and API key exactly as the services' writes do; the worker (or `forma authz outbox drain`) delivers it. The services themselves are not used: they authorize an actor through SpiceDB, which knows nothing about data that does not exist yet.
 package seed
 
 import (
@@ -19,21 +19,28 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/apikey"
 	"github.com/yldm-tech/forma/apps/server/internal/jsonschema"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 	"github.com/yldm-tech/forma/apps/server/internal/workflow"
 )
 
-// Seeded ids, forma2's SEED_IDS through legacyid.
+// seedNamespace is the uuidv5 namespace of the seeded ids, uuidv5(URL namespace, "https://forma.ylam.ai/ns/legacy-id"). Changing it gives every seeded row a new id, so a database seeded before would get a second copy of the demo data that Clear no longer finds.
+var seedNamespace = uuid.MustParse("027acbf8-3f2c-52c4-9593-7683c120c88b")
+
+// seedID is the fixed id of the seeded row named name.
+func seedID(name string) uuid.UUID {
+	return uuid.NewSHA1(seedNamespace, []byte(name))
+}
+
+// Seeded ids.
 var (
-	OrganizationID = legacyid.ID("clseedorg0000000000000")
-	WorkspaceID    = legacyid.ID("clseedworkspace000000000")
-	APIKeyID       = legacyid.ID("clseedapikey000000000")
+	OrganizationID = seedID("clseedorg0000000000000")
+	WorkspaceID    = seedID("clseedworkspace000000000")
+	APIKeyID       = seedID("clseedapikey000000000")
 	// KitchenSinkSurveyID is the survey with every element type, the trigger survey of the demo workflows.
-	KitchenSinkSurveyID = legacyid.ID("clseedsurveykitchen00")
+	KitchenSinkSurveyID = seedID("clseedsurveykitchen00")
 	// FollowUpWorkflowID is the enabled demo workflow, the one with run history.
-	FollowUpWorkflowID = legacyid.ID("clseedwfresponsefup001")
+	FollowUpWorkflowID = seedID("clseedwfresponsefup001")
 )
 
 // Password is the password of every seeded user, forma2's SEED_CREDENTIALS. The seed is development data; never run it against a database real people sign in to.
@@ -49,9 +56,9 @@ type User struct {
 
 // Users are forma2's three seeded users, one per organization role it seeded.
 var Users = []User{
-	{ID: legacyid.ID("clseedadmin000000000000"), Name: "Admin User", Email: "admin@forma.yldm.ai", Role: "owner"},
-	{ID: legacyid.ID("clseedmanager0000000000"), Name: "Manager User", Email: "manager@forma.yldm.ai", Role: "manager"},
-	{ID: legacyid.ID("clseedmember00000000000"), Name: "Member User", Email: "member@forma.yldm.ai", Role: "member"},
+	{ID: seedID("clseedadmin000000000000"), Name: "Admin User", Email: "admin@forma.yldm.ai", Role: "owner"},
+	{ID: seedID("clseedmanager0000000000"), Name: "Manager User", Email: "manager@forma.yldm.ai", Role: "manager"},
+	{ID: seedID("clseedmember00000000000"), Name: "Member User", Email: "member@forma.yldm.ai", Role: "member"},
 }
 
 // Options selects what a seed writes besides the base data.
@@ -190,7 +197,7 @@ func (s *seeder) base(passwordHash string) error {
 		}
 	}
 	for _, sv := range seedSurveys {
-		id := legacyid.ID(sv.id)
+		id := seedID(sv.id)
 		if err := s.survey(id, sv.id, sv.name, sv.status, sv.elements); err != nil {
 			return err
 		}
@@ -234,7 +241,7 @@ func (s *seeder) survey(id uuid.UUID, key, name, status string, elements []map[s
 // responses writes forma2's generated responses, each with the display it answered, plus 30% more displays nobody answered. A re-seed leaves rows that exist alone.
 func (s *seeder) responses(surveyID uuid.UUID, key string, elements []map[string]any, count int) error {
 	for i := range count {
-		displayID := legacyid.ID(fmt.Sprintf("%sdisplay%03d", key, i))
+		displayID := seedID(fmt.Sprintf("%sdisplay%03d", key, i))
 		// Spread over the last weeks, newest first, so the summary's timeline has a shape.
 		at := s.now.Add(-time.Duration(i) * 7 * time.Hour)
 		if err := s.exec("display", `INSERT INTO displays (id, survey_id, created_at, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING`, displayID, surveyID, at, at); err != nil {
@@ -249,7 +256,7 @@ func (s *seeder) responses(surveyID uuid.UUID, key string, elements []map[string
 	for i := range count * 3 / 10 {
 		at := s.now.Add(-time.Duration(i) * 11 * time.Hour)
 		if err := s.exec("display", `INSERT INTO displays (id, survey_id, created_at, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING`,
-			legacyid.ID(fmt.Sprintf("%sextradisplay%03d", key, i)), surveyID, at, at); err != nil {
+			seedID(fmt.Sprintf("%sextradisplay%03d", key, i)), surveyID, at, at); err != nil {
 			return err
 		}
 	}
@@ -258,7 +265,7 @@ func (s *seeder) responses(surveyID uuid.UUID, key string, elements []map[string
 
 // ResponseID is the id of the i-th seeded response of the survey with forma2 seed id key.
 func ResponseID(key string, i int) uuid.UUID {
-	return legacyid.ID(fmt.Sprintf("%sresponse%03d", key, i))
+	return seedID(fmt.Sprintf("%sresponse%03d", key, i))
 }
 
 // apiKey is forma2's seedApiKey: a key with manage access to the seeded workspace and no organization-level grants. The row is keyed on its fixed id, so seeding with a different secret replaces the hashes rather than adding a key.
@@ -365,7 +372,7 @@ func (s *seeder) workflow(id uuid.UUID, name, description, status string, defini
 func (s *seeder) workflows() error {
 	cursor := 0
 	for _, w := range demoWorkflows {
-		id := legacyid.ID(w.id)
+		id := seedID(w.id)
 		if err := s.workflow(id, w.name, w.description, w.status, workflowDefinition(w.key, KitchenSinkSurveyID, w.to, w.subject, w.body)); err != nil {
 			return err
 		}
@@ -381,7 +388,7 @@ func (s *seeder) workflows() error {
 }
 
 func (s *seeder) run(workflowID uuid.UUID, w workflowSpec, r runSpec, responseID uuid.UUID) error {
-	runID := legacyid.ID("clseedwfrun" + w.key + r.suffix)
+	runID := seedID("clseedwfrun" + w.key + r.suffix)
 	created := s.now.Add(-time.Duration(r.minutesAgo) * time.Minute)
 	var started, finished, lastErrorAt *time.Time
 	if r.started {
@@ -444,5 +451,5 @@ func (s *seeder) run(workflowID uuid.UUID, w workflowSpec, r runSpec, responseID
 	// Sequence 1, as every row the runner writes.
 	return s.exec("workflow run log", `INSERT INTO workflow_run_logs (id, run_id, sequence, step_id, step_type, status, input, output, error, started_at, finished_at)
 		VALUES (?, ?, 1, ?, 'send_email', ?, ?::jsonb, ?::jsonb, ?, ?, ?)`,
-		legacyid.ID("clseedwfrunlog"+w.key+r.suffix), runID, w.key+"action", r.step, jsonOf(input), jsonOf(output), runErr, started, finished)
+		seedID("clseedwfrunlog"+w.key+r.suffix), runID, w.key+"action", r.step, jsonOf(input), jsonOf(output), runErr, started, finished)
 }

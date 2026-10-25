@@ -27,13 +27,12 @@ func (h *SSOHandler) Register(r gin.IRouter) {
 	g.POST("/recovery/complete", h.completeRecovery)
 }
 
-// RegisterCallbacks mounts the redirect URIs registered at the identity providers, which must stay byte for byte what forma2 served: /api/auth/callback/{provider} for every provider (Better Auth's route), and /api/auth/oauth2/callback/{azuread|openid|saml}, the URI Azure AD and the generic provider have been registered with since forma v5.2 and SAML's bridge returned to. SAML's assertion consumer service is forma2's /api/auth/saml/callback, a cross-site form POST from the identity provider, so it sits outside /api/app and its CSRF check; the service provider's metadata is beside it. Better Auth's emailed link endpoints are mounted here too (registerLegacyLinks): they are browser navigations under /api/auth that end in a redirect as well.
+// RegisterCallbacks mounts the redirect URIs registered at the identity providers, which must stay byte for byte what the providers are registered with: /api/auth/callback/{provider} for every provider (Better Auth's route), and /api/auth/oauth2/callback/{azuread|openid|saml}, the URI Azure AD and the generic provider have been registered with since forma v5.2 and SAML's bridge returned to. SAML's assertion consumer service is /api/auth/saml/callback, a cross-site form POST from the identity provider, so it sits outside /api/app and its CSRF check; the service provider's metadata is beside it.
 func (h *SSOHandler) RegisterCallbacks(r gin.IRouter) {
 	r.GET("/api/auth/callback/:provider", h.callback)
 	r.GET("/api/auth/oauth2/callback/:provider", h.legacyCallback)
 	r.POST(samlACSPath, h.samlACS)
 	r.GET(samlMetadataPath, h.samlMetadata)
-	registerLegacyLinks(r)
 }
 
 type ssoSignInRequest struct {
@@ -73,7 +72,7 @@ func (h *SSOHandler) callback(c *gin.Context) {
 	h.finish(c, c.Param("provider"))
 }
 
-// legacyCallback serves the pinned paths of the providers forma2 pinned there; others were never served at it.
+// legacyCallback serves the pinned paths of the providers registered there (Azure AD, the generic OpenID provider and SAML's bridge); no other provider is served at it.
 func (h *SSOHandler) legacyCallback(c *gin.Context) {
 	provider := c.Param("provider")
 	if provider != providerAzureAD && provider != providerOpenID && provider != providerSAML {

@@ -14,8 +14,8 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 )
 
@@ -39,7 +39,7 @@ func (h *V1Handler) Register(r gin.IRouter) {
 	g.DELETE("/:webhookId", h.v1.Audited(audit.ActionDeleted, audit.TargetWebhook, h.delete))
 }
 
-// withEnvironmentIDs is forma2's addLegacyEnvironmentIdToList: each webhook with environmentId, its workspace's legacy environment id or the workspace's own id.
+// withEnvironmentIDs is each webhook with the environmentId the v1 payload carries, its workspace's id.
 func (h *V1Handler) withEnvironmentIDs(ctx context.Context, webhooks []*Webhook, withSecret bool) ([]View, error) {
 	ids := []uuid.UUID{}
 	for _, w := range webhooks {
@@ -66,11 +66,11 @@ func (h *V1Handler) withEnvironmentIDs(ctx context.Context, webhooks []*Webhook,
 	return out, nil
 }
 
-// bestEffort is forma2's addLegacyEnvironmentIdBestEffort, for an answer to a write that has already committed: a failed lookup leaves environmentId out rather than turning the write into an error the caller would retry.
+// bestEffort adds environmentId to the answer to a write that has already committed: a failed lookup leaves environmentId out rather than turning the write into an error the caller would retry.
 func (h *V1Handler) bestEffort(c *gin.Context, w *Webhook, withSecret bool) View {
 	views, err := h.withEnvironmentIDs(c.Request.Context(), []*Webhook{w}, withSecret)
 	if err != nil {
-		h.log.ErrorContext(c.Request.Context(), "Failed to resolve legacy environmentId for a committed write", "err", err, "workspace_id", w.WorkspaceID)
+		h.log.ErrorContext(c.Request.Context(), "Failed to resolve environmentId for a committed write", "err", err, "workspace_id", w.WorkspaceID)
 		if withSecret {
 			return w.viewWithSecret()
 		}
@@ -102,10 +102,10 @@ func (h *V1Handler) list(c *gin.Context) {
 	v1api.Success(c, views)
 }
 
-// byPathID loads the webhook the path names, by its id or the forma2 id it was migrated from. It answers 404 itself and returns nil when there is none.
+// byPathID loads the webhook the path names, by its id. It answers 404 itself and returns nil when there is none.
 func (h *V1Handler) byPathID(c *gin.Context) *Webhook {
 	raw := c.Param("webhookId")
-	id, _ := legacyid.Resolve(raw)
+	id, _ := rowid.Parse(raw)
 	w, err := h.svc.repo.ByID(c.Request.Context(), id)
 	if err != nil {
 		h.v1.Unexpected(c, err, mgmtv1.MessageUnexpected)
@@ -159,7 +159,7 @@ func (h *V1Handler) delete(c *gin.Context) {
 	v1api.Success(c, h.bestEffort(c, w, false))
 }
 
-// create is forma2's POST: the body read with its 2 MiB limit, the workspace resolved from workspaceId or the legacy environmentId and authorized for workspace.write, the input validated, the URL's SSRF check, then the webhook with a new secret. The answer is the only one that carries the secret.
+// create is forma2's POST: the body read with its 2 MiB limit, the workspace resolved from workspaceId or environmentId and authorized for workspace.write, the input validated, the URL's SSRF check, then the webhook with a new secret. The answer is the only one that carries the secret.
 func (h *V1Handler) create(c *gin.Context) {
 	ctx := c.Request.Context()
 	body, ok := mgmtv1.ReadBody(c)

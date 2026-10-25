@@ -283,10 +283,10 @@ func (e *env) decodeLink(link string) personalLink {
 	if claims.Expiry != nil {
 		out.expiry = claims.Expiry.Time()
 	}
-	if out.contactID, err = secret.DecryptForma2(claims.ContactID, e.cfg.EncryptionKey, false); err != nil {
+	if out.contactID, err = secret.DecryptLinkValue(claims.ContactID, e.cfg.EncryptionKey); err != nil {
 		e.t.Fatal(err)
 	}
-	if out.surveyID, err = secret.DecryptForma2(claims.SurveyID, e.cfg.EncryptionKey, false); err != nil {
+	if out.surveyID, err = secret.DecryptLinkValue(claims.SurveyID, e.cfg.EncryptionKey); err != nil {
 		e.t.Fatal(err)
 	}
 	if out.query, err = url.ParseQuery(rawQuery); err != nil {

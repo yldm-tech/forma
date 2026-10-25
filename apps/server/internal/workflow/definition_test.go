@@ -8,8 +8,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 const (
@@ -281,13 +279,11 @@ func TestDefinitionRules(t *testing.T) {
 		_, issues = ParseDefinition(raw(t, d))
 		failsWith(t, issues, "Invalid cuid2")
 	})
-	t.Run("reads a forma2 trigger survey id as the id migrated from it", func(t *testing.T) {
+	t.Run("refuses a cuid2 trigger survey id", func(t *testing.T) {
 		d := testDefinition()
 		d["trigger"].(map[string]any)["config"].(map[string]any)["surveyId"] = "cm9zr4mps000008l8btfy1vtz"
-		parsed, issues := ParseExecutable(raw(t, d))
-		if len(issues) > 0 || parsed.Trigger.Config.SurveyID != legacyid.ID("cm9zr4mps000008l8btfy1vtz").String() {
-			t.Fatalf("%+v %+v", issues, parsed)
-		}
+		_, issues := ParseExecutable(raw(t, d))
+		failsWith(t, issues, "Invalid UUID")
 	})
 	t.Run("needs the trigger's survey to be a UUID and the sender an address", func(t *testing.T) {
 		d := testDefinition()

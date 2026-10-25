@@ -15,7 +15,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
@@ -28,12 +27,12 @@ func TestSurveyPageNotFound(t *testing.T) {
 	app := e.survey(ws, "type", "app")
 	archived := e.survey(ws, "status", "paused", "archived_at", time.Now())
 	for name, target := range map[string]string{
-		"unknown uuid":      "/s/" + uuid.NewString(),
-		"unknown forma2 id": "/s/clunknownsurveyaaaaaaaaa1",
-		"garbage":           "/s/%3Cscript%3E",
-		"draft":             "/s/" + draft.String(),
-		"app survey":        "/s/" + app.String(),
-		"archived":          "/s/" + archived.String(),
+		"unknown uuid": "/s/" + uuid.NewString(),
+		"a cuid2 id":   "/s/clunknownsurveyaaaaaaaaa1",
+		"garbage":      "/s/%3Cscript%3E",
+		"draft":        "/s/" + draft.String(),
+		"app survey":   "/s/" + app.String(),
+		"archived":     "/s/" + archived.String(),
 	} {
 		t.Run(name, func(t *testing.T) {
 			p := e.page(target)
@@ -274,17 +273,6 @@ func TestSurveyPageFormaCloudTitle(t *testing.T) {
 	}
 }
 
-// A migrated survey keeps its forma2 links: the forma2 id resolves to it.
-func TestSurveyPageByForma2ID(t *testing.T) {
-	e := newEnv(t)
-	ws := e.workspace()
-	e.surveyWithID(legacyid.ID(forma2Survey), ws)
-	p := e.page("/s/" + forma2Survey)
-	if p.Status != http.StatusOK || p.view() != viewSurvey || p.sub("survey", "survey")["id"] != legacyid.ID(forma2Survey).String() {
-		t.Fatalf("status %d view %q", p.Status, p.view())
-	}
-}
-
 func TestSurveyPageLanguage(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
@@ -327,6 +315,8 @@ func TestSurveyPageSingleUse(t *testing.T) {
 		"/s/" + plain.String() + "?suId=su-1&suToken=" + strings.Repeat("0", 64),
 		"/s/" + plain.String() + "?suId=%20&suToken=" + token,
 		"/s/" + encrypted.String() + "?suId=not-sealed",
+		// A cuid sealed as an "iv:ciphertext:tag" link value, a form this server never issues single-use ids in.
+		"/s/" + encrypted.String() + "?suId=" + url.QueryEscape(linkValueSealedSingleUseID(t)),
 	}
 	for _, target := range invalid {
 		p := e.page(target)
@@ -349,16 +339,10 @@ func TestSurveyPageSingleUse(t *testing.T) {
 	if p.view() != viewCompleted || p.sub("completed", "singleUse")["heading"] != "Already done" || p.sub("completed", "workspace")["linkSurveyBranding"] != false {
 		t.Fatalf("finished response: view %q completed %v", p.view(), p.sub("completed"))
 	}
-
-	parts := strings.Split(forma2EncryptedSingleUseID(t), ":")
-	p = e.page("/s/" + encrypted.String() + "?suId=" + url.QueryEscape(strings.Join(parts, ":")))
-	if p.view() != viewSurvey || p.sub("survey")["singleUseId"] != "clsingleuseaaaaaaaaaaaaa1" {
-		t.Fatalf("forma2 encrypted id: view %q survey %v", p.view(), p.sub("survey"))
-	}
 }
 
-func forma2EncryptedSingleUseID(t *testing.T) string {
-	sealed, err := secret.EncryptForma2("clsingleuseaaaaaaaaaaaaa1", bytes.Repeat([]byte{7}, 32))
+func linkValueSealedSingleUseID(t *testing.T) string {
+	sealed, err := secret.EncryptLinkValue("clsingleuseaaaaaaaaaaaaa1", bytes.Repeat([]byte{7}, 32))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -436,11 +420,11 @@ func TestSurveyPageUserIDFromURL(t *testing.T) {
 
 func contactToken(t *testing.T, cfg config.Config, contactID, surveyID string, expiry *time.Time) string {
 	t.Helper()
-	c, err := secret.EncryptForma2(contactID, cfg.EncryptionKey)
+	c, err := secret.EncryptLinkValue(contactID, cfg.EncryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := secret.EncryptForma2(surveyID, cfg.EncryptionKey)
+	s, err := secret.EncryptLinkValue(surveyID, cfg.EncryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -504,11 +488,9 @@ func TestContactPage(t *testing.T) {
 	if p = e.page("/c/" + contactToken(t, e.cfg, contact.String(), uuid.NewString(), nil)); p.Status != http.StatusNotFound {
 		t.Fatalf("missing survey: %d", p.Status)
 	}
-	// A personal link forma2 issued names the contact and survey by their forma2 ids.
-	e.surveyWithID(legacyid.ID(forma2Survey), ws)
-	e.exec(`INSERT INTO contacts (id, workspace_id) VALUES (?, ?)`, legacyid.ID(forma2Contact), ws)
-	if p = e.page("/c/" + forma2ContactToken); p.view() != viewSurvey || p.sub("survey")["contactId"] != legacyid.ID(forma2Contact).String() {
-		t.Fatalf("forma2 link: view %q survey %v", p.view(), p.sub("survey"))
+	// A personal link that names the contact and survey by cuid2 ids names neither.
+	if p = e.page("/c/" + nodeContactToken); p.Status != http.StatusNotFound {
+		t.Fatalf("cuid2 link: %d view %q", p.Status, p.view())
 	}
 }
 
@@ -659,7 +641,7 @@ func TestSendVerificationEmail(t *testing.T) {
 	if link.Path != "/s/"+id.String() || q.Get("suId") != "su-1" || q.Get("suToken") != "tok" || q.Get("lang") != "de-DE" {
 		t.Fatalf("link %s", link)
 	}
-	if got := VerifyEmailToken(e.cfg, q.Get("verify"), id, id.String(), e.now); got != "user1@example.com" {
+	if got := VerifyEmailToken(e.cfg, q.Get("verify"), id, e.now); got != "user1@example.com" {
 		t.Fatalf("the link's token proves %q", got)
 	}
 	if p := e.page(link.RequestURI()); p.view() != viewSurvey || p.sub("survey")["verifiedEmail"] != "user1@example.com" {

@@ -34,7 +34,7 @@ const (
 	accountDeletionTTL   = time.Hour
 )
 
-// Pages of the SPA that emailed links open. The reset and email change paths are forma2's, so links in mail sent just before the cutover keep their shape.
+// Pages of the SPA that emailed links open. Links already mailed carry these paths, so they do not change.
 const (
 	verifyEmailPath           = "/auth/verify-email"
 	verificationRequestedPath = "/auth/verification-requested"

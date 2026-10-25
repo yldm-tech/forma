@@ -19,8 +19,8 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
@@ -178,7 +178,6 @@ func (q query) userIDParam() string {
 type renderInput struct {
 	survey            *survey.Survey
 	fields            []embeddeddata.LinkedField
-	linkSurveyID      string
 	q                 query
 	singleUseID       string
 	singleUseResponse *existingResponse
@@ -195,7 +194,7 @@ type renderInput struct {
 func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptLanguage string) (page, error) {
 	locale := mailer.MatchLocale(acceptLanguage)
 	notFound := page{Status: http.StatusNotFound, Head: notFoundHead(linkViewport), State: pageState{View: viewNotFound, Locale: locale}}
-	id, _ := legacyid.Resolve(rawID)
+	id, _ := rowid.Parse(rawID)
 	sv, fields, err := s.repo.surveyByID(ctx, id)
 	if err != nil {
 		// forma2 answered any failure to load the survey with notFound().
@@ -215,7 +214,7 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 
 	singleUseID := ""
 	if sv.SingleUseSettings().Enabled {
-		if singleUseID = s.surveys.CheckSingleUseLink(sv, rawID, q.get("suId"), q.get("suToken")); singleUseID == "" {
+		if singleUseID = s.surveys.CheckSingleUseLink(sv, q.get("suId"), q.get("suToken")); singleUseID == "" {
 			return page{Status: http.StatusOK, Head: h, State: pageState{View: viewInactive, Locale: locale, Inactive: &inactiveState{
 				Status: inactiveLinkInvalid, SurveyClosedMessage: json.RawMessage("null"), Workspace: &branding{LinkSurveyBranding: wc.Workspace.LinkSurveyBranding},
 			}}}, nil
@@ -232,7 +231,7 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 		return page{}, err
 	}
 	p, err := s.render(renderInput{
-		survey: sv, fields: fields, linkSurveyID: rawID, q: q, singleUseID: singleUseID, singleUseResponse: singleUseResponse,
+		survey: sv, fields: fields, q: q, singleUseID: singleUseID, singleUseResponse: singleUseResponse,
 		allowURLUserID: true, workspace: wc, locale: locale, acceptLanguage: acceptLanguage, responseCount: count,
 	})
 	if p.Status == http.StatusNotFound {
@@ -290,7 +289,7 @@ func (s *Service) render(in renderInput) (page, error) {
 	verified, fishy := "", false
 	if sv.IsVerifyEmailEnabled {
 		if token := q.get("verify"); token != "" {
-			if verified = VerifyEmailToken(s.cfg, token, sv.ID, in.linkSurveyID, s.now()); verified == "" {
+			if verified = VerifyEmailToken(s.cfg, token, sv.ID, s.now()); verified == "" {
 				fishy = true
 			}
 		}
@@ -427,8 +426,8 @@ func (s *Service) contactPage(ctx context.Context, token string, q query, accept
 		}
 		return page{Status: http.StatusOK, Head: genericHead(), State: pageState{View: viewInactive, Locale: locale, Inactive: inactive}}, nil
 	}
-	contactID, _ := legacyid.Resolve(contactRaw)
-	surveyID, _ := legacyid.Resolve(surveyRaw)
+	contactID, _ := rowid.Parse(contactRaw)
+	surveyID, _ := rowid.Parse(surveyRaw)
 	sv, fields, err := s.repo.surveyByID(ctx, surveyID)
 	if err != nil {
 		return page{}, err
@@ -460,7 +459,7 @@ func (s *Service) contactPage(ctx context.Context, token string, q query, accept
 
 	singleUseID := ""
 	if sv.SingleUseSettings().Enabled {
-		if singleUseID = s.surveys.CheckSingleUseLink(sv, surveyRaw, q.get("suId"), q.get("suToken")); singleUseID == "" {
+		if singleUseID = s.surveys.CheckSingleUseLink(sv, q.get("suId"), q.get("suToken")); singleUseID == "" {
 			return page{Status: http.StatusOK, Head: h, State: pageState{View: viewInactive, Locale: locale, Inactive: &inactiveState{
 				Status: inactiveLinkInvalid, SurveyClosedMessage: json.RawMessage("null"), Workspace: &branding{LinkSurveyBranding: wc.Workspace.LinkSurveyBranding},
 			}}}, nil
@@ -472,7 +471,7 @@ func (s *Service) contactPage(ctx context.Context, token string, q query, accept
 	}
 	// forma2 passed the contact's existing response here, which the check above has already ruled out.
 	p, err := s.render(renderInput{
-		survey: sv, fields: fields, linkSurveyID: surveyRaw, q: q, singleUseID: singleUseID, contactID: contactID.String(),
+		survey: sv, fields: fields, q: q, singleUseID: singleUseID, contactID: contactID.String(),
 		workspace: wc, locale: locale, acceptLanguage: acceptLanguage, responseCount: count,
 	})
 	if p.Status == http.StatusNotFound {
@@ -552,7 +551,7 @@ var errInvalidPin = apperr.InvalidInput("INVALID_PIN", "INVALID_PIN")
 
 // validatePin is forma2's validateSurveyPinAction. Unlike forma2, which returned any survey to anyone for an id without a PIN, it only answers for a survey the page would put behind its PIN gate: a live, PIN-protected link survey.
 func (s *Service) validatePin(ctx context.Context, rawID, pin string) (pinResult, error) {
-	id, _ := legacyid.Resolve(rawID)
+	id, _ := rowid.Parse(rawID)
 	sv, fields, err := s.repo.surveyByID(ctx, id)
 	if err != nil {
 		return pinResult{}, err
@@ -585,7 +584,7 @@ type emailInput struct {
 
 // sendVerificationEmail is forma2's sendLinkSurveyEmailAction: mails the respondent a link to the survey carrying a token that proves their address. The survey's name comes from its row and the language is re-resolved against its own languages, never taken from the unauthenticated caller.
 func (s *Service) sendVerificationEmail(ctx context.Context, rawID string, in emailInput) error {
-	id, _ := legacyid.Resolve(rawID)
+	id, _ := rowid.Parse(rawID)
 	sv, _, err := s.repo.surveyByID(ctx, id)
 	if err != nil {
 		return err

@@ -18,13 +18,12 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 	"github.com/yldm-tech/forma/apps/server/internal/workspace"
 )
 
-// route is forma2's /storage/[workspaceId]/[accessType]/[...filePath]. The id is a workspace id, a forma2 workspace id or a legacy environment id: whatever the stored URL was built with.
+// route is /storage/{workspaceId}/{accessType}/{filePath...}, the URL stored files are embedded with.
 const route = "/storage/:workspaceId/:accessType/*filePath"
 
 // allowedMethods is the Allow header Next.js answered OPTIONS with for a route that exports GET and DELETE.
@@ -178,8 +177,7 @@ func (h *Handler) delete(c *gin.Context) {
 	req, details := parseFileRequest(c)
 	if details != nil {
 		org := ""
-		// forma2 looked the organization up by workspace id only, so a legacy environment id is not attributed.
-		if ws, err := h.workspaces.ResolveClientID(ctx, req.rawID); err == nil && ws != nil && legacyid.Matches(req.rawID, ws.ID) {
+		if ws, err := h.workspaces.ResolveClientID(ctx, req.rawID); err == nil && ws != nil {
 			org = ws.OrganizationID.String()
 		}
 		h.auditDeletion(c, deletion{workspaceID: req.rawID, organizationID: org, actorID: audit.Unknown, failureReason: "Parameter validation failed"})

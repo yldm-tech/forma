@@ -12,7 +12,7 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// recording is testdata/forma2.json: forma2's own renderings of the preview, recorded by running its getPreviewEmailTemplateHtml and extractEmailBodyFragment (at 3db326f, with @react-email/components 1.0.12, @react-email/render 2.1.0, Tailwind 4.3.1 and en-US copy) on the surveys of its embed-survey-preview-email fixture, one per element type, plus variants of scale, color coding, required, rich text with recall, and stylings from none to every token overridden. tokens is getPreviewEmailStyleTokens of each case's styling.
+// recording is testdata/golden.json: renderings of the preview, first made with React Email (@react-email/components 1.0.12, @react-email/render 2.1.0, Tailwind 4.3.1 and en-US copy), the markup the generator reproduces, on surveys with one of each element type, plus variants of scale, color coding, required, rich text with recall, and stylings from none to every token overridden. tokens are the resolved style tokens of each case's styling. A change to the generator's output is a change to the embed code customers paste into their emails; edit the case together with the code.
 type recording struct {
 	WebAppURL string `json:"webAppUrl"`
 	PublicURL string `json:"publicUrl"`
@@ -29,7 +29,7 @@ type recording struct {
 
 func loadRecording(t *testing.T) recording {
 	t.Helper()
-	b, err := os.ReadFile("testdata/forma2.json")
+	b, err := os.ReadFile("testdata/golden.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,8 +40,8 @@ func loadRecording(t *testing.T) recording {
 	return rec
 }
 
-// TestTokensMatchForma2 compares the resolved style tokens with forma2's for every recorded styling.
-func TestTokensMatchForma2(t *testing.T) {
+// TestTokensMatchGolden compares the resolved style tokens with the golden ones for every styling.
+func TestTokensMatchGolden(t *testing.T) {
 	for _, c := range loadRecording(t).Cases {
 		var s styling
 		if err := json.Unmarshal(c.Styling, &s); err != nil {
@@ -72,15 +72,15 @@ func TestTokensMatchForma2(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			for k := range want {
 				if !reflect.DeepEqual(got[k], want[k]) {
-					t.Errorf("%s: %s = %v, forma2 %v", c.Name, k, got[k], want[k])
+					t.Errorf("%s: %s = %v, golden %v", c.Name, k, got[k], want[k])
 				}
 			}
 		}
 	}
 }
 
-// TestRendersAsForma2 renders every recorded survey and compares it with forma2's markup: the same elements in the same order, the same attributes, the same style declarations and the same text. What it does not compare is layout that carries no meaning: the whitespace React Email's pretty printer put between tags, the order of attributes, and the order of declarations within a style.
-func TestRendersAsForma2(t *testing.T) {
+// TestRendersAsGolden renders every survey and compares it with the golden markup: the same elements in the same order, the same attributes, the same style declarations and the same text. What it does not compare is layout that carries no meaning: the whitespace React Email's pretty printer put between tags, the order of attributes, and the order of declarations within a style.
+func TestRendersAsGolden(t *testing.T) {
 	rec := loadRecording(t)
 	g, err := NewGenerator(rec.WebAppURL, rec.PublicURL)
 	if err != nil {
@@ -92,9 +92,7 @@ func TestRendersAsForma2(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			// The one deliberate change: the "Powered by" badge links to forma.yldm.ai, where Forma is served now, instead of forma2's forma.ylam.ai, which no longer resolves. The recording stays as forma2 produced it.
-			recorded := strings.ReplaceAll(c.HTML, "https://forma.ylam.ai?", "https://forma.yldm.ai?")
-			want, have := canonical(t, recorded), canonical(t, got)
+			want, have := canonical(t, c.HTML), canonical(t, got)
 			if want != have {
 				wl, hl := strings.Split(want, "\n"), strings.Split(have, "\n")
 				for i := range max(len(wl), len(hl)) {
@@ -106,7 +104,7 @@ func TestRendersAsForma2(t *testing.T) {
 						h = hl[i]
 					}
 					if w != h {
-						t.Fatalf("differs from forma2 at line %d:\nforma2: %s\ngot:    %s", i+1, w, h)
+						t.Fatalf("differs from the golden markup at line %d:\ngolden: %s\ngot:    %s", i+1, w, h)
 					}
 				}
 			}

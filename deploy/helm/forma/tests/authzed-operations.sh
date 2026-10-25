@@ -86,7 +86,7 @@ grep --fixed-strings 'helm.sh/hook-weight: "10"' <<<"${default_install}" >/dev/n
 grep --fixed-strings 'helm.sh/hook-weight: "-10"' <<<"${default_install}" >/dev/null
 grep --fixed-strings 'value: fully_consistent' <<<"${default_install}" >/dev/null
 
-# The image has no shell: the initialization runs forma2's `upgrade prepare` as three `forma authz` steps, retried by the kubelet.
+# The image has no shell: the initialization runs as three `forma authz` steps, retried by the kubelet.
 initialize_job="$(helm template authzed-default "${CHART_DIR}" "${COMMON_ARGS[@]}" --show-only templates/authzed-initialize-job.yaml)"
 grep --fixed-strings 'restartPolicy: OnFailure' <<<"${initialize_job}" >/dev/null
 # Flattened, an args list reads `args: - authz - schema - apply`.

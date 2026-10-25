@@ -22,7 +22,7 @@ func fileUploadElements(elements []fileUploadElement) []fileUploadElement {
 	return storage.FileUploadElements(elements)
 }
 
-// validClientFileUploads is forma2's validateClientFileUploads for the client widget, which only ever emits the fully scoped shape: no legacy prefix is accepted.
+// validClientFileUploads is validateClientFileUploads for the client widget: every file answer was uploaded for this survey's element.
 func (h *Handler) validClientFileUploads(data map[string]any, elements []fileUploadElement, workspaceID, surveyID uuid.UUID) bool {
 	return storage.ValidAnswerFiles(data, elements, storage.UploadScope{WorkspaceID: workspaceID, SurveyID: surveyID, AppOrigins: []*url.URL{h.cfg.WebAppURL, h.cfg.PublicURL}})
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/stripe/stripe-go/v84/webhook"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 )
 
 // WebhookPath is where Stripe posts events, the endpoint registered in Stripe's dashboard for forma2.
@@ -192,13 +192,13 @@ func (h *WebhookHandler) process(ctx context.Context, event *stripe.Event) (int,
 	return http.StatusOK, "", nil
 }
 
-// organization is forma2's resolveOrganizationId: the object's organizationId metadata, its client reference, else the organization holding its customer. Ids written by forma2 are its own and resolve through legacyid.
+// organization is resolveOrganizationId: the object's organizationId metadata, its client reference, else the organization holding its customer.
 func (h *WebhookHandler) organization(ctx context.Context, obj *eventObject) (uuid.UUID, error) {
-	if id, ok := legacyid.Resolve(obj.metadata("organizationId")); ok {
+	if id, ok := rowid.Parse(obj.metadata("organizationId")); ok {
 		return id, nil
 	}
 	if obj.ClientReferenceID != nil {
-		if id, ok := legacyid.Resolve(*obj.ClientReferenceID); ok {
+		if id, ok := rowid.Parse(*obj.ClientReferenceID); ok {
 			return id, nil
 		}
 	}

@@ -211,39 +211,27 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 	}
 }
 
-// RootPathPrefixes are the first path segments, besides /app, that a request must keep to reach this server when a reverse proxy shares the host with something else (forma.yldm.ai sends every other path to the marketing website): every route the server mounts outside /app, the files of apps/web/public served at their root URL, and the admin pages that only redirect to /app now. The ingress in yldm-platform lists exactly these, plus /app.
+// RootPathPrefixes are the first path segments, besides /app, that a request must keep to reach this server when a reverse proxy shares the host with something else (forma.yldm.ai sends every other path to the marketing website): every route the server mounts outside /app and the files of apps/web/public served at their root URL. The ingress in yldm-platform lists exactly these, plus /app.
 //
 // Each entry is a whole path segment, matched as the path itself and everything under it (/s and /s/...), never as a character prefix: a prefix rule for /s or /p would also take the website's /security or /pricing. A proxy whose prefix match is character-wise, such as Traefik's Ingress pathType Prefix, must route each entry as Exact /x plus Prefix /x/ (the single files favicon.ico and logo-transparent.png need only Exact).
 var RootPathPrefixes = []string{
 	".well-known",          // OAuth and OpenID discovery documents for MCP clients
-	"account",              // legacy admin pages, redirected to /app
 	"animated-bgs",         // survey backgrounds (videos) stored by root URL
 	"api",                  // every API: /api/app, the client API, management v1/v2, v3, MCP, OAuth, SSO and integration callbacks, Stripe
-	"auth",                 // legacy admin pages, redirected to /app
-	"billing-confirmation", // legacy admin page, redirected to /app
 	"c",                    // personal link surveys
-	"email-change-without-verification-success", // legacy admin page, redirected to /app
-	"environments",         // forma2's legacy admin pages, redirected to /app
 	"favicon",              // favicons
 	"favicon.ico",          // favicon
 	"health",               // liveness and readiness probes
-	"i",                    // forma2's /i/{path} shortcut, redirected to /app
 	"image-backgrounds",    // survey backgrounds (images) stored by root URL
 	"ingest",               // first-party PostHog proxy
-	"invite",               // legacy invite links, redirected to /app
 	"js",                   // the SDK and survey runtime bundles customer sites embed
 	"logo-transparent.png", // the logo emails embed
-	"organizations",        // legacy admin pages, redirected to /app
 	"p",                    // pretty-URL surveys
-	"projects",             // forma2's legacy admin pages, redirected to /app
 	"s",                    // public link surveys
 	"sample-csv",           // the invite template download
-	"setup",                // legacy admin pages, redirected to /app
 	"smiley-icons",         // rating icons emails and surveys load
 	"star-icons",           // rating icons emails and surveys load
 	"storage",              // stored files
-	"verify-email-change",  // legacy admin page, redirected to /app
-	"workspaces",           // legacy admin pages and email links, redirected to /app
 }
 
 // The production router answers exactly RootPathPrefixes outside /app, so the list an ingress is configured with cannot fall behind a new route, a new public file or a removed one.
@@ -258,7 +246,7 @@ func TestRootPathPrefixes(t *testing.T) {
 		first, _, _ := strings.Cut(strings.TrimPrefix(route.Path, "/"), "/")
 		served[first] = true
 	}
-	for _, first := range append(slices.Clone(webui.RootPublicPaths), webui.LegacyAdminPaths...) {
+	for _, first := range webui.RootPublicPaths {
 		served[first] = true
 	}
 	if !served["app"] {
@@ -275,20 +263,15 @@ func TestRootPathPrefixes(t *testing.T) {
 		t.Fatalf("root path prefixes = %q, want %q; update RootPathPrefixes and the ingress together", got, want)
 	}
 
-	// Through the whole router, with every middleware in front: the legacy admin prefixes redirect, the root leads to the app, and a path outside the list is not the app.
-	for _, first := range webui.LegacyAdminPaths {
+	// Through the whole router, with every middleware in front: the root leads to the app, and a path outside the list, an admin page's path without /app included, is not the app.
+	for _, path := range []string{"/pricing", "/workspaces/probe", "/auth/login"} {
 		rec := httptest.NewRecorder()
-		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/"+first+"/probe?q=1", nil))
-		if rec.Code != http.StatusPermanentRedirect || rec.Header().Get("Location") != "/app/"+first+"/probe?q=1" {
-			t.Errorf("/%s/probe = %d %s, want 308 to /app/%s/probe?q=1", first, rec.Code, rec.Header().Get("Location"), first)
+		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("%s = %d, want 404", path, rec.Code)
 		}
 	}
 	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/pricing", nil))
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("/pricing = %d, want 404", rec.Code)
-	}
-	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/app/" {
 		t.Errorf("/ = %d %s, want 302 to /app/", rec.Code, rec.Header().Get("Location"))
@@ -344,7 +327,7 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		mgmtapi.NewHandler(cfg, nil, nil, v1, nil, nil, nil, nil, nil, sessions, nil, nil, nil, nil, nil, nil, log),
 		integration.NewHandler(nil, sessions),
 		integration.NewOAuthHandler(nil, sessions, nil, log),
-		notification.NewHandler(web),
+		notification.NewHandler(),
 		analysis.NewAttachmentsHandler(nil, nil, v3, nil, nil, log),
 		workflows,
 		oauth,

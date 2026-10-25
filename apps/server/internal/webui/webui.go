@@ -1,4 +1,4 @@
-// Package webui serves the admin SPA that `pnpm --filter @forma/web build` writes into dist/. The SPA is built for config.AppBasePath (/app) and served only under it; the files of apps/web/public that surveys, emails and customer sites load keep their root URLs, the admin pages that lived at the root before answer with a permanent redirect to the same path under /app, and the root itself leads to the app.
+// Package webui serves the admin SPA that `pnpm --filter @forma/web build` writes into dist/. The SPA is built for config.AppBasePath (/app) and served only under it; the files of apps/web/public that surveys, emails and customer sites load keep their root URLs, and the root itself leads to the app.
 package webui
 
 import (
@@ -34,11 +34,8 @@ type Handler struct {
 // surveyShell is the survey page bundle's entry in the build (apps/web/survey.html).
 const surveyShell = "survey.html"
 
-// RootPublicPaths are the first path segments of the build's files that are served at their root URL as well as under /app: the files of apps/web/public that something outside the SPA loads by a root path. Surveys and workspaces store /image-backgrounds and /animated-bgs URLs as their backgrounds, the survey runtime and emails load /smiley-icons and /star-icons, forma2's emails embed /logo-transparent.png, customer sites load the SDK from /js, browsers ask for /favicon.ico, and the organization invite template is a download link at /sample-csv. A new top-level entry in apps/web/public needs a decision here (TestRootPublicPathsCoverThePublicDirectory) and, when it is listed, in the ingress that routes these paths to the server.
+// RootPublicPaths are the first path segments of the build's files that are served at their root URL as well as under /app: the files of apps/web/public that something outside the SPA loads by a root path. Surveys and workspaces store /image-backgrounds and /animated-bgs URLs as their backgrounds, the survey runtime and emails load /smiley-icons and /star-icons, emails embed /logo-transparent.png, customer sites load the SDK from /js, browsers ask for /favicon.ico, and the organization invite template is a download link at /sample-csv. A new top-level entry in apps/web/public needs a decision here (TestRootPublicPathsCoverThePublicDirectory) and, when it is listed, in the ingress that routes these paths to the server.
 var RootPublicPaths = []string{"animated-bgs", "favicon", "favicon.ico", "image-backgrounds", "js", "logo-transparent.png", "sample-csv", "smiley-icons", "star-icons"}
-
-// LegacyAdminPaths are the first path segments of the admin pages that were served at the root, by forma2 and by this SPA before it moved under /app. Links to them were mailed, bookmarked and registered as return URLs, so each answers with a permanent redirect (308) to the same path and query under /app.
-var LegacyAdminPaths = []string{"account", "auth", "billing-confirmation", "email-change-without-verification-success", "environments", "i", "invite", "organizations", "projects", "setup", "verify-email-change", "workspaces"}
 
 // publicContentTypes are the types of the static files in apps/web/public that Go's built-in table does not know, set explicitly because the distroless image has no system MIME database to fall back on; forma2 sent text/csv for its CSV templates and image/svg+xml for every SVG.
 var publicContentTypes = map[string]string{
@@ -145,11 +142,9 @@ func (h *Handler) serve(c *gin.Context) {
 	clean := path.Clean(p)
 	first, _, _ := strings.Cut(strings.TrimPrefix(clean, "/"), "/")
 	switch {
-	case slices.Contains(LegacyAdminPaths, first):
-		redirectToApp(c, http.StatusPermanentRedirect, c.Request.URL.EscapedPath())
 	case clean == "/":
 		// Temporary: a deployment that puts a website at the root later must not find browsers holding a cached redirect.
-		redirectToApp(c, http.StatusFound, "/")
+		redirectToApp(c)
 	case slices.Contains(RootPublicPaths, first):
 		if !allowedMethod(c) {
 			return
@@ -162,14 +157,14 @@ func (h *Handler) serve(c *gin.Context) {
 	}
 }
 
-// redirectToApp sends the request to target under the app's base path, the query kept.
-func redirectToApp(c *gin.Context, status int, target string) {
-	target = config.AppBasePath + target
+// redirectToApp sends a request for the root to the app's base path, the query kept.
+func redirectToApp(c *gin.Context) {
+	target := config.AppBasePath + "/"
 	if q := c.Request.URL.RawQuery; q != "" {
 		target += "?" + q
 	}
 	c.Header("Cache-Control", "no-store")
-	c.Redirect(status, target)
+	c.Redirect(http.StatusFound, target)
 }
 
 func allowedMethod(c *gin.Context) bool {

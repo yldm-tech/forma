@@ -97,10 +97,10 @@ func QuotedOptions(values []string) string {
 	return strings.Join(q, "|")
 }
 
-// cuid2 is zod's cuid2 shape, every forma2 id.
+// cuid2 is zod's cuid2 shape.
 var cuid2 = regexp.MustCompile(`^[0-9a-z]+$`)
 
-// IsID reports whether s passes zod's z.cuid2() as the rewrite reads it: a forma2 cuid, or one of the rewrite's own UUIDs in their canonical form.
+// IsID reports whether s passes the v1 APIs' id check, zod's z.cuid2() widened to UUIDs in their canonical form. Every row id is a UUID; a cuid2 passes the check but names no row, so it is not found.
 func IsID(s string) bool {
 	if _, err := uuid.Parse(s); err == nil && len(s) == 36 {
 		return true

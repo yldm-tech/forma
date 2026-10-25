@@ -12,7 +12,7 @@ Forma is a survey and experience-management platform. Collect feedback with in-a
 email surveys, read the results in each survey's own summary and response views, and act on them with
 Workflows.
 
-**This repository is mid-rewrite.** Forma is moving from a Next.js monolith ([`yldm-tech/forma2`](https://github.com/yldm-tech/forma2), whose history continues here) to a Go server and a TanStack single-page app. Modules land one at a time; until a module is here, forma2 is the running product and the reference for its behaviour. The feature list below describes the product, not what this branch already serves.
+Forma is a Go server and a TanStack single-page app. It replaced a Next.js monolith ([`yldm-tech/forma2`](https://github.com/yldm-tech/forma2), now archived, whose history continues here), which is retired: an installation of it cannot be upgraded in place, and its data is not read.
 
 The tags `v1.0.0` to `v3.1.0` belong to a different, earlier project that used this repository name; they are unrelated to Forma.
 

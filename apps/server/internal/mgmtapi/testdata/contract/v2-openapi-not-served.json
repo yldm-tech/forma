@@ -1,0 +1,24 @@
+{
+  "case": "v2-openapi-not-served",
+  "description": "GET /api/v2/openapi.json: no OpenAPI document is served; an unknown /api path answers the JSON 404.",
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/openapi.json",
+    "query": {},
+    "headers": {},
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json; charset=utf-8",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "code": "not_found",
+      "message": "Route not found"
+    }
+  }
+}

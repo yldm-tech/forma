@@ -50,7 +50,6 @@ const workspace = (logo: WorkspaceDetail["logo"] = null): WorkspaceDetail => ({
   updatedAt: "2026-01-01T00:00:00Z",
   name: "Main",
   organizationId: ORG,
-  legacyEnvironmentId: null,
   styling: { allowStyleOverwrite: true },
   recontactDays: 7,
   inAppSurveyBranding: true,

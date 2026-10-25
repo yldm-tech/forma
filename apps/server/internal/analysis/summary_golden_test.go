@@ -15,7 +15,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
 
-// goldenCase is a dataset of testdata/forma2-summary: a survey, its responses newest first, the display count and quotas, and what forma2's getSurveySummaryMeta, getSurveySummaryDropOff and getElementSummary computed for them.
+// goldenCase is a dataset of testdata/summary: a survey, its responses newest first, the display count and quotas, and the summary (meta, drop-off, quotas and one entry per element) expected for them.
 type goldenCase struct {
 	Survey struct {
 		Blocks    json.RawMessage `json:"blocks"`
@@ -65,9 +65,9 @@ func (g *goldenCase) doc(t *testing.T) *surveyDoc {
 	return sv
 }
 
-// TestSummaryMatchesForma2 runs the summary over seeded datasets and compares every number, sample and ordering with what forma2's own summary functions computed for the same data: unexpected rating and NPS values opening NaN buckets, numeric choice labels sorted first, answers in a second language, dismissals, "Other" and "None", matrix answers in either language, ranking with unknown items, CTA impressions, hidden fields, truncated samples and the drop-off table with the welcome card on and off.
-func TestSummaryMatchesForma2(t *testing.T) {
-	files, err := filepath.Glob("testdata/forma2-summary/*.json")
+// TestSummaryMatchesGolden runs the summary over seeded datasets and compares every number, sample and ordering with the expected summary, which the analysis pages show: unexpected rating and NPS values opening NaN buckets, numeric choice labels sorted first, answers in a second language, dismissals, "Other" and "None", matrix answers in either language, ranking with unknown items, CTA impressions, hidden fields, truncated samples and the drop-off table with the welcome card on and off.
+func TestSummaryMatchesGolden(t *testing.T) {
+	files, err := filepath.Glob("testdata/summary/*.json")
 	if err != nil || len(files) == 0 {
 		t.Fatalf("no golden datasets: %v", err)
 	}

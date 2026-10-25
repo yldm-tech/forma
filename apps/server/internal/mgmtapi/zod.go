@@ -143,7 +143,7 @@ func (is *issues) optString(path string, v any, p presence) *string {
 	return nil
 }
 
-// id is z.cuid2() under p, widened to the rewrite's UUIDs.
+// id is z.cuid2() under p, widened to UUIDs.
 func (is *issues) id(path string, v any, p presence) (string, bool) {
 	s, ok := is.str(path, v, p)
 	if ok && !v1api.IsID(s) {

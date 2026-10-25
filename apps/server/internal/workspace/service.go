@@ -516,12 +516,8 @@ func (s *Service) delete(ctx context.Context, userID, workspaceID uuid.UUID, con
 	if err != nil {
 		return nil, org.String(), err
 	}
-	// The workspace's files go with it: those stored under its id and, for a workspace from before the workspace rename, under its environment id. A failure leaves orphaned objects behind but does not undo the deletion, as in forma2.
-	fileIDs := []string{workspaceID.String()}
-	if deleted.LegacyEnvironmentID != nil {
-		fileIDs = append(fileIDs, *deleted.LegacyEnvironmentID)
-	}
-	if err := s.files.DeleteWorkspaceFiles(ctx, fileIDs...); err != nil {
+	// The workspace's files, stored under its id, go with it. A failure leaves orphaned objects behind but does not undo the deletion.
+	if err := s.files.DeleteWorkspaceFiles(ctx, workspaceID.String()); err != nil {
 		s.log.ErrorContext(ctx, "Error deleting S3 files", "err", err, "workspaceId", workspaceID.String())
 	}
 	// The workspace is gone; failing to pick where to go next must not report the deletion as failed, and "/" resolves a landing workspace on its own.
@@ -620,36 +616,4 @@ func (s *Service) Onboarding(ctx context.Context, userID, organizationID uuid.UU
 		out.CompletedPath = &path
 	}
 	return out, nil
-}
-
-// ResolveEnvironment is forma2's /environments/{id} alias: an id or a legacy environment id resolves to the workspace when the user may navigate it (organization.read, and workspace.read or organization.manage_billing, which deliberately admits billing members). An unknown id and one the user may not navigate are both not found.
-func (s *Service) ResolveEnvironment(ctx context.Context, userID uuid.UUID, environmentID string) (uuid.UUID, error) {
-	notFound := apperr.NotFound("Environment", "")
-	ws, err := s.repo.byEnvironmentID(ctx, environmentID)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if ws == nil {
-		return uuid.Nil, notFound
-	}
-	ok, err := s.canNavigate(ctx, userID, ws.ID, ws.OrganizationID)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if !ok {
-		return uuid.Nil, notFound
-	}
-	return ws.ID, nil
-}
-
-// canNavigate is forma2's canUserNavigateWorkspace.
-func (s *Service) canNavigate(ctx context.Context, userID, workspaceID, organizationID uuid.UUID) (bool, error) {
-	actor, org := authz.User(userID), authz.Organization(organizationID)
-	if ok, err := s.authz.Can(ctx, actor, authz.OrganizationRead, org); err != nil || !ok {
-		return false, err
-	}
-	if ok, err := s.authz.Can(ctx, actor, authz.WorkspaceRead, authz.Workspace(workspaceID)); err != nil || ok {
-		return ok, err
-	}
-	return s.authz.Can(ctx, actor, authz.OrganizationManageBilling, org)
 }

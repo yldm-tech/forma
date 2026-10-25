@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 type v1Error struct {
@@ -34,7 +32,6 @@ func TestV1Lifecycle(t *testing.T) {
 	owner := e.user()
 	org, ws := e.organization(owner)
 	other := e.workspace(org)
-	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clenv000000000000000000001' WHERE id = ?`, ws)
 	sv := e.survey(ws)
 	key, keyID := e.apiKey(org, ws, "manage", other, "read")
 
@@ -46,19 +43,19 @@ func TestV1Lifecycle(t *testing.T) {
 		t.Errorf("not authenticated = %+v, %v", body, res.Header())
 	}
 
-	// The legacy environment id is accepted in place of the workspace id, and the canonical workspace is used.
+	// environmentId is accepted in place of workspaceId, and every webhook carries its workspace's id as its environmentId.
 	res = e.do(http.MethodPost, "/api/v1/webhooks", asKey(key), map[string]any{
-		"environmentId": "clenv000000000000000000001", "url": "https://93.184.216.34/zap", "source": "zapier",
+		"environmentId": ws.String(), "url": "https://93.184.216.34/zap", "source": "zapier",
 		"triggers": []string{"responseFinished"}, "surveyIds": []string{sv.String()}, "name": "Zap",
 	})
 	if res.Code != http.StatusOK {
 		t.Fatalf("create = %d %s", res.Code, res.Body)
 	}
 	created := decode[v1Data[View]](t, res).Data
-	if created.WorkspaceID != ws || created.Source != SourceZapier || created.Secret == nil || !validSecret(*created.Secret) || created.EnvironmentID == nil || *created.EnvironmentID != "clenv000000000000000000001" {
+	if created.WorkspaceID != ws || created.Source != SourceZapier || created.Secret == nil || !validSecret(*created.Secret) || created.EnvironmentID == nil || *created.EnvironmentID != ws.String() {
 		t.Fatalf("created = %+v", created)
 	}
-	for _, field := range []string{`"id":`, `"name":"Zap"`, `"createdAt":`, `"url":`, `"source":"zapier"`, `"workspaceId":`, `"triggers":["responseFinished"]`, `"surveyIds":["` + sv.String() + `"]`, `"secret":"whsec_`, `"environmentId":"clenv000000000000000000001"`} {
+	for _, field := range []string{`"id":`, `"name":"Zap"`, `"createdAt":`, `"url":`, `"source":"zapier"`, `"workspaceId":`, `"triggers":["responseFinished"]`, `"surveyIds":["` + sv.String() + `"]`, `"secret":"whsec_`, `"environmentId":"` + ws.String() + `"`} {
 		if !strings.Contains(res.Body.String(), field) {
 			t.Errorf("create answer lacks %s: %s", field, res.Body)
 		}
@@ -77,13 +74,13 @@ func TestV1Lifecycle(t *testing.T) {
 	}
 	for _, w := range list {
 		if w.WorkspaceID == other && *w.EnvironmentID != other.String() {
-			t.Errorf("a workspace without a legacy id is its own environment: %+v", w)
+			t.Errorf("a webhook's environmentId is its workspace's id: %+v", w)
 		}
 	}
 
 	res = e.do(http.MethodGet, "/api/v1/webhooks/"+created.ID.String(), asKey(key), nil)
 	got := decode[v1Data[View]](t, res).Data
-	if res.Code != http.StatusOK || got.ID != created.ID || strings.Contains(res.Body.String(), "secret") || *got.EnvironmentID != "clenv000000000000000000001" {
+	if res.Code != http.StatusOK || got.ID != created.ID || strings.Contains(res.Body.String(), "secret") || *got.EnvironmentID != ws.String() {
 		t.Fatalf("get = %d %s", res.Code, res.Body)
 	}
 
@@ -110,24 +107,6 @@ func TestV1Lifecycle(t *testing.T) {
 	}
 	res = e.do(http.MethodDelete, "/api/v1/webhooks/"+created.ID.String(), asKey(key), nil)
 	expectV1Error(t, "second delete", res, decode[v1Error](t, res), http.StatusNotFound, "not_found", "Webhook not found")
-}
-
-// A webhook migrated from forma2 is found by the id Zapier stored when it subscribed.
-func TestV1LegacyWebhookID(t *testing.T) {
-	e := newEnv(t, false)
-	owner := e.user()
-	org, ws := e.organization(owner)
-	key, _ := e.apiKey(org, ws, "read")
-	legacy := "clwebhook0000000000000001"
-	e.exec(`INSERT INTO webhooks (id, workspace_id, url, triggers) VALUES (?, ?, 'https://example.com/zap', '{responseFinished}')`, legacyid.ID(legacy), ws)
-	res := e.do(http.MethodGet, "/api/v1/webhooks/"+legacy, asKey(key), nil)
-	if got := decode[v1Data[View]](t, res).Data; res.Code != http.StatusOK || got.ID != legacyid.ID(legacy) {
-		t.Fatalf("legacy get = %d %s", res.Code, res.Body)
-	}
-	res = e.do(http.MethodGet, "/api/v1/webhooks/not-a-webhook", asKey(key), nil)
-	if res.Code != http.StatusNotFound {
-		t.Errorf("unknown id = %d", res.Code)
-	}
 }
 
 func TestV1CreateRefusals(t *testing.T) {

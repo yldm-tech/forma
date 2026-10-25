@@ -26,7 +26,6 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey/valkeytest"
@@ -273,33 +272,6 @@ func TestDownloadPublicFile(t *testing.T) {
 	}
 }
 
-func TestDownloadByLegacyIDs(t *testing.T) {
-	e := newHandlerEnv(t)
-	org, ws := e.organization(e.user())
-	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clegacyenvaaaaaaaaaaaaaa1' WHERE id = ?`, ws)
-	// A workspace migrated from forma2 has uuidv5 of its old id, and its files are still stored under the old id.
-	migrated := legacyid.ID("clmigratedwsaaaaaaaaaaa1")
-	e.exec(`INSERT INTO workspaces (id, organization_id, name) VALUES (?, ?, 'Migrated')`, migrated, org)
-
-	e.put("clegacyenvaaaaaaaaaaaaaa1/public/old--fid--1.png", "image/png", "env")
-	e.put("clmigratedwsaaaaaaaaaaa1/public/old--fid--2.png", "image/png", "migrated")
-	e.put(migrated.String()+"/public/new--fid--3.png", "image/png", "new")
-	for path, body := range map[string]string{
-		"/storage/clegacyenvaaaaaaaaaaaaaa1/public/old--fid--1.png": "env",
-		"/storage/clmigratedwsaaaaaaaaaaa1/public/old--fid--2.png":  "migrated",
-		"/storage/clmigratedwsaaaaaaaaaaa1/public/new--fid--3.png":  "new",
-		"/storage/" + migrated.String() + "/public/new--fid--3.png": "new",
-	} {
-		if rec := e.do(http.MethodGet, path, nil); rec.Code != http.StatusOK || rec.Body.String() != body {
-			t.Errorf("GET %s: %d %q, want %q", path, rec.Code, rec.Body.String(), body)
-		}
-	}
-	// The legacy id only finds files of its own workspace.
-	e.put(ws.String()+"/private/x.pdf", "application/pdf", "x")
-	expectJSON(t, e.do(http.MethodGet, "/storage/clmigratedwsaaaaaaaaaaa1/public/x.pdf", nil), http.StatusNotFound,
-		`{"code":"not_found","message":"file not found","details":{"resource_id":"x.pdf","resource_type":"file"}}`, true)
-}
-
 func TestDownloadPrivateFile(t *testing.T) {
 	e := newHandlerEnv(t)
 	owner, reader, outsider := e.user(), e.user(), e.user()
@@ -506,18 +478,6 @@ func TestDelete(t *testing.T) {
 	expectAudit(t, e.lastAudit(), owner.String(), ws.String()+":private", "failure", org.String(), map[string]any{"workspaceId": ws.String(), "accessType": "private", "failureReason": "invalid_input"})
 	if !e.exists("victim/private/secret.pdf") {
 		t.Fatal("a traversal deleted another tenant's file")
-	}
-}
-
-func TestDeleteLegacyFile(t *testing.T) {
-	e := newHandlerEnv(t)
-	owner := e.user()
-	_, ws := e.organization(owner)
-	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clegacyenvaaaaaaaaaaaaaa1' WHERE id = ?`, ws)
-	e.put("clegacyenvaaaaaaaaaaaaaa1/private/old.pdf", "application/pdf", "x")
-	expectJSON(t, e.do(http.MethodDelete, "/storage/clegacyenvaaaaaaaaaaaaaa1/private/old.pdf", asUser(owner)), http.StatusOK, `{"data":"File deleted successfully"}`, false)
-	if e.exists("clegacyenvaaaaaaaaaaaaaa1/private/old.pdf") {
-		t.Fatal("a file stored under the environment id survived its deletion")
 	}
 }
 

@@ -117,7 +117,7 @@
     "document": [{"id": "filter1", "connector": null, "resource": {"id": "leaf1", "root": {"type": "surveyInteraction"}, "value": {"surveyScope": "specific", "surveyIds": ["01a16183-b01c-7c25-8029-3eb49de07277"], "within": {"amount": 1, "unit": "months"}}, "qualifier": {"operator": "haveSeen"}}}]
   },
   {
-    "name": "a survey-interaction filter naming a forma2 survey id",
+    "name": "a survey-interaction filter naming a cuid2 survey id",
     "schema": "segment.filters",
     "zod": true,
     "jsonSchema": true,

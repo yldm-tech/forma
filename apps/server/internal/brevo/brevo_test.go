@@ -90,8 +90,8 @@ func TestCreateContactWithoutList(t *testing.T) {
 	}
 }
 
-// A contact forma2 created has forma2's user id as its ext_id, which the migrated user's id no longer matches, so after the ext_id lookup finds nothing the contact is found by the address it had before the change.
-func TestUpdateContactCreatedByForma2(t *testing.T) {
+// A contact created under another ext_id is not found by the user's id, so after the ext_id lookup finds nothing the contact is found by the address it had before the change.
+func TestUpdateContactCreatedElsewhere(t *testing.T) {
 	t.Parallel()
 	for name, tc := range map[string]struct {
 		byEmail int

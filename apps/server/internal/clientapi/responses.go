@@ -12,8 +12,8 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
 	"github.com/yldm-tech/forma/apps/server/internal/linksurvey"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/response/answers"
 )
@@ -248,7 +248,7 @@ func (h *Handler) writeNewResponse(c *gin.Context, sv *response.Survey, workspac
 		Locale: mailer.MatchLocale(c.GetHeader("Accept-Language")),
 	}
 	if in.ContactID != nil {
-		id, _ := legacyid.Resolve(*in.ContactID)
+		id, _ := rowid.Parse(*in.ContactID)
 		create.ContactID = &id
 	}
 	result, err := h.responses.Create(ctx, sv, create)
@@ -291,9 +291,7 @@ func (h *Handler) verifiedEmailGate(sv *response.Survey, data map[string]any, me
 	if token == "" {
 		return refuse
 	}
-	// The link names the survey as it was sent, which is the id a token issued by forma2 is bound to.
-	linkSurveyID, _, _ := strings.Cut(strings.TrimPrefix(u.Path, "/s/"), "/")
-	email := linksurvey.VerifyEmailToken(h.cfg, token, sv.ID, linkSurveyID, h.now())
+	email := linksurvey.VerifyEmailToken(h.cfg, token, sv.ID, h.now())
 	if email == "" {
 		return refuse
 	}

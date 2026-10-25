@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"reflect"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -24,7 +23,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 )
 
 type Config struct {
@@ -40,6 +39,8 @@ type Config struct {
 	DatabaseURL string `env:"DATABASE_URL,required,notEmpty"`
 	// DatabaseMaxOpenConns caps the pool of one process; every forma process holds its own pool.
 	DatabaseMaxOpenConns int `env:"DATABASE_MAX_OPEN_CONNS" envDefault:"20"`
+	// IgnoreForma2Data starts the server on a database whose forma2 "User" table has rows while this server has no user yet, which it otherwise refuses (database.RefuseUnreadForma2Data): forma2's data is then left unread, and the first sign-up becomes the administrator.
+	IgnoreForma2Data bool `env:"FORMA_IGNORE_FORMA2_DATA" envDefault:"0"`
 
 	// RedisURL points at Valkey, which holds the rate-limit counters. forma2 required it outside its test environment, and so does every forma process.
 	RedisURL string `env:"REDIS_URL,required,notEmpty"`
@@ -52,7 +53,7 @@ type Config struct {
 	EncryptionPreviousKeys EncryptionKeyring `env:"ENCRYPTION_PREVIOUS_KEYS"`
 	// EncryptionKeyText is ENCRYPTION_KEY exactly as configured. forma2 keyed its HMAC signatures and JWTs with the variable's text rather than the decoded key, so the links it issued (signed single-use links, personal contact links) verify only against the same text.
 	EncryptionKeyText Secret `env:"ENCRYPTION_KEY"`
-	// NextAuthSecret and BetterAuthSecret are forma2's NEXTAUTH_SECRET and BETTER_AUTH_SECRET. They signed the link survey tokens (email verification links, PIN tokens); an instance migrated from forma2 keeps them so the links it already sent keep working. Without them the tokens are signed with a secret derived from ENCRYPTION_KEY.
+	// NextAuthSecret and BetterAuthSecret are NEXTAUTH_SECRET and BETTER_AUTH_SECRET. They sign the link survey tokens (email verification links, PIN tokens); changing one invalidates the links already sent. Without them the tokens are signed with a secret derived from ENCRYPTION_KEY.
 	NextAuthSecret   Secret `env:"NEXTAUTH_SECRET"`
 	BetterAuthSecret Secret `env:"BETTER_AUTH_SECRET"`
 
@@ -254,7 +255,7 @@ type SSOConfig struct {
 	// DefaultOrganizationID names the organization every new SSO user joins, created on the first such sign-up; DefaultOrganizationRole is the role later sign-ups get in it (manager when unset).
 	DefaultOrganizationID   string `env:"AUTH_SSO_DEFAULT_ORGANIZATION_ID"`
 	DefaultOrganizationRole string `env:"AUTH_SSO_DEFAULT_ORGANIZATION_ROLE"`
-	// BetterAuthURL and NextAuthURL are forma2's auth base URLs. The first one set, else WEBAPP_URL, is where identity providers send the browser back, so the redirect URIs registered for forma2 keep working.
+	// BetterAuthURL and NextAuthURL are the auth base URLs. The first one set, else WEBAPP_URL, is where identity providers send the browser back, so it must be the origin the redirect URIs were registered under.
 	BetterAuthURL *url.URL `env:"BETTER_AUTH_URL"`
 	NextAuthURL   *url.URL `env:"NEXTAUTH_URL"`
 	// SAMLDatabaseURL is forma2's switch for SAML SSO: set, the SAML button is offered and the connection is read from saml-connection/*.xml at start-up. forma2 kept its SAML state in that separate database; here the connection lives in the main one, so only whether it is set matters.
@@ -316,18 +317,15 @@ func (s SSOConfig) OIDCEnabled() bool {
 // SAMLEnabled is forma2's SAML_OAUTH_ENABLED. Its licence check always granted SAML, so the variable is the only gate.
 func (s SSOConfig) SAMLEnabled() bool { return s.SAMLDatabaseURL != "" }
 
-// forma2ID is zod's cuid2 pattern, which forma2 validated AUTH_SSO_DEFAULT_ORGANIZATION_ID against.
-var forma2ID = regexp.MustCompile(`^[0-9a-z]+$`)
-
-// DefaultOrganization is the organization AUTH_SSO_DEFAULT_ORGANIZATION_ID names, if set. A forma2 id resolves to the row it was migrated to, so a value set for forma2 keeps naming the same organization.
+// DefaultOrganization is the organization AUTH_SSO_DEFAULT_ORGANIZATION_ID names, if set.
 func (s SSOConfig) DefaultOrganization() (uuid.UUID, bool) {
-	return legacyid.Resolve(s.DefaultOrganizationID)
+	return rowid.Parse(s.DefaultOrganizationID)
 }
 
 func (s SSOConfig) validate() error {
 	if id := s.DefaultOrganizationID; id != "" {
-		if _, err := uuid.Parse(id); (err != nil || len(id) != 36) && !forma2ID.MatchString(id) {
-			return fmt.Errorf("AUTH_SSO_DEFAULT_ORGANIZATION_ID must be an organization id (a UUID, or the cuid2 id forma2 knew it by), got %q", id)
+		if _, ok := rowid.Parse(id); !ok {
+			return fmt.Errorf("AUTH_SSO_DEFAULT_ORGANIZATION_ID must be an organization id (a UUID), got %q", id)
 		}
 	}
 	switch s.DefaultOrganizationRole {
@@ -532,18 +530,13 @@ func databaseURL(name, raw string, appTimeouts bool) (string, error) {
 	return out, nil
 }
 
-// SourceDatabaseURL accepts the forma2 database URL given to `forma import-forma2 --source` as LoadForMigrate accepts MIGRATE_DATABASE_URL, so forma2's DATABASE_URL can be passed as it is.
-func SourceDatabaseURL(raw string) (string, error) {
-	return databaseURL("--source", strings.TrimSpace(raw), false)
-}
-
 // forma2's BullMQ worker settings. Its parallelism was BULLMQ_WORKER_COUNT workers of BULLMQ_WORKER_CONCURRENCY jobs each.
 type bullMQEnv struct {
 	Concurrency int `env:"BULLMQ_WORKER_CONCURRENCY"`
 	Count       int `env:"BULLMQ_WORKER_COUNT"`
 }
 
-// resolveWorkerConcurrency honours forma2's BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT, which an instance moved from forma2 may still set: with WORKER_CONCURRENCY unset, the worker runs count x concurrency jobs at once, a missing one taking forma2's default (one worker; DefaultWorkerConcurrency jobs). WORKER_CONCURRENCY wins when both styles are set. Either way the deprecation is reported once at start-up.
+// resolveWorkerConcurrency honours the deprecated BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT, which an older .env may still set: with WORKER_CONCURRENCY unset, the worker runs count x concurrency jobs at once, a missing one taking its default (one worker; DefaultWorkerConcurrency jobs). WORKER_CONCURRENCY wins when both styles are set. Either way the deprecation is reported once at start-up.
 func (c *Config) resolveWorkerConcurrency() error {
 	bull, err := env.ParseAs[bullMQEnv]()
 	if err != nil {
@@ -780,41 +773,6 @@ func LoadForHealthcheck() (Config, error) {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
 	return Config{HTTPAddr: e.HTTPAddr}, nil
-}
-
-type importEnv struct {
-	EncryptionKey          EncryptionKey     `env:"ENCRYPTION_KEY,required,notEmpty"`
-	EncryptionKeyVersion   int               `env:"ENCRYPTION_KEY_VERSION" envDefault:"1"`
-	EncryptionPreviousKeys EncryptionKeyring `env:"ENCRYPTION_PREVIOUS_KEYS"`
-	NextAuthSecret         Secret            `env:"NEXTAUTH_SECRET"`
-	BetterAuthSecret       Secret            `env:"BETTER_AUTH_SECRET"`
-	Authz                  AuthzConfig
-}
-
-// LoadForImport reads what `forma import-forma2` needs: the migration connection (MIGRATE_DATABASE_URL, else DATABASE_URL, as LoadForMigrate reads it), ENCRYPTION_KEY, which both opens what forma2 encrypted with it and seals what the import stores, forma2's NEXTAUTH_SECRET and BETTER_AUTH_SECRET, which Better Auth encrypted the two-factor secrets with, and the SpiceDB connection, for the authorization backfill after the import when AuthZed is enabled.
-func LoadForImport() (Config, error) {
-	cfg, err := LoadForMigrate()
-	if err != nil {
-		return Config{}, err
-	}
-	e, err := env.ParseAsWithOptions[importEnv](parseOptions)
-	if err != nil {
-		return Config{}, fmt.Errorf("load config: %w", err)
-	}
-	if e.EncryptionKeyVersion < 1 || e.EncryptionKeyVersion > MaxEncryptionKeyVersion {
-		return Config{}, fmt.Errorf("load config: ENCRYPTION_KEY_VERSION must be between 1 and %d, got %d", MaxEncryptionKeyVersion, e.EncryptionKeyVersion)
-	}
-	if _, ok := e.EncryptionPreviousKeys[e.EncryptionKeyVersion]; ok {
-		return Config{}, fmt.Errorf("load config: ENCRYPTION_PREVIOUS_KEYS must not repeat the current ENCRYPTION_KEY_VERSION %d", e.EncryptionKeyVersion)
-	}
-	if err := e.Authz.validate(); err != nil {
-		return Config{}, fmt.Errorf("load config: %w", err)
-	}
-	cfg.EncryptionKey, cfg.EncryptionKeyVersion, cfg.EncryptionPreviousKeys = e.EncryptionKey, e.EncryptionKeyVersion, e.EncryptionPreviousKeys
-	cfg.NextAuthSecret, cfg.BetterAuthSecret = e.NextAuthSecret, e.BetterAuthSecret
-	cfg.Authz = e.Authz
-	cfg.DatabaseMaxOpenConns = 4
-	return cfg, nil
 }
 
 type authzEnv struct {

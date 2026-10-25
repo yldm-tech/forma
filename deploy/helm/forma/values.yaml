@@ -108,7 +108,7 @@ deployment:
     #   nameSuffix: app-secrets
 
   # Environment variables passed to the server and worker containers (and DATABASE_URL / MIGRATE_DATABASE_URL to the Jobs).
-  # Booleans are 1 or 0: the Go server refuses forma2's true/false spelling except for SKIP_STARTUP_MIGRATION.
+  # Booleans are 1 or 0: the server refuses true/false except for SKIP_STARTUP_MIGRATION.
   # For self-hosted Qwen/vLLM AI, set only the OpenAI-compatible variables you need, for example:
   # AI_PROVIDER: openai-compatible
   # AI_MODEL: qwen3-14b-awq
@@ -227,7 +227,7 @@ deployment:
 # Job worker (`forma worker`)
 ##########################################################
 worker:
-  # Run the background jobs (response pipeline, webhooks, emails, integrations, workflows, SpiceDB projection, periodic tasks) in a Deployment of their own. It uses the server's image, envFrom, env, security contexts, volumes and pull secrets. Disabled, the server pods run the jobs in-process, as forma2's did.
+  # Run the background jobs (response pipeline, webhooks, emails, integrations, workflows, SpiceDB projection, periodic tasks) in a Deployment of their own. It uses the server's image, envFrom, env, security contexts, volumes and pull secrets. Disabled, the server pods run the jobs in-process.
   enabled: true
 
   replicas: 1
@@ -835,7 +835,7 @@ redis:
   architecture: standalone
   # `maxmemory` must stay set, and must stay well under `redis.master.resources.limits.memory` below. Without it Valkey has no ceiling of its own and simply grows until the kernel OOM-kills the container, which drops whatever state sits outside the AOF fsync window and then replays into the same wall. 256mb is half of the 512Mi limit rather than the more usual 70%: `appendonly yes` means an AOF rewrite forks the server, and copy-on-write during that rewrite can add most of the dataset again to RSS, on top of the ~10MB baseline. Raising the limit means raising this line with it.
   #
-  # The sizing was set for forma2's BullMQ job retention. The Go server keeps its job queue in PostgreSQL (River), so this instance now holds only rate-limit counters and short-lived state, far below 256mb; the values are kept so an upgrade does not resize the StatefulSet.
+  # The job queue lives in PostgreSQL (River), so this instance holds only rate-limit counters and short-lived state, far below 256mb; the sizing is kept so an upgrade does not resize the StatefulSet.
   #
   # `noeviction` stays: an LRU policy could silently evict a rate-limit window or a lock. Reaching `maxmemory` fails writes while reads keep serving, a recoverable state, unlike an OOM kill.
   commonConfiguration: |-
@@ -908,7 +908,7 @@ postgresql:
     security:
       allowInsecureImages: true
   fullnameOverride: "forma-postgresql"
-  # PostgreSQL 18 or newer: the schema uses uuidv7(). forma2's chart ran pg17, whose data directory PostgreSQL 18 cannot open, so an upgrade over a release still running another major is refused until its data has been moved (README: Upgrading the bundled PostgreSQL from 17 to 18).
+  # PostgreSQL 18 or newer: the schema uses uuidv7(). PostgreSQL 18 cannot open a data directory another major initialised, so an upgrade over a release still running another major (pg17) is refused until its data has been moved (README: Upgrading the bundled PostgreSQL from 17 to 18).
   image:
     repository: pgvector/pgvector
     tag: pg18

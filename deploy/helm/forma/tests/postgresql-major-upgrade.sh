@@ -30,7 +30,7 @@ chart_running() {
 helm template qa "${CHART_DIR}" "${COMMON_ARGS[@]}" >/dev/null
 helm template qa "${CHART_DIR}" "${COMMON_ARGS[@]}" "${UPGRADE[@]}" >/dev/null
 
-# Upgrading a release whose bundled database still runs forma2's PostgreSQL 17 stops before anything is applied.
+# Upgrading a release whose bundled database still runs PostgreSQL 17 stops before anything is applied.
 pg17="$(chart_running docker.io/pgvector/pgvector:pg17 pg17)"
 if output="$(helm template qa "${pg17}" "${COMMON_ARGS[@]}" "${UPGRADE[@]}" 2>&1)"; then
   fail "An upgrade over a PostgreSQL 17 data directory rendered without postgresql.majorUpgradeAcknowledged."

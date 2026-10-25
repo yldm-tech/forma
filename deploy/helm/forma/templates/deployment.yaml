@@ -112,7 +112,7 @@ spec:
           {{- end }}
           {{- include "forma.appEnvFrom" . | nindent 10 }}
           env:
-            # The container runs `forma start` (the image's default command), forma2's entrypoint: these two switches hand the migrations to the migration Job and the background jobs to the worker Deployment.
+            # The container runs `forma start` (the image's default command): these two switches hand the migrations to the migration Job and the background jobs to the worker Deployment.
             {{- if .Values.migration.enabled }}
             - name: SKIP_STARTUP_MIGRATION
               value: "true"

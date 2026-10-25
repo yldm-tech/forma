@@ -69,7 +69,7 @@ export const localeOfPath = (path: string): Locale =>
   LOCALES.find((locale) => locale !== "en" && (path === `/${locale}` || path.startsWith(`/${locale}/`))) ??
   "en";
 
-// Paths the website must never serve on forma.yldm.ai: the app (/app) and the root admin paths the server redirects into it (webui.LegacyAdminPaths), the Go server's public pages, APIs, SDK bundles and well-known endpoints, and the files the server serves from apps/web/public at their root URL (webui.RootPublicPaths) that stored surveys, emails, browsers and customer sites load. The ingress sends these to the server, so a page here would be unreachable at best and would shadow a live URL at worst. /docs, where the retired documentation site was served, stays reserved so that the site never answers its old URLs with a page of its own.
+// Paths the website must never serve on forma.yldm.ai: the app (/app) and the root paths its admin pages had before they moved under /app, which the ingress still sends to the server, the Go server's public pages, APIs, SDK bundles and well-known endpoints, and the files the server serves from apps/web/public at their root URL (webui.RootPublicPaths) that stored surveys, emails, browsers and customer sites load. The ingress sends these to the server, so a page here would be unreachable at best and would shadow a live URL at worst. /docs, where the retired documentation site was served, stays reserved so that the site never answers its old URLs with a page of its own.
 export const RESERVED_PREFIXES = [
   "/app",
   "/api",

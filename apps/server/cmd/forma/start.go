@@ -14,7 +14,6 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/yldm-tech/forma/apps/server/internal/forma2import"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/logger"
@@ -54,8 +53,8 @@ func start(ctx context.Context) error {
 		}
 	}
 
-	// A database that still holds only forma2's data would come up as an empty instance; refuse until it is imported or discarded.
-	if err := forma2import.GuardDSN(ctx, cfg.DatabaseURL); err != nil {
+	// A database that holds only forma2's data would come up as an empty instance; refuse unless told to start empty.
+	if err := refuseUnreadForma2Data(ctx, cfg, log); err != nil {
 		return err
 	}
 

@@ -14,7 +14,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/pipeline"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
@@ -78,9 +78,9 @@ func readTriggerConfig(definition json.RawMessage) *triggerConfig {
 	return cfg
 }
 
-// matches is forma2's matchWorkflowsForResponse for one candidate: the trigger targets the response's survey (a survey id stored before the migration matches by its forma2 id), and either names no endings or names the one the response reached.
+// matches is forma2's matchWorkflowsForResponse for one candidate: the trigger targets the response's survey, and either names no endings or names the one the response reached.
 func (c *triggerConfig) matches(surveyID uuid.UUID, endingID *string) bool {
-	if !legacyid.Matches(c.SurveyID, surveyID) {
+	if !rowid.Matches(c.SurveyID, surveyID) {
 		return false
 	}
 	if len(c.EndingCardIDs) == 0 {

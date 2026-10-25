@@ -69,12 +69,11 @@ test("refuses a wrong password", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/auth\/login/);
 });
 
-// The admin pages moved under /app; a link to their old root address (an email, a bookmark) lands on the same page there, its query kept, and the root leads to the app.
-test("sends old admin addresses and the root to the app", async ({ page }) => {
-  await page.goto("/auth/login?email=old%40example.com");
-  await expect(page).toHaveURL(/\/app\/auth\/login\?email=old/);
-  await expect(page.getByRole("button", { name: "Log in with Email" })).toBeVisible();
-
+// The admin pages live under /app: the root leads to the app, and an admin page's path at the root is not the app.
+test("sends the root to the app and serves no admin page at the root", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/app\/auth\/login/);
+
+  const response = await page.goto("/auth/login?email=old%40example.com");
+  expect(response?.status()).toBe(404);
 });

@@ -1,4 +1,4 @@
-// Runs the release workflow's final step, the one that moves `stable` and `latest`, under bash in a real git repository, with stand-ins for gh (which emulates GitHub's git data API on that repository) and docker on PATH, and checks what it does. The invariants are the ones release.yml states: `latest` never names an image whose deploy/docker/ files the `stable` branch does not carry, so a refused `stable` update must leave `latest` where it was; `stable` carries those files under docker/ as well, where forma2's installer and guides download them; and `stable` only ever fast-forwards.
+// Runs the release workflow's final step, the one that moves `stable` and `latest`, under bash in a real git repository, with stand-ins for gh (which emulates GitHub's git data API on that repository) and docker on PATH, and checks what it does. The invariants are the ones release.yml states: `latest` never names an image whose deploy/docker/ files the `stable` branch does not carry, so a refused `stable` update must leave `latest` where it was; `stable` carries the release's tree and nothing else, so the docker/ copy earlier releases published goes away; and `stable` only ever fast-forwards.
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -201,19 +201,18 @@ const movesStable = (call: string) => call.startsWith("gh ") && call.includes(`r
 const writesGitData = (call: string) =>
   call.startsWith("gh ") && call.includes("-X") && call.includes(`repos/${REPO}/git/`);
 
-/** stable's tree is the release's, plus deploy/docker/ (the Dockerfile aside) again under docker/, the same blobs with the same modes. */
+/** stable is a commit on top of the release with the release's tree: deploy/docker/ as released, and no docker/ copy. */
 const expectCarriesRelease = (rev: string) => {
   expect(parents(stableSha())[0]).toBe(rev);
-  expect(files("stable", "docker")).toEqual(
-    files(rev, "deploy/docker").filter((line) => !line.endsWith("\tDockerfile"))
-  );
-  expect(files("stable", "docker").map((line) => line.split("\t")[1])).toEqual([
+  expect(git("rev-parse", "stable^{tree}")).toBe(git("rev-parse", `${rev}^{tree}`));
+  expect(files("stable", "docker")).toEqual([]);
+  expect(files("stable", "deploy/docker").map((line) => line.split("\t")[1])).toEqual([
+    "Dockerfile",
     "authzed-postgres-bootstrap.sh",
     "docker-compose.yml",
     "forma.sh",
     "rustfs-init.sh",
   ]);
-  expect(git("diff", "--name-only", rev, "stable", "--", ":(exclude)docker")).toBe("");
 };
 
 describe(`release.yml "${STEP}"`, () => {
@@ -236,7 +235,7 @@ describe(`release.yml "${STEP}"`, () => {
     expect(calls.some((call) => call.includes(`release create v0.2.7`))).toBe(true);
   });
 
-  test("creates stable on the first move, carrying deploy/docker/ under docker/ as well, then moves latest", () => {
+  test("creates stable on the first move, carrying the release, then moves latest", () => {
     const { status, calls, summary, stderr } = run();
     expect(stderr).toBe("");
     expect(status).toBe(0);
@@ -246,7 +245,7 @@ describe(`release.yml "${STEP}"`, () => {
     const latest = calls.findIndex(movesLatest);
     expect(stable).toBeGreaterThanOrEqual(0);
     expect(latest).toBeGreaterThan(stable);
-    expect(calls.filter(writesGitData).length).toBe(3);
+    expect(calls.filter(writesGitData).length).toBe(2);
     for (const call of calls.filter(writesGitData)) expect(call).toContain("token=stable-token");
     expect(summary).toContain("the `stable` branch now point here");
   });
@@ -260,7 +259,7 @@ describe(`release.yml "${STEP}"`, () => {
     expect(status).toBe(0);
     expectCarriesRelease(next);
     expect(parents("stable")).toEqual([next, previous]);
-    expect(git("show", "stable:docker/docker-compose.yml")).toBe("services:\n  forma: {}");
+    expect(git("show", "stable:deploy/docker/docker-compose.yml")).toBe("services:\n  forma: {}");
     expect(calls.some(movesLatest)).toBe(true);
   });
 
@@ -273,6 +272,18 @@ describe(`release.yml "${STEP}"`, () => {
     expect(calls.filter(movesStable)).toEqual([]);
     expect(calls.some(movesLatest)).toBe(true);
     expect(summary).toContain("`stable` already carries this release");
+  });
+
+  test("moves a stable that still carries an earlier release's docker/ copy on to the release's tree", () => {
+    git("checkout", "-q", "-b", "previous-stable", base);
+    writeFile("docker/forma.sh", "#!/usr/bin/env bash\n", 0o755);
+    const previous = commit("Release v0.2.6 with deploy/docker/ also under docker/");
+    git("checkout", "-q", "main");
+    git("update-ref", "refs/heads/stable", previous);
+    const { status } = run();
+    expect(status).toBe(0);
+    expectCarriesRelease(release);
+    expect(parents("stable")).toEqual([release, previous]);
   });
 
   test("fast-forwards a stable that is on main with the release as the only parent", () => {
@@ -293,7 +304,7 @@ describe(`release.yml "${STEP}"`, () => {
       },
     ],
     [
-      "on top of the release but changing more than docker/",
+      "on top of the release but changing more than an earlier release's docker/ copy",
       () => {
         git("checkout", "-q", "-b", "elsewhere", release);
         writeFile("docker/forma.sh", "#!/usr/bin/env bash\n");

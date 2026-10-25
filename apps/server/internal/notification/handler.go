@@ -6,50 +6,20 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
-	"github.com/yldm-tech/forma/apps/server/internal/webui"
 )
 
-// Handler answers the links of the response-finished email that need the server, outside /api/app: they are browser navigations from an email.
-type Handler struct {
-	web *webui.Handler
-}
+// Handler answers the unsubscribe link of the response-finished email, which needs the server: it is a browser navigation from an email, under the app's base path ahead of the SPA, which owns every other page there.
+type Handler struct{}
 
-func NewHandler(web *webui.Handler) *Handler { return &Handler{web: web} }
+func NewHandler() *Handler { return &Handler{} }
 
-// Register mounts the links' paths under the app's base path, ahead of the SPA, which owns every other page there. The root paths emails sent before the SPA moved under /app carry are redirected to these by the SPA handler.
+// Register mounts the link's path.
 func (h *Handler) Register(r gin.IRouter) {
 	r.GET(config.AppBasePath+"/workspaces/:workspaceId/settings/notifications", h.unsubscribe)
-	r.GET(config.AppBasePath+"/workspaces/:workspaceId/surveys/:surveyId/responses", h.responses)
 }
 
 // unsubscribe redirects to the account notification settings with the switch the link names, which the page turns off once the user is signed in.
 func (h *Handler) unsubscribe(c *gin.Context) {
 	c.Header("Cache-Control", "no-store")
 	c.Redirect(http.StatusFound, UnsubscribeTarget(c.Query("type"), c.Query("elementId")))
-}
-
-// responses is the SPA's responses page. The view-responses CTA of an email sent before the migration names the workspace and survey by their forma2 ids, which the page cannot load; it redirects to the ids migrated from them, keeping the link's query.
-func (h *Handler) responses(c *gin.Context) {
-	ws, _ := legacyid.Resolve(c.Param("workspaceId"))
-	survey, _ := legacyid.Resolve(c.Param("surveyId"))
-	if ws.String() == c.Param("workspaceId") && survey.String() == c.Param("surveyId") {
-		h.web.ServePage(c)
-		return
-	}
-	target := config.AppBasePath + "/workspaces/" + ws.String() + "/surveys/" + survey.String() + "/responses"
-	if c.Request.URL.RawQuery != "" {
-		target += "?" + c.Request.URL.RawQuery
-	}
-	c.Header("Cache-Control", "no-store")
-	c.Redirect(http.StatusFound, target)
-}
-
-// resolveElementID is the id an unsubscribe link names: a UUID as it is, a forma2 id as the id migrated from it.
-func resolveElementID(raw string) (string, bool) {
-	id, ok := legacyid.Resolve(raw)
-	if !ok {
-		return "", false
-	}
-	return id.String(), true
 }

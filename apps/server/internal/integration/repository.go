@@ -30,7 +30,7 @@ func credentialsContext(integrationID uuid.UUID) []byte {
 	return []byte("integration_credentials:" + integrationID.String())
 }
 
-// SealCredentials returns what integration_credentials stores for an integration's credentials. The data migration writes the credentials it carries over from forma2 with it.
+// SealCredentials returns what integration_credentials stores for an integration's credentials.
 func SealCredentials(c *secret.Cipher, integrationID uuid.UUID, creds Credentials) ([]byte, error) {
 	plaintext, err := json.Marshal(creds)
 	if err != nil {
@@ -39,7 +39,7 @@ func SealCredentials(c *secret.Cipher, integrationID uuid.UUID, creds Credential
 	return c.Seal(plaintext, credentialsContext(integrationID))
 }
 
-// OpenCredentials is the inverse of SealCredentials. The data migration compares what a row holds with what it would write, so a re-run leaves unchanged credentials as they are.
+// OpenCredentials is the inverse of SealCredentials.
 func OpenCredentials(c *secret.Cipher, integrationID uuid.UUID, ciphertext []byte) (Credentials, error) {
 	plaintext, err := c.Open(ciphertext, credentialsContext(integrationID))
 	if err != nil {

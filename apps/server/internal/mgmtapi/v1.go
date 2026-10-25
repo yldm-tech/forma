@@ -15,8 +15,8 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
@@ -111,7 +111,7 @@ func v1Pagination(c *gin.Context, defaultLimit int, offsetParam string) (limit, 
 	return limit, offset, true
 }
 
-// v1ID reads an id from the path as forma2's validateInputs read a ZId: a UUID, or a forma2 cuid resolved to the row migrated from it; anything else is 400 "Validation failed: Invalid cuid2".
+// v1ID reads an id from the path as validateInputs reads a ZId: a UUID names a row, a cuid2 names none (so it is not found); anything else is 400 "Validation failed: Invalid cuid2".
 func v1ID(c *gin.Context, param string) (uuid.UUID, bool) {
 	raw := c.Param(param)
 	id, err := response.ResolveID(raw)
@@ -122,9 +122,9 @@ func v1ID(c *gin.Context, param string) (uuid.UUID, bool) {
 	return id, true
 }
 
-// v1LooseID reads an id the route never validated: any string, resolved as a forma2 id when it is not a UUID, so an unknown one is simply not found.
+// v1LooseID reads an id the route never validated: any string, so one that is not a UUID is simply not found.
 func v1LooseID(c *gin.Context, param string) uuid.UUID {
-	id, _ := legacyid.Resolve(c.Param(param))
+	id, _ := rowid.Parse(c.Param(param))
 	return id
 }
 
@@ -152,7 +152,7 @@ func (h *Handler) v1Fail(c *gin.Context, err error) {
 	h.v1.Unexpected(c, err, mgmtv1.MessageGeneric)
 }
 
-// environmentIDs is forma2's addLegacyEnvironmentIdToList lookup: each workspace's legacy environment id, or its own id when it has none.
+// environmentIDs is the environmentId the v1 payloads carry for each workspace that exists: the workspace's own id.
 func (h *Handler) environmentIDs(ctx context.Context, workspaceIDs []uuid.UUID) (map[uuid.UUID]string, error) {
 	return h.repo.environmentIDs(ctx, workspaceIDs)
 }
@@ -169,11 +169,11 @@ func (h *Handler) environmentID(ctx context.Context, workspaceID uuid.UUID) (str
 	return workspaceID.String(), nil
 }
 
-// bestEffortEnvironmentID is forma2's addLegacyEnvironmentIdBestEffort, for the answer to a write that has already committed: a failed lookup leaves environmentId out rather than turning the write into an error the caller would retry.
+// bestEffortEnvironmentID adds environmentId to the answer to a write that has already committed: a failed lookup leaves environmentId out rather than turning the write into an error the caller would retry.
 func (h *Handler) bestEffortEnvironmentID(c *gin.Context, obj map[string]any, workspaceID uuid.UUID) {
 	env, err := h.environmentID(c.Request.Context(), workspaceID)
 	if err != nil {
-		h.log.ErrorContext(c.Request.Context(), "Failed to resolve legacy environmentId for a committed write", "err", err, "workspace_id", workspaceID)
+		h.log.ErrorContext(c.Request.Context(), "Failed to resolve environmentId for a committed write", "err", err, "workspace_id", workspaceID)
 		return
 	}
 	obj["environmentId"] = env

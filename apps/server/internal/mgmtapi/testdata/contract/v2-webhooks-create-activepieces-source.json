@@ -1,0 +1,50 @@
+{
+  "case": "v2-webhooks-create-activepieces-source",
+  "description": "POST /api/v2/management/webhooks with the `manage` key (manage on the workspace, organization access read and write). Every webhook source is accepted, activepieces included.",
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/management/webhooks",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "workspaceId": "<id:workspace>",
+      "name": "AP",
+      "url": "https://example.com/ap",
+      "source": "activepieces",
+      "triggers": [
+        "responseFinished"
+      ],
+      "surveyIds": []
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:webhook:activepieces>",
+        "name": "AP",
+        "createdAt": "<timestamp>",
+        "updatedAt": "<timestamp>",
+        "url": "https://example.com/ap",
+        "source": "activepieces",
+        "workspaceId": "<id:workspace>",
+        "triggers": [
+          "responseFinished"
+        ],
+        "surveyIds": [],
+        "secret": "<webhook-secret>"
+      }
+    }
+  }
+}

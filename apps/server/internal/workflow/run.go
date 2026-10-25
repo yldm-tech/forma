@@ -19,8 +19,8 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
 )
@@ -145,14 +145,14 @@ func (r *Runner) loadRun(ctx context.Context, id, workspaceID uuid.UUID) (*claim
 	return &rows[0], nil
 }
 
-// parsePayload reads the stored trigger payload. Its survey and response ids are UUIDs, or forma2's ids in a run queued before the migration, which read as the ids migrated from them.
+// parsePayload reads the stored trigger payload, whose survey and response ids are UUIDs.
 func parsePayload(raw json.RawMessage) (*TriggerPayload, uuid.UUID, uuid.UUID, error) {
 	var p TriggerPayload
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, uuid.Nil, uuid.Nil, fmt.Errorf("workflow run trigger payload: %w", err)
 	}
-	surveyID, sok := legacyid.Resolve(p.SurveyID)
-	responseID, rok := legacyid.Resolve(p.ResponseID)
+	surveyID, sok := rowid.Parse(p.SurveyID)
+	responseID, rok := rowid.Parse(p.ResponseID)
 	if p.Type != TriggerResponseCompleted || !sok || !rok || p.TriggeredAt == "" {
 		return nil, uuid.Nil, uuid.Nil, errors.New("workflow run trigger payload is not a response.completed payload")
 	}

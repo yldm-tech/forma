@@ -130,12 +130,12 @@ func TestAppConnection(t *testing.T) {
 
 	var conn AppConnection
 	e.ok(e.do(reader, http.MethodGet, wsPath(ws, "/app-connection"), nil), http.StatusOK, &conn)
-	if conn.WorkspaceID != ws || conn.LegacyEnvironmentID != nil || conn.AppURL != webApp || conn.AppSetupCompleted {
+	if conn.WorkspaceID != ws || conn.AppURL != webApp || conn.AppSetupCompleted {
 		t.Fatalf("app connection %+v", conn)
 	}
-	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clenv123', app_setup_completed = true WHERE id = ?`, ws)
+	e.exec(`UPDATE workspaces SET app_setup_completed = true WHERE id = ?`, ws)
 	e.ok(e.do(reader, http.MethodGet, wsPath(ws, "/app-connection"), nil), http.StatusOK, &conn)
-	if conn.LegacyEnvironmentID == nil || *conn.LegacyEnvironmentID != "clenv123" || !conn.AppSetupCompleted {
+	if !conn.AppSetupCompleted {
 		t.Fatalf("app connection %+v", conn)
 	}
 	e.fails(e.do(e.user(), http.MethodGet, wsPath(ws, "/app-connection"), nil), http.StatusForbidden, apperr.CodeForbidden, "")

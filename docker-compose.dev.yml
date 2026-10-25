@@ -74,7 +74,7 @@ services:
       retries: 12
       start_period: 10s
 
-  # File storage. Same release the Go tests run (apps/server/internal/storage/s3test), forma2's. RustFS runs as uid 10001, so the data volume is handed to it first.
+  # File storage. Same release the Go tests run (apps/server/internal/storage/s3test). RustFS runs as uid 10001, so the data volume is handed to it first.
   rustfs-perms:
     image: busybox:1.36.1
     restart: "no"
@@ -120,7 +120,7 @@ services:
     depends_on:
       - rustfs
 
-  # Catches every email the server and worker send (forma2 ran mailhog for this); the inbox is at http://localhost:8025. .env.example's SMTP comment shows the settings that point at it.
+  # Catches every email the server and worker send; the inbox is at http://localhost:8025. .env.example's SMTP comment shows the settings that point at it.
   mailpit:
     image: axllent/mailpit:v1.27
     ports:
