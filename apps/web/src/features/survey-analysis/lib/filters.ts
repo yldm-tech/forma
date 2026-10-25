@@ -23,11 +23,12 @@ import {
   type FilterValue,
   OptionsType,
   type SelectedFilterValue,
+  type TContactAttributeDataType,
 } from "./filter-types";
 import { getReservedFieldLabel, getReservedFilterEntries } from "./reserved-fields";
 
 const conditionOptions = {
-  openText: ["is"],
+  openText: ["is", "Contains", "Does not contain"],
   multipleChoiceSingle: ["Includes either"],
   multipleChoiceMulti: ["Includes all", "Includes either"],
   nps: ["Is equal to", "Is less than", "Is more than", "Submitted", "Skipped", "Includes either"],
@@ -38,7 +39,6 @@ const conditionOptions = {
   tags: ["is"],
   languages: ["Equals", "Not equals"],
   pictureSelection: ["Includes all", "Includes either"],
-  userAttributes: ["Equals", "Not equals"],
   consent: ["is"],
   matrix: [""],
   address: ["is"],
@@ -107,6 +107,7 @@ const FILTER_OPERATOR_LABELS: Record<string, TFilterLabel> = {
   "Is greater than": (t) => t("workspace.analysis.filter_op.is_greater_than"),
   "Is before": (t) => t("workspace.analysis.filter_op.is_before"),
   "Is after": (t) => t("workspace.analysis.filter_op.is_after"),
+  "Is on": (t) => t("workspace.analysis.filter_op.is_on"),
   "Is set": (t) => t("workspace.analysis.filter_op.is_set"),
   "Is not set": (t) => t("workspace.analysis.filter_op.is_not_set"),
   Status: (t) => t("common.status"),
@@ -170,15 +171,26 @@ export const getFilterTargetLabel = (
 export const getFilterRowType = (row: FilterValue): TFilterRowType =>
   row.elementType.type === OptionsType.ELEMENTS ? row.elementType.elementType : row.elementType.type;
 
-/** What one applied condition reads as on its chip: the operator and the value, shown after the target, each through its label. */
+// The text operators, whose value is text someone typed, never one of the fixed values above.
+const TEXT_OPERATORS = new Set([
+  "Contains",
+  "Does not contain",
+  "Starts with",
+  "Does not start with",
+  "Ends with",
+  "Does not end with",
+]);
+
+/** What one applied condition reads as on its chip: the operator and the value, shown after the target, each through its label. Typed text is quoted, so "Contains Skipped" reads as the word someone searched for. */
 export const describeFilterCondition = (row: FilterValue, t: TFunction): string => {
   const rowType = getFilterRowType(row);
   const operator = row.filterType.filterValue;
   const value = row.filterType.filterComboBoxValue;
   const values = Array.isArray(value) ? value : value ? [value] : [];
+  const isTypedText = TEXT_OPERATORS.has(operator ?? "");
   return [
     operator ? getFilterOperatorLabel(rowType, operator, t) : "",
-    values.map((v) => getFilterValueLabel(rowType, v, t)).join(", "),
+    values.map((v) => (isTypedText ? `"${v}"` : getFilterValueLabel(rowType, v, t))).join(", "),
   ]
     .filter(Boolean)
     .join(" ");
@@ -304,7 +316,68 @@ const TYPED_FIELD_OP_MAP: Record<string, string> = {
   "Is not set": "isNotSet",
 };
 
-type TTypedFieldFilterCondition = NonNullable<TResponseFilterCriteria["reserved"]>[string];
+// Contact attributes are typed string, number or date (contact_attribute_keys.data_type). A date attribute is compared by its day, so "Is on" replaces equality.
+const CONTACT_DATE_OPERATORS = ["Is on", "Is before", "Is after", ...NO_VALUE_FILTER_OPERATORS];
+
+/** The operators a contact attribute of this type offers; an attribute whose type is unknown (its key since deleted) is text. */
+export const getContactAttributeOperators = (dataType: TContactAttributeDataType | undefined): string[] => {
+  switch (dataType) {
+    case "number":
+      return NUMBER_FIELD_OPERATORS;
+    case "date":
+      return CONTACT_DATE_OPERATORS;
+    default:
+      return TEXT_FIELD_OPERATORS;
+  }
+};
+
+const CONTACT_ATTRIBUTE_OP_MAP: Record<string, string> = {
+  ...META_OP_MAP,
+  "Is greater than": "greaterThan",
+  "Is less than": "lessThan",
+  "Is on": "isSameDay",
+  "Is before": "isBefore",
+  "Is after": "isAfter",
+  "Is set": "isSet",
+  "Is not set": "isNotSet",
+};
+
+type TContactAttributeFilterCondition = Extract<
+  NonNullable<TResponseFilterCriteria["contactAttributes"]>[string],
+  { op: string }
+>;
+
+/** One contact attribute row → one condition: a number attribute sends a real number, which the server compares numerically against the text the response's snapshot holds; a date attribute sends the picked day. Null when the row cannot form a valid condition. */
+const buildContactAttributeCondition = (
+  filterType: FilterValue["filterType"],
+  dataType: TContactAttributeDataType
+): TContactAttributeFilterCondition | null => {
+  const op = CONTACT_ATTRIBUTE_OP_MAP[filterType.filterValue ?? ""];
+  if (!op) return null;
+  if (op === "isSet" || op === "isNotSet") return { op };
+
+  const raw = Array.isArray(filterType.filterComboBoxValue)
+    ? filterType.filterComboBoxValue[0]
+    : filterType.filterComboBoxValue;
+  if (typeof raw !== "string" || raw.trim().length === 0) return null;
+  const value = raw.trim();
+
+  if (op === "isSameDay" || op === "isBefore" || op === "isAfter") {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? ({ op, value } as TContactAttributeFilterCondition) : null;
+  }
+  if (dataType === "number") {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+    return { op, value: numeric } as TContactAttributeFilterCondition;
+  }
+  if (op === "greaterThan" || op === "lessThan") return null;
+  return { op, value } as TContactAttributeFilterCondition;
+};
+
+type TTypedFieldFilterCondition = Extract<
+  NonNullable<TResponseFilterCriteria["reserved"]>[string],
+  { op: string }
+>;
 
 /**
  * One filter row → one typed condition, coerced to the field's dataType (a number field must send a real number — a string-typed `equals` never matches a jsonb number). Returns null when the row cannot form a valid condition, so half-filled rows drop instead of matching wrongly.
@@ -340,6 +413,7 @@ export const generateElementAndFilterOptions = ({
   survey,
   environmentTags,
   attributes,
+  attributeTypes = {},
   reservedValues,
   hiddenFields,
   variableValues,
@@ -349,6 +423,8 @@ export const generateElementAndFilterOptions = ({
   survey: TSurvey;
   environmentTags: TTag[] | undefined;
   attributes: TSurveyContactAttributes;
+  /** The attribute keys' data types, by key; a key without one is text. */
+  attributeTypes?: Record<string, string>;
   reservedValues: TSurveyMetaFieldFilter;
   hiddenFields: TResponseHiddenFieldsFilter;
   variableValues: TSurveyMetaFieldFilter;
@@ -400,20 +476,27 @@ export const generateElementAndFilterOptions = ({
   }
 
   if (attributes) {
+    const attributeType = (key: string): TContactAttributeDataType => {
+      const dataType = attributeTypes[key];
+      return dataType === "number" || dataType === "date" ? dataType : "string";
+    };
     elementOptions = [
       ...elementOptions,
       {
         header: OptionsType.ATTRIBUTES,
         option: Object.keys(attributes).map((a) => {
-          return { label: a, type: OptionsType.ATTRIBUTES, id: a };
+          return { label: a, type: OptionsType.ATTRIBUTES, id: a, dataType: attributeType(a) };
         }),
       },
     ];
+    // Operators per type; a string attribute picks from the observed values or takes typed text, a number or date one takes a typed value.
     Object.keys(attributes).forEach((a) => {
+      const dataType = attributeType(a);
       elementFilterOptions.push({
         type: "Attributes",
-        filterOptions: conditionOptions.userAttributes,
-        filterComboBoxOptions: attributes[a] ?? [],
+        filterOptions: getContactAttributeOperators(dataType),
+        filterComboBoxOptions: dataType === "string" ? (attributes[a] ?? []) : [],
+        fieldDataType: dataType,
         id: a,
       });
     });
@@ -524,29 +607,61 @@ export const generateElementAndFilterOptions = ({
   return { elementOptions: [...elementOptions], elementFilterOptions: [...elementFilterOptions] };
 };
 
+/**
+ * Adds a condition on key to one of the criteria's keyed groups. A key's first condition is sent as an object, the shape the server has always read; a second condition on the same key (a row using a field again, as a range does) turns it into an array, all of whose conditions must hold.
+ */
+const addCondition = <C extends { op: string }>(
+  group: Record<string, C | C[]>,
+  key: string,
+  condition: NoInfer<C>
+) => {
+  const existing = group[key];
+  group[key] =
+    existing === undefined ? condition : [...(Array.isArray(existing) ? existing : [existing]), condition];
+};
+
+type TDataGroup = NonNullable<TResponseFilterCriteria["data"]>;
+
 // Helper function to process filled out/skipped filters
 const processFilledOutSkippedFilter = (
   filterType: FilterValue["filterType"],
   elementId: string,
-  filters: TResponseFilterCriteria
+  data: TDataGroup
 ) => {
   if (filterType.filterComboBoxValue === "Filled out") {
-    filters.data![elementId] = { op: "filledOut" };
+    addCondition(data, elementId, { op: "filledOut" });
   } else if (filterType.filterComboBoxValue === "Skipped") {
-    filters.data![elementId] = { op: "skipped" };
+    addCondition(data, elementId, { op: "skipped" });
   }
 };
 
-// Helper function to process ranking filters
-const processRankingFilter = (
+// An open text answer: "is" Filled out / Skipped, or Contains / Does not contain typed text, which the server matches ignoring case.
+const processOpenTextFilter = (
   filterType: FilterValue["filterType"],
   elementId: string,
-  filters: TResponseFilterCriteria
+  data: TDataGroup
 ) => {
+  const op =
+    filterType.filterValue === "Contains"
+      ? "contains"
+      : filterType.filterValue === "Does not contain"
+        ? "doesNotContain"
+        : undefined;
+  if (!op) {
+    processFilledOutSkippedFilter(filterType, elementId, data);
+    return;
+  }
+  const value =
+    typeof filterType.filterComboBoxValue === "string" ? filterType.filterComboBoxValue.trim() : "";
+  if (value) addCondition(data, elementId, { op, value });
+};
+
+// Helper function to process ranking filters
+const processRankingFilter = (filterType: FilterValue["filterType"], elementId: string, data: TDataGroup) => {
   if (filterType.filterComboBoxValue === "Filled out") {
-    filters.data![elementId] = { op: "submitted" };
+    addCondition(data, elementId, { op: "submitted" });
   } else if (filterType.filterComboBoxValue === "Skipped") {
-    filters.data![elementId] = { op: "skipped" };
+    addCondition(data, elementId, { op: "skipped" });
   }
 };
 
@@ -554,18 +669,18 @@ const processRankingFilter = (
 const processMultipleChoiceFilter = (
   filterType: FilterValue["filterType"],
   elementId: string,
-  filters: TResponseFilterCriteria
+  data: TDataGroup
 ) => {
   if (filterType.filterValue === "Includes either") {
-    filters.data![elementId] = {
+    addCondition(data, elementId, {
       op: "includesOne",
       value: filterType.filterComboBoxValue as string[],
-    };
+    });
   } else if (filterType.filterValue === "Includes all") {
-    filters.data![elementId] = {
+    addCondition(data, elementId, {
       op: "includesAll",
       value: filterType.filterComboBoxValue as string[],
-    };
+    });
   }
 };
 
@@ -573,58 +688,50 @@ const processMultipleChoiceFilter = (
 const processNPSRatingFilter = (
   filterType: FilterValue["filterType"],
   elementId: string,
-  filters: TResponseFilterCriteria
+  data: TDataGroup
 ) => {
   if (filterType.filterValue === "Is equal to") {
-    filters.data![elementId] = {
+    addCondition(data, elementId, {
       op: "equals",
       value: parseInt(filterType.filterComboBoxValue as string),
-    };
+    });
   } else if (filterType.filterValue === "Is less than") {
-    filters.data![elementId] = {
+    addCondition(data, elementId, {
       op: "lessThan",
       value: parseInt(filterType.filterComboBoxValue as string),
-    };
+    });
   } else if (filterType.filterValue === "Is more than") {
-    filters.data![elementId] = {
+    addCondition(data, elementId, {
       op: "greaterThan",
       value: parseInt(filterType.filterComboBoxValue as string),
-    };
+    });
   } else if (filterType.filterValue === "Submitted") {
-    filters.data![elementId] = { op: "submitted" };
+    addCondition(data, elementId, { op: "submitted" });
   } else if (filterType.filterValue === "Skipped") {
-    filters.data![elementId] = { op: "skipped" };
+    addCondition(data, elementId, { op: "skipped" });
   } else if (filterType.filterValue === "Includes either") {
-    filters.data![elementId] = {
+    addCondition(data, elementId, {
       op: "includesOne",
       value: (filterType.filterComboBoxValue as string[]).map((value) => parseInt(value)),
-    };
+    });
   }
 };
 
 // Helper function to process CTA filters
-const processCTAFilter = (
-  filterType: FilterValue["filterType"],
-  elementId: string,
-  filters: TResponseFilterCriteria
-) => {
+const processCTAFilter = (filterType: FilterValue["filterType"], elementId: string, data: TDataGroup) => {
   if (filterType.filterComboBoxValue === "Clicked") {
-    filters.data![elementId] = { op: "clicked" };
+    addCondition(data, elementId, { op: "clicked" });
   } else if (filterType.filterComboBoxValue === "Dismissed") {
-    filters.data![elementId] = { op: "skipped" };
+    addCondition(data, elementId, { op: "skipped" });
   }
 };
 
 // Helper function to process Consent filters
-const processConsentFilter = (
-  filterType: FilterValue["filterType"],
-  elementId: string,
-  filters: TResponseFilterCriteria
-) => {
+const processConsentFilter = (filterType: FilterValue["filterType"], elementId: string, data: TDataGroup) => {
   if (filterType.filterComboBoxValue === "Accepted") {
-    filters.data![elementId] = { op: "accepted" };
+    addCondition(data, elementId, { op: "accepted" });
   } else if (filterType.filterComboBoxValue === "Dismissed") {
-    filters.data![elementId] = { op: "skipped" };
+    addCondition(data, elementId, { op: "skipped" });
   }
 };
 
@@ -633,7 +740,7 @@ const processPictureSelectionFilter = (
   filterType: FilterValue["filterType"],
   elementId: string,
   element: ReturnType<typeof getElementsFromBlocks>[number] | undefined,
-  filters: TResponseFilterCriteria
+  data: TDataGroup
 ) => {
   if (
     element?.type !== TSurveyElementTypeEnum.PictureSelection ||
@@ -650,27 +757,23 @@ const processPictureSelectionFilter = (
     .filter((id): id is string => Boolean(id));
 
   if (filterType.filterValue === "Includes all") {
-    filters.data![elementId] = { op: "includesAll", value: selectedOptions };
+    addCondition(data, elementId, { op: "includesAll", value: selectedOptions });
   } else if (filterType.filterValue === "Includes either") {
-    filters.data![elementId] = { op: "includesOne", value: selectedOptions };
+    addCondition(data, elementId, { op: "includesOne", value: selectedOptions });
   }
 };
 
 // Helper function to process Matrix filters
-const processMatrixFilter = (
-  filterType: FilterValue["filterType"],
-  elementId: string,
-  filters: TResponseFilterCriteria
-) => {
+const processMatrixFilter = (filterType: FilterValue["filterType"], elementId: string, data: TDataGroup) => {
   if (
     filterType.filterValue &&
     filterType.filterComboBoxValue &&
     typeof filterType.filterComboBoxValue === "string"
   ) {
-    filters.data![elementId] = {
+    addCondition(data, elementId, {
       op: "matrix",
       value: { [filterType.filterValue]: filterType.filterComboBoxValue },
-    };
+    });
   }
 };
 
@@ -683,7 +786,7 @@ const processElementFilters = (
   if (!elements.length) return;
 
   const surveyElements = getElementsFromBlocks(survey.blocks);
-  filters.data = filters.data || {};
+  const data = (filters.data = filters.data || {});
 
   elements.forEach(({ filterType, elementType }) => {
     const elementId = elementType.id ?? "";
@@ -691,69 +794,66 @@ const processElementFilters = (
 
     switch (elementType.elementType) {
       case TSurveyElementTypeEnum.OpenText:
+        processOpenTextFilter(filterType, elementId, data);
+        break;
       case TSurveyElementTypeEnum.Address:
       case TSurveyElementTypeEnum.ContactInfo:
-        processFilledOutSkippedFilter(filterType, elementId, filters);
+        processFilledOutSkippedFilter(filterType, elementId, data);
         break;
       case TSurveyElementTypeEnum.Ranking:
-        processRankingFilter(filterType, elementId, filters);
+        processRankingFilter(filterType, elementId, data);
         break;
       case TSurveyElementTypeEnum.MultipleChoiceSingle:
       case TSurveyElementTypeEnum.MultipleChoiceMulti:
-        processMultipleChoiceFilter(filterType, elementId, filters);
+        processMultipleChoiceFilter(filterType, elementId, data);
         break;
       case TSurveyElementTypeEnum.NPS:
       case TSurveyElementTypeEnum.Rating:
       case TSurveyElementTypeEnum.CSAT:
       case TSurveyElementTypeEnum.CES:
-        processNPSRatingFilter(filterType, elementId, filters);
+        processNPSRatingFilter(filterType, elementId, data);
         break;
       case TSurveyElementTypeEnum.CTA:
-        processCTAFilter(filterType, elementId, filters);
+        processCTAFilter(filterType, elementId, data);
         break;
       case TSurveyElementTypeEnum.Consent:
-        processConsentFilter(filterType, elementId, filters);
+        processConsentFilter(filterType, elementId, data);
         break;
       case TSurveyElementTypeEnum.PictureSelection:
-        processPictureSelectionFilter(filterType, elementId, element, filters);
+        processPictureSelectionFilter(filterType, elementId, element, data);
         break;
       case TSurveyElementTypeEnum.Matrix:
-        processMatrixFilter(filterType, elementId, filters);
+        processMatrixFilter(filterType, elementId, data);
         break;
     }
   });
 };
 
-// Helper function to process equals/not equals filters (for attributes, others)
-const processEqualsNotEqualsFilter = (
-  filterType: FilterValue["filterType"],
-  label: string | undefined,
-  filters: TResponseFilterCriteria,
-  targetKey: "contactAttributes" | "others"
-) => {
-  if (!filterType.filterComboBoxValue) return;
+// Contact attribute rows → the `contactAttributes` group, each by its attribute's type. A row from before attributes were typed (a saved link) carries no type and is text, which is what it filtered as then.
+const processContactAttributeFilters = (attributes: FilterValue[], filters: TResponseFilterCriteria) => {
+  attributes.forEach(({ filterType, elementType }) => {
+    const key = elementType.id ?? elementType.label;
+    if (!key) return;
+    const condition = buildContactAttributeCondition(filterType, elementType.dataType ?? "string");
+    if (!condition) return;
+    addCondition((filters.contactAttributes ??= {}), key, condition);
+  });
+};
 
-  if (targetKey === "contactAttributes") {
-    filters.contactAttributes = filters.contactAttributes || {};
-    if (filterType.filterValue === "Equals") {
-      filters.contactAttributes[label ?? ""] = {
-        op: "equals",
-        value: filterType.filterComboBoxValue as string,
-      };
-    } else if (filterType.filterValue === "Not equals") {
-      filters.contactAttributes[label ?? ""] = {
-        op: "notEquals",
-        value: filterType.filterComboBoxValue as string,
-      };
-    }
-  } else if (targetKey === "others") {
-    filters.others = filters.others || {};
-    if (filterType.filterValue === "Equals") {
-      filters.others[label ?? ""] = { op: "equals", value: filterType.filterComboBoxValue as string };
-    } else if (filterType.filterValue === "Not equals") {
-      filters.others[label ?? ""] = { op: "notEquals", value: filterType.filterComboBoxValue as string };
-    }
-  }
+// The language row → the `others` group.
+const processOtherFilters = (others: FilterValue[], filters: TResponseFilterCriteria) => {
+  others.forEach(({ filterType, elementType }) => {
+    if (!filterType.filterComboBoxValue) return;
+    const value = filterType.filterComboBoxValue as string;
+    const op =
+      filterType.filterValue === "Equals"
+        ? "equals"
+        : filterType.filterValue === "Not equals"
+          ? "notEquals"
+          : undefined;
+    if (!op) return;
+    addCondition((filters.others ??= {}), elementType.label ?? "", { op, value });
+  });
 };
 
 // Reserved-field filter rows → the `reserved` criteria group, keyed by catalog name (ENG-1848).
@@ -772,8 +872,7 @@ const processReservedFilters = (
 
     const condition = buildTypedFieldCondition(filterType, entry.dataType);
     if (!condition) return;
-    filters.reserved = filters.reserved || {};
-    filters.reserved[entry.name] = condition;
+    addCondition((filters.reserved ??= {}), entry.name, condition);
   });
 };
 
@@ -795,8 +894,7 @@ const processVariableFilters = (
 
     const condition = buildTypedFieldCondition(filterType, field.field.dataType);
     if (!condition) return;
-    filters.variables = filters.variables || {};
-    filters.variables[field.link.storageKey] = condition;
+    addCondition((filters.variables ??= {}), field.link.storageKey, condition);
   });
 };
 
@@ -818,13 +916,13 @@ const processIngestedFilters = (
 
     const condition = buildTypedFieldCondition(filterType, field.field.dataType);
     if (!condition) return;
-    filters.data = filters.data || {};
+    const data = (filters.data ??= {});
     if (condition.op === "isSet") {
-      filters.data[field.link.storageKey] = { op: "submitted" };
+      addCondition(data, field.link.storageKey, { op: "submitted" });
     } else if (condition.op === "isNotSet") {
-      filters.data[field.link.storageKey] = { op: "skipped" };
+      addCondition(data, field.link.storageKey, { op: "skipped" });
     } else {
-      filters.data[field.link.storageKey] = condition;
+      addCondition(data, field.link.storageKey, condition);
     }
   });
 };
@@ -833,7 +931,7 @@ const processIngestedFilters = (
 const processQuotaFilters = (quotas: FilterValue[], filters: TResponseFilterCriteria) => {
   if (!quotas.length) return;
 
-  filters.quotas = filters.quotas || {};
+  const quotaGroup = (filters.quotas = filters.quotas || {});
 
   const statusMap: Record<string, "screenedIn" | "screenedOut" | "screenedOutNotInQuota"> = {
     "Screened in": "screenedIn",
@@ -846,7 +944,7 @@ const processQuotaFilters = (quotas: FilterValue[], filters: TResponseFilterCrit
     if (!quotaId) return;
 
     const op = statusMap[String(filterType.filterComboBoxValue)];
-    if (op) filters.quotas![quotaId] = { op };
+    if (op) addCondition(quotaGroup, quotaId, { op });
   });
 };
 
@@ -920,25 +1018,14 @@ export const getFormattedFilters = (
   processElementFilters(elements, survey, filters);
   processIngestedFilters(hiddenFields, survey, filters);
   processVariableFilters(variables, survey, filters);
-
-  // for attributes
-  if (attributes.length) {
-    filters.contactAttributes = filters.contactAttributes || {};
-    attributes.forEach(({ filterType, elementType }) => {
-      processEqualsNotEqualsFilter(filterType, elementType.label, filters, "contactAttributes");
-    });
-  }
-
-  // for others
-  if (others.length) {
-    filters.others = filters.others || {};
-    others.forEach(({ filterType, elementType }) => {
-      processEqualsNotEqualsFilter(filterType, elementType.label, filters, "others");
-    });
-  }
-
+  processContactAttributeFilters(attributes, filters);
+  processOtherFilters(others, filters);
   processReservedFilters(meta, survey, filters);
   processQuotaFilters(quotas, filters);
+
+  // The keyword search above the response table.
+  const keyword = selectedFilter.keyword?.trim();
+  if (keyword) filters.search = keyword;
 
   return filters;
 };

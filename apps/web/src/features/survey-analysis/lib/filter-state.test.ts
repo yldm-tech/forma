@@ -30,3 +30,19 @@ describe("hasActiveFilters", () => {
     ).toBe(true);
   });
 });
+
+describe("the keyword search", () => {
+  const to = new Date("2026-10-24T00:00:00Z");
+
+  test("filters the views without counting on the Filter trigger", () => {
+    const searched: SelectedFilterValue = { filter: [], responseStatus: "all", keyword: "onboarding" };
+    expect(countAppliedFilters(searched)).toBe(0);
+    expect(hasActiveFilters(searched, { from: undefined, to })).toBe(true);
+  });
+
+  test("a blank keyword is no filter", () => {
+    expect(
+      hasActiveFilters({ filter: [], responseStatus: "all", keyword: "  " }, { from: undefined, to })
+    ).toBe(false);
+  });
+});

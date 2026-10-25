@@ -159,3 +159,10 @@ describe("ResponseFilter Apply", () => {
     expect(applied.filter.map((row) => row.elementType.id)).toEqual(["csat"]);
   });
 });
+
+describe("ResponseFilter Apply and the keyword search", () => {
+  test("applying the rows keeps the keyword the search box set", () => {
+    const applied = applyFilter({ filter: [], responseStatus: "all", keyword: "onboarding" });
+    expect(applied.keyword).toBe("onboarding");
+  });
+});

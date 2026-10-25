@@ -1706,6 +1706,7 @@
         "is_greater_than": "Is greater than",
         "is_more_than": "Is more than",
         "is_not_set": "Is not set",
+        "is_on": "Is on",
         "is_set": "Is set",
         "not_applied": "Not applied",
         "not_equals": "Not equals",
@@ -1717,7 +1718,12 @@
       },
       "new_responses_pill": "{count, plural, one {{count} new response} other {{count} new responses}}",
       "nps_formula_tooltip": "NPS = % promoters (9 to 10) minus % detractors (0 to 6), out of the {count, plural, one {# respondent} other {# respondents}} who answered. Skips are not counted.",
-      "refresh": "Refresh results"
+      "refresh": "Refresh results",
+      "search": {
+        "chip": "Keyword",
+        "clear": "Clear search",
+        "placeholder": "Search open-text answers"
+      }
     },
     "api_keys": {
       "access": "Access",

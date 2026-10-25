@@ -1,7 +1,13 @@
 import { z } from "zod";
 import type { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import { resolveDateRangePreset } from "./date-ranges";
-import type { DateRange, FilterValue, OptionsType, SelectedFilterValue } from "./filter-types";
+import type {
+  DateRange,
+  FilterValue,
+  OptionsType,
+  SelectedFilterValue,
+  TContactAttributeDataType,
+} from "./filter-types";
 
 /**
  * The single query param that carries the analysis filter, so a filtered Summary or Responses view can be shared, bookmarked and survive a reload. One param rather than several because the filter is a list of heterogeneous entries, not a fixed set of fields.
@@ -19,11 +25,16 @@ const ZEncodedFilterEntry = z.object({
   t: z.string().optional(),
   /** elementType.elementType — a `TSurveyElementTypeEnum` value, same reasoning as `t`. */
   e: z.string().optional(),
+  /** elementType.dataType — a contact attribute's type. A plain string like `t`: absent or unknown (a link from before attributes were typed) it is dropped and the row filters as text. */
+  y: z.string().optional(),
   /** filterType.filterValue */
   v: z.string().optional(),
   /** filterType.filterComboBoxValue */
   c: z.union([z.string(), z.array(z.string())]).optional(),
 });
+
+const isContactAttributeDataType = (value: string | undefined): value is TContactAttributeDataType =>
+  value === "string" || value === "number" || value === "date";
 
 const ZEncodedResponseFilter = z.object({
   /** responseStatus, omitted when "all" */
@@ -38,6 +49,8 @@ const ZEncodedResponseFilter = z.object({
     .optional(),
   /** the filter entries */
   f: z.array(ZEncodedFilterEntry).optional(),
+  /** the keyword search, omitted when there is none */
+  k: z.string().optional(),
 });
 
 export interface TDecodedResponseFilter {
@@ -53,13 +66,17 @@ export const isDefaultResponseFilterState = (
   selectedFilter: SelectedFilterValue,
   dateRange: DateRange
 ): boolean =>
-  selectedFilter.filter.length === 0 && selectedFilter.responseStatus === "all" && !dateRange.from;
+  selectedFilter.filter.length === 0 &&
+  selectedFilter.responseStatus === "all" &&
+  !selectedFilter.keyword?.trim() &&
+  !dateRange.from;
 
 const toEncodedEntry = ({ elementType, filterType }: FilterValue) => ({
   ...(elementType.id === undefined ? {} : { i: elementType.id }),
   ...(elementType.label === undefined ? {} : { l: elementType.label }),
   ...(elementType.type === undefined ? {} : { t: elementType.type }),
   ...(elementType.elementType === undefined ? {} : { e: elementType.elementType }),
+  ...(elementType.dataType === undefined ? {} : { y: elementType.dataType }),
   ...(filterType.filterValue === undefined ? {} : { v: filterType.filterValue }),
   ...(filterType.filterComboBoxValue === undefined ? {} : { c: filterType.filterComboBoxValue }),
 });
@@ -90,6 +107,11 @@ export const encodeResponseFilter = (
 
   if (selectedFilter.filter.length > 0) {
     encoded.f = selectedFilter.filter.map(toEncodedEntry);
+  }
+
+  const keyword = selectedFilter.keyword?.trim();
+  if (keyword) {
+    encoded.k = keyword;
   }
 
   if (Object.keys(encoded).length === 0) {
@@ -141,6 +163,7 @@ export const decodeResponseFilter = (parsed: unknown): TDecodedResponseFilter | 
         ...(entry.l === undefined ? {} : { label: entry.l }),
         ...(entry.t === undefined ? {} : { type: entry.t as OptionsType }),
         ...(entry.e === undefined ? {} : { elementType: entry.e as TSurveyElementTypeEnum }),
+        ...(isContactAttributeDataType(entry.y) ? { dataType: entry.y } : {}),
       },
       filterType: {
         filterValue: entry.v,
@@ -148,6 +171,7 @@ export const decodeResponseFilter = (parsed: unknown): TDecodedResponseFilter | 
       },
     })),
     responseStatus: encoded.s ?? "all",
+    ...(encoded.k?.trim() ? { keyword: encoded.k.trim() } : {}),
   };
 
   if (!encoded.d) {

@@ -65,13 +65,13 @@ const findFilterOption = (options: ElementFilterOptions[], elementType: Partial<
 
 /** forma2's clearItem: rows without a target, or without a value their operator needs, are dropped. A row whose operator takes no value ("Is set", or "Submitted" / "Skipped" on a score element) is complete as it is. */
 const withoutIncompleteRows = (value: SelectedFilterValue): SelectedFilterValue => ({
+  ...value,
   filter: value.filter.filter(
     (row) =>
       Object.hasOwn(row.elementType, "label") &&
       (Boolean(row.filterType.filterComboBoxValue?.length) ||
         isNoValueFilterOperator(getFilterRowType(row), row.filterType.filterValue))
   ),
-  responseStatus: value.responseStatus,
 });
 
 /** forma2's ResponseFilter: the popover that edits the filter rows and the response status, applied together. The options are read from the survey's filter data when the popover opens. */
@@ -85,12 +85,20 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
 
   const { elementOptions, elementFilterOptions } = useMemo(() => {
     if (!filterData.data) return { elementOptions: [], elementFilterOptions: [] };
-    const { attributes, environmentTags, hiddenFields, reservedValues, variableValues, quotas } =
-      filterData.data;
+    const {
+      attributes,
+      attributeTypes,
+      environmentTags,
+      hiddenFields,
+      reservedValues,
+      variableValues,
+      quotas,
+    } = filterData.data;
     return generateElementAndFilterOptions({
       survey,
       environmentTags,
       attributes,
+      attributeTypes,
       reservedValues,
       hiddenFields,
       variableValues,
@@ -114,9 +122,8 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
   };
 
   const handleOnChangeElementComboBoxValue = (value: ElementOption, index: number) => {
-    const matchingFilterOption = elementFilterOptions.find(
-      (option) => option.type === value.type || option.type === value.elementType
-    );
+    // The option's own operators: two attributes or fields of one group can differ in type.
+    const matchingFilterOption = findFilterOption(elementFilterOptions, value);
     updateRow(index, {
       elementType: value,
       filterType: {
@@ -157,14 +164,6 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
     setSelectedFilter(withoutIncompleteRows(filterValue));
     setIsOpen(false);
   };
-
-  // An option already used by another row is not offered again.
-  const elementComboBoxOptions = elementOptions.map((group) => ({
-    ...group,
-    option: group.option.filter(
-      (option) => !filterValue.filter.some((row) => row.elementType.id === option.id)
-    ),
-  }));
 
   // The applied filter, not the rows being edited: a row added but not applied changes nothing yet.
   const activeFilterCount = countAppliedFilters(selectedFilter);
@@ -213,7 +212,7 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
                   <div className="grid w-full grid-cols-1 items-center gap-3 md:grid-cols-2">
                     <ElementsComboBox
                       key={`${row.elementType.label}-${i}-${row.elementType.id}`}
-                      options={elementComboBoxOptions}
+                      options={elementOptions}
                       selected={row.elementType}
                       onChangeValue={(value) => handleOnChangeElementComboBoxValue(value, i)}
                     />
@@ -310,6 +309,16 @@ export const AppliedFilterChips = () => {
           filter: current.filter.filter((_, i) => i !== index),
         })),
     })),
+    ...(selectedFilter.keyword?.trim()
+      ? [
+          {
+            key: "keyword",
+            label: t("workspace.analysis.search.chip"),
+            condition: `"${selectedFilter.keyword.trim()}"`,
+            remove: () => setSelectedFilter((current) => ({ ...current, keyword: undefined })),
+          },
+        ]
+      : []),
     ...(statusLabel[selectedFilter.responseStatus]
       ? [
           {

@@ -1633,6 +1633,7 @@ checksums:
     workspace/analysis/filter_op/is_greater_than: b9542ab0e0ea0ee18e82931b160b1385
     workspace/analysis/filter_op/is_more_than: 90ca8c8fc3a69ae9ea544a3e97995739
     workspace/analysis/filter_op/is_not_set: c1a6fd89387686d3a5426a768bb286e9
+    workspace/analysis/filter_op/is_on: fb65cd92e682b299175735353f73a6fc
     workspace/analysis/filter_op/is_set: 1c66019bd162201db83aef305ab2a161
     workspace/analysis/filter_op/not_applied: 3e24d3bcb5468ff7fb554fe6cea53209
     workspace/analysis/filter_op/not_equals: 4ba7dcfb1f5abb60e344eefa8043331a
@@ -1644,6 +1645,9 @@ checksums:
     workspace/analysis/new_responses_pill: 9d45e8c6a91b67744980b06b26ac3903
     workspace/analysis/nps_formula_tooltip: 22f37aac6d65e65a0d787badcb4cf4f5
     workspace/analysis/refresh: 8dab72d1eded5437272bb02c543e4042
+    workspace/analysis/search/chip: c85a01aa86d4b45d821978d2159e0f1b
+    workspace/analysis/search/clear: 0ee4a80abe134b7edd90c74f03638877
+    workspace/analysis/search/placeholder: 10d646cd0c34d524946bcde9c1405b6f
     workspace/api_keys/access: 550606d4a12bdf108c1b12b925ca1b3a
     workspace/api_keys/add_api_key: 3c7633bae18a6e19af7a5af12f9bc3da
     workspace/api_keys/api_key: ce825fec5b3e1f8e27c45b1a63619985

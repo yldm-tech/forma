@@ -1706,6 +1706,7 @@
         "is_greater_than": "大于",
         "is_more_than": "大于",
         "is_not_set": "未设置",
+        "is_on": "同一天",
         "is_set": "已设置",
         "not_applied": "未添加",
         "not_equals": "不等于",
@@ -1717,7 +1718,12 @@
       },
       "new_responses_pill": "{count, plural, other {{count} 条新回复}}",
       "nps_formula_tooltip": "NPS = 推荐者（9–10 分）占比 − 贬损者（0–6 分）占比，以作答的 {count} 位受访者为基数，不计跳过的回答。",
-      "refresh": "刷新结果"
+      "refresh": "刷新结果",
+      "search": {
+        "chip": "关键词",
+        "clear": "清除搜索",
+        "placeholder": "搜索开放式回复"
+      }
     },
     "api_keys": {
       "access": "访问权限",

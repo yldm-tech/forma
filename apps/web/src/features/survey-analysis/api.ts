@@ -27,6 +27,8 @@ export const DISPLAYS_PER_PAGE = 15;
 export interface SurveyFilterData {
   environmentTags: TTag[];
   attributes: TSurveyContactAttributes;
+  /** The data types (string, number, date) of the attribute keys in attributes; a key the workspace no longer has is missing. */
+  attributeTypes: Record<string, string>;
   meta: TSurveyMetaFieldFilter;
   hiddenFields: TResponseHiddenFieldsFilter;
   reservedValues: TSurveyMetaFieldFilter;

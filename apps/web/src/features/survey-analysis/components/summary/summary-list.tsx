@@ -92,11 +92,11 @@ export const SummaryList = ({
     const row = { elementType: value, filterType: { filterComboBoxValue, filterValue } };
     const existingIndex = selectedFilter.filter.findIndex((filter) => filter.elementType.id === elementId);
     const next: SelectedFilterValue = {
+      ...selectedFilter,
       filter:
         existingIndex === -1
           ? [...selectedFilter.filter, row]
           : selectedFilter.filter.map((filter, index) => (index === existingIndex ? row : filter)),
-      responseStatus: selectedFilter.responseStatus,
     };
     toast.success(
       existingIndex === -1

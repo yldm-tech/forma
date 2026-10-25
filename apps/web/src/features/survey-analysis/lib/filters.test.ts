@@ -1541,3 +1541,190 @@ describe("surveys", () => {
     });
   });
 });
+
+describe("open text, contact attribute and repeated-field filters", () => {
+  const survey = asRead({
+    id: "survey1",
+    name: "Feedback",
+    blocks: [
+      {
+        id: "block1",
+        name: "Block 1",
+        elements: [
+          {
+            id: "improve",
+            type: TSurveyElementTypeEnum.OpenText,
+            headline: { default: "What could we improve?" },
+            required: false,
+            inputType: "text",
+            charLimit: { enabled: false },
+          },
+          {
+            id: "rating",
+            type: TSurveyElementTypeEnum.Rating,
+            headline: { default: "Rating" },
+            required: false,
+            scale: "number",
+            range: 10,
+          },
+        ] as TSurveyElement[],
+      },
+    ],
+    questions: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    status: "inProgress",
+  } as unknown as TSurvey);
+
+  const elementRow = (
+    id: string,
+    elementType: TSurveyElementTypeEnum,
+    filterValue: string,
+    filterComboBoxValue?: string
+  ): SelectedFilterValue["filter"][number] => ({
+    elementType: { id, label: id, type: OptionsType.ELEMENTS, elementType },
+    filterType: { filterValue, filterComboBoxValue },
+  });
+
+  const attributeRow = (
+    key: string,
+    dataType: "string" | "number" | "date" | undefined,
+    filterValue: string,
+    filterComboBoxValue?: string
+  ): SelectedFilterValue["filter"][number] => ({
+    elementType: { id: key, label: key, type: OptionsType.ATTRIBUTES, ...(dataType ? { dataType } : {}) },
+    filterType: { filterValue, filterComboBoxValue },
+  });
+
+  const format = (filter: SelectedFilterValue["filter"], keyword?: string) =>
+    getFormattedFilters(survey, { filter, responseStatus: "all", keyword }, {} as DateRange);
+
+  test("an open text question offers Contains and Does not contain beside Filled out and Skipped", () => {
+    const option = genOptions(survey).elementFilterOptions.find((o) => o.id === "improve");
+    expect(option?.filterOptions).toEqual(["is", "Contains", "Does not contain"]);
+    expect(option?.filterComboBoxOptions).toEqual(["Filled out", "Skipped"]);
+  });
+
+  test("Contains and Does not contain send the typed text, trimmed; a blank one is no condition", () => {
+    expect(
+      format([elementRow("improve", TSurveyElementTypeEnum.OpenText, "Contains", " onboarding ")]).data
+    ).toEqual({ improve: { op: "contains", value: "onboarding" } });
+    expect(
+      format([elementRow("improve", TSurveyElementTypeEnum.OpenText, "Does not contain", "price")]).data
+        ?.improve
+    ).toEqual({ op: "doesNotContain", value: "price" });
+    expect(
+      format([elementRow("improve", TSurveyElementTypeEnum.OpenText, "Contains", "  ")]).data?.improve
+    ).toBe(undefined);
+    expect(
+      format([elementRow("improve", TSurveyElementTypeEnum.OpenText, "is", "Filled out")]).data?.improve
+    ).toEqual({ op: "filledOut" });
+  });
+
+  test("a field used in two rows sends both conditions, which makes a range", () => {
+    const result = format([
+      elementRow("rating", TSurveyElementTypeEnum.Rating, "Is more than", "2"),
+      elementRow("rating", TSurveyElementTypeEnum.Rating, "Is less than", "8"),
+      elementRow("improve", TSurveyElementTypeEnum.OpenText, "is", "Filled out"),
+      elementRow("improve", TSurveyElementTypeEnum.OpenText, "Does not contain", "slow"),
+    ]);
+    expect(result.data).toEqual({
+      rating: [
+        { op: "greaterThan", value: 2 },
+        { op: "lessThan", value: 8 },
+      ],
+      improve: [{ op: "filledOut" }, { op: "doesNotContain", value: "slow" }],
+    });
+  });
+
+  test("a contact attribute's operators and values follow its type", () => {
+    const { elementOptions, elementFilterOptions } = genOptions(survey, {
+      attributes: {
+        plan: ["pro", "free"],
+        seats: ["3", "25"],
+        renewal: ["2026-03-01T00:00:00.000Z"],
+        gone: ["x"],
+      },
+      attributeTypes: { plan: "string", seats: "number", renewal: "date" },
+    });
+    const attributeOptions = elementOptions.find((group) => group.header === OptionsType.ATTRIBUTES)?.option;
+    expect(attributeOptions?.map((option) => [option.id, option.dataType])).toEqual([
+      ["plan", "string"],
+      ["seats", "number"],
+      ["renewal", "date"],
+      ["gone", "string"],
+    ]);
+    const optionOf = (id: string) => elementFilterOptions.find((o) => o.type === "Attributes" && o.id === id);
+    expect(optionOf("plan")?.filterOptions).toEqual(expect.arrayContaining(["Equals", "Contains", "Is set"]));
+    expect(optionOf("plan")?.filterComboBoxOptions).toEqual(["pro", "free"]);
+    expect(optionOf("seats")?.filterOptions).toEqual([
+      "Equals",
+      "Not equals",
+      "Is greater than",
+      "Is less than",
+      "Is set",
+      "Is not set",
+    ]);
+    expect(optionOf("seats")?.fieldDataType).toBe("number");
+    expect(optionOf("renewal")?.filterOptions).toEqual([
+      "Is on",
+      "Is before",
+      "Is after",
+      "Is set",
+      "Is not set",
+    ]);
+    expect(optionOf("gone")?.filterOptions).toEqual(optionOf("plan")?.filterOptions);
+  });
+
+  test("a contact attribute row sends its type's condition", () => {
+    const result = format([
+      attributeRow("plan", "string", "Contains", "pro"),
+      attributeRow("seats", "number", "Is greater than", "20"),
+      attributeRow("seats", "number", "Is less than", "100"),
+      attributeRow("renewal", "date", "Is after", "2026-01-01"),
+      attributeRow("region", "string", "Is not set"),
+      attributeRow("tier", undefined, "Equals", "gold"),
+    ]);
+    expect(result.contactAttributes).toEqual({
+      plan: { op: "contains", value: "pro" },
+      seats: [
+        { op: "greaterThan", value: 20 },
+        { op: "lessThan", value: 100 },
+      ],
+      renewal: { op: "isAfter", value: "2026-01-01" },
+      region: { op: "isNotSet" },
+      tier: { op: "equals", value: "gold" },
+    });
+  });
+
+  test("a number attribute compares as a number; rows that cannot form a condition drop", () => {
+    expect(format([attributeRow("seats", "number", "Equals", "25")]).contactAttributes).toEqual({
+      seats: { op: "equals", value: 25 },
+    });
+    expect(
+      format([
+        attributeRow("seats", "number", "Is greater than", "many"),
+        attributeRow("renewal", "date", "Is on", "March"),
+        attributeRow("plan", "string", "Is greater than", "a"),
+      ]).contactAttributes
+    ).toBe(undefined);
+  });
+
+  test("the keyword search is sent trimmed, and a blank one not at all", () => {
+    expect(format([], "  Onboarding ").search).toBe("Onboarding");
+    expect(format([], "   ").search).toBe(undefined);
+    expect(format([]).search).toBe(undefined);
+  });
+
+  test("a chip quotes typed text rather than reading it as a fixed value", () => {
+    expect(
+      describeFilterCondition(
+        elementRow("improve", TSurveyElementTypeEnum.OpenText, "Contains", "Skipped"),
+        t
+      )
+    ).toBe('workspace.analysis.filter_op.contains "Skipped"');
+    expect(
+      describeFilterCondition(elementRow("improve", TSurveyElementTypeEnum.OpenText, "is", "Skipped"), t)
+    ).toBe("workspace.analysis.filter_op.is common.skipped");
+  });
+});

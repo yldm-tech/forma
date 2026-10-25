@@ -1706,6 +1706,7 @@
         "is_greater_than": "大於",
         "is_more_than": "大於",
         "is_not_set": "未設定",
+        "is_on": "同一天",
         "is_set": "已設定",
         "not_applied": "未加上",
         "not_equals": "不等於",
@@ -1717,7 +1718,12 @@
       },
       "new_responses_pill": "{count, plural, other {{count} 筆新回應}}",
       "nps_formula_tooltip": "NPS = 推廣者（9–10 分）比例 − 批評者（0–6 分）比例，以作答的 {count} 位受訪者為基數，不計入略過的回應。",
-      "refresh": "重新整理結果"
+      "refresh": "重新整理結果",
+      "search": {
+        "chip": "關鍵字",
+        "clear": "清除搜尋",
+        "placeholder": "搜尋開放式回應"
+      }
     },
     "api_keys": {
       "access": "存取權限",

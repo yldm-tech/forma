@@ -1706,6 +1706,7 @@
         "is_greater_than": "より大きい",
         "is_more_than": "より大きい",
         "is_not_set": "設定されていない",
+        "is_on": "と同日",
         "is_set": "設定されている",
         "not_applied": "未付与",
         "not_equals": "と等しくない",
@@ -1717,7 +1718,12 @@
       },
       "new_responses_pill": "{count, plural, other {{count} 件の新しい回答}}",
       "nps_formula_tooltip": "NPS = 推奨者（9〜10）の割合 − 批判者（0〜6）の割合。回答した{count}人を母数とし、スキップは含みません。",
-      "refresh": "結果を更新"
+      "refresh": "結果を更新",
+      "search": {
+        "chip": "キーワード",
+        "clear": "検索をクリア",
+        "placeholder": "自由記述の回答を検索"
+      }
     },
     "api_keys": {
       "access": "アクセス権",
