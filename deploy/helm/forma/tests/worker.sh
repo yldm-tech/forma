@@ -38,7 +38,7 @@ worker="$(manifest "${default_render}" Deployment forma-worker)"
 [[ -n "${server}" ]] || fail "The server Deployment must render."
 [[ -n "${worker}" ]] || fail "The worker Deployment must render by default."
 
-# The server keeps the image's default command (`forma start`), steered by forma2's entrypoint switches.
+# The server keeps the image's default command (`forma start`), steered by its switches.
 if grep --quiet '^          args:' <<<"${server}"; then
   fail "The server must run the image's default command unless deployment.args says otherwise."
 fi
@@ -63,14 +63,14 @@ grep --quiet --fixed-strings 'name: forma-app-secrets' <<<"${worker}" || fail "T
 for variable in AUTHZED_ENABLED AUTHZED_ENDPOINT AUTHZED_TOKEN AUTHZED_INSECURE TRUSTED_PROXY_HOP_COUNT; do
   [[ "$(count_env "${worker}" "${variable}")" == "1" ]] || fail "The worker must get ${variable} like the server."
 done
-# Booleans the Go server reads are 1 or 0; only SKIP_STARTUP_MIGRATION keeps forma2's "true".
+# Booleans the Go server reads are 1 or 0; only SKIP_STARTUP_MIGRATION takes "true".
 spelled_out="$(awk '
   /^ *- name: / { name = $3 }
   /^ *value: "?(true|false)"?$/ && name != "SKIP_STARTUP_MIGRATION" { print name }
 ' <<<"${server}${worker}")"
 [[ -z "${spelled_out}" ]] || fail "These variables must be 1 or 0, not true or false: ${spelled_out}"
 
-# --- worker.enabled=false: the server runs the jobs in-process, as forma2's pods did ------------------------
+# --- worker.enabled=false: the server runs the jobs in-process ------------------------
 inline_render="$(render --set worker.enabled=false)"
 [[ -z "$(manifest "${inline_render}" Deployment forma-worker)" ]] || fail "worker.enabled=false must not render the worker Deployment."
 [[ "$(count_env "$(manifest "${inline_render}" Deployment forma)" BULLMQ_WORKER_ENABLED)" == "0" ]] \

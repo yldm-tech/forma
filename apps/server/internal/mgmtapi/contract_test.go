@@ -18,7 +18,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// The contract test replays the exchanges recorded against forma2 (testdata/forma2, see its README) in the order their scenarios need, against data equivalent to what the recorder created, and requires the same status, the recorded headers and a body equal to the recorded one with its placeholders matched by kind. An id placeholder binds to the first id it meets and must name the same id wherever it appears again; ids are the rewrite's UUIDs where forma2 had cuids. Steps whose name starts with "@" are the recorder's own requests and writes that set up a scenario without being recorded.
+// The contract test replays the exchanges in testdata/contract (see its README) in the order their scenarios need, against the data seedRecording creates, and requires the same status, the listed headers and a body equal to the expected one with its placeholders matched by kind. An id placeholder binds to the first id it meets and must name the same id wherever it appears again. Steps whose name starts with "@" are setup requests and writes that are not cases themselves.
 
 type recorded struct {
 	Case    string `json:"case"`
@@ -44,26 +44,14 @@ type recorded struct {
 	} `json:"notes"`
 }
 
-// notReplayed are the recorded exchanges the replay skips, with the reason.
-var notReplayed = map[string]string{
-	"mcp-unauthenticated":    mcpCrashed,
-	"mcp-api-key-initialize": mcpCrashed,
-	"mcp-api-key-tools-list": mcpCrashed,
-	"mcp-foreign-origin":     mcpCrashed,
-	"mcp-invalid-bearer":     mcpCrashed,
-	"mcp-query-credential":   mcpCrashed,
-}
-
-const mcpCrashed = "forma2 answered every POST /api/mcp with a bare 500 before authenticating (notes.knownDefect), so the recording holds no MCP exchange; the intended answers the notes describe are tested in internal/mcp."
-
-// replayOrder is the order the recorder's scenarios need: v1 first (action classes, attribute keys, the contacts the client API identified, surveys, the client API's responses and the v1 ones, storage), then v2, whose lists the v1 writes populate. The rate-limit cases come last.
+// replayOrder is the order the scenarios need: v1 first (action classes, attribute keys, the contacts the client API identified, surveys, the client API's responses and the v1 ones, storage), then v2, whose lists the v1 writes populate. The rate-limit cases come last.
 var replayOrder = []string{
 	"v1-management-options",
 	"v1-me-no-key", "v1-me-invalid-key", "v1-me-bearer-ignored", "v1-me-organization-only-key", "v1-me", "v1-me-other-workspace-key",
 
 	"v1-action-classes-list-no-key", "v1-action-classes-list-invalid-key", "v1-action-classes-list-organization-only-key", "v1-action-classes-list-bearer",
 	"v1-action-classes-create-code", "@checkout-recorded-at",
-	"v1-action-classes-create-nocode-legacy-environment-id", "v1-action-classes-create-duplicate-key", "v1-action-classes-create-invalid-body",
+	"v1-action-classes-create-nocode-environment-id", "v1-action-classes-create-duplicate-key", "v1-action-classes-create-invalid-body",
 	"v1-action-classes-create-malformed-json", "v1-action-classes-create-missing-workspace", "v1-action-classes-create-other-workspace-key",
 	"v1-action-classes-create-read-key", "v1-action-classes-create-unknown-workspace",
 	"v1-action-classes-list", "v1-action-classes-list-read-key", "v1-action-classes-get", "v1-action-classes-get-other-workspace-key", "v1-action-classes-get-unknown",
@@ -86,7 +74,7 @@ var replayOrder = []string{
 	"v1-contacts-get", "v1-contacts-get-other-workspace-key", "v1-contacts-get-unknown",
 	"v1-contact-attributes-list", "v1-contact-attributes-list-other-workspace-key",
 
-	"v1-surveys-create-questions", "v1-surveys-create-blocks", "v1-surveys-create-legacy-environment-id", "v1-surveys-create-other-workspace",
+	"v1-surveys-create-questions", "v1-surveys-create-blocks", "v1-surveys-create-environment-id", "v1-surveys-create-other-workspace",
 	"v1-surveys-create-questions-and-blocks", "v1-surveys-create-invalid-body", "v1-surveys-create-malformed-json", "v1-surveys-create-missing-workspace",
 	"v1-surveys-create-other-workspace-key", "v1-surveys-create-read-key", "v1-surveys-create-recaptcha",
 	"v1-surveys-list", "v1-surveys-list-paginated", "v1-surveys-list-skip-ignored", "v1-surveys-list-offset-beyond", "v1-surveys-list-organization-only-key",
@@ -110,7 +98,7 @@ var replayOrder = []string{
 	"v1-responses-update-validation-failed",
 	"@temporary-response", "v1-responses-delete-write-key", "v1-responses-delete", "v1-responses-delete-unknown",
 
-	"v1-storage-upload", "v1-storage-upload-legacy-environment-id", "v1-storage-extension-not-allowed", "v1-storage-invalid-file-name",
+	"v1-storage-upload", "v1-storage-upload-environment-id", "v1-storage-extension-not-allowed", "v1-storage-invalid-file-name",
 	"v1-storage-malformed-json", "v1-storage-missing-fields", "v1-storage-missing-workspace", "v1-storage-no-key", "v1-storage-other-workspace-key",
 	"v1-storage-read-key", "v1-storage-unknown-workspace",
 
@@ -120,7 +108,7 @@ var replayOrder = []string{
 
 	"v2-contact-attribute-keys-list", "v2-contact-attribute-keys-list-paginated", "v2-contact-attribute-keys-list-other-workspace-key",
 	"v2-contact-attribute-keys-list-organization-only-key", "v2-contact-attribute-keys-list-invalid-query", "v2-contact-attribute-keys-list-date-range-inverted",
-	"v2-contact-attribute-keys-create", "v2-contact-attribute-keys-create-legacy-environment-id", "v2-contact-attribute-keys-create-reserved-key",
+	"v2-contact-attribute-keys-create", "v2-contact-attribute-keys-create-environment-id", "v2-contact-attribute-keys-create-reserved-key",
 	"v2-contact-attribute-keys-create-duplicate", "v2-contact-attribute-keys-create-invalid-key", "v2-contact-attribute-keys-create-malformed-json",
 	"v2-contact-attribute-keys-create-missing-description", "v2-contact-attribute-keys-create-missing-workspace", "v2-contact-attribute-keys-create-other-workspace-key",
 	"v2-contact-attribute-keys-create-read-key", "v2-contact-attribute-keys-create-unknown-workspace",
@@ -152,7 +140,7 @@ var replayOrder = []string{
 	"v2-contacts-bulk", "v2-contacts-bulk-new-attribute-key", "v2-contacts-bulk-update-existing", "v2-contacts-bulk-conflicting-userid", "v2-contacts-bulk-invalid",
 	"v2-contacts-bulk-read-key",
 
-	"v2-webhooks-list-empty", "v2-webhooks-create", "v2-webhooks-create-legacy-environment-id", "v2-webhooks-create-activepieces-source", "@forget-activepieces-webhook",
+	"v2-webhooks-list-empty", "v2-webhooks-create", "v2-webhooks-create-environment-id", "v2-webhooks-create-activepieces-source", "@forget-activepieces-webhook",
 	"v2-webhooks-create-invalid-body", "v2-webhooks-create-private-url", "v2-webhooks-create-read-key", "v2-webhooks-create-survey-other-workspace",
 	"v2-webhooks-list", "v2-webhooks-list-other-workspace-key", "v2-webhooks-list-by-survey",
 	"v2-webhooks-get", "v2-webhooks-get-other-workspace-key", "v2-webhooks-get-unknown",
@@ -189,210 +177,9 @@ var replayOrder = []string{
 	"v1-rate-limited", "v2-rate-limited", "v1-storage-rate-limited",
 }
 
-// deviation is a recorded answer the rewrite gives differently on purpose: adjust rewrites the expected exchange.
-type deviation struct {
-	reason string
-	adjust func(f *recorded)
-}
-
-func replaceBody(f *recorded, old, replacement string) {
-	f.Response.Body = json.RawMessage(strings.ReplaceAll(string(f.Response.Body), old, replacement))
-}
-
-// deviations are the recorded answers the rewrite gives differently on purpose, each with the reason.
-var deviations = map[string]deviation{
-	"v1-action-classes-create-code": {
-		reason: "Recording artifact: the recorder replaced this action class's creation time with the literal it later sent back in a survey's triggers, so the create answer shows it; the replay seeds that literal after the create (step @checkout-recorded-at), and the create itself answers with the time it ran.",
-		adjust: func(f *recorded) { replaceBody(f, `"2026-10-22T23:28:39.933Z"`, `"<timestamp>"`) },
-	},
-	"v1-surveys-single-use-ids": {
-		reason: "Encrypted single-use ids are sealed by the rewrite's own cipher (base64url, bound to the survey; P3), not forma2's iv:ciphertext:tag; the survey pages open both.",
-		adjust: func(f *recorded) { replaceBody(f, "<single-use-token>", "<sealed-single-use-id>") },
-	},
-	"v1-surveys-single-use-ids-default-limit": {
-		reason: "Encrypted single-use ids are sealed by the rewrite's own cipher (base64url, bound to the survey; P3), not forma2's iv:ciphertext:tag; the survey pages open both.",
-		adjust: func(f *recorded) { replaceBody(f, "<single-use-token>", "<sealed-single-use-id>") },
-	},
-	"v2-openapi-not-served": {
-		reason: "No OpenAPI document is served, as in forma2; an unknown /api path answers the rewrite's JSON 404 instead of Next.js's HTML not-found page.",
-		adjust: func(f *recorded) {
-			f.Response.Headers["content-type"] = "application/json; charset=utf-8"
-			delete(f.Response.Headers, "cache-control")
-			delete(f.Response.Headers, "vary")
-			f.Response.BodyFormat = "json"
-			f.Response.Body = json.RawMessage(`{"code":"not_found","message":"Route not found"}`)
-		},
-	},
-	"v2-webhooks-create-activepieces-source": {
-		reason: "The recorded image predates 3db326f, which derives the webhook source enum from the Prisma enum and so accepts activepieces (README): the rewrite answers as 3db326f does.",
-		adjust: func(f *recorded) {
-			f.Response.Status = 201
-			f.Response.Body = json.RawMessage(`{"data":{"id":"<id:webhook:activepieces>","name":"AP","createdAt":"<timestamp>","updatedAt":"<timestamp>","url":"https://example.com/ap","source":"activepieces","workspaceId":"<id:workspace>","triggers":["responseFinished"],"surveyIds":[],"secret":"<webhook-secret>"}}`)
-		},
-	},
-	"v2-contact-attribute-keys-list": {
-		reason: "forma2 created a workspace's default attribute keys in one statement, with one creation time, and left the order of equal times to PostgreSQL; the rewrite breaks such ties by id, so the default keys list in the order they were created (newest first here).",
-		adjust: func(f *recorded) {
-			reorderData(f, "seats", "plan", "language", "lastName", "firstName", "email", "userId")
-		},
-	},
-	"v2-contact-attribute-keys-list-paginated": {
-		reason: "As v2-contact-attribute-keys-list: ties of the default keys' equal creation times are broken by id (oldest first here).",
-		adjust: func(f *recorded) {
-			f.Response.Body = json.RawMessage(`{"data":[
-				{"id":"<id:contactAttributeKey:email>","createdAt":"<timestamp>","updatedAt":"<timestamp>","isUnique":true,"key":"email","name":"Email","description":"The email of a contact","type":"default","dataType":"string","workspaceId":"<id:workspace>"},
-				{"id":"<id:contactAttributeKey:firstName>","createdAt":"<timestamp>","updatedAt":"<timestamp>","isUnique":false,"key":"firstName","name":"First Name","description":"Your contact's first name","type":"default","dataType":"string","workspaceId":"<id:workspace>"}
-			],"meta":{"total":7,"limit":2,"offset":1}}`)
-		},
-	},
-	"v2-contact-attribute-keys-list-other-workspace-key": {
-		reason: "As v2-contact-attribute-keys-list: ties of the default keys' equal creation times are broken by id (newest first here).",
-		adjust: func(f *recorded) { reorderData(f, "language", "lastName", "firstName", "email", "userId") },
-	},
-	"v2-webhooks-create-invalid-body": {
-		reason: "At 3db326f the source enum lists activepieces too (README), so its message does.",
-		adjust: func(f *recorded) {
-			replaceBody(f, `\"n8n\""`, `\"n8n\"|\"activepieces\""`)
-		},
-	},
-	"v2-webhooks-update-invalid-body": {
-		reason: "At 3db326f the source enum lists activepieces too (README), so its message does.",
-		adjust: func(f *recorded) {
-			replaceBody(f, `\"n8n\""`, `\"n8n\"|\"activepieces\""`)
-		},
-	},
-	"v2-contacts-bulk": {
-		reason: "forma2 defect (notes.knownDefect): every bulk upload that writes a contact failed with 500. The rewrite answers what forma2 meant to.",
-		adjust: bulkSucceeded,
-	},
-	"v2-contacts-bulk-new-attribute-key": {
-		reason: "forma2 defect (notes.knownDefect), as v2-contacts-bulk; the new key is created.",
-		adjust: bulkSucceeded,
-	},
-	"v2-contacts-bulk-update-existing": {
-		reason: "forma2 defect (notes.knownDefect), as v2-contacts-bulk.",
-		adjust: bulkSucceeded,
-	},
-	"v2-teams-create-duplicate": {
-		reason: "forma2 defect (notes.knownDefect): a duplicate team name surfaced as a 500. The rewrite answers 409.",
-		adjust: func(f *recorded) {
-			f.Response.Status = 409
-			f.Response.Body = json.RawMessage(`{"error":{"code":409,"message":"Conflict","details":[{"field":"team","issue":"Team name already exists"}]}}`)
-		},
-	},
-	"v2-workspace-teams-delete-unknown": {
-		reason: "forma2 defect (notes.knownDefect): deleting a workspace team that does not exist surfaced as a 500. The rewrite answers 404.",
-		adjust: func(f *recorded) {
-			f.Response.Status = 404
-			f.Response.Body = json.RawMessage(`{"error":{"code":404,"message":"Not Found","details":[{"field":"workspaceTeam","issue":"not found"}]}}`)
-		},
-	},
-}
-
-func init() {
-	for _, name := range []string{"mcp-get", "well-known-oauth-protected-resource", "well-known-oauth-protected-resource-mcp", "well-known-oauth-protected-resource-unknown", "oauth-register-public-client", "oauth-register-invalid-redirect", "oauth-register-missing-redirect"} {
-		deviations[name] = deviation{reason: goJSONHeaders, adjust: jsonHeaders}
-	}
-	for _, name := range []string{"well-known-oauth-authorization-server", "well-known-oauth-authorization-server-issuer-path", "well-known-openid-configuration", "well-known-openid-configuration-issuer-path", "auth-openid-configuration"} {
-		deviations[name] = deviation{
-			reason: goJSONHeaders + " The discovery document leaves out what this server does not implement: the client_credentials grant (every token is a user's), private_key_jwt client authentication and the JWT signing algorithms only it uses, DPoP, back-channel logout, the claims request parameter, the iss authorization response parameter, and the sid, picture, given_name and family_name claims it never issues.",
-			adjust: func(f *recorded) {
-				jsonHeaders(f)
-				editBody(f, func(body map[string]any) {
-					for _, member := range []string{
-						"authorization_response_iss_parameter_supported", "dpop_signing_alg_values_supported", "backchannel_logout_supported", "backchannel_logout_session_supported",
-						"claims_parameter_supported", "token_endpoint_auth_signing_alg_values_supported", "introspection_endpoint_auth_signing_alg_values_supported",
-						"revocation_endpoint_auth_signing_alg_values_supported",
-					} {
-						delete(body, member)
-					}
-					without(body, "grant_types_supported", "client_credentials")
-					for _, member := range []string{"token_endpoint_auth_methods_supported", "introspection_endpoint_auth_methods_supported", "revocation_endpoint_auth_methods_supported"} {
-						without(body, member, "private_key_jwt")
-					}
-					without(body, "claims_supported", "sid", "picture", "given_name", "family_name")
-				})
-			},
-		}
-	}
-	deviations["auth-jwks"] = deviation{
-		reason: "The Vary header Next.js added for its React Server Components is not sent, and each key also names its use, sig (RFC 7517 §4.2), which zitadel/oidc always publishes.",
-		adjust: func(f *recorded) {
-			delete(f.Response.Headers, "vary")
-			editBody(f, func(body map[string]any) {
-				for _, k := range body["keys"].([]any) {
-					k.(map[string]any)["use"] = "sig"
-				}
-			})
-		},
-	}
-}
-
-// goJSONHeaders is the deviation every OAuth and MCP exchange shares.
-const goJSONHeaders = "JSON is labelled application/json; charset=utf-8, and the Vary header Next.js added for its React Server Components is not sent: neither changes what an OAuth or MCP client reads."
-
-func jsonHeaders(f *recorded) {
-	delete(f.Response.Headers, "vary")
-	if f.Response.Headers["content-type"] == "application/json" {
-		f.Response.Headers["content-type"] = "application/json; charset=utf-8"
-	}
-}
-
-// editBody rewrites the expected JSON object.
-func editBody(f *recorded, edit func(map[string]any)) {
-	var body map[string]any
-	if err := json.Unmarshal(f.Response.Body, &body); err != nil {
-		panic(err)
-	}
-	edit(body)
-	out, err := json.Marshal(body)
-	if err != nil {
-		panic(err)
-	}
-	f.Response.Body = out
-}
-
-// without removes values from the list member of body.
-func without(body map[string]any, member string, values ...string) {
-	var kept []any
-	for _, v := range body[member].([]any) {
-		if !slices.Contains(values, v.(string)) {
-			kept = append(kept, v)
-		}
-	}
-	body[member] = kept
-}
-
-// reorderData puts the expected list's entries in the order of their keys.
-func reorderData(f *recorded, keys ...string) {
-	var body struct {
-		Data []map[string]any `json:"data"`
-		Meta any              `json:"meta"`
-	}
-	if err := json.Unmarshal(f.Response.Body, &body); err != nil {
-		panic(err)
-	}
-	slices.SortStableFunc(body.Data, func(a, b map[string]any) int {
-		return slices.Index(keys, a["key"].(string)) - slices.Index(keys, b["key"].(string))
-	})
-	out, err := json.Marshal(body)
-	if err != nil {
-		panic(err)
-	}
-	f.Response.Body = out
-}
-
-func bulkSucceeded(f *recorded) {
-	f.Response.Status = 200
-	f.Response.Headers["access-control-allow-origin"] = "*"
-	f.Response.Headers["access-control-allow-methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-	f.Response.Headers["access-control-allow-headers"] = "Content-Type, Authorization"
-	f.Response.Body = json.RawMessage(`{"data":{"status":"success","message":"Contacts bulk upload successful"}}`)
-}
-
 func loadRecorded(t *testing.T, name string) recorded {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join("testdata", "forma2", name+".json"))
+	b, err := os.ReadFile(filepath.Join("testdata", "contract", name+".json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -598,7 +385,7 @@ func (r *replay) check(f recorded, res result) {
 	}
 	for _, name := range []string{"Access-Control-Allow-Origin", "X-Frame-Options", "Allow", "Cache-Control"} {
 		if _, recorded := f.Response.Headers[strings.ToLower(name)]; !recorded && res.Header.Get(name) != "" {
-			t.Errorf("header %s %q was not sent by forma2", name, res.Header.Get(name))
+			t.Errorf("header %s %q is sent but not listed", name, res.Header.Get(name))
 		}
 	}
 	switch f.Response.BodyFormat {
@@ -658,18 +445,16 @@ func (r *replay) checkContactLinkToken(res result, header map[string]string, cla
 	}
 }
 
-// The management APIs answer every request recorded against forma2 as forma2 did, apart from the deviations listed with their reasons.
-func TestReplaysRecordedForma2Exchanges(t *testing.T) {
+// The management APIs answer every contract exchange as it is written down.
+func TestContractExchanges(t *testing.T) {
 	e := newEnv(t)
-	files, err := filepath.Glob(filepath.Join("testdata", "forma2", "*.json"))
+	files, err := filepath.Glob(filepath.Join("testdata", "contract", "*.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var all []string
 	for _, f := range files {
-		if name := strings.TrimSuffix(filepath.Base(f), ".json"); notReplayed[name] == "" {
-			all = append(all, name)
-		}
+		all = append(all, strings.TrimSuffix(filepath.Base(f), ".json"))
 	}
 	var ordered []string
 	for _, name := range replayOrder {
@@ -681,7 +466,7 @@ func TestReplaysRecordedForma2Exchanges(t *testing.T) {
 	slices.Sort(all)
 	if !slices.Equal(ordered, all) {
 		missing, extra := difference(all, ordered), difference(ordered, all)
-		t.Fatalf("the replay order lacks %v and lists %v that the recording does not have", missing, extra)
+		t.Fatalf("the replay order lacks %v and lists %v that testdata/contract does not have", missing, extra)
 	}
 
 	s := e.seedRecording()
@@ -694,9 +479,6 @@ func TestReplaysRecordedForma2Exchanges(t *testing.T) {
 			continue
 		}
 		f := loadRecorded(t, name)
-		if d, ok := deviations[name]; ok {
-			d.adjust(&f)
-		}
 		s.prepare(name)
 		res := r.send(e, f)
 		e.deliver()
@@ -704,9 +486,6 @@ func TestReplaysRecordedForma2Exchanges(t *testing.T) {
 			sub := &replay{t: t, bound: r.bound}
 			sub.check(f, res)
 		})
-	}
-	for name, d := range deviations {
-		t.Logf("%s deviates from forma2 on purpose: %s", name, d.reason)
 	}
 }
 
@@ -720,7 +499,7 @@ func difference(a, b []string) []string {
 	return out
 }
 
-// seed is the recorder's data and the scenario steps that need it.
+// seed is the scenario's data and the steps that need it.
 type seed struct {
 	e     *env
 	bound map[string]string
@@ -729,14 +508,13 @@ type seed struct {
 	ws2   uuid.UUID
 }
 
-// seedRecording creates what the recorder set up before the first request (README): the organization with its admin, the two workspaces (the first with a legacy environment id) and the API keys.
+// seedRecording creates what the first case expects (README): the organization with its owner, the two workspaces and the API keys.
 func (e *env) seedRecording() *seed {
 	org := e.insert(`INSERT INTO organizations (name) VALUES ('Contract Organization') RETURNING id`)
 	e.exec(`INSERT INTO organization_billing (organization_id, limits) VALUES (?, '{}'::jsonb)`, org)
 	admin := e.user("Contract Admin", "admin@example.com")
 	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'owner', true)`, admin, org)
 	ws := e.workspace(org, "My workspace")
-	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clegacyenvaaaaaaaaaaaaaa1' WHERE id = ?`, ws)
 	ws2 := e.workspace(org, "Other workspace")
 	s := &seed{e: e, ws: ws, ws2: ws2, keys: map[string]uuid.UUID{}, bound: map[string]string{
 		"<id:organization>": org.String(), "<id:workspace>": ws.String(), "<id:workspace2>": ws2.String(), "<id:user:admin>": admin.String(),
@@ -814,7 +592,7 @@ func (s *seed) step(name string, r *replay) {
 	e := s.e
 	switch name {
 	case "@checkout-recorded-at":
-		// The recorder echoed this creation time in later requests, so the replay gives the action class the time it was recorded with.
+		// Later cases send this creation time back, so the replay gives the action class that time.
 		e.exec(`UPDATE action_classes SET created_at = '2026-10-22T23:28:39.933Z', updated_at = '2026-10-22T23:28:39.933Z' WHERE id = ?`, r.bound["<id:actionClass:checkout>"])
 	case "@temporary-action-class":
 		data := s.post(r, "/api/v1/management/action-classes", map[string]any{"workspaceId": s.ws.String(), "name": "Temporary", "type": "code", "key": "temporary"})
@@ -863,7 +641,7 @@ func (s *seed) step(name string, r *replay) {
 	case "@jane-responds":
 		s.post(r, "/api/v2/management/responses", map[string]any{"surveyId": r.bound["<id:survey:link>"], "userId": "contract-user-4", "finished": true, "data": map[string]any{"feedback": "From Jane"}})
 	case "@forget-activepieces-webhook":
-		// The recorded image refused this webhook (see the deviation of v2-webhooks-create-activepieces-source); the lists recorded after it do not show it.
+		// The lists after v2-webhooks-create-activepieces-source are written without the webhook it created.
 		e.exec(`DELETE FROM webhooks WHERE id = ?`, r.bound["<id:webhook:activepieces>"])
 	case "@temporary-team":
 		data := s.post(r, "/api/v2/organizations/"+r.bound["<id:organization>"]+"/teams", map[string]any{"name": "Temporary Team"})

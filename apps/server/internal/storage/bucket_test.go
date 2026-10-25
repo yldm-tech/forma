@@ -160,7 +160,7 @@ func TestSignUploadPolicy(t *testing.T) {
 	if err := json.Unmarshal(raw, &policy); err != nil {
 		t.Fatalf("policy %s: %v", raw, err)
 	}
-	// Two minutes, as forma2's Expires: 120.
+	// Two minutes (Expires: 120).
 	if d := policy.Expiration.Sub(before); d < 119*time.Second || d > 125*time.Second {
 		t.Errorf("policy expires after %v, want 2m", d)
 	}
@@ -192,10 +192,10 @@ func TestSignUploadPolicy(t *testing.T) {
 	}
 }
 
-// recordedFieldNames reads the presignedFields keys of a recorded forma2 exchange in their order.
-func recordedFieldNames(t *testing.T, fixture string) []string {
+// contractFieldNames reads the presignedFields keys of a client API contract exchange in their order.
+func contractFieldNames(t *testing.T, fixture string) []string {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("..", "clientapi", "testdata", "forma2", fixture))
+	raw, err := os.ReadFile(filepath.Join("..", "clientapi", "testdata", "contract", fixture))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func objectKeys(t *testing.T, raw []byte) []string {
 	return keys
 }
 
-func TestPresignedFieldsMatchForma2(t *testing.T) {
+func TestPresignedFieldsMatchTheContract(t *testing.T) {
 	t.Parallel()
 	b, _ := newBucket(t)
 	post, err := b.SignUpload(t.Context(), "report--fid--1.pdf", "application/pdf", "ws/private", 5<<20)
@@ -247,8 +247,8 @@ func TestPresignedFieldsMatchForma2(t *testing.T) {
 	}
 	got := objectKeys(t, raw)
 	for _, fixture := range []string{"v1-storage-upload-init.json", "v2-storage-upload-init.json"} {
-		if want := recordedFieldNames(t, fixture); !slices.Equal(got, want) {
-			t.Errorf("presignedFields keys %v, forma2 sent %v (%s)", got, want, fixture)
+		if want := contractFieldNames(t, fixture); !slices.Equal(got, want) {
+			t.Errorf("presignedFields keys %v, the contract lists %v (%s)", got, want, fixture)
 		}
 	}
 	if got := fieldValue(post.Fields, "X-Amz-Algorithm"); got != "AWS4-HMAC-SHA256" {

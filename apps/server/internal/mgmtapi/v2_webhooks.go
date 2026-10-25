@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 )
@@ -96,7 +96,7 @@ func (h *Handler) surveysWorkspace(ctx context.Context, raw []string) (*uuid.UUI
 	}
 	ids := make([]uuid.UUID, 0, len(raw))
 	for _, r := range raw {
-		id, _ := legacyid.Resolve(r)
+		id, _ := rowid.Parse(r)
 		ids = append(ids, id)
 	}
 	var rows []struct {

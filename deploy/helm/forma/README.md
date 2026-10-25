@@ -8,26 +8,24 @@ A Helm chart for Forma (the Go server and its job worker) with PostgreSQL, Valke
 
 The chart is installed from this repository (`helm install forma ./deploy/helm/forma`); it is not published to a chart registry. `Chart.yaml` keeps the development version `0.0.0-dev`. Set `deployment.image.tag` (or `deployment.image.digest`) to the release you deploy: `ghcr.io/yldm-tech/forma-server:<version>` as the release workflow publishes it.
 
-## Forma on the Go server: what changed in this chart
+## Processes and settings
 
-The chart keeps forma2's values, Secrets and resource names; these are the differences.
-
-- The image is `ghcr.io/yldm-tech/forma-server`, the default of `deployment.image.repository`; `ghcr.io/yldm-tech/forma` keeps forma2's releases. Values that set the repository to forma2's image must change it, or drop it to take the default.
-- One image, several processes. The server Deployment runs the image's default command, `forma start` (forma2's entrypoint: validate the configuration, migrate unless `SKIP_STARTUP_MIGRATION=true`, serve on port 3000). The new `worker` Deployment runs `forma worker`, the background jobs forma2 ran inside the web pods, with the same image, envFrom, env, security context and volumes; the server gets `BULLMQ_WORKER_ENABLED=0` so the jobs run only there. `worker.enabled=false` returns to forma2's single Deployment. Scale the worker with `worker.replicas`; the HPA, PDB and Service address the server only.
-- The migration Job runs `forma wait-for-database` (same flags as forma2's script) and `forma migrate`, honouring `MIGRATE_DATABASE_URL` as before. With `migration.enabled=false` every server pod migrates as it starts; an advisory lock makes them take turns.
-- The AuthZed initialization Job runs `forma authz` steps instead of `forma-authzed upgrade prepare` (see below).
-- Booleans are `1` or `0`. The chart renders `AUTHZED_ENABLED` and `AUTHZED_INSECURE` that way; those two also accept forma2's `"true"`/`"false"` in `deployment.env`, every other switch must be `1` or `0`. `SKIP_STARTUP_MIGRATION` keeps forma2's `"true"`.
-- The image runs as uid 1001 on a distroless base, with no shell: `kubectl exec ... -- forma <command>` replaces shell sessions, and there is no `uploads` volume (files live in S3). The working directory stays forma2's `/home/nextjs/apps/web`: for SAML SSO, mount the identity provider's metadata XML at `/home/nextjs/apps/web/saml-connection` through `deployment.extraVolumes` / `deployment.extraVolumeMounts`.
-- PostgreSQL 18 or newer is required; the bundled database image is `pgvector/pgvector:pg18`, where forma2's chart ran `pg17`. PostgreSQL 18 cannot open a data directory PostgreSQL 17 initialised, so upgrading a release whose bundled database still runs 17 is refused until its data has been moved (see [Upgrading the bundled PostgreSQL from 17 to 18](#upgrading-the-bundled-postgresql-from-17-to-18)). A release on an external database (`postgresql.enabled=false`) is not affected.
-- Valkey no longer holds the job queue (River keeps it in PostgreSQL), only rate limits and short-lived state. Its sizing is unchanged.
+- The image is `ghcr.io/yldm-tech/forma-server`, the default of `deployment.image.repository`. `ghcr.io/yldm-tech/forma` holds the retired Next.js release (forma2), which this chart does not run: values that still set the repository to it must change it, or drop it to take the default.
+- One image, several processes. The server Deployment runs the image's default command, `forma start` (validate the configuration, migrate unless `SKIP_STARTUP_MIGRATION=true`, serve on port 3000). The `worker` Deployment runs `forma worker`, the background jobs, with the same image, envFrom, env, security context and volumes; the server gets `BULLMQ_WORKER_ENABLED=0` so the jobs run only there. With `worker.enabled=false` the server pods run the jobs in-process. Scale the worker with `worker.replicas`; the HPA, PDB and Service address the server only.
+- The migration Job runs `forma wait-for-database` and `forma migrate`, honouring `MIGRATE_DATABASE_URL`. With `migration.enabled=false` every server pod migrates as it starts; an advisory lock makes them take turns.
+- The AuthZed initialization Job runs `forma authz` steps (see below).
+- Booleans are `1` or `0`. The chart renders `AUTHZED_ENABLED` and `AUTHZED_INSECURE` that way; those two also accept `"true"`/`"false"` in `deployment.env`, every other switch must be `1` or `0`. `SKIP_STARTUP_MIGRATION` takes `"true"`.
+- The image runs as uid 1001 on a distroless base, with no shell: `kubectl exec ... -- forma <command>` replaces shell sessions, and there is no `uploads` volume (files live in S3). The working directory is `/home/nextjs/apps/web`: for SAML SSO, mount the identity provider's metadata XML at `/home/nextjs/apps/web/saml-connection` through `deployment.extraVolumes` / `deployment.extraVolumeMounts`.
+- PostgreSQL 18 or newer is required; the bundled database image is `pgvector/pgvector:pg18`. PostgreSQL 18 cannot open a data directory another major initialised, so upgrading a release whose bundled database still runs 17 is refused until its data has been moved (see [Upgrading the bundled PostgreSQL from 17 to 18](#upgrading-the-bundled-postgresql-from-17-to-18)). A release on an external database (`postgresql.enabled=false`) is not affected.
+- Valkey holds only rate limits and short-lived state; the job queue lives in PostgreSQL (River).
 - With a ServiceMonitor, the worker exports metrics too, through a headless `<name>-worker-metrics` Service the ServiceMonitor also selects.
-- Removed values, which nothing reads any more: `enterprise.enabled`, `enterprise.licenseKey` (every feature is available without a license) and `authzed.systemKey`. The generated Secret no longer has `CRON_SECRET` or `ENTERPRISE_LICENSE_KEY`.
-- With the chart's Envoy gateway (`envoy.enabled`), set `GATEWAY_RATE_LIMITING: "1"` in `deployment.env` so the server leaves the routes the gateway limits to it, as forma2 did; the chart does not set it.
-- `forma.mcpOauthJwksUrl` still renders `MCP_OAUTH_JWKS_URL`; leave it empty to verify MCP tokens against the keys in this release's database.
+- `enterprise.enabled`, `enterprise.licenseKey` and `authzed.systemKey` are not read (every feature is available without a license). The generated Secret has no `CRON_SECRET` or `ENTERPRISE_LICENSE_KEY`.
+- With the chart's Envoy gateway (`envoy.enabled`), set `GATEWAY_RATE_LIMITING: "1"` in `deployment.env` so the server leaves the routes the gateway limits to it; the chart does not set it.
+- `forma.mcpOauthJwksUrl` renders `MCP_OAUTH_JWKS_URL`; leave it empty to verify MCP tokens against the keys in this release's database.
 
 ## Upgrading the bundled PostgreSQL from 17 to 18
 
-A release installed with forma2's chart runs the bundled PostgreSQL as `pgvector/pgvector:pg17`, and its StatefulSet keeps the volume across `helm upgrade`. Started on that volume, PostgreSQL 18 stops with "database files are incompatible with server" and the database, the migration Job, SpiceDB and Forma go down with it. On an upgrade the chart therefore looks up the image the bundled StatefulSet runs and refuses to render while its major version differs from `postgresql.image.tag`, until `postgresql.majorUpgradeAcknowledged=true` says the data has been moved. (A render without cluster access, such as `helm template` or Argo CD, cannot look it up and does not check.) `pg_upgrade` is not an option here: it needs both versions' binaries with pgvector built for each, which no published image has. Move the data with a dump instead, in a maintenance window. The commands assume the release `forma` in namespace `forma` and the default `postgresql.fullnameOverride`, `postgresql.auth.username` and `postgresql.auth.database` (`forma-postgresql`, `forma`, `forma`).
+A release whose bundled PostgreSQL runs `pgvector/pgvector:pg17` keeps that volume across `helm upgrade` (its StatefulSet does). Started on that volume, PostgreSQL 18 stops with "database files are incompatible with server" and the database, the migration Job, SpiceDB and Forma go down with it. On an upgrade the chart therefore looks up the image the bundled StatefulSet runs and refuses to render while its major version differs from `postgresql.image.tag`, until `postgresql.majorUpgradeAcknowledged=true` says the data has been moved. (A render without cluster access, such as `helm template` or Argo CD, cannot look it up and does not check.) `pg_upgrade` is not an option here: it needs both versions' binaries with pgvector built for each, which no published image has. Move the data with a dump instead, in a maintenance window. The commands assume the release `forma` in namespace `forma` and the default `postgresql.fullnameOverride`, `postgresql.auth.username` and `postgresql.auth.database` (`forma-postgresql`, `forma`, `forma`).
 
 1. Take a snapshot of the volume `data-forma-postgresql-0` if your storage class supports it. The steps below delete the volume.
 2. Stop everything that writes: `kubectl -n forma scale deployment -l app.kubernetes.io/instance=forma --replicas=0` (the server and the worker; with `autoscaling.enabled` the HPA keeps a minimum, so delete it or set `autoscaling.enabled=false` first).
@@ -247,7 +245,7 @@ authzed:
 
 `authzed.insecure` defaults to `false` in external mode. Set it to `true` only for a trusted plaintext gRPC endpoint; plaintext transport sends the preshared token without TLS protection. The chart injects `AUTHZED_ENABLED`, `AUTHZED_ENDPOINT`, `AUTHZED_TOKEN`, `AUTHZED_INSECURE` (as `1` or `0`) and `AUTHZED_CONSISTENCY` into the server and the worker. Authorization checks fail closed; general Forma readiness remains independent from transient SpiceDB availability.
 
-Fresh installs run a release-matched post-install initialization Job: `forma authz schema apply`, `forma authz outbox drain`, then `forma authz backfill --apply`, each retried by the kubelet while SpiceDB comes up, the last exiting 0 only when nothing is left unreconciled. This is forma2's `forma-authzed upgrade prepare`; the image has no shell and no `forma-authzed` wrapper any more. An acknowledged existing release runs the same Job as a pre-upgrade hook; unacknowledged upgrades are rejected before rendering. To prepare by hand:
+Fresh installs run a release-matched post-install initialization Job: `forma authz schema apply`, `forma authz outbox drain`, then `forma authz backfill --apply`, each retried by the kubelet while SpiceDB comes up, the last exiting 0 only when nothing is left unreconciled. The image has no shell, so each step is its own `forma authz` command. An acknowledged existing release runs the same Job as a pre-upgrade hook; unacknowledged upgrades are rejected before rendering. To prepare by hand:
 
 ```bash
 kubectl exec -n <namespace> deployment/<release-name> -- forma authz schema check
@@ -262,7 +260,7 @@ kubectl exec -n <namespace> deployment/<release-name> -- forma authz schema appl
 
 kubectl exec -n <namespace> deployment/<release-name> -- forma authz outbox drain
 kubectl exec -n <namespace> deployment/<release-name> -- forma authz backfill --apply
-# The read-only audit forma2 called `upgrade check`: exit 0 is reconciled, 2 drifted, 1 failed.
+# The read-only audit: exit 0 is reconciled, 2 drifted, 1 failed.
 kubectl exec -n <namespace> deployment/<release-name> -- forma authz backfill
 ```
 

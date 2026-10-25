@@ -14,7 +14,6 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
-	"github.com/yldm-tech/forma/apps/server/internal/webui"
 )
 
 var update = flag.Bool("update", false, "rewrite catalog/locales from apps/web/locales")
@@ -158,7 +157,10 @@ func TestCatalogRendersEveryTemplate(t *testing.T) {
 	}
 }
 
-// A survey created from a template stores the template's URLs in its own definition, where a deploy cannot change them, so a link to a Forma admin page must use its canonical address under /app rather than the legacy root path that only redirects there.
+// adminRootSegments are the first path segments of the admin pages, which exist only under /app.
+var adminRootSegments = []string{"account", "auth", "billing-confirmation", "email-change-without-verification-success", "invite", "organizations", "setup", "verify-email-change", "workspaces"}
+
+// A survey created from a template stores the template's URLs in its own definition, where a deploy cannot change them, so a link to a Forma admin page must use its address under /app: the same path at the root is not the app.
 func TestCatalogLinksAdminPagesUnderApp(t *testing.T) {
 	raw, err := catalogFS.ReadFile("catalog/templates.json")
 	if err != nil {
@@ -167,8 +169,8 @@ func TestCatalogLinksAdminPagesUnderApp(t *testing.T) {
 	formaURL := regexp.MustCompile(`https?://forma\.yldm\.ai(/[^"?#\s]*)?`)
 	for _, m := range formaURL.FindAllSubmatch(raw, -1) {
 		first, _, _ := strings.Cut(strings.TrimPrefix(string(m[1]), "/"), "/")
-		if slices.Contains(webui.LegacyAdminPaths, first) {
-			t.Errorf("%s links a legacy root admin path; use %s%s", m[0], config.AppBasePath, m[1])
+		if slices.Contains(adminRootSegments, first) {
+			t.Errorf("%s links an admin page outside /app; use %s%s", m[0], config.AppBasePath, m[1])
 		}
 	}
 }

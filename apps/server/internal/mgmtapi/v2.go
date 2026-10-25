@@ -18,8 +18,8 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 )
 
@@ -240,7 +240,7 @@ func v2Query(c *gin.Context) object {
 	return out
 }
 
-// v2ResolveWorkspace is forma2's resolveBodyIdsV2, the body transform of the create routes: the workspace named by workspaceId or the legacy environmentId must exist (404), be in the key's organization and allow the method's action (403 otherwise); its canonical id replaces the body's.
+// v2ResolveWorkspace is forma2's resolveBodyIdsV2, the body transform of the create routes: the workspace named by workspaceId or its alias environmentId must exist (404), be in the key's organization and allow the method's action (403 otherwise); its canonical id replaces the body's.
 func (h *Handler) v2ResolveWorkspace(c *gin.Context, body map[string]any, method string) (uuid.UUID, bool) {
 	raw, present := body["workspaceId"]
 	if !present || raw == nil {
@@ -313,14 +313,14 @@ func (h *Handler) authorizedWorkspaces(c *gin.Context) ([]uuid.UUID, error) {
 	return out, nil
 }
 
-// v2PathID reads an id parameter checked by the route's params schema (z.cuid2(), widened to the rewrite's UUIDs): 422 naming the parameter when it is malformed.
+// v2PathID reads an id parameter checked by the route's params schema (z.cuid2(), widened to UUIDs): 422 naming the parameter when it is malformed.
 func v2PathID(c *gin.Context, name string) (uuid.UUID, bool) {
 	raw := c.Param(name)
 	if !v1api.IsID(raw) {
 		v2Error(c, http.StatusUnprocessableEntity, detail(name, "Invalid cuid2"))
 		return uuid.Nil, false
 	}
-	id, _ := legacyid.Resolve(raw)
+	id, _ := rowid.Parse(raw)
 	return id, true
 }
 
@@ -401,12 +401,12 @@ func (is *issues) commonFilter(q object) listFilter {
 	return f
 }
 
-// filterID reads an id a list is filtered by: a UUID, or a forma2 id resolved to the row migrated from it. An empty value is no filter, as forma2's truthiness checks had it.
+// filterID reads an id a list is filtered by: a UUID names a row, anything else none. An empty value is no filter.
 func filterID(raw *string) *uuid.UUID {
 	if raw == nil || *raw == "" {
 		return nil
 	}
-	id, _ := legacyid.Resolve(*raw)
+	id, _ := rowid.Parse(*raw)
 	return &id
 }
 

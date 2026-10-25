@@ -60,7 +60,7 @@ func TestLongPasswords(t *testing.T) {
 	}
 }
 
-// A hash written by forma2's bcryptjs (cost 12, $2b$ prefix) must verify, or every migrated user is locked out.
+// A hash written by bcryptjs (cost 12, $2b$ prefix) verifies.
 func TestVerifiesBcryptjsHashes(t *testing.T) {
 	// Generated with bcryptjs 3.0.3, the version forma2 ships: hashSync("Password123!", 12).
 	const hash = "$2b$12$YV/xESRyZOgC6WIYEJBc9uVo0VjvYM2.BxgoOx/O098h9CYEDEk72"

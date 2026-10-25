@@ -1,6 +1,6 @@
 name: Release
 
-# Publishes the container image the cluster deploys, as forma2's release workflow did: the same tag scheme (<version>, sha-<commit>, latest) and the same labels, now built from the repository's deploy/docker/Dockerfile (the Go binary with the SPA embedded) for linux/amd64 and linux/arm64. The image has a name of its own, ghcr.io/yldm-tech/forma-server: ghcr.io/yldm-tech/forma belongs to forma2's release workflow, which is the only one its package accepts pushes from, and keeps forma2's last release. The marketing site on forma.yldm.ai's root is a second image, ghcr.io/yldm-tech/forma-website, published by a job of its own so that it never holds back a release.
+# Publishes the container image the cluster deploys, tagged <version>, sha-<commit> and latest, built from the repository's deploy/docker/Dockerfile (the Go binary with the SPA embedded) for linux/amd64 and linux/arm64, as ghcr.io/yldm-tech/forma-server. The marketing site on forma.yldm.ai's root is a second image, ghcr.io/yldm-tech/forma-website, published by a job of its own so that it never holds back a release.
 #
 # Triggered on the push rather than chained off a successful CI run, because no workflow in this repository runs on pushes to main. The gate is the `main: required checks` ruleset: a pull request merges only once `PR Check Summary` (pr.yml) and `PR title` pass on it. The ruleset does not require the branch to be up to date and there is no merge queue (pr.yml's `merge_group` trigger never fires), so what was checked is the pull request merged into main as main stood at its last run, not the merge commit that lands here.
 on:
@@ -25,11 +25,11 @@ jobs:
       contents: write
       packages: write
     env:
-      # Monotonic, so a retried run republishes the same version from the same commit rather than minting a new one. forma2 published 0.1.<run> from its own repository as ghcr.io/yldm-tech/forma; this repository's run numbers start again at 1, and its versions are 0.2.<run>, so a version names one build of one product whichever of the two image names it is looked up under.
+      # Monotonic, so a retried run republishes the same version from the same commit rather than minting a new one. Versions are 0.2.<run>; the retired Next.js release used 0.1.<run>, so no version names two builds.
       VERSION: 0.2.${{ github.run_number }}
       IMAGE: ghcr.io/yldm-tech/forma-server
       RELEASE_SHA: ${{ github.sha }}
-      # `latest` is what deploy/docker/docker-compose.yml pulls, and it moves together with the `stable` branch: deploy/docker/forma.sh downloads deploy/docker/ from `stable`, and forma2's installer and guides download the same files from its docker/, which the last step publishes there as well, so `stable` always describes the image `latest` names. forma2's compose file pulls ghcr.io/yldm-tech/forma:latest, which this workflow never touches, but the compose file forma2's installer and guides download once `stable` has moved pulls this server instead. Moving both is therefore opt-in: set the repository variable RELEASE_MOVE_LATEST to true at the cutover (with the data migration).
+      # `latest` is what deploy/docker/docker-compose.yml pulls, and it moves together with the `stable` branch: deploy/docker/forma.sh downloads deploy/docker/ from `stable`, so `stable` always describes the image `latest` names. Moving both is opt-in: they move only while the repository variable RELEASE_MOVE_LATEST is true.
       MOVE_LATEST: ${{ vars.RELEASE_MOVE_LATEST }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -46,7 +46,7 @@ jobs:
           ref: ${{ env.RELEASE_SHA }}
           fetch-depth: 0
 
-      # An organization package only accepts pushes from the workflows of the repositories listed under its "Manage Actions access" (github.com/orgs/yldm-tech/packages/container/<name>/settings). forma-server and forma-website (the `website` job below) are created by this workflow's first push, which links them to this repository and grants it access; ghcr.io/yldm-tech/forma was created by forma2's workflow and refuses this one with `denied: permission_denied: write_package`, which is why the image is published under a new name.
+      # An organization package only accepts pushes from the workflows of the repositories listed under its "Manage Actions access" (github.com/orgs/yldm-tech/packages/container/<name>/settings). forma-server and forma-website (the `website` job below) are created by this workflow's first push, which links them to this repository and grants it access; ghcr.io/yldm-tech/forma, the retired Next.js release's package, refuses this workflow with `denied: permission_denied: write_package`, which is why the image has a name of its own.
       # A package the first push creates is private: it inherits the repository's access but not its visibility. Self-hosters pull forma-server without credentials, so after the first successful run, and before RELEASE_MOVE_LATEST is set to true, an org admin sets ghcr.io/yldm-tech/forma-server to Public (its package settings, Danger Zone > Change visibility); the last step refuses to move `stable` and `latest` until an anonymous pull of the release works. forma-website only needs the same when something without a pull secret is to pull it.
       - name: Log in to ghcr.io
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.0.0
@@ -100,7 +100,7 @@ jobs:
             org.opencontainers.image.version=${{ env.VERSION }}
           provenance: false
 
-      # After the build, not before: forma2's first release run failed on a missing build secret and left a v0.1.1 tag pointing at a commit that never produced an image. The concurrency group serialises runs, so nothing is racing for the name.
+      # After the build, not before, so a run that fails to build leaves no tag pointing at a commit that never produced an image. The concurrency group serialises runs, so nothing is racing for the name.
       - name: Tag the published commit
         shell: bash
         run: |
@@ -144,8 +144,8 @@ jobs:
           fi
 
           # `stable` before `latest`: if either fails the step stops, and a `stable` ahead of `latest` only means the next `docker compose pull` is still to come, while a `latest` ahead of `stable` hands new images the previous release's deploy/docker/ files. A rerun repeats both, and both are idempotent.
-          # `stable` is not the release commit itself but a commit on top of it whose tree is the release's plus deploy/docker/'s files (the image's Dockerfile aside) under docker/ as well, the same blobs. forma2's one-click installer and its self-hosting guides, already on users' machines, download docker-compose.yml, forma.sh and authzed-postgres-bootstrap.sh from stable/docker/, which is where those files lived until the repository moved them to deploy/docker/; without the copy every one of those URLs would turn into a 404 at the cutover instead of handing over the new stack.
-          # The trees, the commit and the ref are all written with the stable token, since GitHub may refuse any of them for want of the workflows permission.
+          # `stable` is a commit on top of the release commit with the release's tree. Earlier releases also published deploy/docker/ under docker/ there, for the retired Next.js release's installer; that copy is no longer published, so the first release after it drops docker/ from `stable`, and the installer's downloads from stable/docker/ answer 404 instead of handing a forma2 installation a stack that cannot read its data.
+          # The commit and the ref are written with the stable token, since GitHub may refuse either for want of the workflows permission.
           stable_failed() {
             echo "::error::$1, so latest was left alone. If GitHub refused it for want of the workflows permission, set the RELEASE_STABLE_TOKEN secret and rerun."
             exit 1
@@ -157,17 +157,18 @@ jobs:
             stable=""
           fi
 
-          tree_request=$(git ls-tree "$RELEASE_SHA" deploy/docker/ | jq -R -s --arg base "$(git rev-parse "$RELEASE_SHA^{tree}")" '{base_tree: $base, tree: [splits("\n") | select(. != "") | split("\t") as [$meta, $path] | ($meta | split(" ")) as [$mode, $type, $sha] | select($type == "blob" and $path != "deploy/docker/Dockerfile") | {path: ("docker/" + ($path | ltrimstr("deploy/docker/"))), mode: $mode, type: $type, sha: $sha}]}')
-          if ! jq -e '(["docker/docker-compose.yml", "docker/forma.sh", "docker/authzed-postgres-bootstrap.sh"] - [.tree[].path]) == []' <<<"$tree_request" >/dev/null; then
-            echo "::error::$RELEASE_SHA has no deploy/docker/docker-compose.yml, forma.sh or authzed-postgres-bootstrap.sh to publish under docker/ on stable, so latest was left alone."
-            exit 1
-          fi
-          tree=$(GH_TOKEN="$STABLE_TOKEN" gh api -X POST "repos/$GH_REPO/git/trees" --input - --jq .sha <<<"$tree_request") || stable_failed "Could not create the tree for stable"
+          for name in docker-compose.yml forma.sh authzed-postgres-bootstrap.sh; do
+            if ! git cat-file -e "$RELEASE_SHA:deploy/docker/$name" 2>/dev/null; then
+              echo "::error::$RELEASE_SHA has no deploy/docker/$name for forma.sh to download from stable, so latest was left alone."
+              exit 1
+            fi
+          done
+          tree=$(git rev-parse "$RELEASE_SHA^{tree}")
 
           if [ -n "$stable" ] && [ "$(git rev-parse "$stable^{tree}")" = "$tree" ]; then
             echo "- \`stable\` already carries this release" >> "$GITHUB_STEP_SUMMARY"
           else
-            # Not forced: main only moves forward, so the update must be a fast-forward. A stable on main is one; the commit this step made for the previous release is made one by being the new commit's second parent. Anything else means something else moved stable, and it should fail loudly rather than be overwritten.
+            # Not forced: main only moves forward, so the update must be a fast-forward. A stable on main is one; the commit this step made for the previous release (which, for releases before the docker/ copy was dropped, also carries docker/) is made one by being the new commit's second parent. Anything else means something else moved stable, and it should fail loudly rather than be overwritten.
             parents=(-f "parents[]=$RELEASE_SHA")
             if [ -n "$stable" ] && ! git merge-base --is-ancestor "$stable" "$RELEASE_SHA"; then
               if git merge-base --is-ancestor "$stable^1" "$RELEASE_SHA" 2>/dev/null && git diff --quiet "$stable^1" "$stable" -- ':(exclude)docker'; then
@@ -177,14 +178,14 @@ jobs:
                 exit 1
               fi
             fi
-            commit=$(GH_TOKEN="$STABLE_TOKEN" gh api -X POST "repos/$GH_REPO/git/commits" -f message="Release v$VERSION: $RELEASE_SHA with deploy/docker/ also under docker/" -f tree="$tree" "${parents[@]}" --jq .sha) || stable_failed "Could not create the stable commit for $RELEASE_SHA"
+            commit=$(GH_TOKEN="$STABLE_TOKEN" gh api -X POST "repos/$GH_REPO/git/commits" -f message="Release v$VERSION: $RELEASE_SHA" -f tree="$tree" "${parents[@]}" --jq .sha) || stable_failed "Could not create the stable commit for $RELEASE_SHA"
 
             if [ -n "$stable" ]; then
               update=(api -X PATCH "repos/$GH_REPO/git/refs/heads/stable" -f sha="$commit" -F force=false)
             else
               update=(api -X POST "repos/$GH_REPO/git/refs" -f ref=refs/heads/stable -f sha="$commit")
             fi
-            GH_TOKEN="$STABLE_TOKEN" gh "${update[@]}" >/dev/null || stable_failed "Could not move stable to $commit ($RELEASE_SHA with deploy/docker/ also under docker/)"
+            GH_TOKEN="$STABLE_TOKEN" gh "${update[@]}" >/dev/null || stable_failed "Could not move stable to $commit ($RELEASE_SHA)"
           fi
           docker buildx imagetools create --tag "$IMAGE:latest" "$IMAGE:$VERSION"
           echo "- \`$IMAGE:latest\` and the \`stable\` branch now point here" >> "$GITHUB_STEP_SUMMARY"

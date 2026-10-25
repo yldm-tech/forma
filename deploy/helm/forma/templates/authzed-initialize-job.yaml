@@ -15,7 +15,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
   activeDeadlineSeconds: 900
-  # Every step is retried in place (restartPolicy OnFailure) while SpiceDB comes up, within the 15-minute deadline: forma2's loop of 120 attempts, without a shell in the image.
+  # Every step is retried in place (restartPolicy OnFailure) while SpiceDB comes up, within the 15-minute deadline, without a shell in the image.
   backoffLimit: 20
   ttlSecondsAfterFinished: 300
   template:
@@ -45,7 +45,7 @@ spec:
       securityContext:
         {{- toYaml .Values.deployment.securityContext | nindent 8 }}
       {{- end }}
-      # forma2's `forma-authzed upgrade prepare`, step by step: write the release's schema (a no-op when it is already there; a different schema is refused unless its digest is supplied, see the README), deliver what the projection outbox holds, then rebuild every relationship from PostgreSQL. The last step exits 0 only when nothing is left unreconciled.
+      # Step by step: write the release's schema (a no-op when it is already there; a different schema is refused unless its digest is supplied, see the README), deliver what the projection outbox holds, then rebuild every relationship from PostgreSQL. The last step exits 0 only when nothing is left unreconciled.
       initContainers:
         - name: schema
           {{- include "forma.authzedJobContainer" (dict "context" . "args" (list "authz" "schema" "apply")) | nindent 10 }}

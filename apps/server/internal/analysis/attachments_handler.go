@@ -16,13 +16,13 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api"
 )
 
-// cuid2 is zod's cuid2 shape, every forma2 id.
+// cuid2 is zod's cuid2 shape, which the id check accepts besides UUIDs; such an id names no survey.
 var cuid2 = regexp.MustCompile(`^[0-9a-z]+$`)
 
 // AttachmentsHandler serves GET /api/surveys/{surveyId}/attachments, forma2's internal attachment export route: outside /api/v3, since a streaming ZIP has no contract to publish, but with the v3 conventions (session only, the api:v3 limit, RFC 9457 problems, audit). The browser reaches it by navigating, so it asks first with dryRun=true and only downloads when the counts allow.
@@ -68,7 +68,7 @@ func (h *AttachmentsHandler) export(c *gin.Context, e *audit.Event) error {
 	if _, err := uuid.Parse(raw); (err != nil || len(raw) != 36) && !cuid2.MatchString(raw) {
 		return v3api.BadRequest("Invalid route parameters", v3api.InvalidParam{Name: "surveyId", Reason: "Invalid cuid2"})
 	}
-	surveyID, _ := legacyid.Resolve(raw)
+	surveyID, _ := rowid.Parse(raw)
 	q := v3api.ReadQuery(c, "filters", "dryRun")
 	filters, hasFilters := c.GetQuery("filters")
 	dryRun := c.Query("dryRun") == "true"

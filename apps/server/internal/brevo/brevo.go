@@ -37,7 +37,7 @@ type CreateContactArgs struct {
 
 func (CreateContactArgs) Kind() string { return "brevo.create-contact" }
 
-// UpdateContactArgs is the brevo.update-contact job: forma2's updateBrevoCustomer, the contact found by the user id it was created with or, for a contact forma2 created under the user's old cuid, by the address it had before the change.
+// UpdateContactArgs is the brevo.update-contact job: the contact found by the user id it was created with or, for a contact created under another ext_id, by the address it had before the change.
 type UpdateContactArgs struct {
 	UserID   uuid.UUID `json:"userId"`
 	OldEmail string    `json:"oldEmail,omitempty"`
@@ -117,7 +117,7 @@ func (c *Client) createContact(ctx context.Context, userID uuid.UUID, email stri
 	return c.do(ctx, http.MethodPost, "/contacts", body, http.StatusCreated)
 }
 
-// updateContact finds the contact by the user id it was created with, as forma2 did. A contact forma2 created carries forma2's cuid as its ext_id, which the migrated user's id (a one-way uuidv5 of it) cannot match, so when Brevo knows no such ext_id the contact is found by the address it had before the change.
+// updateContact finds the contact by the user id it was created with. A contact created outside this server carries another ext_id, so when Brevo knows no such ext_id the contact is found by the address it had before the change.
 func (c *Client) updateContact(ctx context.Context, userID uuid.UUID, oldEmail, email string) error {
 	body := updateContactRequest{Attributes: map[string]string{"EMAIL": email}}
 	err := c.do(ctx, http.MethodPut, "/contacts/"+userID.String()+"?identifierType=ext_id", body, http.StatusNoContent)

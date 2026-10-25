@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/tag"
 )
 
@@ -121,14 +121,14 @@ func conflict(message string) *apperr.Error {
 	return &apperr.Error{Status: http.StatusConflict, Code: codeConflict, Message: message, Details: map[string]any{}}
 }
 
-// cuid2 is zod's cuid2 shape, every forma2 id.
+// cuid2 is zod's cuid2 shape.
 var cuid2 = regexp.MustCompile(`^[0-9a-z]+$`)
 
-// ResolveID reads an id a client sent: a UUID as it is, a forma2 cuid through the legacy id function. Anything else is forma2's validateInputs failure on a ZId, "Validation failed: Invalid cuid2".
+// ResolveID reads an id a client sent, checked as validateInputs checks a ZId: a UUID names a row, a cuid2 passes the check but names none (uuid.Nil, so it is not found), and anything else is "Validation failed: Invalid cuid2".
 func ResolveID(raw string) (uuid.UUID, error) {
 	if _, err := uuid.Parse(raw); (err != nil || len(raw) != 36) && !cuid2.MatchString(raw) {
 		return uuid.Nil, badRequest("Validation failed: Invalid cuid2", nil)
 	}
-	id, _ := legacyid.Resolve(raw)
+	id, _ := rowid.Parse(raw)
 	return id, nil
 }

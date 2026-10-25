@@ -210,7 +210,7 @@ func TestCrossTenantDenial(t *testing.T) {
 			t.Errorf("%s %s: %d %s, want 403", r.method, r.path, rec.Code, rec.Body.String())
 		}
 	}
-	notFound := []string{orgPath(theirs.ID, ""), orgPath(theirs.ID, "/navigation"), orgPath(theirs.ID, "/onboarding"), "/api/app/environments/" + second.String()}
+	notFound := []string{orgPath(theirs.ID, ""), orgPath(theirs.ID, "/navigation"), orgPath(theirs.ID, "/onboarding")}
 	for _, p := range notFound {
 		if rec := e.do(alice, http.MethodGet, p, nil); rec.Code != http.StatusNotFound {
 			t.Errorf("GET %s: %d %s, want 404", p, rec.Code, rec.Body.String())

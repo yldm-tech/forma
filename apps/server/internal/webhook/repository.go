@@ -180,24 +180,18 @@ func (r *Repository) delete(ctx context.Context, id uuid.UUID) (bool, error) {
 	return res.RowsAffected > 0, nil
 }
 
-// environmentIDs is forma2's addLegacyEnvironmentIdToList lookup: each workspace's legacy environment id, or its own id when it has none.
+// environmentIDs is the environmentId the v1 payloads carry for each workspace that exists: the workspace's own id.
 func (r *Repository) environmentIDs(ctx context.Context, workspaceIDs []uuid.UUID) (map[uuid.UUID]string, error) {
 	out := map[uuid.UUID]string{}
 	if len(workspaceIDs) == 0 {
 		return out, nil
 	}
-	var rows []struct {
-		ID                  uuid.UUID
-		LegacyEnvironmentID *string
+	var ids []uuid.UUID
+	if err := r.db.WithContext(ctx).Raw(`SELECT id FROM workspaces WHERE id = ANY(?::uuid[])`, uuidArray(workspaceIDs)).Scan(&ids).Error; err != nil {
+		return nil, fmt.Errorf("load workspaces: %w", err)
 	}
-	if err := r.db.WithContext(ctx).Raw(`SELECT id, legacy_environment_id FROM workspaces WHERE id = ANY(?::uuid[])`, uuidArray(workspaceIDs)).Scan(&rows).Error; err != nil {
-		return nil, fmt.Errorf("load legacy environment ids: %w", err)
-	}
-	for _, w := range rows {
-		out[w.ID] = w.ID.String()
-		if w.LegacyEnvironmentID != nil {
-			out[w.ID] = *w.LegacyEnvironmentID
-		}
+	for _, id := range ids {
+		out[id] = id.String()
 	}
 	return out, nil
 }

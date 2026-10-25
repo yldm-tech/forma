@@ -9,11 +9,11 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
-// The link survey tokens are forma2's jsonwebtoken HS256 JWTs, so tokens either implementation issued verify in the other: the claims, secrets and lifetimes below are forma2's.
+// The link survey tokens are jsonwebtoken HS256 JWTs. Links already sent carry them, so the claims, secrets and lifetimes below do not change.
 const (
 	// pinTokenPurpose and pinTokenTTL are forma2's PIN_TOKEN_PURPOSE and PIN_TOKEN_TTL_SECONDS (modules/survey/link/lib/pin-token.ts).
 	pinTokenPurpose = "link_survey_pin"
@@ -70,7 +70,7 @@ func NewPinToken(cfg config.Config, surveyID uuid.UUID, now time.Time) (string, 
 	})
 }
 
-// VerifyPinToken is forma2's verifyLinkSurveyPinToken: a valid, unexpired PIN token issued for this survey. A token forma2 issued names the survey by its forma2 id, which still identifies the migrated survey.
+// VerifyPinToken is verifyLinkSurveyPinToken: a valid, unexpired PIN token issued for this survey.
 func VerifyPinToken(cfg config.Config, token string, surveyID uuid.UUID, now time.Time) bool {
 	if token == "" {
 		return false
@@ -79,7 +79,7 @@ func VerifyPinToken(cfg config.Config, token string, surveyID uuid.UUID, now tim
 	if verify(cfg.LinkSurveyPinSecret(), token, now, &c) != nil {
 		return false
 	}
-	return c.Purpose == pinTokenPurpose && legacyid.Matches(c.SurveyID, surveyID)
+	return c.Purpose == pinTokenPurpose && rowid.Matches(c.SurveyID, surveyID)
 }
 
 type emailClaims struct {
@@ -89,9 +89,9 @@ type emailClaims struct {
 	jwt.Claims
 }
 
-// newEmailToken is forma2's createTokenForLinkSurvey: the verified address, encrypted with forma2's cipher under ENCRYPTION_KEY, bound to the survey for seven days.
+// newEmailToken is createTokenForLinkSurvey: the verified address, encrypted as a link value under ENCRYPTION_KEY, bound to the survey for seven days.
 func newEmailToken(cfg config.Config, surveyID uuid.UUID, email string, now time.Time) (string, error) {
-	encrypted, err := secret.EncryptForma2(email, cfg.EncryptionKey)
+	encrypted, err := secret.EncryptLinkValue(email, cfg.EncryptionKey)
 	if err != nil {
 		return "", err
 	}
@@ -102,29 +102,13 @@ func newEmailToken(cfg config.Config, surveyID uuid.UUID, email string, now time
 	})
 }
 
-// VerifyEmailToken is forma2's verifyTokenForLinkSurvey: the address a link survey email verification token proves, or "" when it proves none for this survey. linkSurveyID is the id the request named the survey by. A token signed with the plain secret must name the survey; forma2's older tokens carry no survey claim and are bound by their key instead, NEXTAUTH_SECRET followed by the survey id of the link they were sent with. A purpose, when present, must be email verification. The address is decrypted, or read as it is when it was never encrypted.
-func VerifyEmailToken(cfg config.Config, token string, surveyID uuid.UUID, linkSurveyID string, now time.Time) string {
+// VerifyEmailToken is verifyTokenForLinkSurvey: the address a link survey email verification token proves, or "" when it proves none for this survey. The token must be signed with the email secret and name the survey, a purpose, when present, must be email verification, and the address must decrypt.
+func VerifyEmailToken(cfg config.Config, token string, surveyID uuid.UUID, now time.Time) string {
 	var c emailClaims
-	boundByKey := false
 	if verify(cfg.LinkSurveyEmailSecret(), token, now, &c) != nil {
-		if cfg.NextAuthSecret == "" {
-			return ""
-		}
-		c = emailClaims{}
-		ok := false
-		for _, id := range uniqueIDs(surveyID.String(), linkSurveyID) {
-			if verify(string(cfg.NextAuthSecret)+id, token, now, &c) == nil && legacyid.Matches(id, surveyID) {
-				ok = true
-				break
-			}
-			c = emailClaims{}
-		}
-		if !ok {
-			return ""
-		}
-		boundByKey = true
+		return ""
 	}
-	if !boundByKey && (c.SurveyID == nil || !legacyid.Matches(*c.SurveyID, surveyID)) {
+	if c.SurveyID == nil || !rowid.Matches(*c.SurveyID, surveyID) {
 		return ""
 	}
 	if c.Purpose != nil && *c.Purpose != emailTokenPurpose {
@@ -133,20 +117,11 @@ func VerifyEmailToken(cfg config.Config, token string, surveyID uuid.UUID, linkS
 	if c.Email == "" {
 		return ""
 	}
-	if email, err := secret.DecryptForma2(c.Email, cfg.EncryptionKey, false); err == nil {
-		return email
+	email, err := secret.DecryptLinkValue(c.Email, cfg.EncryptionKey)
+	if err != nil {
+		return ""
 	}
-	return c.Email
-}
-
-func uniqueIDs(ids ...string) []string {
-	out := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if id != "" && (len(out) == 0 || out[len(out)-1] != id) {
-			out = append(out, id)
-		}
-	}
-	return out
+	return email
 }
 
 type contactClaims struct {
@@ -160,7 +135,7 @@ var (
 	errContactTokenInvalid = errors.New("invalid survey token")
 )
 
-// verifyContactToken is forma2's verifyContactSurveyToken: a personal survey link signed with ENCRYPTION_KEY's text whose contact and survey ids are encrypted with forma2's cipher under the same key. The ids are returned as they were issued: a forma2 id or a UUID.
+// verifyContactToken is verifyContactSurveyToken: a personal survey link signed with ENCRYPTION_KEY's text whose contact and survey ids are encrypted as link values under the same key. The ids are returned as they were issued.
 func verifyContactToken(cfg config.Config, token string, now time.Time) (contactID, surveyID string, err error) {
 	var c contactClaims
 	if err := verify(string(cfg.EncryptionKeyText), token, now, &c); err != nil {
@@ -172,8 +147,8 @@ func verifyContactToken(cfg config.Config, token string, now time.Time) (contact
 	if c.ContactID == "" || c.SurveyID == "" {
 		return "", "", errContactTokenInvalid
 	}
-	contactID, err1 := secret.DecryptForma2(c.ContactID, cfg.EncryptionKey, false)
-	surveyID, err2 := secret.DecryptForma2(c.SurveyID, cfg.EncryptionKey, false)
+	contactID, err1 := secret.DecryptLinkValue(c.ContactID, cfg.EncryptionKey)
+	surveyID, err2 := secret.DecryptLinkValue(c.SurveyID, cfg.EncryptionKey)
 	if err1 != nil || err2 != nil {
 		return "", "", errContactTokenInvalid
 	}
@@ -187,13 +162,13 @@ type contactTokenClaims struct {
 	jwt.Claims
 }
 
-// NewContactToken is forma2's getContactSurveyLink token: the contact and survey ids, each encrypted with forma2's cipher under ENCRYPTION_KEY, signed HS256 with ENCRYPTION_KEY's text; it expires after expiresIn, or never when that is zero. verifyContactToken reads it, as forma2's verifyContactSurveyToken read the tokens forma2 issued.
+// NewContactToken is the getContactSurveyLink token: the contact and survey ids, each encrypted as a link value under ENCRYPTION_KEY, signed HS256 with ENCRYPTION_KEY's text; it expires after expiresIn, or never when that is zero. verifyContactToken reads it.
 func NewContactToken(cfg config.Config, contactID, surveyID uuid.UUID, now time.Time, expiresIn time.Duration) (string, error) {
-	encryptedContact, err := secret.EncryptForma2(contactID.String(), cfg.EncryptionKey)
+	encryptedContact, err := secret.EncryptLinkValue(contactID.String(), cfg.EncryptionKey)
 	if err != nil {
 		return "", err
 	}
-	encryptedSurvey, err := secret.EncryptForma2(surveyID.String(), cfg.EncryptionKey)
+	encryptedSurvey, err := secret.EncryptLinkValue(surveyID.String(), cfg.EncryptionKey)
 	if err != nil {
 		return "", err
 	}

@@ -14,7 +14,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
 )
 
-// deploy/docker/forma.sh, the one-click installer, rewrites a forma2 installation's compose file and .env for the server this package configures; these tests run it against forma2's files with a docker stand-in on PATH, and check that what it drops and keeps agrees with what Load reads.
+// deploy/docker/forma.sh, the one-click installer, rewrites an installation's .env for the server this package configures; these tests run it with docker and sudo stand-ins on PATH, and check that what it drops and keeps agrees with what Load reads.
 
 // formaSh is the path of deploy/docker/forma.sh.
 func formaSh(t *testing.T) string {
@@ -79,13 +79,12 @@ func requireBash(t *testing.T) {
 	}
 }
 
-// installEnv is a forma2 installation in a temporary directory, with docker replaced by a script that logs its arguments and answers the database queries from FAKE_DB_*.
+// installEnv is an installation in a temporary directory: the release's compose file and an .env that still sets retired variables, with docker and sudo replaced by a script that logs its arguments.
 type installEnv struct {
-	t      *testing.T
-	root   string
-	dir    string
-	log    string
-	dbVars []string
+	t    *testing.T
+	root string
+	dir  string
+	log  string
 }
 
 func newInstall(t *testing.T) *installEnv {
@@ -97,24 +96,19 @@ func newInstall(t *testing.T) *installEnv {
 		t.Fatal(err)
 	}
 	fake := `#!/bin/sh
-printf '%s\n' "$*" >> "$FAKE_DOCKER_LOG"
-case "$*" in
-  *to_regclass*) echo "$FAKE_DB_TABLES" ;;
-  *to_regprocedure*) echo "${FAKE_DB_DRIFT_CHECK:-f}" ;;
-  *forma2_import_drift*) echo "$FAKE_DB_DRIFT" ;;
-  *'FROM "User"'*) echo "$FAKE_DB_FORMA2_USERS" ;;
-  *'FROM forma2_imports'*) echo "$FAKE_DB_IMPORTED" ;;
-esac
+printf '%s %s\n' "$(basename "$0")" "$*" >> "$FAKE_DOCKER_LOG"
 exit 0
 `
-	if err := os.WriteFile(filepath.Join(root, "bin", "docker"), []byte(fake), 0o755); err != nil {
-		t.Fatal(err)
+	for _, name := range []string{"docker", "sudo"} {
+		if err := os.WriteFile(filepath.Join(root, "bin", name), []byte(fake), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := os.MkdirAll(e.dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for src, dst := range map[string]string{"docker-compose.yml": "docker-compose.yml", "env": ".env"} {
-		b, err := os.ReadFile(filepath.Join("testdata", "forma2-install", src))
+	for src, dst := range map[string]string{filepath.Join(repotest.Root(t), "deploy/docker/docker-compose.yml"): "docker-compose.yml", filepath.Join("testdata", "install", "env"): ".env"} {
+		b, err := os.ReadFile(src)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -135,7 +129,6 @@ func (e *installEnv) run(args ...string) (string, error) {
 		"PATH="+filepath.Join(e.root, "bin")+string(os.PathListSeparator)+os.Getenv("PATH"),
 		"FAKE_DOCKER_LOG="+e.log, "FORMA_SOURCE_DIR="+source, "FORMA_DIR=forma",
 	)
-	cmd.Env = append(cmd.Env, e.dbVars...)
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	err := cmd.Run()
@@ -184,15 +177,14 @@ func dotenvValues(t *testing.T, content string) map[string]string {
 	return values
 }
 
-func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
+func TestFormaShUpdateMigratesTheEnv(t *testing.T) {
 	e := newInstall(t)
-	e.dbVars = []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=t"}
+	fixtureEnv := e.read(".env")
 	out, err := e.run("update")
 	if err != nil {
 		t.Fatalf("update: %v\n%s", err, out)
 	}
 
-	// The release's compose file replaces forma2's, which is kept.
 	release, err := os.ReadFile(filepath.Join(repotest.Root(t), "deploy/docker/docker-compose.yml"))
 	if err != nil {
 		t.Fatal(err)
@@ -200,12 +192,9 @@ func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 	if e.read("docker-compose.yml") != string(release) {
 		t.Error("docker-compose.yml is not the release's")
 	}
-	fixture, _ := os.ReadFile("testdata/forma2-install/docker-compose.yml")
-	fixtureEnv, _ := os.ReadFile("testdata/forma2-install/env")
-	backups, _ := filepath.Glob(filepath.Join(e.dir, "docker-compose.yml.forma2-*"))
 	envBackups, _ := filepath.Glob(filepath.Join(e.dir, ".env.2*"))
-	if len(backups) != 1 || len(envBackups) != 1 || e.read(filepath.Base(backups[0])) != string(fixture) || e.read(filepath.Base(envBackups[0])) != string(fixtureEnv) {
-		t.Errorf("backups %v %v, want forma2's compose file and .env unchanged", backups, envBackups)
+	if len(envBackups) != 1 || e.read(filepath.Base(envBackups[0])) != fixtureEnv {
+		t.Errorf("backups %v, want the previous .env unchanged", envBackups)
 	}
 	for _, name := range []string{"authzed-postgres-bootstrap.sh", "rustfs-init.sh"} {
 		if info, err := os.Stat(filepath.Join(e.dir, name)); err != nil || info.Mode().Perm() != 0o700 {
@@ -216,31 +205,22 @@ func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 	env := e.read(".env")
 	values := dotenvValues(t, env)
 	want := map[string]string{
-		// Inline in forma2's compose file; the ${FORMA_RUSTFS_*} references resolved from .env.
-		"WEBAPP_URL":                  "https://surveys.example.com",
-		"NEXTAUTH_URL":                "https://surveys.example.com",
-		"NEXTAUTH_SECRET":             "5a1d0c1b2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f",
-		"ENCRYPTION_KEY":              "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
-		"MAIL_FROM":                   "noreply@example.com",
-		"MAIL_FROM_NAME":              "Example Surveys",
-		"SMTP_PORT":                   "587",
-		"SMTP_PASSWORD":               `p@ss "word" #1`,
-		"S3_ACCESS_KEY":               "forma-service-5e6f7a8b",
-		"S3_SECRET_KEY":               "c2VydmljZS1wYXNzd29yZA==",
-		"S3_REGION":                   "us-east-1",
-		"S3_BUCKET_NAME":              "forma-uploads",
-		"S3_ENDPOINT_URL":             "https://files.surveys.example.com",
-		"S3_FORCE_PATH_STYLE":         "1",
-		"EMAIL_VERIFICATION_DISABLED": "1",
-		"PASSWORD_RESET_DISABLED":     "1",
-		"REDIS_URL":                   "redis://redis:6379",
-		// Mapped.
+		// Mapped from FORMA_RUSTFS_*.
 		"RUSTFS_ADMIN_USER":     "forma-1a2b3c4d",
 		"RUSTFS_ADMIN_PASSWORD": "Zm9ybWEtYWRtaW4tcGFzc3dvcmQ=",
+		"S3_ACCESS_KEY":         "forma-service-5e6f7a8b",
+		"S3_SECRET_KEY":         "c2VydmljZS1wYXNzd29yZA==",
+		"S3_REGION":             "us-east-1",
+		"S3_BUCKET_NAME":        "forma-uploads",
+		"S3_FORCE_PATH_STYLE":   "1",
 		"COMPOSE_PROFILES":      "storage",
-		"WORKER_CONCURRENCY":    "6",
-		"MIGRATE_DATABASE_URL":  "postgresql://owner:secret@postgres:5432/forma?connect_timeout=10",
+		// BULLMQ_WORKER_COUNT x BULLMQ_WORKER_CONCURRENCY.
+		"WORKER_CONCURRENCY": "6",
+		// Without Prisma's ?schema=public.
+		"MIGRATE_DATABASE_URL": "postgresql://owner:secret@postgres:5432/forma?connect_timeout=10",
 		// Kept as they were.
+		"WEBAPP_URL":        "https://surveys.example.com",
+		"ENCRYPTION_KEY":    "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
 		"POSTGRES_PASSWORD": "pg$$secret",
 		"AUTHZED_ENABLED":   "true",
 		"LOG_LEVEL":         "warn",
@@ -266,25 +246,14 @@ func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 		t.Errorf(".env mode: %v %v", info, err)
 	}
 
-	// Traefik moves into the override file, without forma2's dangling dependencies.
-	override := e.read("docker-compose.override.yml")
-	for _, s := range []string{"  forma:\n    labels:\n", "traefik.http.routers.forma.rule=Host(`surveys.example.com`)", "  rustfs:\n    labels:\n", "traefik.http.routers.rustfs-s3.rule=Host(`files.surveys.example.com`)", "  traefik:\n    image: \"traefik:v3.6.4\"", "      - forma\n", "/var/run/docker.sock"} {
-		if !strings.Contains(override, s) {
-			t.Errorf("override lacks %q:\n%s", s, override)
-		}
-	}
-	if strings.Contains(override, "- hub") || strings.Contains(override, "      - rustfs\n") || strings.Contains(override, "environment:") {
-		t.Errorf("override keeps more than the proxy:\n%s", override)
-	}
-
 	calls := strings.Join(e.dockerCalls(), "\n")
-	for _, c := range []string{"compose config -q", "compose pull", "compose up -d --wait postgres", "compose up -d --remove-orphans"} {
+	for _, c := range []string{"compose config -q", "compose pull", "compose up -d --remove-orphans"} {
 		if !strings.Contains(calls, c) {
 			t.Errorf("docker was not called with %q:\n%s", c, calls)
 		}
 	}
 
-	// A second update finds a Go installation and changes nothing.
+	// A second update changes nothing.
 	before := env
 	if out, err := e.run("update"); err != nil {
 		t.Fatalf("second update: %v\n%s", err, out)
@@ -294,51 +263,28 @@ func TestFormaShUpdateMigratesAForma2Install(t *testing.T) {
 	}
 }
 
-// The Go server keeps its data in tables of its own: started on a database where only forma2's tables hold users, it would serve an empty instance whose first sign-up becomes its owner, so the update stops before starting anything until forma2_imports records an import (or a discard), and again when forma2 ran after the record, as after a rollback.
-func TestFormaShUpdateRefusesADatabaseWithoutTheMigratedData(t *testing.T) {
-	requireBash(t)
-	for name, db := range map[string][]string{
-		"go schema absent": {"FAKE_DB_TABLES=true,false", "FAKE_DB_FORMA2_USERS=t"},
-		"not imported":     {"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=f"},
-	} {
-		t.Run(name, func(t *testing.T) {
+// The compose file the retired Next.js release's installer wrote: its data lives in tables this server does not read, so neither install nor update touches the directory, and nothing is started.
+func TestFormaShRefusesAForma2Install(t *testing.T) {
+	const forma2Compose = "x-environment: &environment\n  environment:\n    WEBAPP_URL: \"https://surveys.example.com\"\nservices:\n  forma:\n    image: ghcr.io/yldm-tech/forma:3db326f\n"
+	for _, command := range []string{"install", "update"} {
+		t.Run(command, func(t *testing.T) {
 			e := newInstall(t)
-			e.dbVars = db
-			out, err := e.run("update")
-			if err == nil || !strings.Contains(out, "still holds forma2's data") || !strings.Contains(out, "docker compose run --rm forma-migrate import-forma2") {
-				t.Fatalf("update: %v\n%s", err, out)
+			if err := os.WriteFile(filepath.Join(e.dir, "docker-compose.yml"), []byte(forma2Compose), 0o600); err != nil {
+				t.Fatal(err)
 			}
-			if calls := strings.Join(e.dockerCalls(), "\n"); strings.Contains(calls, "--remove-orphans") {
+			env := e.read(".env")
+			out, err := e.run(command)
+			if err == nil || !strings.Contains(out, "retired Next.js release") {
+				t.Fatalf("%s: %v\n%s", command, err, out)
+			}
+			if e.read("docker-compose.yml") != forma2Compose || e.read(".env") != env {
+				t.Errorf("%s changed the installation", command)
+			}
+			if calls := strings.Join(e.dockerCalls(), "\n"); strings.Contains(calls, "compose up") || strings.Contains(calls, "compose pull") {
 				t.Errorf("the stack was started:\n%s", calls)
 			}
 		})
 	}
-	t.Run("forma2 changed since the import", func(t *testing.T) {
-		e := newInstall(t)
-		e.dbVars = []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=t", "FAKE_DB_DRIFT_CHECK=t", "FAKE_DB_DRIFT=Response,User"}
-		out, err := e.run("update")
-		if err == nil || !strings.Contains(out, "changed: Response,User") || !strings.Contains(out, "import-forma2 --refresh") || !strings.Contains(out, "--discard-forma2-data") {
-			t.Fatalf("update: %v\n%s", err, out)
-		}
-		if calls := strings.Join(e.dockerCalls(), "\n"); strings.Contains(calls, "--remove-orphans") {
-			t.Errorf("the stack was started:\n%s", calls)
-		}
-	})
-	t.Run("imported and unchanged", func(t *testing.T) {
-		e := newInstall(t)
-		e.dbVars = []string{"FAKE_DB_TABLES=true,true", "FAKE_DB_FORMA2_USERS=t", "FAKE_DB_IMPORTED=t", "FAKE_DB_DRIFT_CHECK=t", "FAKE_DB_DRIFT="}
-		if out, err := e.run("update"); err != nil {
-			t.Fatalf("update after the import: %v\n%s", err, out)
-		}
-	})
-	// A fresh database has nothing to lose.
-	t.Run("fresh database", func(t *testing.T) {
-		e := newInstall(t)
-		e.dbVars = []string{"FAKE_DB_TABLES=false,false"}
-		if out, err := e.run("update"); err != nil {
-			t.Fatalf("update on an empty database: %v\n%s", err, out)
-		}
-	})
 }
 
 func TestFormaShStripsSchemaPublic(t *testing.T) {

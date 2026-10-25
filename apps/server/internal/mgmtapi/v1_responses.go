@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi/mgmtv1"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/response/answers"
@@ -140,30 +140,13 @@ func (h *Handler) v1DeleteResponse(c *gin.Context) {
 	v1OK(c, deleted)
 }
 
-// legacyPrefixes is forma2's getWorkspaceLegacyStoragePrefixes: the storage prefixes a workspace owns for files uploaded before uploads were scoped to a survey and element, its own id (as the rewrite and as forma2 knew it) and its legacy environment id.
-func (h *Handler) legacyPrefixes(c *gin.Context, workspaceID uuid.UUID) ([]string, error) {
-	prefixes := []string{workspaceID.String()}
-	env, err := h.environmentID(c.Request.Context(), workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	if env != workspaceID.String() {
-		prefixes = append(prefixes, env)
-	}
-	return prefixes, nil
-}
-
-// validUploads is forma2's validateClientFileUploads for a management caller, which may replay files stored under the workspace's legacy prefixes.
-func (h *Handler) validUploads(c *gin.Context, sv *response.Survey, data map[string]any) (bool, error) {
+// validUploads is validateClientFileUploads for a management caller: every file answer was uploaded for this survey's element.
+func (h *Handler) validUploads(sv *response.Survey, data map[string]any) (bool, error) {
 	elements, err := storage.AnswerElements(sv.Blocks)
 	if err != nil {
 		return false, err
 	}
-	prefixes, err := h.legacyPrefixes(c, sv.WorkspaceID)
-	if err != nil {
-		return false, err
-	}
-	scope := storage.UploadScope{WorkspaceID: sv.WorkspaceID, SurveyID: sv.ID, AppOrigins: []*url.URL{h.cfg.WebAppURL, h.cfg.PublicURL}, LegacyPrefixes: prefixes}
+	scope := storage.UploadScope{WorkspaceID: sv.WorkspaceID, SurveyID: sv.ID, AppOrigins: []*url.URL{h.cfg.WebAppURL, h.cfg.PublicURL}}
 	return storage.ValidAnswerFiles(data, elements, scope), nil
 }
 
@@ -234,7 +217,7 @@ func (h *Handler) v1CreateResponse(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	surveyID, _ := legacyid.Resolve(input.surveyID)
+	surveyID, _ := rowid.Parse(input.surveyID)
 	sv, err := response.LoadSurvey(ctx, h.db, surveyID)
 	if err != nil {
 		h.v1Fail(c, err)
@@ -248,7 +231,7 @@ func (h *Handler) v1CreateResponse(c *gin.Context) {
 		v1api.BadRequest(c, "Survey is part of another workspace", map[string]any{"workspaceId": ws.ID.String()}, true)
 		return
 	}
-	valid, err := h.validUploads(c, sv, input.in.Data)
+	valid, err := h.validUploads(sv, input.in.Data)
 	if err != nil {
 		h.v1Fail(c, err)
 		return
@@ -304,7 +287,7 @@ func (h *Handler) v1UpdateResponse(c *gin.Context) {
 		languagePtr = &language
 	}
 	if data != nil {
-		valid, err := h.validUploads(c, sv, data)
+		valid, err := h.validUploads(sv, data)
 		if err != nil {
 			h.v1Fail(c, err)
 			return

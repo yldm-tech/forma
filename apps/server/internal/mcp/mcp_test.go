@@ -15,7 +15,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
 
 	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 )
 
@@ -370,12 +369,6 @@ func TestArgumentValidation(t *testing.T) {
 	failed, payload, text := e.tool(key, "list_surveys", map[string]any{"workspaceId": f.ws.String(), "filter": map[string]any{"status": map[string]any{"in": []string{"archived"}}}})
 	if failed || len(payload["data"].([]any)) != 0 || payload["meta"].(map[string]any)["limit"] != float64(20) {
 		t.Fatalf("archived filter: %s", text)
-	}
-	// A forma2 id resolves to the row migrated from it.
-	legacy := "clxbivtla014iye2vfrn436xd"
-	migrated := e.insert(`INSERT INTO surveys (id, workspace_id, name, type, status, blocks) VALUES (?, ?, 'Migrated', 'link', 'draft', ?::jsonb) RETURNING id`, legacyid.ID(legacy), f.ws, blocks)
-	if failed, payload, text := e.tool(key, "get_survey", map[string]any{"surveyId": legacy}); failed || payload["data"].(map[string]any)["id"] != migrated.String() {
-		t.Fatalf("legacy id: %s", text)
 	}
 }
 

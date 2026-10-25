@@ -11,7 +11,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/pipeline"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
 )
 
@@ -71,9 +71,9 @@ func (d *Deliverer) HandleResponse(ctx context.Context, ev *pipeline.Event) erro
 	return nil
 }
 
-// forSurvey reports whether a link is for the response's survey; links made in forma2 name it by its old id.
+// forSurvey reports whether a link is for the response's survey.
 func forSurvey(l LinkBase, r *submission) bool {
-	id, ok := legacyid.Resolve(l.SurveyID)
+	id, ok := rowid.Parse(l.SurveyID)
 	return ok && id == r.answers.Response.SurveyID
 }
 

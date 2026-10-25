@@ -15,10 +15,10 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 )
 
-// toolsJSON is the tools/list forma2 answered, in its order, recorded from its zod input schemas through the MCP SDK: names, titles, descriptions, annotations and input schemas. One change: the ids a tool takes (workspaceId, surveyId, workflowId, runId, responseId, and a workflow trigger's surveyId) accept the rewrite's UUIDs as well as the cuid2 ids forma2 issued, which resolve to the rows migrated from them.
+// toolsJSON is the tools/list forma2 answered, in its order, recorded from its zod input schemas through the MCP SDK: names, titles, descriptions, annotations and input schemas. One change: the ids a tool takes (workspaceId, surveyId, workflowId, runId, responseId, and a workflow trigger's surveyId) accept UUIDs, the ids this server issues, as well as cuid2 ids, which name no row.
 //
 //go:embed tools.json
 var toolsJSON []byte
@@ -243,9 +243,9 @@ func workflowLifecycle(action string) toolSpec {
 	}}
 }
 
-// id is a tool's id argument as the v3 API takes it: a UUID as it is, a forma2 id as the id its row was migrated to.
+// id is a tool's id argument as the v3 API takes it: a UUID in its canonical lowercase form, anything else as it was sent.
 func id(raw string) string {
-	resolved, ok := legacyid.Resolve(raw)
+	resolved, ok := rowid.Parse(raw)
 	if !ok {
 		return raw
 	}

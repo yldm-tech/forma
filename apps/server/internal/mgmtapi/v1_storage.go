@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi/mgmtv1"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
 	"github.com/yldm-tech/forma/apps/server/internal/storage"
 )
@@ -71,7 +71,7 @@ func (h *Handler) v1StorageUpload(c *gin.Context) {
 		v1api.BadRequest(c, messageInvalidFields, is.v1Details(), true)
 		return
 	}
-	workspaceID, _ := legacyid.Resolve(rawWorkspace)
+	workspaceID, _ := rowid.Parse(rawWorkspace)
 	if !h.v1.Authorize(c, http.MethodPost, workspaceID) {
 		return
 	}

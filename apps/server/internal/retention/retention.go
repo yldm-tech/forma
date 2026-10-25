@@ -244,7 +244,7 @@ func (w *sweepWorker) Work(ctx context.Context, job *river.Job[SweepArgs]) error
 	if result.DryRun {
 		message = "Retention sweep job completed (dry run, nothing deleted)"
 	}
-	// invalidWindows is always 0: the columns' CHECK refuses a window that is not a positive number of days. It stays in the line so forma2's log queries keep working.
+	// invalidWindows is always 0: the columns' CHECK refuses a window that is not a positive number of days. It stays in the line so existing log queries keep working.
 	w.log.InfoContext(ctx, message, append(logContext, "dryRun", result.DryRun, "organizations", result.Organizations, "invalidWindows", 0, "workflowRuns", result.WorkflowRuns, "displays", result.Displays)...)
 	return nil
 }

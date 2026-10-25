@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // unsetEnv removes a variable for the duration of the test; t.Setenv first records the value to restore.
@@ -349,7 +347,7 @@ func TestLoadAuthz(t *testing.T) {
 	}
 }
 
-// forma2 read AUTHZED_ENABLED and AUTHZED_INSECURE with z.enum(["true","false","1","0"]), and its installer writes AUTHZED_ENABLED=true into .env, so both spellings keep working; every other switch stays 1/0.
+// AUTHZED_ENABLED and AUTHZED_INSECURE take true/false as well as 1/0, the spellings existing .env files use; every other switch stays 1/0.
 func TestLoadAcceptsForma2AuthzedBooleans(t *testing.T) {
 	for _, tc := range []struct {
 		enabled, insecure string
@@ -465,14 +463,12 @@ func TestLoadSSO(t *testing.T) {
 	if id, ok := s.DefaultOrganization(); !ok || id.String() != "0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10" {
 		t.Fatalf("DefaultOrganization = %s, %v", id, ok)
 	}
-	// forma2 validated the variable as a cuid2, so an existing deployment's value is its organization's forma2 id, which names the migrated row.
+	// Organization ids are UUIDs; a cuid2 names no organization, so it fails the start rather than being ignored.
 	t.Setenv("AUTH_SSO_DEFAULT_ORGANIZATION_ID", "clxbivtla014iye2vfrn436xd")
-	if cfg, err = Load(); err != nil {
-		t.Fatalf("Load with a forma2 organization id: %v", err)
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "AUTH_SSO_DEFAULT_ORGANIZATION_ID") {
+		t.Fatalf("Load with a cuid2 organization id: %v", err)
 	}
-	if id, ok := cfg.SSO.DefaultOrganization(); !ok || id != legacyid.ID("clxbivtla014iye2vfrn436xd") {
-		t.Fatalf("DefaultOrganization = %s, %v; want the migrated id", id, ok)
-	}
+	t.Setenv("AUTH_SSO_DEFAULT_ORGANIZATION_ID", "0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10")
 
 	t.Setenv("OIDC_ISSUER", "idp.example.com")
 	if _, err := Load(); err == nil {
@@ -756,13 +752,13 @@ func TestDatabaseURLDropsPrismaConnectionParameters(t *testing.T) {
 	}
 }
 
-// Every process that reads forma2's DATABASE_URL (serve, worker and start through Load; migrate, wait-for-database and import-forma2 through LoadForMigrate and LoadForImport; the authz commands through LoadForAuthz) gets it without Prisma's parameters.
+// Every process that reads forma2's DATABASE_URL (serve, worker and start through Load; migrate and wait-for-database through LoadForMigrate; the authz commands through LoadForAuthz) gets it without Prisma's parameters.
 func TestLoadersAcceptProductionForma2URLs(t *testing.T) {
 	setRequired(t)
 	t.Setenv("DATABASE_URL", prodPooledURL)
 	t.Setenv("AUTHZED_ENDPOINT", "spicedb:50051")
 	want := "postgresql://forma:pw@pgbouncer.postgres.svc.cluster.local:5432/forma"
-	for name, load := range map[string]func() (Config, error){"Load": Load, "LoadForMigrate": LoadForMigrate, "LoadForImport": LoadForImport, "LoadForAuthz": LoadForAuthz} {
+	for name, load := range map[string]func() (Config, error){"Load": Load, "LoadForMigrate": LoadForMigrate, "LoadForAuthz": LoadForAuthz} {
 		cfg, err := load()
 		if err != nil || cfg.DatabaseURL != want {
 			t.Errorf("%s: DatabaseURL %q, err %v; want %q", name, cfg.DatabaseURL, err, want)
@@ -772,22 +768,12 @@ func TestLoadersAcceptProductionForma2URLs(t *testing.T) {
 	// The migration hook overrides DATABASE_URL with the direct URL.
 	t.Setenv("DATABASE_URL", prodDirectURL+"&statement_timeout=30")
 	want = "postgresql://forma:pw@pg-rw.postgres.svc.cluster.local:5432/forma"
-	for name, load := range map[string]func() (Config, error){"LoadForMigrate": LoadForMigrate, "LoadForImport": LoadForImport} {
-		cfg, err := load()
-		if err != nil || cfg.DatabaseURL != want {
-			t.Errorf("%s: DatabaseURL %q, err %v; want %q", name, cfg.DatabaseURL, err, want)
-		}
+	if cfg, err := LoadForMigrate(); err != nil || cfg.DatabaseURL != want {
+		t.Errorf("LoadForMigrate: DatabaseURL %q, err %v; want %q", cfg.DatabaseURL, err, want)
 	}
 	t.Setenv("MIGRATE_DATABASE_URL", prodDirectURL)
 	if cfg, err := LoadForMigrate(); err != nil || cfg.DatabaseURL != want {
 		t.Errorf("LoadForMigrate: DatabaseURL %q, err %v; want %q", cfg.DatabaseURL, err, want)
-	}
-
-	if got, err := SourceDatabaseURL(" " + prodDirectURL + " "); err != nil || got != want {
-		t.Errorf("SourceDatabaseURL = %q, %v; want %q", got, err, want)
-	}
-	if _, err := SourceDatabaseURL(prodDirectURL + "&schema=tenant"); err == nil || !strings.Contains(err.Error(), "--source") {
-		t.Errorf("SourceDatabaseURL accepted another schema: %v", err)
 	}
 }
 

@@ -84,7 +84,7 @@ func TestServe(t *testing.T) {
 	}
 }
 
-// The admin pages forma2 and this SPA served at the root answer with a permanent redirect to the same path under /app, keeping the query and the method; the root leads to the app with a redirect browsers do not cache for good.
+// The root leads to the app with a redirect browsers do not cache for good, keeping the query; the admin pages exist only under /app, so their paths at the root are not the app.
 func TestRedirectsToTheApp(t *testing.T) {
 	r := newEngine(t, fstest.MapFS{"index.html": {Data: []byte(indexHTML)}})
 
@@ -95,18 +95,9 @@ func TestRedirectsToTheApp(t *testing.T) {
 	}{
 		{http.MethodGet, "/", http.StatusFound, "/app/"},
 		{http.MethodGet, "/?utm_source=x", http.StatusFound, "/app/?utm_source=x"},
-		{http.MethodGet, "/auth/login?callbackUrl=https%3A%2F%2Fforma.example%2Fworkspaces%2Fw1", http.StatusPermanentRedirect, "/app/auth/login?callbackUrl=https%3A%2F%2Fforma.example%2Fworkspaces%2Fw1"},
-		{http.MethodGet, "/workspaces/w1/surveys/s1/summary", http.StatusPermanentRedirect, "/app/workspaces/w1/surveys/s1/summary"},
-		{http.MethodGet, "/workspaces/w1/", http.StatusPermanentRedirect, "/app/workspaces/w1/"},
-		{http.MethodGet, "/invite?token=abc", http.StatusPermanentRedirect, "/app/invite?token=abc"},
-		{http.MethodGet, "/environments/e1/surveys", http.StatusPermanentRedirect, "/app/environments/e1/surveys"},
-		{http.MethodGet, "/i/workspaces?ref=mail", http.StatusPermanentRedirect, "/app/i/workspaces?ref=mail"},
-		{http.MethodGet, "/setup", http.StatusPermanentRedirect, "/app/setup"},
-		{http.MethodGet, "/billing-confirmation?organizationId=o1&checkout_success=1", http.StatusPermanentRedirect, "/app/billing-confirmation?organizationId=o1&checkout_success=1"},
-		{http.MethodGet, "/verify-email-change?token=t", http.StatusPermanentRedirect, "/app/verify-email-change?token=t"},
-		{http.MethodGet, "/workspaces/caf%C3%A9%2Fx", http.StatusPermanentRedirect, "/app/workspaces/caf%C3%A9%2Fx"},
-		{http.MethodHead, "/account/settings/profile", http.StatusPermanentRedirect, "/app/account/settings/profile"},
-		{http.MethodPost, "/organizations/o1/settings", http.StatusPermanentRedirect, "/app/organizations/o1/settings"},
+		{http.MethodGet, "/auth/login", http.StatusNotFound, ""},
+		{http.MethodGet, "/workspaces/w1/surveys/s1/summary", http.StatusNotFound, ""},
+		{http.MethodGet, "/invite?token=abc", http.StatusNotFound, ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
@@ -115,11 +106,6 @@ func TestRedirectsToTheApp(t *testing.T) {
 				t.Fatalf("%d %s, want %d %s", rec.Code, rec.Header().Get("Location"), tc.code, tc.location)
 			}
 		})
-	}
-	for _, first := range LegacyAdminPaths {
-		if rec := get(r, http.MethodGet, "/"+first+"/x?y=1"); rec.Code != http.StatusPermanentRedirect || rec.Header().Get("Location") != "/app/"+first+"/x?y=1" {
-			t.Errorf("/%s/x?y=1 = %d %s", first, rec.Code, rec.Header().Get("Location"))
-		}
 	}
 }
 

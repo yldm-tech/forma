@@ -1,0 +1,22 @@
+{
+  "case": "mcp-get",
+  "description": "GET /api/mcp: only POST is routed.",
+  "request": {
+    "method": "GET",
+    "path": "/api/mcp",
+    "query": {},
+    "headers": {
+      "accept": "text/event-stream"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 405,
+    "headers": {
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "empty",
+    "body": null
+  }
+}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
@@ -127,21 +126,6 @@ func TestUpdateRefusals(t *testing.T) {
 	}
 	_, err = e.svc.Update(ctx, sv2, gone.String(), UpdateInput{})
 	appErr(t, err, http.StatusNotFound, "Response not found", map[string]any{"resource_id": gone.String(), "resource_type": "Response"})
-}
-
-func TestAMigratedResponseIsFoundByItsForma2ID(t *testing.T) {
-	e := newEnv(t)
-	_, ws := e.organization(e.user())
-	sv := e.survey(ws, surveyOpts{})
-	legacy := "clmigratedresponseaaaaa1"
-	e.exec(`INSERT INTO responses (id, survey_id) VALUES (?, ?)`, legacyid.ID(legacy), sv)
-	res, err := e.update(context.Background(), ws, legacy, `{"q1":"x"}`, UpdateInput{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res.ID != legacyid.ID(legacy) {
-		t.Fatalf("updated %s", res.ID)
-	}
 }
 
 func TestUpdateDropsAClientSentVerifiedEmail(t *testing.T) {

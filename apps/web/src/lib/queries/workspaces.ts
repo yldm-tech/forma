@@ -22,7 +22,6 @@ export interface Workspace {
   updatedAt: string;
   name: string;
   organizationId: string;
-  legacyEnvironmentId: string | null;
   styling: TWorkspaceStyling;
   recontactDays: number;
   inAppSurveyBranding: boolean;
@@ -61,7 +60,6 @@ export interface WorkspaceDeletion {
 /** What the app-connection page shows to install the SDK. */
 export interface AppConnection {
   workspaceId: string;
-  legacyEnvironmentId: string | null;
   appUrl: string;
   appSetupCompleted: boolean;
 }
@@ -121,15 +119,6 @@ export const workspacesQuery = (organizationId: string, access: "read" | "write"
           { signal }
         )
         .then((res) => res.workspaces),
-  });
-
-export const environmentQuery = (environmentId: string) =>
-  queryOptions({
-    queryKey: ["environments", environmentId],
-    queryFn: ({ signal }) =>
-      api.get<{ workspaceId: string }>(`/api/app/environments/${encodeURIComponent(environmentId)}`, {
-        signal,
-      }),
   });
 
 export const useCreateWorkspace = (organizationId: string) => {

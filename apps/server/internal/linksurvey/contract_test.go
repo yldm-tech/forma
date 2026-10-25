@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// fixture is one exchange recorded against forma2 (apps/server/internal/clientapi/testdata/forma2, see its README).
+// fixture is one contract exchange of the public survey pages (apps/server/internal/clientapi/testdata/contract, see its README).
 type fixture struct {
 	Request struct {
 		Method  string            `json:"method"`
@@ -35,7 +35,7 @@ type headBody struct {
 
 func loadFixture(t *testing.T, name string, placeholders map[string]string) fixture {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join("..", "clientapi", "testdata", "forma2", name+".json"))
+	b, err := os.ReadFile(filepath.Join("..", "clientapi", "testdata", "contract", name+".json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,22 +61,19 @@ func (f fixture) target() string {
 	return f.Request.Path + "?" + q.Encode()
 }
 
-// checkHeaders compares every header the fixture recorded, and requires the ones it recorded as absent (x-frame-options on an embeddable page) to be absent. Vary is compared as a set of tokens. One divergence from forma2 is intended: every HTML response ends its Cache-Control with no-transform (httpserver's noTransformHTML), so Cloudflare does not inject its Web Analytics beacon, which the Content-Security-Policy blocks.
+// checkHeaders compares every header the fixture lists, and requires X-Frame-Options and Access-Control-Allow-Origin to be absent where it does not list them (x-frame-options on an embeddable page). Every HTML page's Cache-Control ends with no-transform (httpserver's noTransformHTML), so Cloudflare does not inject its Web Analytics beacon, which the Content-Security-Policy blocks.
 func checkHeaders(t *testing.T, got http.Header, want map[string]string) {
 	t.Helper()
 	for name, value := range want {
-		if name == "cache-control" && strings.HasPrefix(want["content-type"], "text/html") {
-			value += ", no-transform"
-		}
 		if got.Get(name) != value {
 			t.Errorf("header %s = %q, want %q", name, got.Get(name), value)
 		}
 	}
 	if _, recorded := want["x-frame-options"]; !recorded && got.Get("X-Frame-Options") != "" {
-		t.Errorf("X-Frame-Options %q was not sent by forma2", got.Get("X-Frame-Options"))
+		t.Errorf("X-Frame-Options %q is sent but not listed", got.Get("X-Frame-Options"))
 	}
 	if _, recorded := want["access-control-allow-origin"]; !recorded && got.Get("Access-Control-Allow-Origin") != "" {
-		t.Errorf("Access-Control-Allow-Origin %q was not sent by forma2", got.Get("Access-Control-Allow-Origin"))
+		t.Errorf("Access-Control-Allow-Origin %q is sent but not listed", got.Get("Access-Control-Allow-Origin"))
 	}
 }
 
@@ -101,7 +98,7 @@ func checkHead(t *testing.T, p renderedPage, raw json.RawMessage) {
 	}
 }
 
-// The recorded link survey: in progress, en-US by default and de-DE, with the slug contract-feedback, on a workspace with the default styling.
+// The contract's link survey: in progress, en-US by default and de-DE, with the slug contract-feedback, on a workspace with the default styling.
 func (e *env) recordedSurveys() (link, paused string) {
 	ws := e.workspace()
 	l := e.survey(ws, "slug", "contract-feedback", "hidden_fields", `{"enabled":true,"fieldIds":["utm_source","campaign"]}`)
@@ -111,8 +108,8 @@ func (e *env) recordedSurveys() (link, paused string) {
 	return l.String(), p.String()
 }
 
-// The /s and /p pages answer the recorded requests with forma2's status, headers and document head.
-func TestPagesMatchRecordedForma2(t *testing.T) {
+// The /s and /p pages answer the contract requests with the listed status, headers and document head.
+func TestPagesMatchTheContract(t *testing.T) {
 	e := newEnv(t)
 	link, paused := e.recordedSurveys()
 	placeholders := map[string]string{"<webapp-url>": "http://localhost:3999", "<id:survey:link>": link, "<id:survey:paused>": paused}
@@ -129,8 +126,8 @@ func TestPagesMatchRecordedForma2(t *testing.T) {
 	}
 }
 
-// forma2's /p/{slug} redirects to /s/{id}; the recorder followed the redirect, so the fixture is the /s page it lands on.
-func TestPrettyURLMatchesRecordedForma2(t *testing.T) {
+// /p/{slug} redirects to /s/{id}; the fixture is the /s page it lands on.
+func TestPrettyURLMatchesTheContract(t *testing.T) {
 	e := newEnv(t)
 	link, _ := e.recordedSurveys()
 	f := loadFixture(t, "page-p-slug", map[string]string{"<webapp-url>": "http://localhost:3999", "<id:survey:link>": link})
@@ -146,8 +143,8 @@ func TestPrettyURLMatchesRecordedForma2(t *testing.T) {
 	checkHead(t, p, f.Response.Body)
 }
 
-// The OG image route answers with forma2's status, headers and an 800x400 PNG, and its OPTIONS with Next's automatic 204.
-func TestOgImageMatchesRecordedForma2(t *testing.T) {
+// The OG image route answers with the listed status, headers and an 800x400 PNG, and its OPTIONS with a 204.
+func TestOgImageMatchesTheContract(t *testing.T) {
 	e := newEnv(t)
 	for _, name := range []string{"v1-og-image", "v1-og-image-options"} {
 		t.Run(name, func(t *testing.T) {

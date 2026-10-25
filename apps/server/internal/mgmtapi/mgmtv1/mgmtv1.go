@@ -253,7 +253,7 @@ func ReadBody(c *gin.Context) (map[string]any, bool) {
 	return body, true
 }
 
-// rawWorkspaceID is forma2's `body.workspaceId ?? body.environmentId`, the legacy alias read only when workspaceId is absent or null. It answers 400 itself when the result is falsy or not a string.
+// rawWorkspaceID is `body.workspaceId ?? body.environmentId`, the alias read only when workspaceId is absent or null. It answers 400 itself when the result is falsy or not a string.
 func rawWorkspaceID(c *gin.Context, body map[string]any) (string, bool) {
 	raw, present := body["workspaceId"]
 	if !present || raw == nil {
@@ -271,7 +271,7 @@ func rawWorkspaceID(c *gin.Context, body map[string]any) (string, bool) {
 	return s, true
 }
 
-// ResolveWorkspace is forma2's resolveBodyIds: the workspace the body names by workspaceId or its legacy environment id (404 Workspace naming the id sent), authorized for the method's action (401 when refused). On success the body's workspaceId is the canonical id.
+// ResolveWorkspace is forma2's resolveBodyIds: the workspace the body names by workspaceId or its alias environmentId (404 Workspace naming the id sent), authorized for the method's action (401 when refused). On success the body's workspaceId is the canonical id.
 func (w *Wrapper) ResolveWorkspace(c *gin.Context, body map[string]any, method string) (*workspace.ClientWorkspace, bool) {
 	raw, ok := rawWorkspaceID(c, body)
 	if !ok {

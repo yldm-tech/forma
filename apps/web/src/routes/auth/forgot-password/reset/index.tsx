@@ -64,7 +64,7 @@ function ResetPasswordPage() {
     },
   });
 
-  // Without a token the link is no longer valid: the server's redirect of a pre-cutover Better Auth reset link lands here (apps/server/internal/auth/legacy_links.go). A new one is requested from the forgot-password page.
+  // Without a token the link is no longer valid. A new one is requested from the forgot-password page.
   if (!token || linkExpired) {
     return (
       <div className="space-y-6 text-center">

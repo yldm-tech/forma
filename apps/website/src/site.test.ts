@@ -55,7 +55,7 @@ describe("routes", () => {
     expect(isReservedPath("/favicon.ico")).toBe(true);
   });
 
-  // The root paths apps/server/internal/webui serves or redirects (RootPublicPaths, LegacyAdminPaths): the ingress sends them to the server, so a file the site builds there would never be served.
+  // The root paths apps/server/internal/webui serves (RootPublicPaths) and the admin pages' old root paths: the ingress sends them to the server, so a file the site builds there would never be served.
   it("reserves every root path the server owns", () => {
     const server = [
       "/animated-bgs",

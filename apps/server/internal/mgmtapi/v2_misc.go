@@ -40,7 +40,7 @@ func (h *Handler) v2Roles(c *gin.Context) {
 	v2OK(c, roles, nil)
 }
 
-// v2Me is forma2's GET /api/v2/me: what the key may do, for a key with read access to its organization's access control (401 otherwise). Its workspace grants are those SpiceDB confirms and whose workspaces still exist in its organization; a workspace with a legacy environment id is also listed as the environment it once was.
+// v2Me is forma2's GET /api/v2/me: what the key may do, for a key with read access to its organization's access control (401 otherwise). Its workspace grants are those SpiceDB confirms and whose workspaces still exist in its organization. environmentPermissions stays in the payload for the clients that read it, always empty: a workspace has no environments.
 func (h *Handler) v2Me(c *gin.Context) {
 	if !h.v2Limit(c) {
 		return
@@ -78,31 +78,18 @@ func (h *Handler) v2Me(c *gin.Context) {
 		WorkspaceID   uuid.UUID `json:"workspaceId"`
 		WorkspaceName string    `json:"workspaceName"`
 	}
-	type environmentPermission struct {
-		EnvironmentID   string    `json:"environmentId"`
-		EnvironmentType string    `json:"environmentType"`
-		Permissions     string    `json:"permissions"`
-		ProjectID       uuid.UUID `json:"projectId"`
-		ProjectName     string    `json:"projectName"`
-	}
 	workspaces := []workspacePermission{}
-	environments := []environmentPermission{}
 	for _, g := range p.WorkspacePermissions {
 		w, ok := found[g.WorkspaceID]
 		if !ok || w.OrganizationID != p.OrganizationID {
 			continue
 		}
 		workspaces = append(workspaces, workspacePermission{Permissions: g.Permission, WorkspaceID: w.ID, WorkspaceName: w.Name})
-		if w.LegacyEnvironmentID != nil {
-			environments = append(environments, environmentPermission{
-				EnvironmentID: *w.LegacyEnvironmentID, EnvironmentType: "production", Permissions: g.Permission, ProjectID: w.ID, ProjectName: w.Name,
-			})
-		}
 	}
 	v2OK(c, struct {
 		WorkspacePermissions   []workspacePermission     `json:"workspacePermissions"`
-		EnvironmentPermissions []environmentPermission   `json:"environmentPermissions"`
+		EnvironmentPermissions []struct{}                `json:"environmentPermissions"`
 		OrganizationID         uuid.UUID                 `json:"organizationId"`
 		OrganizationAccess     apikey.OrganizationAccess `json:"organizationAccess"`
-	}{workspaces, environments, p.OrganizationID, p.OrganizationAccess}, nil)
+	}{workspaces, []struct{}{}, p.OrganizationID, p.OrganizationAccess}, nil)
 }

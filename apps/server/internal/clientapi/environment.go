@@ -18,7 +18,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/langcode"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 )
 
 const (
@@ -88,7 +88,6 @@ func (h *Handler) workspaceState(ctx context.Context, workspaceID uuid.UUID) (js
 
 type stateWorkspace struct {
 	ID                  uuid.UUID
-	LegacyEnvironmentID *string
 	AppSetupCompleted   bool
 	RecontactDays       int
 	ClickOutsideClose   bool
@@ -139,7 +138,7 @@ type stateLanguage struct {
 func (h *Handler) buildState(ctx context.Context, workspaceID uuid.UUID) (fields, error) {
 	db := h.db.WithContext(ctx)
 	var workspaces []stateWorkspace
-	if err := db.Raw(`SELECT id, legacy_environment_id, app_setup_completed, recontact_days, click_outside_close, overlay, placement, in_app_survey_branding, styling
+	if err := db.Raw(`SELECT id, app_setup_completed, recontact_days, click_outside_close, overlay, placement, in_app_survey_branding, styling
 		FROM workspaces WHERE id = ?`, workspaceID).Scan(&workspaces).Error; err != nil {
 		return nil, fmt.Errorf("load workspace state: %w", err)
 	}
@@ -202,10 +201,6 @@ func (h *Handler) buildState(ctx context.Context, workspaceID uuid.UUID) (fields
 		return nil, err
 	}
 
-	legacyOrCurrent := ws.ID.String()
-	if ws.LegacyEnvironmentID != nil {
-		legacyOrCurrent = *ws.LegacyEnvironmentID
-	}
 	epoch := jsvalue.ISOString(time.Unix(0, 0))
 	stateSurveys := make([]any, 0, len(surveys))
 	for _, s := range surveys {
@@ -219,7 +214,7 @@ func (h *Handler) buildState(ctx context.Context, workspaceID uuid.UUID) (fields
 			}
 			segment = fields{
 				{"id", s.SegmentID}, {"title", segmentTitlePlaceholder}, {"description", nil}, {"isPrivate", true}, {"filters", filters},
-				{"environmentId", legacyOrCurrent}, {"workspaceId", legacyOrCurrent}, {"createdAt", epoch}, {"updatedAt", epoch},
+				{"environmentId", ws.ID.String()}, {"workspaceId", ws.ID.String()}, {"createdAt", epoch}, {"updatedAt", epoch},
 				{"surveys", []any{}}, {"hasFilters", hasFilters},
 			}
 		}
@@ -349,7 +344,7 @@ func (h *Handler) interactionRefresh(ctx context.Context, workspaceID uuid.UUID,
 		}
 	}
 	refresh, hasAny := contact.InteractionRefreshMap(delivered, func(segmentID string) (contact.Filters, bool) {
-		id, _ := legacyid.Resolve(segmentID)
+		id, _ := rowid.Parse(segmentID)
 		f, ok := segments[id]
 		return f, ok
 	})

@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 )
 
 // InteractionRefresh is forma2's TSurveyInteractionRefresh, the per-survey gate of the SDK's segment refresh after an interaction: whether a display of the survey, a response to it, or finishing that response can change some live survey's segment membership.
@@ -51,7 +51,7 @@ func InteractionRefreshMap(surveys []SurveyFilters, resolve func(segmentID strin
 			return
 		}
 		for _, raw := range v.SurveyIDs {
-			id, _ := legacyid.Resolve(raw)
+			id, _ := rowid.Parse(raw)
 			if r, delivered := refresh[id]; delivered {
 				set(r)
 				hasAny = true

@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
 
@@ -69,7 +69,7 @@ func (h *Handler) createDisplayV2(c *gin.Context) {
 	}
 	var contactID *uuid.UUID
 	if hasContact {
-		id, _ := legacyid.Resolve(contactRaw)
+		id, _ := rowid.Parse(contactRaw)
 		contactID = &id
 	}
 	d, err := h.responses.CreateDisplay(c.Request.Context(), response.DisplayInput{WorkspaceID: ws.ID, SurveyID: surveyID, ContactID: contactID})

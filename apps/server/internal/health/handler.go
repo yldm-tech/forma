@@ -30,7 +30,7 @@ func NewDatabasePinger(db *gorm.DB) (Pinger, error) {
 	return db.DB()
 }
 
-// Register mounts the probes at the paths forma2 served them on, so the Helm chart and any external monitor keep working unchanged.
+// Register mounts the probes at /health and /health/ready, the paths the Helm chart and external monitors probe.
 func (h *Handler) Register(r gin.IRouter) {
 	r.GET("/health", h.live)
 	r.GET("/health/ready", h.ready)

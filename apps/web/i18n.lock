@@ -1635,8 +1635,6 @@ checksums:
     workspace/app-connection/app_connection_description: 37cc98d52b99f9369c66980a412b420b
     workspace/app-connection/cache_update_delay_description: 14b0ec8d102a843e354245d2347d3b16
     workspace/app-connection/cache_update_delay_title: 60e4a0fcfbd8850bddf29b5c3f59550c
-    workspace/app-connection/environment_id_legacy: d5c701874d34b4591e780755f7ac7a58
-    workspace/app-connection/environment_id_legacy_alert: 09ac96821ff99fad4590c661503fa0cd
     workspace/app-connection/forma_sdk_connected: 283a75b3130bc5b39de8cb4671f010e4
     workspace/app-connection/forma_sdk_not_connected: 5521e99a2b37eb01edd2e3e7a2c2ff1e
     workspace/app-connection/forma_sdk_not_connected_description: 77c28dd2c2e477ec05ff07715322c7b2

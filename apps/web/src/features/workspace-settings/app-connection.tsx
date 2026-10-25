@@ -93,20 +93,7 @@ const ConnectionCards = ({ connection, onRecheck }: { connection: AppConnection;
         description={t("workspace.app-connection.workspace_details_description")}>
         <div className="space-y-3 pb-4">
           <IdBadge id={connection.workspaceId} label={t("workspace.app-connection.workspace_id")} />
-          {connection.legacyEnvironmentId && (
-            <IdBadge
-              id={connection.legacyEnvironmentId}
-              label={t("workspace.app-connection.environment_id_legacy")}
-            />
-          )}
           <IdBadge id={connection.appUrl} label={t("workspace.app-connection.webapp_url")} />
-          {connection.legacyEnvironmentId && (
-            <Alert variant="info" role="status">
-              <AlertDescription>
-                <p>{t("workspace.app-connection.environment_id_legacy_alert")}</p>
-              </AlertDescription>
-            </Alert>
-          )}
         </div>
       </SettingsCard>
       <SettingsCard

@@ -13,7 +13,6 @@ import (
 	"github.com/stripe/stripe-go/v84/webhook"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // post sends a webhook delivery: the payload signed with secret now, or with the given header when it is set.
@@ -98,16 +97,6 @@ func TestWebhookSyncsTheOrganization(t *testing.T) {
 	answers(t, e.post(event, "whsec_test", ""), http.StatusOK, received200)
 	if got := len(e.stripe.requests(http.MethodGet, "/v1/subscriptions")); got != lists+1 {
 		t.Fatalf("a redelivery read the subscriptions %d times; only the reconcile reads them", got-lists)
-	}
-
-	// Ids forma2 wrote into Stripe's metadata are its own; they resolve to the migrated organization.
-	legacy := legacyid.ID("clxlegacyorganization0000")
-	e.exec(`INSERT INTO organizations (id, name) VALUES (?, 'Legacy')`, legacy)
-	e.exec(`INSERT INTO organization_billing (organization_id, stripe_customer_id, limits) VALUES (?, 'cus_legacy', '{"workspaces":1,"monthly":{"responses":250}}')`, legacy)
-	event = eventJSON(t, "evt_2", "subscription_schedule.updated", 1739923400, map[string]any{"id": "sub_sched_1", "customer": "cus_other", "metadata": map[string]any{"organizationId": "clxlegacyorganization0000"}})
-	answers(t, e.post(event, "whsec_test", ""), http.StatusOK, received200)
-	if rec := e.record(legacy); rec.Stripe == nil || *rec.Stripe.LastSyncedEventID != "evt_2" {
-		t.Fatalf("the legacy organization was not synced: %+v", rec.Stripe)
 	}
 }
 

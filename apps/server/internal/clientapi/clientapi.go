@@ -19,6 +19,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/storage"
@@ -116,17 +117,21 @@ func ratelimitBy(h *Handler, rule ratelimit.Rule) gin.HandlerFunc {
 	}
 }
 
-// idResolutionTTL is how long forma2 cached a resolved client id.
+// idResolutionTTL is how long a resolved client id is cached.
 const idResolutionTTL = time.Hour
 
-// idResolutionKey is where a resolved {id} is cached. It is not forma2's "fb:env:<id>:id-resolution": forma2 keys the same raw id but stores its own cuids under it, so a shared key would hand this server forma2's ids and, after a rollback, forma2 this server's UUIDs for up to an hour.
-func idResolutionKey(raw string) string {
-	return valkey.KeyPrefix + "env:" + raw + ":id-resolution"
+// idResolutionKey is where the workspace a client id names is cached.
+func idResolutionKey(id uuid.UUID) string {
+	return valkey.KeyPrefix + "env:" + id.String() + ":id-resolution"
 }
 
-// resolveWorkspace is forma2's resolveClientApiIds: the workspace the {id} in the path names, by its id, its forma2 id or its legacy environment id, or nil. A hit is cached for an hour, a miss never, and a cache failure reads through to the database.
+// resolveWorkspace is the workspace the {id} in the path names, by its id, or nil. A hit is cached for an hour, a miss never, and a cache failure reads through to the database.
 func (h *Handler) resolveWorkspace(ctx context.Context, raw string) (*workspace.ClientWorkspace, error) {
-	key := idResolutionKey(raw)
+	id, ok := rowid.Parse(raw)
+	if !ok {
+		return nil, nil
+	}
+	key := idResolutionKey(id)
 	if b, err := h.cache.Get(ctx, key).Bytes(); err == nil {
 		var cached struct {
 			ID             uuid.UUID `json:"id"`
@@ -138,7 +143,7 @@ func (h *Handler) resolveWorkspace(ctx context.Context, raw string) (*workspace.
 	} else if !errors.Is(err, redis.Nil) {
 		h.log.WarnContext(ctx, "client id resolution cache read failed", "err", err)
 	}
-	ws, err := h.workspaces.ResolveClientID(ctx, raw)
+	ws, err := h.workspaces.ResolveClientID(ctx, id.String())
 	if err != nil || ws == nil {
 		return ws, err
 	}

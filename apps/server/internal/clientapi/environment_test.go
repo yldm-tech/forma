@@ -66,7 +66,7 @@ func TestStateListsLiveAppSurveys(t *testing.T) {
 	}
 }
 
-// The segment is reduced to placeholders: whether it filters, never how; environmentId and workspaceId are the legacy environment id when the workspace has one.
+// The segment is reduced to placeholders: whether it filters, never how; environmentId and workspaceId are the workspace's id.
 func TestStateSanitizesSegments(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
@@ -97,13 +97,6 @@ func TestStateSanitizesSegments(t *testing.T) {
 		if _, ok := s["interactionRefresh"]; ok {
 			t.Fatal("interactionRefresh without interaction filters")
 		}
-	}
-
-	e.exec(`UPDATE workspaces SET legacy_environment_id = 'cllegacyenvironmentaaaa1' WHERE id = ?`, ws)
-	e.flushState(ws)
-	seg := surveysOf(e.state(t, ws.String()))[0]["segment"].(map[string]any)
-	if seg["environmentId"] != "cllegacyenvironmentaaaa1" || seg["workspaceId"] != "cllegacyenvironmentaaaa1" {
-		t.Fatalf("legacy ids %v", seg)
 	}
 }
 
@@ -229,12 +222,12 @@ func TestStateComposition(t *testing.T) {
 	})
 }
 
-// The state is cached for a minute under forma2's key; the id resolution for an hour; a miss is never cached.
+// The state is cached for a minute under fb:env:<id>:state; the id resolution for an hour; a miss is never cached.
 func TestStateAndIDResolutionAreCached(t *testing.T) {
 	e := newEnv(t)
-	ws := e.workspace("legacy_environment_id", "clcachedenvaaaaaaaaaaaa1")
+	ws := e.workspace()
 	e.survey(ws, "type", "app")
-	if n := len(surveysOf(e.state(t, "clcachedenvaaaaaaaaaaaa1"))); n != 1 {
+	if n := len(surveysOf(e.state(t, ws.String()))); n != 1 {
 		t.Fatalf("%d surveys", n)
 	}
 	e.survey(ws, "type", "app")
@@ -244,7 +237,7 @@ func TestStateAndIDResolutionAreCached(t *testing.T) {
 	if ttl := e.cache.TTL(t.Context(), "fb:env:"+ws.String()+":state").Val(); ttl <= 0 || ttl > stateTTL {
 		t.Fatalf("state TTL %v", ttl)
 	}
-	if ttl := e.cache.TTL(t.Context(), "forma:env:clcachedenvaaaaaaaaaaaa1:id-resolution").Val(); ttl <= stateTTL || ttl > idResolutionTTL {
+	if ttl := e.cache.TTL(t.Context(), "forma:env:"+ws.String()+":id-resolution").Val(); ttl <= stateTTL || ttl > idResolutionTTL {
 		t.Fatalf("id resolution TTL %v", ttl)
 	}
 	e.flushState(ws)
@@ -252,7 +245,7 @@ func TestStateAndIDResolutionAreCached(t *testing.T) {
 		t.Fatalf("after the cache entry expired: %d surveys", n)
 	}
 
-	missing := "clmissingworkspaceaaaaa1"
+	missing := uuid.NewString()
 	e.do("GET", "/api/v1/client/"+missing+"/environment", nil).expectError(t, 404, "not_found", "Workspace not found")
 	if n := e.cache.Exists(t.Context(), "forma:env:"+missing+":id-resolution").Val(); n != 0 {
 		t.Fatal("a miss was cached")
@@ -260,28 +253,6 @@ func TestStateAndIDResolutionAreCached(t *testing.T) {
 	// A cache that cannot be read is read through.
 	e.cache.Set(t.Context(), "forma:env:"+ws.String()+":id-resolution", "not json", 0)
 	e.state(t, ws.String())
-}
-
-// forma2 caches the same raw id under "fb:env:<id>:id-resolution", holding its own cuids. The two servers share one Valkey during the cutover and after a rollback, so this server neither reads forma2's entry nor overwrites it.
-func TestIDResolutionLeavesForma2sEntryAlone(t *testing.T) {
-	e := newEnv(t)
-	legacy := "clsharedenvaaaaaaaaaaaa1"
-	ws := e.workspace("legacy_environment_id", legacy)
-	e.survey(ws, "type", "app")
-	forma2Key := "fb:env:" + legacy + ":id-resolution"
-	forma2Entry := `{"id":"clforma2workspaceaaaaaa1","organizationId":"clforma2organizationa1"}`
-	e.cache.Set(t.Context(), forma2Key, forma2Entry, 0)
-
-	if n := len(surveysOf(e.state(t, legacy))); n != 1 {
-		t.Fatalf("%d surveys", n)
-	}
-	if got := e.cache.Get(t.Context(), forma2Key).Val(); got != forma2Entry {
-		t.Fatalf("forma2's entry was overwritten with %s", got)
-	}
-	var cached map[string]string
-	if err := json.Unmarshal([]byte(e.cache.Get(t.Context(), "forma:env:"+legacy+":id-resolution").Val()), &cached); err != nil || cached["id"] != ws.String() {
-		t.Fatalf("own entry %v, %v", cached, err)
-	}
 }
 
 // The environment and identify routes check the id's form before resolving it: a cuid or UUID, surrounding spaces ignored.

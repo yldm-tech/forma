@@ -1,0 +1,120 @@
+{
+  "case": "v2-contact-attribute-keys-list",
+  "description": "GET /api/v2/management/contact-attribute-keys with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "GET",
+    "path": "/api/v2/management/contact-attribute-keys",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-headers": "Content-Type, Authorization",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": [
+        {
+          "id": "<id:contactAttributeKey:seats>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "isUnique": false,
+          "key": "seats",
+          "name": "Seats",
+          "description": "",
+          "type": "custom",
+          "dataType": "number",
+          "workspaceId": "<id:workspace>"
+        },
+        {
+          "id": "<id:contactAttributeKey:plan>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "isUnique": false,
+          "key": "plan",
+          "name": "Plan tier",
+          "description": "Current subscription tier",
+          "type": "custom",
+          "dataType": "string",
+          "workspaceId": "<id:workspace>"
+        },
+        {
+          "id": "<id:contactAttributeKey:language>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "isUnique": false,
+          "key": "language",
+          "name": "Language",
+          "description": "The language preference of a contact",
+          "type": "default",
+          "dataType": "string",
+          "workspaceId": "<id:workspace>"
+        },
+        {
+          "id": "<id:contactAttributeKey:lastName>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "isUnique": false,
+          "key": "lastName",
+          "name": "Last Name",
+          "description": "Your contact's last name",
+          "type": "default",
+          "dataType": "string",
+          "workspaceId": "<id:workspace>"
+        },
+        {
+          "id": "<id:contactAttributeKey:firstName>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "isUnique": false,
+          "key": "firstName",
+          "name": "First Name",
+          "description": "Your contact's first name",
+          "type": "default",
+          "dataType": "string",
+          "workspaceId": "<id:workspace>"
+        },
+        {
+          "id": "<id:contactAttributeKey:email>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "isUnique": true,
+          "key": "email",
+          "name": "Email",
+          "description": "The email of a contact",
+          "type": "default",
+          "dataType": "string",
+          "workspaceId": "<id:workspace>"
+        },
+        {
+          "id": "<id:contactAttributeKey:userId>",
+          "createdAt": "<timestamp>",
+          "updatedAt": "<timestamp>",
+          "isUnique": true,
+          "key": "userId",
+          "name": "User Id",
+          "description": "The user id of a contact",
+          "type": "default",
+          "dataType": "string",
+          "workspaceId": "<id:workspace>"
+        }
+      ],
+      "meta": {
+        "total": 7,
+        "limit": 50,
+        "offset": 0
+      }
+    }
+  }
+}

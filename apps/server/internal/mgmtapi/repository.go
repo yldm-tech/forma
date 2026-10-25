@@ -41,18 +41,17 @@ func isUniqueViolation(err error) bool {
 
 // workspaceRow is what the APIs read of a workspace.
 type workspaceRow struct {
-	ID                  uuid.UUID
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	Name                string
-	OrganizationID      uuid.UUID
-	LegacyEnvironmentID *string
-	AppSetupCompleted   bool
+	ID                uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	Name              string
+	OrganizationID    uuid.UUID
+	AppSetupCompleted bool
 }
 
 func (r *Repository) workspaces(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]workspaceRow, error) {
 	var rows []workspaceRow
-	if err := r.db.WithContext(ctx).Raw(`SELECT id, created_at, updated_at, name, organization_id, legacy_environment_id, app_setup_completed FROM workspaces WHERE id = ANY(?::uuid[])`,
+	if err := r.db.WithContext(ctx).Raw(`SELECT id, created_at, updated_at, name, organization_id, app_setup_completed FROM workspaces WHERE id = ANY(?::uuid[])`,
 		uuidArray(ids)).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load workspaces: %w", err)
 	}
@@ -63,18 +62,15 @@ func (r *Repository) workspaces(ctx context.Context, ids []uuid.UUID) (map[uuid.
 	return out, nil
 }
 
-// environmentIDs is each workspace's legacy environment id, or its own id when it has none.
+// environmentIDs is the environmentId of each workspace that exists: its own id.
 func (r *Repository) environmentIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {
 	found, err := r.workspaces(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
 	out := make(map[uuid.UUID]string, len(found))
-	for id, w := range found {
+	for id := range found {
 		out[id] = id.String()
-		if w.LegacyEnvironmentID != nil {
-			out[id] = *w.LegacyEnvironmentID
-		}
 	}
 	return out, nil
 }

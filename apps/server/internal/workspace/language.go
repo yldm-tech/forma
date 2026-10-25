@@ -259,12 +259,10 @@ func (s *Service) SurveysUsingLanguage(ctx context.Context, userID, workspaceID,
 	return s.repo.surveysUsingLanguage(ctx, workspaceID, languageID)
 }
 
-// AppConnection is what the app-connection settings page shows: the ids an SDK snippet is set up with, the server the snippet points at, and whether an SDK has fetched its environment yet.
+// AppConnection is what the app-connection settings page shows: the workspace id an SDK snippet is set up with, the server the snippet points at, and whether an SDK has fetched its environment yet.
 type AppConnection struct {
 	WorkspaceID uuid.UUID `json:"workspaceId"`
-	// LegacyEnvironmentID is the environment id snippets installed before the workspace rename still send; shown only when it is set.
-	LegacyEnvironmentID *string `json:"legacyEnvironmentId"`
-	AppURL              string  `json:"appUrl"`
+	AppURL      string    `json:"appUrl"`
 	// AppSetupCompleted flips once, when an SDK first fetches the workspace's environment state.
 	AppSetupCompleted bool `json:"appSetupCompleted"`
 }
@@ -281,7 +279,7 @@ func (s *Service) AppConnection(ctx context.Context, userID, workspaceID uuid.UU
 	if ws == nil {
 		return nil, apperr.NotFound("Workspace", "")
 	}
-	return &AppConnection{WorkspaceID: ws.ID, LegacyEnvironmentID: ws.LegacyEnvironmentID, AppURL: appURL(s.cfg.WebAppURL.String()), AppSetupCompleted: ws.AppSetupCompleted}, nil
+	return &AppConnection{WorkspaceID: ws.ID, AppURL: appURL(s.cfg.WebAppURL.String()), AppSetupCompleted: ws.AppSetupCompleted}, nil
 }
 
 // appURL is WEBAPP_URL as the snippets embed it, without a trailing slash.

@@ -1,6 +1,6 @@
 # Production stack: the Forma server and its job worker, the one-shot migration, PostgreSQL 18, Valkey and SpiceDB, plus optional S3-compatible storage (profile `storage`) and a local Qwen model (profile `qwen`). deploy/docker/forma.sh installs and updates it on a single host; keep local changes in docker-compose.override.yml so this file can be replaced on update.
 #
-# Put the settings in deploy/docker/.env next to this file (mode 0600); every service below reads it, under forma2's variable names. The repository's .env.example documents every variable the server reads. The minimum:
+# Put the settings in deploy/docker/.env next to this file (mode 0600); every service below reads it. The repository's .env.example documents every variable the server reads. The minimum:
 #
 #   WEBAPP_URL=https://forma.example.com
 #   POSTGRES_PASSWORD=<openssl rand -hex 32>
@@ -8,13 +8,13 @@
 #   AUTHZED_TOKEN=<openssl rand -hex 32>
 #   AUTHZED_DATABASE_PASSWORD=<openssl rand -hex 32>
 #
-# then `docker compose up -d`. Every image runs the same binary: `forma serve` answers on :3000, `forma worker` runs the background jobs, `forma migrate` applies the schema before either starts, and `forma authz schema apply` writes the authorization schema into SpiceDB. Booleans are 1 or 0; AUTHZED_ENABLED and AUTHZED_INSECURE also take true and false, as forma2's installer and compose file wrote them.
+# then `docker compose up -d`. Every image runs the same binary: `forma serve` answers on :3000, `forma worker` runs the background jobs, `forma migrate` applies the schema before either starts, and `forma authz schema apply` writes the authorization schema into SpiceDB. Booleans are 1 or 0; AUTHZED_ENABLED and AUTHZED_INSECURE also take true and false.
 
 # Pin a release (FORMA_IMAGE_REF=ghcr.io/yldm-tech/forma-server:<version>) for reproducible upgrades.
 x-forma-image: &forma-image
   image: ${FORMA_IMAGE_REF:-ghcr.io/yldm-tech/forma-server:latest}
 
-# The password goes into a URL: set POSTGRES_PASSWORD_URL_ENCODED as well when it contains characters that need escaping. forma2's `?schema=public` suffix, a Prisma option, is not needed: the server drops it from DATABASE_URL and MIGRATE_DATABASE_URL.
+# The password goes into a URL: set POSTGRES_PASSWORD_URL_ENCODED as well when it contains characters that need escaping. A `?schema=public` suffix, a Prisma option, is not needed: the server drops it from DATABASE_URL and MIGRATE_DATABASE_URL.
 x-forma-database: &forma-database
   DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD_URL_ENCODED:-${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}}@postgres:5432/forma?sslmode=disable"
 
@@ -39,11 +39,11 @@ x-forma-app: &forma-app
     # The server sits behind one reverse proxy (Traefik, Caddy, nginx) that appends to X-Forwarded-For. Set 0 when clients reach port 3000 directly, or the client address can be spoofed.
     TRUSTED_PROXY_HOP_COUNT: ${TRUSTED_PROXY_HOP_COUNT:-1}
 
-    # Everything else comes from .env. The groups, as in forma2's compose file:
+    # Everything else comes from .env. The groups:
     #
-    # Required: WEBAPP_URL (the public URL of the admin, e.g. https://forma.example.com) and ENCRYPTION_KEY (openssl rand -hex 32; an instance moved from forma2 keeps its value).
+    # Required: WEBAPP_URL (the public URL of the admin, e.g. https://forma.example.com) and ENCRYPTION_KEY (openssl rand -hex 32; an existing instance keeps its value).
     # Optional URLs: PUBLIC_URL (a separate origin for surveys and the client API), BETTER_AUTH_URL / NEXTAUTH_URL (only when single sign-on redirect URIs were registered under another origin).
-    # forma2 secrets kept so links it sent keep working: NEXTAUTH_SECRET, BETTER_AUTH_SECRET.
+    # Link survey token secrets, kept so links already sent keep working: NEXTAUTH_SECRET, BETTER_AUTH_SECRET.
     # Email: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_AUTHENTICATED, SMTP_SECURE_ENABLED, SMTP_REJECT_UNAUTHORIZED_TLS, MAIL_FROM, MAIL_FROM_NAME.
     # Sign-up and sign-in: EMAIL_VERIFICATION_DISABLED, PASSWORD_RESET_DISABLED, EMAIL_AUTH_DISABLED, INVITE_DISABLED, INVITE_RATE_LIMIT_PER_24_HOURS, SESSION_MAX_AGE, TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY, USER_MANAGEMENT_MINIMUM_ROLE.
     # Single sign-on: GITHUB_ID, GITHUB_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AZUREAD_CLIENT_ID, AZUREAD_CLIENT_SECRET, AZUREAD_TENANT_ID, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_ISSUER, OIDC_DISPLAY_NAME, AUTH_SSO_DEFAULT_ORGANIZATION_ID, AUTH_SSO_DEFAULT_ORGANIZATION_ROLE.
@@ -66,7 +66,7 @@ x-forma-app: &forma-app
 services:
   postgres:
     restart: always
-    # PostgreSQL 18 (the schema needs uuidv7()). The pgvector build is forma2's image, so a data volume it created keeps opening.
+    # PostgreSQL 18 (the schema needs uuidv7()).
     image: pgvector/pgvector:pg18
     volumes:
       - postgres:/var/lib/postgresql
@@ -181,7 +181,7 @@ services:
     command: ["serve"]
     ports:
       - 3000:3000
-    # SAML SSO (SAML_DATABASE_URL set): put the identity provider's metadata XML in deploy/docker/saml-connection/, as with forma2.
+    # SAML SSO (SAML_DATABASE_URL set): put the identity provider's metadata XML in deploy/docker/saml-connection/.
     volumes:
       - ./saml-connection:/home/nextjs/apps/web/saml-connection
 

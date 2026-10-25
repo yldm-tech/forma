@@ -13,6 +13,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/linksurvey"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
 )
 
@@ -26,15 +27,19 @@ func respond(ws uuid.UUID, version string) string {
 	return "/api/" + version + "/client/" + ws.String() + "/responses"
 }
 
-// emailToken is a link survey email verification token as forma2 issued it.
+// emailToken is a link survey email verification token as the survey page issues it: the address encrypted as a link value.
 func (e *env) emailToken(t *testing.T, surveyID uuid.UUID, email string) string {
 	t.Helper()
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte(e.cfg.LinkSurveyEmailSecret())}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	encrypted, err := secret.EncryptLinkValue(email, e.cfg.EncryptionKey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	token, err := jwt.Signed(signer).Claims(map[string]any{
-		"email": email, "surveyId": surveyID.String(), "purpose": "link_survey_email_verification", "exp": time.Now().Add(time.Hour).Unix(),
+		"email": encrypted, "surveyId": surveyID.String(), "purpose": "link_survey_email_verification", "exp": time.Now().Add(time.Hour).Unix(),
 	}).Serialize()
 	if err != nil {
 		t.Fatal(err)

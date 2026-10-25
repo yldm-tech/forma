@@ -16,8 +16,8 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 )
 
@@ -111,11 +111,11 @@ func (s *Service) fields(ctx context.Context, workspaceID uuid.UUID, in Input, k
 	return f, nil
 }
 
-// resolveSurveyIDs reads survey ids from outside: UUIDs, or forma2 ids that resolve to the surveys migrated from them.
+// resolveSurveyIDs reads survey ids from outside, which are UUIDs.
 func resolveSurveyIDs(raw []string) ([]uuid.UUID, error) {
 	var out []uuid.UUID
 	for _, r := range raw {
-		id, ok := legacyid.Resolve(r)
+		id, ok := rowid.Parse(r)
 		if !ok {
 			return nil, apperr.BadRequest("Invalid survey id")
 		}
@@ -316,7 +316,7 @@ func (s *Service) TestEndpoint(ctx context.Context, userID, workspaceID uuid.UUI
 	var secret string
 	result := &TestResult{Success: true}
 	if in.WebhookID != nil {
-		id, ok := legacyid.Resolve(*in.WebhookID)
+		id, ok := rowid.Parse(*in.WebhookID)
 		if !ok {
 			return nil, apperr.BadRequest("Invalid webhook id")
 		}

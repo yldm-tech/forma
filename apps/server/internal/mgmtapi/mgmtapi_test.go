@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // auditEvent is the part of an audit record the tests check.
@@ -292,14 +291,13 @@ func TestSaturatingInt(t *testing.T) {
 	}
 }
 
-// forma2's ids keep filtering after the migration (contactId and a user's id resolve as surveyId does), and an empty filter is no filter, as forma2's `if (contactId)` and `if (params.id)` had it.
-func TestV2ListFiltersReadForma2IDs(t *testing.T) {
+// The list filters name rows by their ids, and an empty filter is no filter.
+func TestV2ListFilters(t *testing.T) {
 	e := newEnv(t)
 	s := e.seedRecording()
 	key, org := s.bound["<api-key:manage>"], s.bound["<id:organization>"]
 	sv := e.insert(`INSERT INTO surveys (workspace_id, name) VALUES (?, 'Survey') RETURNING id`, s.ws)
-	contact := legacyid.ID("clcontactaaaaaaaaaaaaaaa1")
-	e.exec(`INSERT INTO contacts (id, workspace_id) VALUES (?, ?)`, contact, s.ws)
+	contact := e.insert(`INSERT INTO contacts (workspace_id) VALUES (?) RETURNING id`, s.ws)
 	mine := e.insert(`INSERT INTO responses (survey_id, contact_id, data) VALUES (?, ?, '{}') RETURNING id`, sv, contact)
 	e.insert(`INSERT INTO responses (survey_id, data) VALUES (?, '{}') RETURNING id`, sv)
 
@@ -310,22 +308,22 @@ func TestV2ListFiltersReadForma2IDs(t *testing.T) {
 		}
 		return out
 	}
-	for _, contactID := range []string{"clcontactaaaaaaaaaaaaaaa1", contact.String()} {
-		body := expectStatus(t, "contactId "+contactID, e.do("GET", "/api/v2/management/responses?contactId="+contactID, nil, "x-api-key", key), http.StatusOK)
-		if got := ids(body); len(got) != 1 || got[0] != mine.String() {
-			t.Errorf("contactId=%s = %v, want [%s]", contactID, got, mine)
-		}
+	body := expectStatus(t, "contactId", e.do("GET", "/api/v2/management/responses?contactId="+contact.String(), nil, "x-api-key", key), http.StatusOK)
+	if got := ids(body); len(got) != 1 || got[0] != mine.String() {
+		t.Errorf("contactId=%s = %v, want [%s]", contact, got, mine)
+	}
+	if got := ids(expectStatus(t, "cuid2 contactId", e.do("GET", "/api/v2/management/responses?contactId=clcontactaaaaaaaaaaaaaaa1", nil, "x-api-key", key), http.StatusOK)); len(got) != 0 {
+		t.Errorf("contactId=<cuid2> = %v, want none", got)
 	}
 	if got := ids(expectStatus(t, "empty contactId", e.do("GET", "/api/v2/management/responses?contactId=", nil, "x-api-key", key), http.StatusOK)); len(got) != 2 {
 		t.Errorf("contactId= = %v, want both responses", got)
 	}
 
-	user := legacyid.ID("cluseraaaaaaaaaaaaaaaaa1")
-	e.exec(`INSERT INTO users (id, name, email, email_verified) VALUES (?, 'Migrated', 'migrated@example.com', true)`, user)
+	user := e.insert(`INSERT INTO users (name, email, email_verified) VALUES ('Member', 'member@example.com', true) RETURNING id`)
 	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'member', true)`, user, org)
 	users := "/api/v2/organizations/" + org + "/users"
-	if got := ids(expectStatus(t, "forma2 user id", e.do("GET", users+"?id=cluseraaaaaaaaaaaaaaaaa1", nil, "x-api-key", key), http.StatusOK)); len(got) != 1 || got[0] != user.String() {
-		t.Errorf("id=<forma2 id> = %v, want [%s]", got, user)
+	if got := ids(expectStatus(t, "user id", e.do("GET", users+"?id="+user.String(), nil, "x-api-key", key), http.StatusOK)); len(got) != 1 || got[0] != user.String() {
+		t.Errorf("id=%s = %v, want [%s]", user, got, user)
 	}
 	if got := ids(expectStatus(t, "empty user id", e.do("GET", users+"?id=", nil, "x-api-key", key), http.StatusOK)); len(got) != 2 {
 		t.Errorf("id= = %v, want both members", got)

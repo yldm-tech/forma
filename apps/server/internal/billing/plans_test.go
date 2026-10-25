@@ -10,7 +10,6 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // proSubscription is an active Pro monthly subscription whose period runs from 1739923200 to 1742515200, forma2's plan-change fixture.
@@ -303,7 +302,7 @@ func TestUndoPendingChange(t *testing.T) {
 	}
 }
 
-// forma2's applySetupCheckoutUpgrade tests: the saved card is attached and the upgrade applied; a session of another organization is refused; a session without a paid target changes nothing. Sessions forma2 created name the organization by its forma2 id.
+// forma2's applySetupCheckoutUpgrade tests: the saved card is attached and the upgrade applied; a session of another organization is refused; a session without a paid target changes nothing.
 func TestApplySetupCheckoutUpgrade(t *testing.T) {
 	e := newEnv(t)
 	org := e.customerOrganization(`{"subscriptionId":"sub_1","plan":"hobby"}`)
@@ -338,9 +337,9 @@ func TestApplySetupCheckoutUpgrade(t *testing.T) {
 	_, err = e.engine.ApplySetupCheckoutUpgrade(context.Background(), org, "cs_1")
 	notAllowed(t, err, CodeCheckoutSessionMismatch)
 
-	session["metadata"] = map[string]any{"organizationId": "clxlegacyorg0000000000000"}
-	if result, err := e.engine.ApplySetupCheckoutUpgrade(context.Background(), legacyid.ID("clxlegacyorg0000000000000"), "cs_1"); err != nil || result.TargetPlan != nil {
-		t.Fatalf("a forma2 session without a target: %+v %v", result, err)
+	session["metadata"] = map[string]any{"organizationId": org.String()}
+	if result, err := e.engine.ApplySetupCheckoutUpgrade(context.Background(), org, "cs_1"); err != nil || result.TargetPlan != nil {
+		t.Fatalf("a session without a target: %+v %v", result, err)
 	}
 	if len(e.stripe.requests(http.MethodPost, "/v1/subscriptions/sub_1")) != 2 {
 		t.Fatal("a session without a target changed the subscription")

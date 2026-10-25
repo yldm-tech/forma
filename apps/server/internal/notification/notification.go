@@ -14,6 +14,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
 )
 
@@ -133,14 +134,14 @@ func (n *Notifier) Send(ctx context.Context, recipients []Recipient, rf Response
 // unsubscribeTypes are the switches an unsubscribe link may name.
 var unsubscribeTypes = map[string]bool{"alert": true, "unsubscribedOrganizationIds": true}
 
-// UnsubscribeTarget is where an email's unsubscribe link lands: the account notification settings under the app's base path, which turn the named switch off. forma2's emails linked to /workspaces/{id}/settings/notifications, a page forma2 never had; the link is kept (under /app, where the root path is redirected) and answered here. elementId keeps its value, except that a forma2 id from an email sent before the migration becomes the id of the survey or organization migrated from it.
+// UnsubscribeTarget is where an email's unsubscribe link (/app/workspaces/{id}/settings/notifications) lands: the account notification settings under the app's base path, which turn the named switch off. elementId, the survey or organization the switch is for, is kept when it is a UUID.
 func UnsubscribeTarget(kind, elementID string) string {
 	const settings = config.AppBasePath + "/account/settings/notifications"
 	q := url.Values{}
 	if unsubscribeTypes[kind] {
 		q.Set("type", kind)
-		if id, ok := resolveElementID(elementID); ok {
-			q.Set("elementId", id)
+		if id, ok := rowid.Parse(elementID); ok {
+			q.Set("elementId", id.String())
 		}
 	}
 	if len(q) == 0 {

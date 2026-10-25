@@ -11,7 +11,6 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 )
 
@@ -312,15 +311,14 @@ func TestDeleteWorkspace(t *testing.T) {
 	e.fails(e.do(owner, http.MethodPost, wsPath(first, "/delete"), map[string]string{"confirmationName": DefaultName}), http.StatusForbidden, apperr.CodeOperationNotAllowed, "You can't delete the last workspace.")
 
 	third := e.workspace(org, "Third")
-	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clegacyenvaaaaaaaaaaaaaa1' WHERE id = ?`, third)
 	e.survey(first)
 	d = del(owner, third, "Third")
 	if d.Destination.Path != "/workspaces/"+first.String()+"/" {
 		t.Fatalf("destination after onboarding %+v", d.Destination)
 	}
 
-	// Only the two deletions that happened cleaned up files: under the workspace id, and under the environment id a workspace from before the rename stored its files under.
-	want := [][]string{{second.String()}, {third.String(), "clegacyenvaaaaaaaaaaaaaa1"}}
+	// Only the two deletions that happened cleaned up files, each under its workspace's id.
+	want := [][]string{{second.String()}, {third.String()}}
 	if got := e.files.calls(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("deleted files under %v, want %v", got, want)
 	}
@@ -346,29 +344,6 @@ func TestOnboarding(t *testing.T) {
 	e.fails(e.do(member, http.MethodGet, path, nil), http.StatusNotFound, apperr.CodeNotFound, "")
 }
 
-func TestResolveEnvironment(t *testing.T) {
-	e := newEnv(t)
-	owner, billing, ungranted, outsider := e.user(), e.user(), e.user(), e.user()
-	org, ws := e.organization(owner)
-	e.member(org, billing, "billing")
-	e.member(org, ungranted, "member")
-	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clr8k2m3n0001abcd' WHERE id = ?`, ws)
-
-	for _, id := range []string{ws.String(), "clr8k2m3n0001abcd"} {
-		var res environmentResponse
-		e.ok(e.do(owner, http.MethodGet, "/api/app/environments/"+id, nil), http.StatusOK, &res)
-		if res.WorkspaceID != ws {
-			t.Fatalf("%s resolved to %s", id, res.WorkspaceID)
-		}
-	}
-	// The navigation gate admits billing members; anyone who may not navigate the workspace, and an unknown id, are not found.
-	e.ok(e.do(billing, http.MethodGet, "/api/app/environments/"+ws.String(), nil), http.StatusOK, nil)
-	for _, u := range []uuid.UUID{ungranted, outsider} {
-		e.fails(e.do(u, http.MethodGet, "/api/app/environments/"+ws.String(), nil), http.StatusNotFound, apperr.CodeNotFound, "")
-	}
-	e.fails(e.do(owner, http.MethodGet, "/api/app/environments/unknown", nil), http.StatusNotFound, apperr.CodeNotFound, "")
-}
-
 func TestValidStorageURL(t *testing.T) {
 	cases := map[string]bool{
 		"/storage/a/public/b.png": true, "https://cdn.example.com/x.png": true, "http://example.com": true, "HTTPS://EXAMPLE.COM/a": true,
@@ -384,17 +359,10 @@ func TestValidStorageURL(t *testing.T) {
 func TestResolveClientID(t *testing.T) {
 	e := newEnv(t)
 	org, ws := e.organization(e.user())
-	e.exec(`UPDATE workspaces SET legacy_environment_id = 'clegacyenvaaaaaaaaaaaaaa1' WHERE id = ?`, ws)
-	// A workspace migrated from forma2 carries uuidv5 of its old id.
-	migrated := legacyid.ID("clmigratedwsaaaaaaaaaaa1")
-	e.exec(`INSERT INTO workspaces (id, organization_id, name) VALUES (?, ?, 'Migrated')`, migrated, org)
-
+	// A workspace's id is a UUID; a cuid2 names none.
 	for raw, want := range map[string]uuid.UUID{
 		ws.String():                  ws,
 		strings.ToUpper(ws.String()): ws,
-		"clegacyenvaaaaaaaaaaaaaa1":  ws,
-		"clmigratedwsaaaaaaaaaaa1":   migrated,
-		migrated.String():            migrated,
 		"clunknownaaaaaaaaaaaaaaa1":  uuid.Nil,
 		uuid.NewString():             uuid.Nil,
 		"../" + ws.String():          uuid.Nil,

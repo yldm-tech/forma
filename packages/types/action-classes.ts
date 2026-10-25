@@ -151,7 +151,7 @@ const ZActionClassInputBase = z.object({
       error: "Name must be at least 1 character long",
     }),
   description: z.string().nullish(),
-  // Workspace ids are UUIDs in the Go server (v1api.IsID reads z.cuid2() the same way); forma2's cuid2 ids stay valid, since the server resolves them through legacyid.
+  // Workspace ids are UUIDs (the server's v1api.IsID reads z.cuid2() the same way); a cuid2 passes the check but names no workspace.
   workspaceId: z.union([
     ZId.min(1, {
       error: "Workspace ID cannot be empty",

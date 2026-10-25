@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 )
 
 // Repository reads and writes workspaces and the rows a new workspace starts with. Every query names the organization or workspace it is scoped to.
@@ -39,7 +39,7 @@ func (r *Repository) transaction(ctx context.Context, fn func(tx *Repository) er
 	})
 }
 
-const workspaceColumns = `w.id, w.created_at, w.updated_at, w.legacy_environment_id, w.name, w.organization_id, w.styling, w.recontact_days,
+const workspaceColumns = `w.id, w.created_at, w.updated_at, w.name, w.organization_id, w.styling, w.recontact_days,
 	w.link_survey_branding, w.in_app_survey_branding, w.config, w.placement, w.click_outside_close, w.overlay, w.logo,
 	w.app_setup_completed, w.custom_head_scripts`
 
@@ -47,7 +47,6 @@ type workspaceRow struct {
 	ID                  uuid.UUID
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
-	LegacyEnvironmentID sql.NullString
 	Name                string
 	OrganizationID      uuid.UUID
 	Styling             []byte
@@ -69,9 +68,6 @@ func (w workspaceRow) workspace(languages []Language) *Workspace {
 		Styling: w.Styling, RecontactDays: w.RecontactDays, InAppSurveyBranding: w.InAppSurveyBranding, LinkSurveyBranding: w.LinkSurveyBranding,
 		Config: w.Config, Placement: w.Placement, ClickOutsideClose: w.ClickOutsideClose, Overlay: w.Overlay, Languages: languages,
 		AppSetupCompleted: w.AppSetupCompleted, Logo: w.Logo,
-	}
-	if w.LegacyEnvironmentID.Valid {
-		out.LegacyEnvironmentID = &w.LegacyEnvironmentID.String
 	}
 	if w.CustomHeadScripts.Valid {
 		out.CustomHeadScripts = &w.CustomHeadScripts.String
@@ -199,36 +195,20 @@ func (r *Repository) organizationOf(ctx context.Context, id uuid.UUID) (*uuid.UU
 	return &orgs[0], nil
 }
 
-// byEnvironmentID resolves an id the way forma2's resolver did: a workspace id, or the environment id an SDK snippet installed before the workspace rename still sends. It returns nil when neither matches.
-func (r *Repository) byEnvironmentID(ctx context.Context, environmentID string) (*struct{ ID, OrganizationID uuid.UUID }, error) {
-	var rows []struct{ ID, OrganizationID uuid.UUID }
-	db := r.db.WithContext(ctx)
-	var err error
-	if id, parseErr := uuid.Parse(environmentID); parseErr == nil {
-		err = db.Raw(`SELECT id, organization_id FROM workspaces WHERE id = ? OR legacy_environment_id = ? ORDER BY id = ? DESC LIMIT 1`, id, environmentID, id).Scan(&rows).Error
-	} else {
-		err = db.Raw(`SELECT id, organization_id FROM workspaces WHERE legacy_environment_id = ?`, environmentID).Scan(&rows).Error
-	}
-	if err != nil {
-		return nil, fmt.Errorf("resolve environment id: %w", err)
-	}
-	if len(rows) == 0 {
-		return nil, nil
-	}
-	return &rows[0], nil
-}
-
 // ClientWorkspace is the workspace an id from outside resolved to.
 type ClientWorkspace struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 }
 
-// ResolveClientID is forma2's findWorkspaceByIdOrLegacyEnvId, for ids that arrive from outside (an SDK snippet, a stored /storage URL): the workspace with that id, where a forma2 id resolves to the workspace migrated from it, or else the one whose legacy environment id it is. It returns nil when nothing matches. The id is not authenticated: the caller authorizes whatever it reads next.
+// ResolveClientID is the workspace an id that arrives from outside (an SDK snippet, a stored /storage URL) names, or nil when it is not a workspace's id. The id is not authenticated: the caller authorizes whatever it reads next.
 func (r *Repository) ResolveClientID(ctx context.Context, raw string) (*ClientWorkspace, error) {
+	id, ok := rowid.Parse(raw)
+	if !ok {
+		return nil, nil
+	}
 	var rows []ClientWorkspace
-	id, _ := legacyid.Resolve(raw)
-	if err := r.db.WithContext(ctx).Raw(`SELECT id, organization_id FROM workspaces WHERE id = ? OR legacy_environment_id = ? ORDER BY id = ? DESC LIMIT 1`, id, raw, id).Scan(&rows).Error; err != nil {
+	if err := r.db.WithContext(ctx).Raw(`SELECT id, organization_id FROM workspaces WHERE id = ?`, id).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("resolve client id: %w", err)
 	}
 	if len(rows) == 0 {

@@ -34,7 +34,6 @@ type Workspace struct {
 	ID                  uuid.UUID       `json:"id"`
 	CreatedAt           time.Time       `json:"createdAt"`
 	UpdatedAt           time.Time       `json:"updatedAt"`
-	LegacyEnvironmentID *string         `json:"legacyEnvironmentId"`
 	Name                string          `json:"name"`
 	OrganizationID      uuid.UUID       `json:"organizationId"`
 	Styling             json.RawMessage `json:"styling"`
@@ -61,7 +60,7 @@ type Language struct {
 	WorkspaceID uuid.UUID `json:"workspaceId"`
 }
 
-// SPA paths the redirect rules send a user to. They are forma2's, so bookmarked links keep working.
+// SPA paths the redirect rules send a user to. Bookmarks carry them, so they do not change.
 
 // HomePath is a workspace's landing page.
 func HomePath(workspaceID uuid.UUID) string {

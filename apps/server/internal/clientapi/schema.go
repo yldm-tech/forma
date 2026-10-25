@@ -124,7 +124,7 @@ func (is *issues) optString(path string, v any, p presence) *string {
 // cuid2 is zod's z.cuid2() character set.
 var cuid2 = regexp.MustCompile(`^[0-9a-z]+$`)
 
-// isID is ZId, z.cuid2(), widened to the rewrite's ids: a UUID, or a forma2 cuid that resolves to one through the legacy id function.
+// isID is ZId, z.cuid2(), widened to UUIDs. Every row id is a UUID; a cuid2 passes the check but names no row.
 func isID(s string) bool {
 	if _, err := uuid.Parse(s); err == nil && len(s) == 36 {
 		return true

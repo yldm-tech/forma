@@ -2,7 +2,7 @@
 
 # The Forma image: one static `forma` binary with the admin SPA, the public survey page and the SDK bundles (/js/*) embedded, on a distroless base with no shell or package manager. Build from the repository root: `docker build -f deploy/docker/Dockerfile -t forma .`.
 #
-# The container's default command is `forma start`, forma2's entrypoint: validate the configuration, apply the migrations unless SKIP_STARTUP_MIGRATION=true, then serve on :3000 with the job worker in the same process unless BULLMQ_WORKER_ENABLED=0. The same image runs every other process by naming its subcommand: `serve`, `worker`, `migrate`, `wait-for-database`, `authz ...` (deploy/docker/docker-compose.yml and deploy/helm/forma do).
+# The container's default command is `forma start`: validate the configuration, apply the migrations unless SKIP_STARTUP_MIGRATION=true, then serve on :3000 with the job worker in the same process unless BULLMQ_WORKER_ENABLED=0. The same image runs every other process by naming its subcommand: `serve`, `worker`, `migrate`, `wait-for-database`, `authz ...` (deploy/docker/docker-compose.yml and deploy/helm/forma do).
 #
 # Both build stages run on the builder's own platform. The web build is platform independent, and Go cross-compiles, so a multi-platform build needs no emulation.
 
@@ -13,7 +13,7 @@ ARG RUNTIME_IMAGE=gcr.io/distroless/static-debian13@sha256:034df5c1737e8241f6ed6
 # ---- web: the SPA, the survey page and the SDK bundles (`make web`) ----
 FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS web
 
-# The corepack release forma2's image used. It provides pnpm at the version package.json pins (packageManager), installed once package.json is in.
+# The corepack release that provides pnpm at the version package.json pins (packageManager), installed once package.json is in.
 RUN npm install --ignore-scripts -g corepack@0.35.0 \
     && corepack enable
 
@@ -63,10 +63,10 @@ FROM ${RUNTIME_IMAGE}
 
 COPY --from=server /out/forma /usr/local/bin/forma
 
-# forma2's working directory, kept because SAML SSO reads the identity provider's metadata from saml-connection/ under it: a volume mounted at forma2's /home/nextjs/apps/web/saml-connection keeps working.
+# The working directory, which SAML SSO reads the identity provider's metadata from (saml-connection/ under it): mount it at /home/nextjs/apps/web/saml-connection.
 WORKDIR /home/nextjs/apps/web
 
-# forma2's uid, which the Helm chart pins in its securityContext (runAsUser 1001). The process writes nothing to disk: uploads go to S3 and the job queue lives in PostgreSQL.
+# The uid the Helm chart pins in its securityContext (runAsUser 1001). The process writes nothing to disk: uploads go to S3 and the job queue lives in PostgreSQL.
 USER 1001:1001
 
 EXPOSE 3000

@@ -111,9 +111,6 @@ func (h *Handler) v1MeKey(c *gin.Context, raw string) {
 	}
 	w := found[id]
 	envID := w.ID.String()
-	if w.LegacyEnvironmentID != nil {
-		envID = *w.LegacyEnvironmentID
-	}
 	type ref struct {
 		ID   uuid.UUID `json:"id"`
 		Name string    `json:"name"`

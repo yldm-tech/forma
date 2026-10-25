@@ -1,0 +1,106 @@
+{
+  "case": "v1-surveys-delete",
+  "description": "DELETE /api/v1/management/surveys/<id:survey:temporary> with the `manage` key (manage on the workspace, organization access read and write).",
+  "request": {
+    "method": "DELETE",
+    "path": "/api/v1/management/surveys/<id:survey:temporary>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:survey:temporary>",
+        "createdAt": "<timestamp>",
+        "updatedAt": "<timestamp>",
+        "name": "Temporary Survey",
+        "redirectUrl": null,
+        "type": "link",
+        "workspaceId": "<id:workspace>",
+        "createdBy": null,
+        "status": "draft",
+        "welcomeCard": {
+          "enabled": false,
+          "timeToFinish": true,
+          "showResponseCount": false
+        },
+        "questions": [],
+        "blocks": [
+          {
+            "id": "<id:block:temporary:1>",
+            "name": "Block 1",
+            "elements": [
+              {
+                "id": "q1",
+                "type": "openText",
+                "headline": {
+                  "default": "Hello from the other workspace"
+                },
+                "required": false,
+                "charLimit": {
+                  "enabled": false
+                },
+                "inputType": "text",
+                "insightsEnabled": false
+              }
+            ]
+          }
+        ],
+        "endings": [],
+        "hiddenFields": {
+          "enabled": false
+        },
+        "variables": [],
+        "displayOption": "displayOnce",
+        "recontactDays": null,
+        "displayLimit": null,
+        "inlineTriggers": null,
+        "autoClose": null,
+        "autoComplete": null,
+        "delay": 0,
+        "publishOn": null,
+        "closeOn": null,
+        "archivedAt": null,
+        "surveyClosedMessage": null,
+        "segmentId": null,
+        "workspaceOverwrites": null,
+        "styling": null,
+        "singleUse": {
+          "enabled": false,
+          "isEncrypted": true
+        },
+        "isVerifyEmailEnabled": false,
+        "isBackButtonHidden": false,
+        "isAutoProgressingEnabled": false,
+        "isCaptureIpEnabled": false,
+        "isAnonymizeResponsesEnabled": false,
+        "pin": null,
+        "displayPercentage": null,
+        "showLanguageSwitch": null,
+        "recaptcha": {
+          "enabled": false,
+          "threshold": 0.1
+        },
+        "metadata": {},
+        "slug": null,
+        "customHeadScripts": null,
+        "customHeadScriptsMode": "add",
+        "segment": null,
+        "triggers": [],
+        "environmentId": "<id:workspace>"
+      }
+    }
+  }
+}

@@ -6,8 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // The client API's answers keep forma2's shapes (the recorded v1/v2 responses and displays fixtures): a quota is reported only when one is full, its ending only when it has one.
@@ -41,7 +39,8 @@ func TestResolveID(t *testing.T) {
 	if got, err := ResolveID(native.String()); err != nil || got != native {
 		t.Errorf("ResolveID(uuid) = %v, %v", got, err)
 	}
-	if got, err := ResolveID("clsurveyaaaaaaaaaaaaaaaa"); err != nil || got != legacyid.ID("clsurveyaaaaaaaaaaaaaaaa") {
+	// A cuid2 passes the check but names no row.
+	if got, err := ResolveID("clsurveyaaaaaaaaaaaaaaaa"); err != nil || got != uuid.Nil {
 		t.Errorf("ResolveID(cuid) = %v, %v", got, err)
 	}
 	for _, bad := range []string{"", "not-a-cuid", "UPPER", "a b"} {

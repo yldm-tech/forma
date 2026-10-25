@@ -18,7 +18,6 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 )
 
 // withProvider enables one provider with the fake's client credentials. The provider is pointed at the fake once the env exists (see ssoEnv).
@@ -680,23 +679,16 @@ func TestSSODefaultOrganization(t *testing.T) {
 		preexists  bool
 		wantFirst  string
 		wantSecond string
-		// forma2ID is a forma2 (cuid2) organization id configured as AUTH_SSO_DEFAULT_ORGANIZATION_ID; it names the migrated row legacyid.ID(forma2ID).
-		forma2ID string
 	}{
-		{"created by the first sign-up", "", false, "owner", "manager", ""},
-		{"created, with a configured role", "member", false, "owner", "member", ""},
-		{"existing", "billing", true, "billing", "billing", ""},
-		{"migrated from forma2, configured by its old id", "member", true, "member", "member", "clxbivtla014iye2vfrn436xd"},
+		{"created by the first sign-up", "", false, "owner", "manager"},
+		{"created, with a configured role", "member", false, "owner", "member"},
+		{"existing", "billing", true, "billing", "billing"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			orgID, configured := uuid.New(), ""
-			if tc.forma2ID != "" {
-				orgID, configured = legacyid.ID(tc.forma2ID), tc.forma2ID
-			} else {
-				configured = orgID.String()
-			}
+			orgID := uuid.New()
+			configured := orgID.String()
 			e, fake := ssoEnv(t, providerGoogle, func(cfg *config.Config) {
 				cfg.SSO.DefaultOrganizationID = configured
 				cfg.SSO.DefaultOrganizationRole = tc.role

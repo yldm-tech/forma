@@ -1,0 +1,45 @@
+{
+  "case": "v2-contact-attribute-keys-create-environment-id",
+  "description": "POST /api/v2/management/contact-attribute-keys with the `manage` key (manage on the workspace, organization access read and write). Addressing the workspace through the environmentId alias of workspaceId.",
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/management/contact-attribute-keys",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:manage>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "environmentId": "<id:workspace>",
+      "key": "signup_date",
+      "name": "Signup date",
+      "description": null,
+      "dataType": "date"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:contactAttributeKey:signup_date>",
+        "createdAt": "<timestamp>",
+        "updatedAt": "<timestamp>",
+        "isUnique": false,
+        "key": "signup_date",
+        "name": "Signup date",
+        "description": null,
+        "type": "custom",
+        "dataType": "date",
+        "workspaceId": "<id:workspace>"
+      }
+    }
+  }
+}

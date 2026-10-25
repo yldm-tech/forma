@@ -11,7 +11,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 )
 
 // Trial lengths, forma2's DEFAULT_PRO_TRIAL_DAYS. forma2 shortened it to seven days for a PostHog experiment's test variant; without the experiment every trial is the default.
@@ -561,7 +561,7 @@ type SetupUpgrade struct {
 	TargetPlan     *string `json:"targetPlan"`
 }
 
-// ApplySetupCheckoutUpgrade is forma2's applySetupCheckoutUpgrade: right after a setup checkout with an upgrade intent, the saved card becomes the customer's and the subscription's default and the upgrade is applied, without waiting for the webhook. A session of another organization is refused (forma2's sessions name the organization by its forma2 id); a session that is not a completed setup with a paid target changes nothing.
+// ApplySetupCheckoutUpgrade is forma2's applySetupCheckoutUpgrade: right after a setup checkout with an upgrade intent, the saved card becomes the customer's and the subscription's default and the upgrade is applied, without waiting for the webhook. A session of another organization is refused; a session that is not a completed setup with a paid target changes nothing.
 func (e *Engine) ApplySetupCheckoutUpgrade(ctx context.Context, organizationID uuid.UUID, sessionID string) (*SetupUpgrade, error) {
 	none := &SetupUpgrade{Mode: ModeImmediate}
 	if !e.stripe.Configured() {
@@ -573,7 +573,7 @@ func (e *Engine) ApplySetupCheckoutUpgrade(ctx context.Context, organizationID u
 	if err != nil {
 		return nil, fmt.Errorf("retrieve Stripe checkout session: %w", err)
 	}
-	if !legacyid.Matches(session.Metadata["organizationId"], organizationID) {
+	if !rowid.Matches(session.Metadata["organizationId"], organizationID) {
 		return nil, errNotAllowed(CodeCheckoutSessionMismatch)
 	}
 	if session.Mode != stripe.CheckoutSessionModeSetup || session.Status != stripe.CheckoutSessionStatusComplete {

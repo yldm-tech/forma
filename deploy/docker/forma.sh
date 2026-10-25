@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Forma's one-click installer for a single Ubuntu host: the production stack of deploy/docker/docker-compose.yml behind Traefik, in ./forma. forma2's docker/forma.sh with the same commands, for the Go server.
+# Forma's one-click installer for a single Ubuntu host: the production stack of deploy/docker/docker-compose.yml behind Traefik, in ./forma.
 #
 #   ./forma.sh install               ask a few questions, write ./forma (compose file, .env with generated secrets, Traefik) and start it
-#   ./forma.sh update                bring ./forma to the current release; an installation made for forma2 is migrated first
+#   ./forma.sh update                bring ./forma to the current release
 #   ./forma.sh stop | restart        docker compose down | restart
 #   ./forma.sh logs [args]           docker compose logs [args]
 #   ./forma.sh cleanup-rustfs-init   remove the finished RustFS bootstrap container (cleanup-minio-init is an alias)
@@ -20,7 +20,7 @@ FORMA_RAW_URL="https://raw.githubusercontent.com/yldm-tech/forma/${FORMA_REF}/de
 # The files the stack is made of; docker-compose.yml mounts the two scripts.
 FORMA_STACK_FILES="docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh"
 
-# Variables forma2 read that the Go server does not; an update comments them out of .env. BULLMQ_WORKER_CONCURRENCY, BULLMQ_WORKER_COUNT and FORMA_RUSTFS_* are mapped to their replacements first (migrate_env).
+# Variables an .env may still set that the server does not read; an update comments them out of .env. BULLMQ_WORKER_CONCURRENCY, BULLMQ_WORKER_COUNT and FORMA_RUSTFS_* are mapped to their replacements first (migrate_env).
 FORMA_IGNORED_VARIABLES="CRON_SECRET AUTHZED_SYSTEM_KEY FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED BULLMQ_EXTERNAL_WORKER_ENABLED AUTH_SKIP_INVITE_FOR_SSO AUTH_SSO_DEFAULT_TEAM_ID OIDC_SIGNING_ALGORITHM ENTERPRISE_LICENSE_KEY DEBUG DEBUG_SHOW_RESET_LINK ASSET_PREFIX_URL SENTRY_AUTH_TOKEN OTEL_LOGS_ENABLED"
 FORMA_MAPPED_VARIABLES="BULLMQ_WORKER_CONCURRENCY BULLMQ_WORKER_COUNT FORMA_RUSTFS_ADMIN_USER FORMA_RUSTFS_ADMIN_PASSWORD FORMA_RUSTFS_SERVICE_USER FORMA_RUSTFS_SERVICE_PASSWORD FORMA_RUSTFS_BUCKET_NAME FORMA_RUSTFS_POLICY_NAME FORMA_RUSTFS_REGION"
 
@@ -35,7 +35,7 @@ die() {
 
 forma_docker=(docker)
 
-# configure_docker uses docker directly when the daemon answers, else through sudo, as forma2 did.
+# configure_docker uses docker directly when the daemon answers, else through sudo.
 configure_docker() {
   if docker info >/dev/null 2>&1; then
     forma_docker=(docker)
@@ -142,7 +142,7 @@ dotenv_comment_out() {
   mv "$tmp" "$file"
 }
 
-# strip_schema_public removes Prisma's schema=public parameter (forma2's ?schema=public suffix) from a connection URL. The server drops it too, and refuses any other schema value.
+# strip_schema_public removes Prisma's schema=public parameter from a connection URL. The server drops it too, and refuses any other schema value.
 strip_schema_public() {
   printf '%s' "$1" | sed -E \
     -e 's/\?[sS][cC][hH][eE][mM][aA]=public&/?/' \
@@ -161,7 +161,7 @@ is_positive_integer() {
   esac
 }
 
-# migrate_env rewrites a forma2 .env for the Go server. Every step is idempotent, so it runs on every update. A value read from .env is written back as it was spelled there (literal 0).
+# migrate_env rewrites the retired variables of an .env into the ones the server reads. Every step is idempotent, so it runs on every update. A value read from .env is written back as it was spelled there (literal 0).
 migrate_env() {
   local file="$1" key value concurrency count cpus profiles
 
@@ -175,7 +175,7 @@ migrate_env() {
     fi
   done
 
-  # forma2 ran BULLMQ_WORKER_COUNT workers of BULLMQ_WORKER_CONCURRENCY jobs each (one worker of 2 to 4 jobs by default).
+  # BULLMQ_WORKER_COUNT workers of BULLMQ_WORKER_CONCURRENCY jobs each (one worker of 2 to 4 jobs by default) become WORKER_CONCURRENCY.
   concurrency=$(dotenv_get BULLMQ_WORKER_CONCURRENCY "$file")
   count=$(dotenv_get BULLMQ_WORKER_COUNT "$file")
   if [ -n "$concurrency$count" ]; then
@@ -195,7 +195,7 @@ migrate_env() {
     dotenv_comment_out BULLMQ_WORKER_COUNT "replaced by WORKER_CONCURRENCY" "$file"
   fi
 
-  # forma2's installer kept the bundled RustFS credentials under FORMA_RUSTFS_*; the compose file's storage profile reads RUSTFS_ADMIN_* and the S3_* settings the server uses.
+  # Older installs kept the bundled RustFS credentials under FORMA_RUSTFS_*; the compose file's storage profile reads RUSTFS_ADMIN_* and the S3_* settings the server uses.
   if dotenv_has FORMA_RUSTFS_ADMIN_USER "$file"; then
     dotenv_set_if_missing RUSTFS_ADMIN_USER "$(dotenv_get FORMA_RUSTFS_ADMIN_USER "$file")" "$file" 0
     dotenv_set_if_missing RUSTFS_ADMIN_PASSWORD "$(dotenv_get FORMA_RUSTFS_ADMIN_PASSWORD "$file")" "$file" 0
@@ -252,153 +252,14 @@ fetch_stack() {
   chmod 700 authzed-postgres-bootstrap.sh rustfs-init.sh
 }
 
-# is_forma2_compose recognises forma2's compose file: its containers ran shell, node and forma-authzed entrypoints, which the distroless Go image does not have.
+# is_forma2_compose recognises the compose file of the retired Next.js release (forma2): its containers ran shell, node and forma-authzed entrypoints, which the distroless image does not have. Its data lives in tables this server does not read, so this script neither installs over nor updates such an installation.
 is_forma2_compose() {
-  grep -Eq 'forma-authzed|apply-migrations\.js|validate-env\.mjs|^x-environment:' "$1"
-}
-
-# forma2_inline_environment prints the KEY<TAB>value settings forma2's compose file held inline under x-environment (its installer wrote WEBAPP_URL, the secrets, SMTP and S3 there), with YAML's quoting removed. Empty and commented ones are skipped.
-forma2_inline_environment() {
-  awk '
-    /^[^[:space:]#]/ { in_env = ($0 ~ /^x-environment:/) }
-    in_env && /^    [A-Z][A-Z0-9_]*:/ {
-      line = $0
-      sub(/^    /, "", line)
-      key = line
-      sub(/:.*/, "", key)
-      value = substr(line, length(key) + 2)
-      sub(/^[[:space:]]+/, "", value)
-      sub(/[[:space:]]+$/, "", value)
-      if (value ~ /^".*"$/) {
-        quoted = substr(value, 2, length(value) - 2)
-        value = ""
-        for (i = 1; i <= length(quoted); i++) {
-          c = substr(quoted, i, 1)
-          if (c == "\\" && i < length(quoted)) c = substr(quoted, ++i, 1)
-          value = value c
-        }
-      } else if (value ~ /^'"'"'.*'"'"'$/) {
-        value = substr(value, 2, length(value) - 2)
-        gsub(/'"''"'/, "'"'"'", value)
-      }
-      if (value != "") printf "%s\t%s\n", key, value
-    }
-  ' "$1"
-}
-
-# service_labels prints the labels block of a service in a compose file, header included.
-service_labels() {
-  FORMA_SERVICE="$2" awk '
-    BEGIN { svc = "  " ENVIRON["FORMA_SERVICE"] ":" }
-    /^[^[:space:]#]/ { in_svc = 0 }
-    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { in_svc = ($0 == svc); in_labels = 0; next }
-    in_svc && /^    [A-Za-z0-9_-]+:/ { in_labels = ($0 ~ /^    labels:[[:space:]]*$/) }
-    in_svc && in_labels { print }
-  ' "$1"
-}
-
-# service_block prints a whole service of a compose file, header included.
-service_block() {
-  FORMA_SERVICE="$2" awk '
-    BEGIN { svc = "  " ENVIRON["FORMA_SERVICE"] ":" }
-    /^[^[:space:]#]/ { in_svc = 0 }
-    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { in_svc = ($0 == svc) }
-    in_svc { print }
-  ' "$1"
+  grep -Eq 'apply-migrations\.js|validate-env\.mjs|^x-environment:|^[[:space:]]+(entrypoint|command):.*forma-authzed' "$1"
 }
 
 override_header() {
   echo "# Written by forma.sh: the Traefik reverse proxy in front of the stack in docker-compose.yml. Docker Compose merges this file into docker-compose.yml on its own; forma.sh update replaces docker-compose.yml with the release's and keeps this file, so put local changes here."
   echo "services:"
-}
-
-# migrate_forma2_install moves what forma2's installer wrote into its compose file to where the Go stack reads it: the inline settings into .env, the Traefik service and labels into docker-compose.override.yml.
-migrate_forma2_install() {
-  local compose_file="$1" env_file="$2" override="$3" key value ref labels traefik rustfs_labels
-  echo "Moving the settings of the forma2 compose file into $env_file:"
-  while IFS="$(printf '\t')" read -r key value; do
-    # A ${VAR} reference (the bundled RustFS credentials) is resolved against .env, where VAR lived.
-    if [[ "$value" =~ ^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$ ]]; then
-      ref="${BASH_REMATCH[1]}"
-      value=$(dotenv_get "$ref" "$env_file")
-    fi
-    # The compose file's environment overrode .env in forma2, so its value is the one that was in effect.
-    dotenv_set "$key" "$value" "$env_file" 0
-    echo "  $key"
-  done < <(forma2_inline_environment "$compose_file")
-
-  labels=$(service_labels "$compose_file" forma)
-  rustfs_labels=$(service_labels "$compose_file" rustfs)
-  # forma2's installer made Traefik wait for a "hub" service its compose file never defined, and for rustfs, which only runs in the storage profile now.
-  traefik=$(service_block "$compose_file" traefik | sed -E '/^      - (hub|rustfs)[[:space:]]*$/d')
-  if [ -z "$labels$traefik$rustfs_labels" ]; then
-    return 0
-  fi
-  if [ -f "$override" ]; then
-    cp -p "$override" "$override.forma2-$(date +%Y%m%d%H%M%S)"
-  fi
-  {
-    override_header
-    if [ -n "$labels" ]; then
-      echo "  forma:"
-      printf '%s\n' "$labels"
-    fi
-    if [ -n "$rustfs_labels" ]; then
-      echo "  rustfs:"
-      printf '%s\n' "$rustfs_labels"
-    fi
-    if [ -n "$traefik" ]; then
-      printf '%s\n' "$traefik"
-    fi
-  } >"$override"
-  echo "Moved the Traefik service and labels into $override."
-}
-
-# ---- database ----
-
-psql_forma() {
-  compose exec -T postgres psql -U postgres -d forma -tA -c "$1" | tr -d '[:space:]'
-}
-
-# check_database refuses to start the Go server on a database whose forma2 data has not been imported. The Go server keeps its data in tables of its own next to forma2's, and started without forma2's data it would serve an empty instance whose first sign-up becomes its owner. This is the server's own startup check, run before anything is started: forma2's "User" table has rows and forma2_imports, which `forma import-forma2` (or its --discard-forma2-data) writes, has none; or forma2's tables changed after the latest record, as when forma2 ran again after a rollback (forma2_import_drift(), which a schema older than it lacks).
-check_database() {
-  local tables forma2_users=f recorded=f drift=
-  compose up -d --wait postgres >/dev/null
-  tables=$(psql_forma "SELECT (to_regclass('public.\"User\"') IS NOT NULL)::text || ',' || (to_regclass('public.forma2_imports') IS NOT NULL)::text")
-  case "$tables" in
-    true,*) forma2_users=$(psql_forma 'SELECT EXISTS (SELECT 1 FROM "User")') ;;
-  esac
-  case "$tables" in
-    *,true) recorded=$(psql_forma 'SELECT EXISTS (SELECT 1 FROM forma2_imports)') ;;
-  esac
-  if [ "$forma2_users" = t ] && [ "$recorded" != t ]; then
-    cat >&2 <<EOF
-The database still holds forma2's data, and it has not been imported into the Go server's tables yet. Starting the new stack now would serve an empty instance.
-Nothing else was started, and the configuration has been migrated (the previous files are kept next to the new ones). Stop forma2, import its data, then run ./forma.sh update again:
-  cd $PWD
-  docker compose stop forma
-  docker compose run --rm forma-migrate
-  docker compose run --rm forma-migrate import-forma2 --dry-run
-  docker compose run --rm forma-migrate import-forma2
-EOF
-    exit 1
-  fi
-  if [ "$recorded" = t ] && [ "$(psql_forma "SELECT to_regprocedure('forma2_import_drift()') IS NOT NULL")" = t ]; then
-    drift=$(psql_forma "SELECT array_to_string(forma2_import_drift(), ',')")
-  fi
-  if [ -n "$drift" ]; then
-    cat >&2 <<EOF
-forma2's tables changed after its data was imported (changed: $drift): forma2 ran again, as after a rollback, and the Go server's tables lack what it wrote since.
-Nothing else was started. Stop forma2, then either import its data again or keep the Go server's data and leave forma2's later writes behind:
-  cd $PWD
-  docker compose stop forma
-  docker compose run --rm forma-migrate import-forma2 --refresh --dry-run
-  docker compose run --rm forma-migrate import-forma2 --refresh
-  docker compose run --rm forma-migrate import-forma2 --discard-forma2-data --reason="<why>"
-A refresh refuses when the Go server changed its tables too.
-EOF
-    exit 1
-  fi
 }
 
 # ---- commands ----
@@ -589,7 +450,7 @@ install_forma() {
   mkdir -p "$FORMA_DIR"
   cd "$FORMA_DIR"
   if [ -f docker-compose.yml ] && is_forma2_compose docker-compose.yml; then
-    die "$PWD holds a forma2 installation. Run ./forma.sh update to migrate it."
+    die "$PWD holds an installation of the retired Next.js release (forma2), which this script does not install over. Install into another directory (FORMA_DIR)."
   fi
 
   read -r -p "Your app domain (for example surveys.example.com), without http:// or https://: " domain
@@ -685,24 +546,19 @@ install_forma() {
 }
 
 update_forma() {
-  local stamp forma2=0 name
+  local stamp name
   [ -d "$FORMA_DIR" ] || die "no installation in ./$FORMA_DIR. Run this script from the directory you installed from, or set FORMA_DIR."
   cd "$FORMA_DIR"
   [ -f docker-compose.yml ] || die "$PWD has no docker-compose.yml."
+  if is_forma2_compose docker-compose.yml; then
+    die "$PWD holds an installation of the retired Next.js release (forma2), which this script does not update: its data lives in tables this server does not read."
+  fi
   configure_docker
   stamp=$(date +%Y%m%d%H%M%S)
 
   touch .env
   chmod 600 .env
   cp -p .env ".env.$stamp"
-  if is_forma2_compose docker-compose.yml; then
-    forma2=1
-    echo "This is a forma2 installation; migrating it to the Go server."
-    cp -p docker-compose.yml "docker-compose.yml.forma2-$stamp"
-    echo "Backups: docker-compose.yml.forma2-$stamp, .env.$stamp"
-    migrate_forma2_install docker-compose.yml .env docker-compose.override.yml
-  fi
-
   echo "Updating .env:"
   migrate_env .env
   [ -n "$(dotenv_get WEBAPP_URL .env)" ] || die "WEBAPP_URL is not set in $PWD/.env."
@@ -716,18 +572,13 @@ update_forma() {
   if ! compose config -q; then
     echo "The new compose configuration is invalid; restoring the previous files." >&2
     cp -p ".env.$stamp" .env
-    if [ "$forma2" = 1 ]; then
-      cp -p "docker-compose.yml.forma2-$stamp" docker-compose.yml
-    else
-      for name in $FORMA_STACK_FILES; do
-        if [ -f "$name.$stamp" ]; then cp -p "$name.$stamp" "$name"; fi
-      done
-    fi
+    for name in $FORMA_STACK_FILES; do
+      if [ -f "$name.$stamp" ]; then cp -p "$name.$stamp" "$name"; fi
+    done
     exit 1
   fi
 
   compose pull
-  check_database
   # forma-migrate applies the schema and authzed-initialize the authorization schema before the server and the worker start (depends_on).
   compose up -d --remove-orphans
   echo "Forma is updated. Follow the start with 'cd $PWD && docker compose logs -f forma forma-worker'."

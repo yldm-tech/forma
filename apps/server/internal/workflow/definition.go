@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
@@ -416,20 +415,11 @@ func (p *parser) email(s string, at []any) {
 	}
 }
 
-// uuidString checks the survey id format; the rewrite's ids are UUIDs where forma2's were cuid2.
+// uuidString checks the survey id format: a row id is a UUID.
 func (p *parser) uuidString(s string, at []any) {
 	if _, err := uuid.Parse(s); err != nil || len(s) != 36 {
 		p.add(at, "Invalid UUID")
 	}
-}
-
-// triggerSurveyID checks the trigger's survey id and returns it as the survey's id: a UUID, the rewrite's id format, as it is, or forma2's cuid2 id, which a workflow migrated from forma2 still names, as the id the survey was migrated to (legacyid), so a migrated workflow runs, tests and enables, and is stored with the UUID the next time it is saved.
-func (p *parser) triggerSurveyID(s string, at []any) string {
-	if surveydoc.IsCUID2(s) {
-		return legacyid.ID(s).String()
-	}
-	p.uuidString(s, at)
-	return s
 }
 
 func (p *parser) definition(v any, at []any, executable bool) *Definition {
@@ -565,7 +555,7 @@ func (p *parser) trigger(v any, at []any) *TriggerNode {
 	cat := path(at, "config")
 	t.Config.SurveyID = p.str(c, "surveyId", cat, -1, -1)
 	if _, isString := c["surveyId"].(string); isString {
-		t.Config.SurveyID = p.triggerSurveyID(t.Config.SurveyID, path(cat, "surveyId"))
+		p.uuidString(t.Config.SurveyID, path(cat, "surveyId"))
 	}
 	if raw, present := c["endingCardIds"]; present {
 		list, ok := raw.([]any)

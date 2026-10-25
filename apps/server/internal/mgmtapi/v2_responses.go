@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/legacyid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/storage"
 )
@@ -76,7 +76,7 @@ func (h *Handler) v2ListResponses(c *gin.Context) {
 	}
 	query := response.ManagedQuery{WorkspaceIDs: ids, ContactID: contactID, DateField: f.DateField, Start: f.Start, End: f.End, OrderBy: f.orderColumn(), Ascending: f.Ascending, Limit: f.Limit, Offset: f.Skip}
 	if hasSurvey {
-		id, _ := legacyid.Resolve(surveyID)
+		id, _ := rowid.Parse(surveyID)
 		query.SurveyID = &id
 	}
 	ctx := c.Request.Context()
@@ -152,7 +152,7 @@ func parseV2ResponseInput(body map[string]any) (string, response.ManagedInput, *
 
 // v2CheckAnswers runs forma2's checks of a v2 write's answers against the survey: the file uploads (400 on response), an "Other" text over the limit (400 naming the question), and validateResponseData (400 with one detail per failed rule). It answers itself and reports whether the write may go on.
 func (h *Handler) v2CheckAnswers(c *gin.Context, sv *response.Survey, data map[string]any, language *string) bool {
-	valid, err := h.validUploads(c, sv, data)
+	valid, err := h.validUploads(sv, data)
 	if err != nil {
 		h.v2Unexpected(c, err)
 		return false
@@ -208,7 +208,7 @@ func (h *Handler) v2CreateResponse(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	surveyID, _ := legacyid.Resolve(rawSurveyID)
+	surveyID, _ := rowid.Parse(rawSurveyID)
 	sv, err := response.LoadSurvey(ctx, h.db, surveyID)
 	if err != nil {
 		h.v2Unexpected(c, err)
