@@ -29,12 +29,17 @@ func NewAuthorizer(cfg config.Config, db *gorm.DB, client *Client) *Authorizer {
 
 // Can reports whether actor may perform action on resource. Within a request carrying a decision memo (WithDecisionMemo), the same question is evaluated once; denials are memoized like grants, failures never.
 func (a *Authorizer) Can(ctx context.Context, actor Actor, action Action, resource Resource) (bool, error) {
+	return a.can(ctx, actor, action, resource, true)
+}
+
+// can is Can; with secondFactor false the organization's two-factor requirement is set aside (CanReadOrganizationDespiteSecondFactor), and the decision is memoized apart from the one that applies it.
+func (a *Authorizer) can(ctx context.Context, actor Actor, action Action, resource Resource, secondFactor bool) (bool, error) {
 	checkIssued(ctx)
 	if memo := memoFrom(ctx); memo != nil {
-		key := fmt.Sprintf("%s:%s|%s|%s:%s", actor.Type, actor.ID, action, resource.Type, resource.ID)
-		return memo.do(key, func() (bool, error) { return a.evaluate(ctx, actor, action, resource) })
+		key := fmt.Sprintf("%s:%s|%s|%s:%s|%t", actor.Type, actor.ID, action, resource.Type, resource.ID, secondFactor)
+		return memo.do(key, func() (bool, error) { return a.evaluate(ctx, actor, action, resource, secondFactor) })
 	}
-	return a.evaluate(ctx, actor, action, resource)
+	return a.evaluate(ctx, actor, action, resource, secondFactor)
 }
 
 // Require is Can for service methods: a denial is forma2's AuthorizationError, "Not authorized" (403), or ErrTwoFactorRequired when the organization's two-factor requirement refused the user.
@@ -44,14 +49,14 @@ func (a *Authorizer) Require(ctx context.Context, actor Actor, action Action, re
 		return err
 	}
 	if !allowed {
-		return a.denial(ctx, actor, action, resource)
+		return a.denial(ctx, actor, resource)
 	}
 	return nil
 }
 
-func (a *Authorizer) evaluate(ctx context.Context, actor Actor, action Action, resource Resource) (bool, error) {
+func (a *Authorizer) evaluate(ctx context.Context, actor Actor, action Action, resource Resource, secondFactor bool) (bool, error) {
 	started := time.Now()
-	allowed, err := a.check(ctx, actor, action, resource)
+	allowed, err := a.check(ctx, actor, action, resource, secondFactor)
 	if err != nil {
 		err = normalize(err, "authorization")
 	}
@@ -59,8 +64,8 @@ func (a *Authorizer) evaluate(ctx context.Context, actor Actor, action Action, r
 	return allowed && err == nil, err
 }
 
-func (a *Authorizer) check(ctx context.Context, actor Actor, action Action, resource Resource) (bool, error) {
-	scope, err := resolveScope(ctx, a.db, actor, !exemptFromSecondFactor(action, resource), resource)
+func (a *Authorizer) check(ctx context.Context, actor Actor, action Action, resource Resource, secondFactor bool) (bool, error) {
+	scope, err := resolveScope(ctx, a.db, actor, secondFactor, resource)
 	if err != nil || scope == nil {
 		return false, err
 	}

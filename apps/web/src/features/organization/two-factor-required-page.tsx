@@ -10,10 +10,11 @@ import { sortByName } from "../../lib/navigation";
 import { meQuery } from "../../lib/queries/auth";
 import { organizationQuery, organizationsQuery } from "../../lib/queries/organizations";
 import { EnableTwoFactorModal } from "../account/two-factor";
+import { LeaveOrganizationDialog } from "./leave-organization-dialog";
 import { mustTurnOnTwoFactor } from "./two-factor-requirement";
 
 /**
- * Where a member is sent when their organization requires two-factor authentication they have not turned on: from the reminder during the grace period, and from every page of the organization once the server refuses them. It names the organization and the deadline, sets two-factor authentication up in place, and leaves a way out: the member's other organizations and, in the account menu, their profile and signing out. During the grace period the member may also go on to the organization for now.
+ * Where a member is sent when their organization requires two-factor authentication they have not turned on: from the reminder during the grace period, and from every page of the organization once the server refuses them. It names the organization and the deadline, sets two-factor authentication up in place, and leaves a way out: leaving the organization (not for owners), the member's other organizations and, in the account menu, their profile and signing out. During the grace period the member may also go on to the organization for now.
  */
 export const TwoFactorRequiredPage = ({ organizationId }: { organizationId: string }) => {
   const { t, i18n } = useTranslation();
@@ -21,8 +22,11 @@ export const TwoFactorRequiredPage = ({ organizationId }: { organizationId: stri
   const { data: organization } = useSuspenseQuery(organizationQuery(organizationId));
   const organizations = useQuery(organizationsQuery);
   const [enrolling, setEnrolling] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const others = sortByName((organizations.data ?? []).filter((o) => o.id !== organizationId));
   const required = mustTurnOnTwoFactor(organization);
+  // A member who would rather not turn it on may leave instead, as from the members page; owners cannot leave.
+  const canLeave = required && organization.membership.role !== "owner";
   const deadline = organization.twoFactorEnforcedAt
     ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "long", timeStyle: "short" }).format(
         new Date(organization.twoFactorEnforcedAt)
@@ -68,6 +72,11 @@ export const TwoFactorRequiredPage = ({ organizationId }: { organizationId: stri
                   </Link>
                 </Button>
               )}
+              {canLeave && (
+                <Button variant="ghost" onClick={() => setLeaving(true)}>
+                  {t("workspace.settings.general.leave_organization")}
+                </Button>
+              )}
             </>
           ) : (
             <Button asChild>
@@ -98,6 +107,9 @@ export const TwoFactorRequiredPage = ({ organizationId }: { organizationId: stri
         )}
       </main>
       {enrolling && <EnableTwoFactorModal onClose={() => setEnrolling(false)} />}
+      {canLeave && (
+        <LeaveOrganizationDialog organizationId={organization.id} open={leaving} onOpenChange={setLeaving} />
+      )}
     </div>
   );
 };

@@ -180,6 +180,35 @@ func TestTwoFactorSetupReplacesAnUnfinishedEnrolment(t *testing.T) {
 }
 
 // forma2's two-factor-auth.test.ts disable cases: the password plus a current code or a backup code; the backup code, when given, is the one checked, with or without its hyphen.
+// An account with a password and an external identity (SSO recovery keeps a verified account's password) signs in with the password alone, so it can turn two-factor authentication on and off like a password account, and the password then asks for the code.
+func TestTwoFactorForAPasswordAccountWithAnExternalIdentity(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{sso: true})
+	b := e.browser()
+	b.signIn("ada@example.com", strongPassword)
+	if me := b.get("/auth/me").json(); me["identityProvider"] != "sso" || me["hasPassword"] != true {
+		t.Fatalf("me %v", me)
+	}
+
+	secret := setupTOTP(t, b)["secret"].(string)
+	expectStatus(t, b.post("/auth/two-factor/enable", map[string]string{"code": e.codeFor(secret, 0)}), http.StatusOK, "")
+	if !e.twoFactorEnabled(id) {
+		t.Fatal("enable left two-factor authentication off")
+	}
+	e.browser().signInPending()
+
+	expectStatus(t, b.post("/auth/two-factor/disable", map[string]string{"password": strongPassword, "code": e.codeFor(secret, 0)}), http.StatusOK, "")
+	if e.twoFactorEnabled(id) {
+		t.Fatal("disable left two-factor authentication on")
+	}
+
+	sso := e.sessionFor(e.seedUser("sso@example.com", "", userOpts{noPassword: true, sso: true}))
+	if me := sso.get("/auth/me").json(); me["hasPassword"] != false {
+		t.Fatalf("an SSO account's me %v", me)
+	}
+}
+
 func TestDisableTwoFactor(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t)

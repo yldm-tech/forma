@@ -714,7 +714,7 @@
     },
     "security_tip_github": "Stay informed about security fixes: open <githubLink>Forma's security advisories on GitHub</githubLink> and choose Watch → Custom → Releases and Security alerts.",
     "two_factor": {
-      "card_description": "Require every member who signs in with a password to use two-factor authentication. Members who sign in with SSO are exempt: their identity provider decides how they sign in.",
+      "card_description": "Require every member who can sign in with a password to use two-factor authentication, including members who also use SSO. Members without a password, who sign in only with SSO, are exempt: their identity provider decides how they sign in.",
       "card_title": "Two-factor authentication",
       "column": "2FA",
       "column_description": "Two-factor authentication",
@@ -747,7 +747,7 @@
       "status_disabled": "Off",
       "status_enabled": "On",
       "status_sso": "SSO",
-      "status_sso_hint": "Signs in with SSO, so the identity provider handles the second factor.",
+      "status_sso_hint": "Signs in only with SSO, so the identity provider handles the second factor.",
       "stop_button": "Stop requiring it"
     },
     "workspaces": {

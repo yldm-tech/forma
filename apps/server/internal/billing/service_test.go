@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
@@ -196,4 +197,23 @@ func TestBillingSummary(t *testing.T) {
 	if !s.IsFormaCloud || s.Plan != PlanPro || s.Usage == nil || s.Usage.Responses != 0 || *s.Limits.Monthly.Responses != 250 || s.TrialDaysRemaining == nil || *s.TrialDaysRemaining != 3 || *s.TrialEnd != "2026-03-11T13:00:00.000Z" || s.ProTrialDays != proTrialDays {
 		t.Fatalf("summary %+v", s)
 	}
+}
+
+// A member the organization's two-factor requirement refuses does not read its plan, limits or usage; they are told why, while an outsider still learns nothing.
+func TestBillingSummaryRefusesAMemberWithoutRequiredTwoFactor(t *testing.T) {
+	a := newApp(t)
+	org, _, _, member, _ := a.billedOrganization()
+	outsider := a.user("Outsider", uuid.NewString()+"@example.com")
+	for _, u := range []uuid.UUID{member, outsider} {
+		a.exec(`INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES (?, 'credential', ?, '$2a$10$hash')`, u, u.String())
+	}
+	a.exec(`UPDATE organizations SET two_factor_enforced_at = now() - interval '1 minute' WHERE id = ?`, org)
+
+	a.fails(a.do(member, http.MethodGet, billingPath(org, "/summary"), nil), http.StatusForbidden, authz.CodeTwoFactorRequired)
+	a.fails(a.do(member, http.MethodGet, billingPath(org, ""), nil), http.StatusForbidden, authz.CodeTwoFactorRequired)
+	a.fails(a.do(outsider, http.MethodGet, billingPath(org, "/summary"), nil), http.StatusNotFound, apperr.CodeNotFound)
+
+	a.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, '\x00', '\x00', true)`, member)
+	var s Summary
+	a.ok(a.do(member, http.MethodGet, billingPath(org, "/summary"), nil), &s)
 }

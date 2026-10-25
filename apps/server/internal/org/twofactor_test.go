@@ -19,11 +19,16 @@ func (e *env) passwordUser() uuid.UUID {
 	return id
 }
 
-// ssoUser is a user who signs in through an external identity provider, whom the requirement exempts.
+// ssoUser is a user without a password who signs in through an external identity provider, whom the requirement exempts.
 func (e *env) ssoUser() uuid.UUID {
 	id := e.user()
-	e.exec(`INSERT INTO user_identities (user_id, provider, issuer, subject) VALUES (?, 'openid', 'https://idp.example.com', ?)`, id, id.String())
+	e.linkSSO(id)
 	return id
+}
+
+// linkSSO gives the user an external identity. A password user keeps their password (SSO recovery of a verified account leaves it), signs in with it alone and so stays subject to the requirement.
+func (e *env) linkSSO(user uuid.UUID) {
+	e.exec(`INSERT INTO user_identities (user_id, provider, issuer, subject) VALUES (?, 'openid', 'https://idp.example.com', ?)`, user, user.String())
 }
 
 // enrol gives the user a verified authenticator.
@@ -85,6 +90,12 @@ func TestRequireTwoFactor(t *testing.T) {
 		t.Fatalf("enforced at %v after turning the requirement off", o.TwoFactorEnforcedAt)
 	}
 
+	// An owner with a password and an SSO identity signs in with the password alone, so they must turn it on first too.
+	linked := e.passwordUser()
+	e.linkSSO(linked)
+	e.member(c.ID, linked, RoleOwner)
+	e.fails(e.do(linked, http.MethodPatch, orgPath(c.ID, ""), requirement(true, &week)), http.StatusForbidden, CodeEnableTwoFactorFirst, "")
+
 	// An owner who signs in through SSO cannot enrol here and is exempt, so they may require it of the others.
 	sso := e.ssoUser()
 	e.member(c.ID, sso, RoleOwner)
@@ -114,25 +125,17 @@ func TestTwoFactorRequirementRefusesMembersWithoutIt(t *testing.T) {
 	e.ok(e.do(member, http.MethodGet, workspacePath, nil), http.StatusOK, nil)
 
 	e.enforce(c.ID, -time.Minute)
-	for _, path := range []string{workspacePath, orgPath(c.ID, "/members")} {
+	for _, path := range []string{workspacePath, orgPath(c.ID, "/members"), orgPath(c.ID, "/workspaces")} {
 		rec := e.do(member, http.MethodGet, path, nil)
 		e.fails(rec, http.StatusForbidden, authz.CodeTwoFactorRequired, "")
 		if want := `"organizationId":"` + c.ID.String() + `"`; !strings.Contains(rec.Body.String(), want) {
 			t.Fatalf("%s: %s, want the organization in the details", path, rec.Body.String())
 		}
 	}
-	// Reading the organization is allowed, but the lookup behind its workspace list leaves them out.
-	var workspaces struct {
-		Workspaces []map[string]any `json:"workspaces"`
-	}
-	e.ok(e.do(member, http.MethodGet, orgPath(c.ID, "/workspaces"), nil), http.StatusOK, &workspaces)
-	if len(workspaces.Workspaces) != 0 {
-		t.Fatalf("workspaces %v", workspaces.Workspaces)
-	}
 	// Writes are refused too.
 	e.fails(e.do(member, http.MethodPatch, orgPath(c.ID, ""), map[string]any{"displayTimeZone": "Asia/Tokyo"}), http.StatusForbidden, authz.CodeTwoFactorRequired, "")
 
-	// The organization itself stays readable, so the browser can name it on the guide to enrolment, and its routes lead there.
+	// The organization's page stays readable, so the browser can name it on the guide to enrolment, and its routes lead there.
 	var d Detail
 	e.ok(e.do(member, http.MethodGet, orgPath(c.ID, ""), nil), http.StatusOK, &d)
 	if !d.TwoFactorBlocked || d.TwoFactorStatus != authz.SecondFactorDisabled {
@@ -189,11 +192,13 @@ func TestHomeGuidesARefusedMemberToEnrol(t *testing.T) {
 
 func TestMembersShowTwoFactorToManagers(t *testing.T) {
 	e := newEnv(t)
-	owner, member, sso := e.passwordUser(), e.passwordUser(), e.ssoUser()
+	owner, member, sso, linked := e.passwordUser(), e.passwordUser(), e.ssoUser(), e.passwordUser()
+	e.linkSSO(linked)
 	e.enrol(owner)
 	c := e.organization(owner, "Acme")
-	e.member(c.ID, member, RoleMember)
-	e.member(c.ID, sso, RoleMember)
+	for _, u := range []uuid.UUID{member, sso, linked} {
+		e.member(c.ID, u, RoleMember)
+	}
 
 	var res membersResponse
 	e.ok(e.do(owner, http.MethodGet, orgPath(c.ID, "/members"), nil), http.StatusOK, &res)
@@ -201,7 +206,7 @@ func TestMembersShowTwoFactorToManagers(t *testing.T) {
 	for _, m := range res.Members {
 		got[m.UserID] = m.TwoFactor
 	}
-	if got[owner] != authz.SecondFactorEnabled || got[member] != authz.SecondFactorDisabled || got[sso] != authz.SecondFactorSSO {
+	if got[owner] != authz.SecondFactorEnabled || got[member] != authz.SecondFactorDisabled || got[sso] != authz.SecondFactorSSO || got[linked] != authz.SecondFactorDisabled {
 		t.Fatalf("two-factor statuses %v", got)
 	}
 
@@ -212,5 +217,22 @@ func TestMembersShowTwoFactorToManagers(t *testing.T) {
 		if m.TwoFactor != "" {
 			t.Fatalf("a member sees %+v", m)
 		}
+	}
+}
+
+// A member the requirement refuses may leave the organization rather than turn it on.
+func TestARefusedMemberMayLeave(t *testing.T) {
+	e := newEnv(t)
+	owner, member := e.passwordUser(), e.passwordUser()
+	e.enrol(owner)
+	c := e.organization(owner, "Acme")
+	e.organization(member, "Elsewhere")
+	e.member(c.ID, member, RoleMember)
+	e.enforce(c.ID, -time.Minute)
+
+	e.fails(e.do(member, http.MethodGet, "/api/app/workspaces/"+c.WorkspaceID.String(), nil), http.StatusForbidden, authz.CodeTwoFactorRequired, "")
+	e.ok(e.do(member, http.MethodPost, orgPath(c.ID, "/leave"), nil), http.StatusNoContent, nil)
+	if e.count(`SELECT count(*) FROM memberships WHERE user_id = ? AND organization_id = ?`, member, c.ID) != 0 {
+		t.Fatal("the membership is still there")
 	}
 }

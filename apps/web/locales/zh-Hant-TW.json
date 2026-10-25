@@ -714,7 +714,7 @@
     },
     "security_tip_github": "隨時掌握安全性修正：開啟<githubLink>Forma 在 GitHub 上的安全性公告</githubLink>，選擇 Watch → Custom → Releases 和 Security alerts。",
     "two_factor": {
-      "card_description": "要求所有使用密碼登入的成員啟用雙重驗證。透過SSO登入的成員不受此限制，由其身分提供者決定登入方式。",
+      "card_description": "要求所有可以使用密碼登入的成員（包括同時使用SSO的成員）啟用雙重驗證。沒有密碼、只透過SSO登入的成員不受此限制，由其身分提供者決定登入方式。",
       "card_title": "雙重驗證",
       "column": "雙重驗證",
       "column_description": "雙重驗證",
@@ -747,7 +747,7 @@
       "status_disabled": "未啟用",
       "status_enabled": "已啟用",
       "status_sso": "SSO",
-      "status_sso_hint": "透過SSO登入，第二重驗證由身分提供者負責。",
+      "status_sso_hint": "只透過SSO登入，第二重驗證由身分提供者負責。",
       "stop_button": "取消此要求"
     },
     "workspaces": {

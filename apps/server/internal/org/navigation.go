@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/workspace"
 )
 
@@ -98,7 +97,7 @@ type Navigation struct {
 
 // Navigate is forma2's /organizations/{id} route and the landing layout behind it: members only (anyone else gets a not-found), a member the organization's two-factor requirement refuses goes to enrol, a billing member goes to the billing path, a member who can open no workspace lands on the organization's landing page, and anyone else opens their first workspace. forma2 checked for workspaces before the billing role, so billing members, who can open none, always reached the landing page; here they reach the billing path as intended.
 func (s *Service) Navigate(ctx context.Context, userID, organizationID uuid.UUID) (*Navigation, error) {
-	m, err := s.memberWith(ctx, userID, organizationID, authz.OrganizationRead)
+	m, err := s.memberDespiteSecondFactor(ctx, userID, organizationID)
 	if err != nil {
 		return nil, err
 	}

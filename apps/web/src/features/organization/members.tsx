@@ -1,5 +1,4 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -14,14 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
-import {
-  Dialog,
-  DialogBody,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
+import { Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,10 +43,7 @@ import {
   type Member,
   type OrganizationDetail,
   membersQuery,
-  organizationKeys,
-  organizationsQuery,
   useChangeMemberRole,
-  useLeaveOrganization,
   useRemoveMember,
 } from "../../lib/queries/organizations";
 import {
@@ -66,9 +55,9 @@ import {
   isRoleEditDisabled,
   roleLabel,
 } from "../../lib/roles";
-import { forgetWorkspace } from "../../lib/storage";
 import { toast } from "../../lib/toast";
 import { InviteMemberModal } from "./invite-member-modal";
+import { LeaveOrganizationDialog } from "./leave-organization-dialog";
 import { TwoFactorStatusBadge } from "./two-factor-requirement";
 
 /** A row of the members table: an accepted membership or a pending invite. */
@@ -508,16 +497,11 @@ const OrganizationActions = ({
   emailConfigured: boolean;
 }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const organizations = useQuery({ ...organizationsQuery, enabled: leaveOpen });
-  const leave = useLeaveOrganization(organization.id);
   const link = useInviteLink(organization.id);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const role = organization.membership.role;
-  const isOnlyOrganization = (organizations.data?.length ?? 0) <= 1;
 
   const shareNewInvite = async (inviteId: string) => {
     try {
@@ -526,21 +510,6 @@ const OrganizationActions = ({
     } catch (error) {
       toast.error(errorMessage(t, error));
     }
-  };
-
-  const leaveOrganization = async () => {
-    try {
-      await leave.mutateAsync();
-    } catch (error) {
-      toast.error(errorMessage(t, error));
-      return;
-    }
-    toast.success(t("workspace.settings.general.member_deleted_successfully"));
-    forgetWorkspace();
-    setLeaveOpen(false);
-    queryClient.removeQueries({ queryKey: organizationKeys.detail(organization.id) });
-    await queryClient.invalidateQueries({ queryKey: organizationKeys.all });
-    await navigate({ to: "/" });
   };
 
   return (
@@ -569,31 +538,11 @@ const OrganizationActions = ({
         onCreatedWithoutEmail={(inviteId) => void shareNewInvite(inviteId)}
       />
       <ShareInviteModal url={shareUrl} onClose={() => setShareUrl(null)} />
-      <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
-        <DialogHeader>
-          <DialogTitle>{t("workspace.settings.general.leave_organization_title")}</DialogTitle>
-          <DialogDescription>
-            {t("workspace.settings.general.leave_organization_description")}
-          </DialogDescription>
-        </DialogHeader>
-        {organizations.isSuccess && isOnlyOrganization && (
-          <p className="mt-2 text-sm text-red-700">
-            {t("workspace.settings.general.cannot_leave_only_organization")}
-          </p>
-        )}
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => setLeaveOpen(false)}>
-            {t("common.cancel")}
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => void leaveOrganization()}
-            loading={leave.isPending}
-            disabled={!organizations.isSuccess || isOnlyOrganization}>
-            {t("workspace.settings.general.leave_organization_ok_btn_text")}
-          </Button>
-        </DialogFooter>
-      </Dialog>
+      <LeaveOrganizationDialog
+        organizationId={organization.id}
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+      />
     </>
   );
 };

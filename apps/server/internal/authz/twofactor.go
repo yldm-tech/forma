@@ -12,23 +12,22 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
-// An organization may require two-factor authentication of its members (organizations.two_factor_enforced_at). The requirement is enforced here, at the PostgreSQL tenant boundary, so it holds for every surface a user acts on, the admin API, v3 and MCP through OAuth alike: once the organization's grace period is over, a member who must enrol and has not is refused every decision in the organization except reading the organization itself (its name and the caller's membership, which the guide to enrolment and leaving need), and the lookups leave its workspaces out. API keys are not users and are never refused for it.
+// An organization may require two-factor authentication of its members (organizations.two_factor_enforced_at). The requirement is enforced here, at the PostgreSQL tenant boundary, so it holds for every surface a user acts on, the admin API, v3 and MCP through OAuth alike: once the organization's grace period is over, a member who must enrol and has not is refused every decision in the organization, and the lookups leave its workspaces out. The one exception is CanReadOrganizationDespiteSecondFactor, which only the guide to enrolment (the organization's name and the caller's membership) and leaving the organization use. API keys are not users and are never refused for it.
 
 // A user's two-factor status, as SecondFactorStatusSQL computes it.
 const (
 	// SecondFactorEnabled is a user with a verified authenticator.
 	SecondFactorEnabled = "enabled"
-	// SecondFactorDisabled is a user who signs in with a password and has no verified authenticator: the one a requirement applies to.
+	// SecondFactorDisabled is a user who can sign in with a password and has no verified authenticator: the one a requirement applies to, whether or not the account also has external identities, since the password alone still signs it in.
 	SecondFactorDisabled = "disabled"
-	// SecondFactorSSO is a user who signs in through an external identity provider, or has no password, and so cannot enrol here; a requirement exempts them.
+	// SecondFactorSSO is a user without a password, who can only sign in through an external identity provider and so cannot enrol here; a requirement exempts them.
 	SecondFactorSSO = "sso"
 )
 
-// SecondFactorStatusSQL is a SQL expression for the two-factor status of the user whose id the column userID holds ("u.id"). "Signs in with a password" is the account's email identity (auth's emailIdentity): a credential with a password and no external identity.
+// SecondFactorStatusSQL is a SQL expression for the two-factor status of the user whose id the column userID holds ("u.id"). What counts is what a sign-in can use: an account with a credential password signs in with it alone (auth's checkCredentials), external identities or not, so only an account without one is "sso".
 func SecondFactorStatusSQL(userID string) string {
 	return `(CASE WHEN EXISTS (SELECT 1 FROM user_totp t WHERE t.user_id = ` + userID + ` AND t.verified) THEN '` + SecondFactorEnabled + `'
-		WHEN EXISTS (SELECT 1 FROM user_identities i WHERE i.user_id = ` + userID + ` AND i.provider = 'credential' AND i.password_hash <> '')
-			AND NOT EXISTS (SELECT 1 FROM user_identities i WHERE i.user_id = ` + userID + ` AND i.provider <> 'credential') THEN '` + SecondFactorDisabled + `'
+		WHEN EXISTS (SELECT 1 FROM user_identities i WHERE i.user_id = ` + userID + ` AND i.provider = 'credential' AND i.password_hash <> '') THEN '` + SecondFactorDisabled + `'
 		ELSE '` + SecondFactorSSO + `' END)`
 }
 
@@ -45,9 +44,9 @@ func ErrTwoFactorRequired(organizationID uuid.UUID) *apperr.Error {
 	}
 }
 
-// exemptFromSecondFactor is the one decision a refused member keeps: reading the organization, which shows its name on the guide to enrolment and lets them leave it.
-func exemptFromSecondFactor(action Action, resource Resource) bool {
-	return action == OrganizationRead && resource.Type == ResourceOrganization
+// CanReadOrganizationDespiteSecondFactor is organization.read on the organization with its two-factor requirement set aside: the one decision a member it refuses keeps. Only the organization's own page (its name and the caller's membership, which the guide to enrolment shows), the navigation that sends the member to that guide, and leaving the organization use it. Every other organization.read, the billing summary and AI availability among them, goes through Can and refuses the member like any other decision.
+func (a *Authorizer) CanReadOrganizationDespiteSecondFactor(ctx context.Context, actor Actor, organizationID uuid.UUID) (bool, error) {
+	return a.can(ctx, actor, OrganizationRead, Organization(organizationID), false)
 }
 
 // userAllowed is userActive for a decision in an organization: an existing, active user who, unless secondFactor is false, is not refused by the organization's two-factor requirement.
@@ -100,9 +99,9 @@ func (a *Authorizer) SecondFactorRefusal(ctx context.Context, userID, organizati
 }
 
 // denial is Require's refusal: ErrTwoFactorRequired when the requirement of the resource's organization denied a user, "Not authorized" otherwise.
-func (a *Authorizer) denial(ctx context.Context, actor Actor, action Action, resource Resource) error {
+func (a *Authorizer) denial(ctx context.Context, actor Actor, resource Resource) error {
 	denied := apperr.Forbidden("Not authorized")
-	if actor.Type != ActorUser || exemptFromSecondFactor(action, resource) {
+	if actor.Type != ActorUser {
 		return denied
 	}
 	s, err := resourceScope(ctx, a.db, resource)

@@ -217,6 +217,49 @@ describe("TwoFactorReminder", () => {
     expect(screen.queryByText(t("organizations.two_factor.reminder_title"))).toBeNull();
   });
 
+  test("stays away for the rest of the user's own day, not the UTC one", async () => {
+    const zone = process.env.TZ;
+    process.env.TZ = "Asia/Tokyo";
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const member = organization("member", {
+        twoFactorEnforcedAt: "2026-11-30T00:00:00Z",
+        twoFactorStatus: "disabled",
+      });
+      const renderReminder = async () => {
+        renderInRouter(
+          <>
+            <p>page</p>
+            <TwoFactorReminder organization={member} />
+          </>
+        );
+        await screen.findByText("page");
+      };
+
+      // 08:30 in Tokyo, still the previous day in UTC.
+      vi.setSystemTime(new Date("2026-10-25T23:30:00Z"));
+      expect(new Date().getHours()).toBe(8);
+      await renderReminder();
+      fireEvent.click(screen.getByRole("button", { name: t("common.close") }));
+      cleanup();
+
+      // 09:00 in Tokyo the same day, after midnight UTC.
+      vi.setSystemTime(new Date("2026-10-26T00:00:00Z"));
+      await renderReminder();
+      expect(screen.queryByText(t("organizations.two_factor.reminder_title"))).toBeNull();
+      cleanup();
+
+      // The next morning in Tokyo it is back.
+      vi.setSystemTime(new Date("2026-10-26T23:30:00Z"));
+      await renderReminder();
+      expect(screen.getByText(t("organizations.two_factor.reminder_title"))).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    }
+  });
+
   test("says nothing to members who have it, are exempt, or whose organization does not require it", async () => {
     for (const overrides of [
       { twoFactorEnforcedAt: NEXT_WEEK, twoFactorStatus: "enabled" as const },
@@ -237,8 +280,9 @@ describe("TwoFactorReminder", () => {
 });
 
 describe("TwoFactorRequiredPage", () => {
-  const renderPage = (overrides: Partial<OrganizationDetail>) => {
-    stubServer({
+  const renderPage = (overrides: Partial<OrganizationDetail>, answers: Record<string, unknown> = {}) => {
+    const fetch = stubServer({
+      ...answers,
       "GET /api/app/organizations": {
         organizations: [
           { ...organization("member"), role: "member" },
@@ -256,12 +300,14 @@ describe("TwoFactorRequiredPage", () => {
       emailVerified: true,
       locale: "en-US",
       identityProvider: "email",
+      hasPassword: true,
       twoFactorEnabled: false,
       createdAt: "2026-01-01T00:00:00Z",
       lastLoginAt: null,
     });
     queryClient.setQueryData(organizationKeys.detail(ORG), organization("member", overrides));
     renderInRouter(<TwoFactorRequiredPage organizationId={ORG} />, queryClient);
+    return fetch;
   };
 
   test("a refused member sets it up or opens another organization, but cannot go on", async () => {
@@ -275,6 +321,39 @@ describe("TwoFactorRequiredPage", () => {
     expect(
       await screen.findByText(t("workspace.settings.profile.enable_two_factor_authentication"))
     ).toBeTruthy();
+  });
+
+  test("a refused member may leave the organization instead", async () => {
+    const fetch = renderPage(
+      { twoFactorEnforcedAt: LAST_WEEK, twoFactorStatus: "disabled", twoFactorBlocked: true },
+      { [`POST ${API}/leave`]: {} }
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: t("workspace.settings.general.leave_organization") })
+    );
+    const confirm = await screen.findByRole("button", {
+      name: t("workspace.settings.general.leave_organization_ok_btn_text"),
+    });
+    await waitFor(() => expect((confirm as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(
+        fetch.mock.calls.some(([path, init]) => path === `${API}/leave` && init?.method === "POST")
+      ).toBe(true)
+    );
+  });
+
+  test("an owner, who cannot leave, is not offered it", async () => {
+    renderPage({
+      twoFactorEnforcedAt: LAST_WEEK,
+      twoFactorStatus: "disabled",
+      twoFactorBlocked: true,
+      membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner" },
+    });
+    await screen.findByText(t("organizations.two_factor.page_blocked"));
+    expect(
+      screen.queryByRole("button", { name: t("workspace.settings.general.leave_organization") })
+    ).toBeNull();
   });
 
   test("during the grace period a member may go on for now", async () => {

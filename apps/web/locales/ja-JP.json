@@ -714,7 +714,7 @@
     },
     "security_tip_github": "セキュリティ修正の情報を受け取りましょう：<githubLink>GitHub の Forma セキュリティアドバイザリ</githubLink>を開き、Watch → Custom → Releases と Security alerts を選択してください。",
     "two_factor": {
-      "card_description": "パスワードでサインインするすべてのメンバーに二段階認証を必須にします。SSOでサインインするメンバーは対象外です。サインイン方法はIDプロバイダーが決めます。",
+      "card_description": "パスワードでサインインできるすべてのメンバー（SSOも使うメンバーを含む）に二段階認証を必須にします。パスワードがなくSSOでのみサインインするメンバーは対象外です。サインイン方法はIDプロバイダーが決めます。",
       "card_title": "二段階認証",
       "column": "二段階認証",
       "column_description": "二段階認証",
@@ -747,7 +747,7 @@
       "status_disabled": "無効",
       "status_enabled": "有効",
       "status_sso": "SSO",
-      "status_sso_hint": "SSOでサインインするため、二段階目の認証はIDプロバイダーが担います。",
+      "status_sso_hint": "SSOでのみサインインするため、二段階目の認証はIDプロバイダーが担います。",
       "stop_button": "必須を解除する"
     },
     "workspaces": {

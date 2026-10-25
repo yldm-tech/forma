@@ -224,8 +224,13 @@ func (s *Service) Leave(ctx context.Context, userID, organizationID uuid.UUID) e
 }
 
 func (s *Service) leave(ctx context.Context, userID, organizationID uuid.UUID) (old *Membership, disabled []disable.Key, err error) {
-	if err := s.authz.Require(ctx, authz.User(userID), authz.OrganizationRead, authz.Organization(organizationID)); err != nil {
+	// A member the organization's two-factor requirement refuses may still leave it rather than enrol.
+	allowed, err := s.authz.CanReadOrganizationDespiteSecondFactor(ctx, authz.User(userID), organizationID)
+	if err != nil {
 		return nil, nil, err
+	}
+	if !allowed {
+		return nil, nil, apperr.Forbidden("Not authorized")
 	}
 	if err := s.limiter.Apply(ctx, ratelimit.ActionStateMutation, organizationID.String()); err != nil {
 		return nil, nil, err

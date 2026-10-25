@@ -13,6 +13,8 @@ export interface Me {
   emailVerified: boolean;
   locale: string;
   identityProvider: IdentityProvider;
+  /** Whether the account can sign in with a password, external identities or not: such an account manages its own two-factor authentication. */
+  hasPassword: boolean;
   twoFactorEnabled: boolean;
   createdAt: string;
   lastLoginAt: string | null;

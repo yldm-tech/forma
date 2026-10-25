@@ -38,7 +38,7 @@ import { DeleteAccount } from "./delete-account";
 import { SessionsCard } from "./sessions";
 import { AccountSecurity } from "./two-factor";
 
-/** forma2's profile page: personal information, the password and two-factor authentication for password users, where the user is signed in, the connected MCP clients, and deleting the account. */
+/** forma2's profile page: personal information, the password for password users and two-factor authentication for every user who can sign in with a password, where the user is signed in, the connected MCP clients, and deleting the account. */
 export const ProfilePage = () => {
   const { t } = useTranslation();
   const { data: me } = useSuspenseQuery(meQuery);
@@ -51,17 +51,7 @@ export const ProfilePage = () => {
         description={t("workspace.settings.profile.update_personal_info")}>
         <EditProfileDetailsForm key={`${me.name}|${me.email}|${me.locale}`} user={me} />
       </SettingsCard>
-      {me.identityProvider === "email" && (
-        <SettingsCard
-          width="full"
-          title={t("common.security")}
-          description={t("workspace.settings.profile.security_description")}>
-          <ChangePassword />
-          <div className="pt-6">
-            <AccountSecurity user={me} />
-          </div>
-        </SettingsCard>
-      )}
+      <SecurityCard user={me} />
       <SessionsCard locale={me.locale} />
       <AuthorizedAppsCard locale={me.locale} />
       <SettingsCard
@@ -72,6 +62,24 @@ export const ProfilePage = () => {
       </SettingsCard>
       <IdBadge id={me.id} label={t("common.profile_id")} />
     </PageContentWrapper>
+  );
+};
+
+/** The password and two-factor authentication. Changing the password is for password accounts; two-factor authentication is for every account that can sign in with a password, including one that also has an external identity (SSO recovery keeps a verified account's password), since the password alone still signs it in. An account without a password has neither here. */
+export const SecurityCard = ({ user }: { user: Me }) => {
+  const { t } = useTranslation();
+  const passwordAccount = user.identityProvider === "email";
+  if (!passwordAccount && !user.hasPassword) return null;
+  return (
+    <SettingsCard
+      width="full"
+      title={t("common.security")}
+      description={t("workspace.settings.profile.security_description")}>
+      {passwordAccount && <ChangePassword />}
+      <div className={passwordAccount ? "pt-6" : undefined}>
+        <AccountSecurity user={user} />
+      </div>
+    </SettingsCard>
   );
 };
 

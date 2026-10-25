@@ -19,10 +19,13 @@ func (e *testEnv) passwordUser() uuid.UUID {
 func TestTwoFactorRequirementRefusesOnlyMembersWhoMustEnrol(t *testing.T) {
 	e := newTestEnv(t)
 	org, other := e.org(), e.org()
-	member, enrolled, sso, keyless := e.passwordUser(), e.passwordUser(), e.user(), e.passwordUser()
-	e.exec(`INSERT INTO user_identities (user_id, provider, issuer, subject) VALUES (?, 'saml', 'https://idp.example.com', ?)`, sso, sso.String())
+	member, enrolled, sso, keyless, linked := e.passwordUser(), e.passwordUser(), e.user(), e.passwordUser(), e.passwordUser()
+	// An SSO identity alongside a password (what SSO recovery leaves on a verified account) does not exempt: the password alone still signs in.
+	for _, u := range []uuid.UUID{sso, linked} {
+		e.exec(`INSERT INTO user_identities (user_id, provider, issuer, subject) VALUES (?, 'saml', 'https://idp.example.com', ?)`, u, u.String())
+	}
 	e.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, '\x00', '\x00', true)`, enrolled)
-	for _, u := range []uuid.UUID{member, enrolled, sso} {
+	for _, u := range []uuid.UUID{member, enrolled, sso, linked} {
 		e.member(org, u, "manager")
 	}
 	e.member(other, member, "manager")
@@ -37,7 +40,15 @@ func TestTwoFactorRequirementRefusesOnlyMembersWhoMustEnrol(t *testing.T) {
 
 	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() - interval '1 minute' WHERE id = ?`, org)
 	e.expect(User(member), Workspace(ws), map[Action]bool{WorkspaceRead: false, WorkspaceManage: false})
-	e.expect(User(member), Organization(org), map[Action]bool{OrganizationRead: true, OrganizationManage: false})
+	e.expect(User(linked), Workspace(ws), map[Action]bool{WorkspaceRead: false})
+	// Even reading the organization is refused, so its billing and AI settings stay closed; only the guide to enrolment and leaving set the requirement aside.
+	e.expect(User(member), Organization(org), map[Action]bool{OrganizationRead: false, OrganizationManage: false})
+	if ok, err := e.authorizer.CanReadOrganizationDespiteSecondFactor(e.ctx, User(member), org); err != nil || !ok {
+		t.Fatalf("read despite the requirement = %v, %v", ok, err)
+	}
+	if ok, err := e.authorizer.CanReadOrganizationDespiteSecondFactor(e.ctx, User(keyless), org); err != nil || ok {
+		t.Fatalf("a non-member's read despite the requirement = %v, %v", ok, err)
+	}
 	e.expect(User(member), Workspace(otherWS), map[Action]bool{WorkspaceRead: true})
 	for _, u := range []uuid.UUID{enrolled, sso} {
 		e.expect(User(u), Workspace(ws), map[Action]bool{WorkspaceRead: true})
@@ -49,6 +60,9 @@ func TestTwoFactorRequirementRefusesOnlyMembersWhoMustEnrol(t *testing.T) {
 	var ae *apperr.Error
 	if !errors.As(err, &ae) || ae.Code != CodeTwoFactorRequired || ae.Details["organizationId"] != org.String() {
 		t.Fatalf("Require = %v", err)
+	}
+	if err := e.authorizer.Require(e.ctx, User(member), OrganizationRead, Organization(org)); !errors.As(err, &ae) || ae.Code != CodeTwoFactorRequired {
+		t.Fatalf("Require organization.read = %v", err)
 	}
 	if err := e.authorizer.Require(e.ctx, User(keyless), WorkspaceRead, Workspace(ws)); err == nil || err.Error() != "forbidden: Not authorized" {
 		t.Fatalf("a non-member's Require = %v", err)

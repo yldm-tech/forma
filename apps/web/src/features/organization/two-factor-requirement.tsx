@@ -170,7 +170,11 @@ export const TwoFactorStatusBadge = ({ status }: { status: TwoFactorStatus }) =>
 /** The day a reminder was dismissed, per organization: it stays away for the rest of that day and comes back on the next. */
 const reminderKey = (organizationId: string) => `forma-two-factor-reminder-${organizationId}`;
 
-const today = () => new Date().toISOString().slice(0, 10);
+/** The user's own calendar day, not UTC's: a reminder put away in the morning east of UTC must not come back when the UTC date changes later that day. */
+const today = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
 
 /**
  * The reminder a member gets in the organization's pages during its grace period when they have not turned two-factor authentication on: what is required, by when, and a link to set it up. It can be put away for the day; once the grace period is over the server refuses them and the pages send them to set it up instead.

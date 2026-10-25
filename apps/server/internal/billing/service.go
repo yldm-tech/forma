@@ -61,13 +61,21 @@ func (s *Service) customer(ctx context.Context, organizationID uuid.UUID) (strin
 	return *rec.StripeCustomerID, rec, nil
 }
 
-// member returns the caller's role when they may read the organization, and a not-found otherwise, so an organization's existence never leaks (forma2's getOrganizationAuth).
+// member returns the caller's role when they may read the organization, the two-factor refusal to a member the organization's requirement refuses, and a not-found otherwise, so an organization's existence never leaks (forma2's getOrganizationAuth).
 func (s *Service) member(ctx context.Context, userID, organizationID uuid.UUID) (string, error) {
 	allowed, err := s.authz.Can(ctx, authz.User(userID), authz.OrganizationRead, authz.Organization(organizationID))
 	if err != nil {
 		return "", err
 	}
 	if !allowed {
+		// A member the organization's two-factor requirement refuses is told so, and the browser guides them to enrol; anyone else learns nothing.
+		refusal, err := s.authz.SecondFactorRefusal(ctx, userID, organizationID)
+		if err != nil {
+			return "", err
+		}
+		if refusal != nil {
+			return "", refusal
+		}
 		return "", errNotFound("Organization", organizationID)
 	}
 	role, err := s.engine.repo.role(ctx, userID, organizationID)

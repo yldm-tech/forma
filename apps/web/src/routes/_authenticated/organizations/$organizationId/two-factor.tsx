@@ -4,7 +4,7 @@ import { TwoFactorRequiredPage } from "../../../../features/organization/two-fac
 import { guardPageError } from "../../../../lib/route-guards";
 import { organizationQuery } from "../../../../lib/queries/organizations";
 
-// The guide to the two-factor authentication an organization requires of its members. Reading the organization is the one request its requirement never refuses, so a member it refuses can always reach this page; anyone who is not a member goes to the root page.
+// The guide to the two-factor authentication an organization requires of its members. Reading the organization's page is one of the few requests its requirement never refuses (with its navigation and leaving it), so a member it refuses can always reach this page; anyone who is not a member goes to the root page.
 export const Route = createFileRoute("/_authenticated/organizations/$organizationId/two-factor")({
   loader: async ({ context: { queryClient }, params }) => {
     await queryClient

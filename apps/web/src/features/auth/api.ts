@@ -30,6 +30,7 @@ export interface SessionUser {
   emailVerified: boolean;
   locale: string;
   identityProvider: string;
+  hasPassword: boolean;
   twoFactorEnabled: boolean;
   createdAt: string;
   lastLoginAt: string | null;
