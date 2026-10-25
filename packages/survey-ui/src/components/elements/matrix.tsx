@@ -89,18 +89,32 @@ function useMatrixLayout(contentKey: string): {
   const [stackedFor, setStackedFor] = React.useState<{ contentKey: string; tableWidth: number } | null>(null);
   const layout: MatrixLayout = stackedFor?.contentKey === contentKey ? "stacked" : "table";
   const tableWidth = stackedFor?.tableWidth ?? 0;
+  // The id of the radio that had focus when a resize switched the layout. Switching replaces every radio, which drops focus to the page; both layouts render the same radio ids, so the new one is found by id and focused again.
+  const focusedRadioIdRef = React.useRef<string | null>(null);
+
+  React.useLayoutEffect(() => {
+    const id = focusedRadioIdRef.current;
+    focusedRadioIdRef.current = null;
+    if (!id) return;
+    containerRef.current?.ownerDocument.getElementById(id)?.focus({ preventScroll: true });
+  }, [layout]);
 
   React.useLayoutEffect(() => {
     const element = containerRef.current;
     if (!element) return;
+    const switchLayout = (next: { contentKey: string; tableWidth: number } | null): void => {
+      const active = element.ownerDocument.activeElement;
+      focusedRadioIdRef.current = active && active.id && element.contains(active) ? active.id : null;
+      setStackedFor(next);
+    };
     const update = (): void => {
       if (layout === "table") {
         // A hidden card measures 0 wide and fits; it is measured again when it is shown.
         if (element.scrollWidth - element.clientWidth > 1) {
-          setStackedFor({ contentKey, tableWidth: element.scrollWidth });
+          switchLayout({ contentKey, tableWidth: element.scrollWidth });
         }
       } else if (element.clientWidth >= tableWidth) {
-        setStackedFor(null);
+        switchLayout(null);
       }
     };
     update();
@@ -232,11 +246,11 @@ function Matrix({
                       "relative p-0 text-center align-middle",
                       isLastColumn && "rounded-e-input"
                     )}>
-                    {/* The whole cell is the target: the label is at least 44px square, and its ::before covers the rest of the cell when a long row label makes the row taller. */}
+                    {/* The whole cell is the target: the label is at least 44px tall and 32px wide (the width the 16px dot and p-2 gave before, so the table needs no more room than it did and a scale that fitted a phone still fits), and its ::before covers the rest of the cell when a long row label makes the row taller. */}
                     <label
                       htmlFor={`${rowGroupId}-${column.id}`}
                       className={cn(
-                        "flex min-h-11 w-full min-w-11 items-center justify-center",
+                        "flex min-h-11 w-full min-w-8 items-center justify-center",
                         "before:absolute before:inset-0 before:content-['']",
                         cursorClass
                       )}>

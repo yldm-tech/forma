@@ -133,6 +133,37 @@ describe("Matrix layout", () => {
     expect(layoutOf(container)).toBe("table");
   });
 
+  // Switching layouts replaces every radio, so without this a rotation or a window resize dropped keyboard focus to the page and the next Tab started over at the first row.
+  test("keeps focus on the same radio when the layout switches", () => {
+    size = { clientWidth: 600, scrollWidth: 600 };
+    const { container } = renderMatrix();
+    const radio = screen.getByRole("radio", { name: "Support Satisfied" });
+    const radioId = radio.id;
+    radio.focus();
+
+    resizeCard(313, 378);
+    expect(layoutOf(container)).toBe("stacked");
+    expect(document.activeElement?.id).toBe(radioId);
+    expect(document.activeElement).not.toBe(radio);
+
+    resizeCard(400, 378);
+    expect(layoutOf(container)).toBe("table");
+    expect(document.activeElement?.id).toBe(radioId);
+  });
+
+  test("leaves focus alone when it is outside the matrix as the layout switches", () => {
+    size = { clientWidth: 600, scrollWidth: 600 };
+    const { container } = renderMatrix();
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+
+    resizeCard(313, 378);
+    expect(layoutOf(container)).toBe("stacked");
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
+  });
+
   test("measures the table again when the labels change", () => {
     size = { clientWidth: 313, scrollWidth: 378 };
     const { container, rerender } = renderMatrix();
@@ -153,7 +184,7 @@ describe("Matrix layout", () => {
     expect(layoutOf(container)).toBe("table");
   });
 
-  test("each table cell's whole area is the radio's label, at least 44px", () => {
+  test("each table cell's whole area is the radio's label, 44px tall but no wider than the cell was before", () => {
     size = { clientWidth: 600, scrollWidth: 600 };
     const { container } = renderMatrix();
 
@@ -161,6 +192,9 @@ describe("Matrix layout", () => {
     const label = container.querySelector<HTMLLabelElement>(`label[for="${radio.id}"]`);
     expect(label?.parentElement?.tagName).toBe("TD");
     expect(label?.className).toContain("min-h-11");
+    // The cell's minimum width sets the table's, and with it the card width below which the rows stack. It stays 32px, what the 16px dot plus p-2 gave before, so a five-point scale that fitted a phone as a table still does; a 44px floor stacked it into a list three times as tall.
+    expect(label?.className).toContain("min-w-8");
+    expect(label?.className).not.toContain("min-w-11");
     expect(label?.className).toContain("before:inset-0");
     expect(label?.querySelector("[data-fb-focus-ring]")).not.toBeNull();
   });
