@@ -3,24 +3,33 @@ import { useMemo } from "react";
 import { PreviewSurvey } from "../../../components/ui/preview-survey/index";
 import { workspaceQuery } from "../../../lib/queries/workspaces";
 import { toEditorWorkspace } from "../../survey-editor/api";
-import type { SurveyTemplate } from "../api";
+import { surveyTemplatesInLanguageQuery } from "../api";
 import { templatePreviewSurvey } from "./preview";
 
 /**
- * forma2's template preview: the template rendered by the respondent runtime in preview mode, with the workspace's theme and branding, exactly as the editor's preview shows the draft it creates (a link survey full width, an app survey in a mock web app), with the editor's phone and desktop frames and its restart. Answers go nowhere. Lazy-loaded by the gallery, so the preview's code stays out of the survey list until a template is previewed.
+ * forma2's template preview: the template rendered by the respondent runtime in preview mode, with the workspace's theme and branding, exactly as the editor's preview shows the draft it creates (a link survey full width, an app survey in a mock web app), with the editor's phone and desktop frames and its restart. The template is read from the catalog in the survey's default language, not the dashboard's, because that is the language "Use this template" creates the draft in. Answers go nowhere. Lazy-loaded by the gallery, so the preview's code stays out of the survey list until a template is previewed.
  */
 export const TemplatePreview = ({
   workspaceId,
-  template,
+  templateId,
+  defaultLanguage,
   surveyType,
 }: {
   workspaceId: string;
-  template: SurveyTemplate;
+  templateId: string;
+  /** The default language of the survey the template would create (resolveDefaultSurveyLanguage). */
+  defaultLanguage: string;
   surveyType: "link" | "app";
 }) => {
   const { data: detail } = useSuspenseQuery(workspaceQuery(workspaceId));
+  const { data: catalog } = useSuspenseQuery(surveyTemplatesInLanguageQuery(workspaceId, defaultLanguage));
   const workspace = useMemo(() => toEditorWorkspace(detail), [detail]);
-  const survey = useMemo(() => templatePreviewSurvey(template, surveyType), [template, surveyType]);
+  const template = catalog.templates.find((candidate) => candidate.id === templateId);
+  const survey = useMemo(
+    () => (template ? templatePreviewSurvey(template, surveyType) : null),
+    [template, surveyType]
+  );
+  if (!survey) return null;
   return (
     <PreviewSurvey
       survey={survey}

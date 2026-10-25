@@ -1,7 +1,7 @@
 import type { TSurvey } from "@forma/types/surveys/types";
 import type { SurveyTemplate } from "../api";
 
-/** A catalog template's preset as the server sends it (the Go `survey.Preset`): the survey document the template creates, rendered in the dashboard's language with the workspace's name filled in. */
+/** A catalog template's preset as the server sends it (the Go `survey.Preset`): the survey document the template creates, rendered in the language it was asked in with the workspace's name filled in. */
 export type TemplatePreset = Partial<
   Pick<TSurvey, "name" | "welcomeCard" | "blocks" | "endings" | "hiddenFields" | "variables" | "metadata">
 >;

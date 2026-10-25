@@ -75,6 +75,12 @@ export const TemplateGallery = ({
   const isWideScreen = useIsWideScreen();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
+  // Widening the window hands the preview to the pane, which closes the dialog for good: narrowing it again must not reopen a dialog nobody asked for. Adjusted while rendering, as React recommends for state that follows a prop.
+  const [wasWideScreen, setWasWideScreen] = useState(isWideScreen);
+  if (wasWideScreen !== isWideScreen) {
+    setWasWideScreen(isWideScreen);
+    if (isWideScreen) setIsPreviewDialogOpen(false);
+  }
   // The same query the list reads, so the chosen template follows the catalog into another dashboard language.
   const catalog = useQuery(surveyTemplatesQuery(workspaceId, i18n.language));
   const activeTemplate = catalog.data?.templates.find((template) => template.id === activeId) ?? null;
@@ -163,7 +169,8 @@ export const TemplateGallery = ({
                   <Suspense fallback={<PreviewFallback />}>
                     <TemplatePreview
                       workspaceId={workspaceId}
-                      template={activeTemplate}
+                      templateId={activeTemplate.id}
+                      defaultLanguage={defaultLanguage}
                       surveyType={surveyType}
                     />
                   </Suspense>
@@ -187,7 +194,12 @@ export const TemplateGallery = ({
             aria-label={t("workspace.surveys.templates.template_preview")}
             className="relative h-[65dvh] flex-none overflow-hidden">
             <Suspense fallback={<PreviewFallback />}>
-              <TemplatePreview workspaceId={workspaceId} template={activeTemplate} surveyType={surveyType} />
+              <TemplatePreview
+                workspaceId={workspaceId}
+                templateId={activeTemplate.id}
+                defaultLanguage={defaultLanguage}
+                surveyType={surveyType}
+              />
             </Suspense>
           </DialogBody>
           <DialogFooter>

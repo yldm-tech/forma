@@ -7,14 +7,14 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { SurveyContainerProps } from "@forma/types/forma-surveys";
 import type { i18n as I18n } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../lib/i18n";
 import { type WorkspaceDetail, workspaceQuery } from "../../../lib/queries/workspaces";
-import { type SurveyTemplate, surveyTemplatesQuery } from "../api";
+import { type SurveyTemplate, surveyTemplatesInLanguageQuery, surveyTemplatesQuery } from "../api";
 import { TemplateGallery } from "./template-gallery";
 
 // The gallery previews the chosen template with the respondent runtime: beside the cards on a wide screen, in a dialog from the card's Preview button on a narrower one.
@@ -105,18 +105,38 @@ const stubRuntime = () => {
   return renderSurvey;
 };
 
-const stubScreen = (wide: boolean) =>
+/** Stubs the viewport as wide (from the lg breakpoint) or not; `resize` crosses the breakpoint as a window resize would. */
+const stubScreen = (wide: boolean) => {
+  let isWide = wide;
+  const listeners = new Set<() => void>();
   vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: wide && query === "(min-width: 1024px)",
+    get matches() {
+      return isWide && query === "(min-width: 1024px)";
+    },
     media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
+    addEventListener: (_type: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
   }));
+  return {
+    resize: (nextWide: boolean) =>
+      act(() => {
+        isWide = nextWide;
+        for (const listener of listeners) listener();
+      }),
+  };
+};
 
-const renderGallery = (surveyType: "link" | "app" = "link") => {
+const renderGallery = (
+  surveyType: "link" | "app" = "link",
+  { defaultLanguage = "en-US", templatesInSurveyLanguage = templates } = {}
+) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   queryClient.setQueryData(surveyTemplatesQuery(WS, i18n.language).queryKey, {
     templates,
+    xmTemplateIds: ["nps"],
+  });
+  queryClient.setQueryData(surveyTemplatesInLanguageQuery(WS, defaultLanguage).queryKey, {
+    templates: templatesInSurveyLanguage,
     xmTemplateIds: ["nps"],
   });
   queryClient.setQueryData(workspaceQuery(WS).queryKey, workspace);
@@ -131,7 +151,7 @@ const renderGallery = (surveyType: "link" | "app" = "link") => {
             workspaceId={WS}
             organizationId={ORG}
             surveyType={surveyType}
-            defaultLanguage="en-US"
+            defaultLanguage={defaultLanguage}
             isTemplatePage
           />
         </div>
@@ -225,5 +245,58 @@ describe("TemplateGallery preview", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.close") }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+  test("previews the template in the survey's default language, which the created survey uses, not the dashboard's", async () => {
+    stubScreen(true);
+    const renderSurvey = stubRuntime();
+    const jaBlock = {
+      ...npsBlock,
+      elements: [
+        {
+          ...npsBlock.elements[0],
+          headline: { default: "Mainを友人に勧める可能性はどのくらいありますか？" },
+        },
+      ],
+    };
+    const jaTemplates = templates.map((template): SurveyTemplate =>
+      template.id === "nps"
+        ? {
+            ...template,
+            name: "ネットプロモータースコア (NPS)",
+            preset: { ...template.preset, blocks: [jaBlock] } as SurveyTemplate["preset"],
+          }
+        : template
+    );
+    renderGallery("link", { defaultLanguage: "ja-JP", templatesInSurveyLanguage: jaTemplates });
+
+    // The cards stay in the dashboard's language.
+    await chooseTemplate("Net Promoter Score (NPS)");
+
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(renderedSurvey(renderSurvey)?.survey.blocks).toEqual([jaBlock]);
+  });
+
+  test("a preview dialog closed by widening the window does not reopen when it narrows again", async () => {
+    const screenSize = stubScreen(false);
+    stubRuntime();
+    renderGallery();
+
+    await chooseTemplate("Net Promoter Score (NPS)");
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.preview") }));
+    await screen.findByRole("dialog", { name: "Net Promoter Score (NPS)" });
+
+    // The pane takes the preview over.
+    screenSize.resize(true);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      screen.getByRole("complementary", { name: i18n.t("workspace.surveys.templates.template_preview") })
+    ).toBeTruthy();
+
+    screenSize.resize(false);
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // The card's Preview button still opens it.
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.preview") }));
+    expect(await screen.findByRole("dialog", { name: "Net Promoter Score (NPS)" })).toBeTruthy();
   });
 });

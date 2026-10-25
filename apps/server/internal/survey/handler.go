@@ -353,7 +353,13 @@ func (h *Handler) templates(c *gin.Context) {
 	if !ok {
 		return
 	}
-	templates, err := h.svc.Templates(c.Request.Context(), sessionCaller(c), id)
+	// The gallery's preview asks for the catalog in the language of the survey "Use this template" creates, so the preview shows the draft it makes; the cards ask without one, in the dashboard's language.
+	language, hasLanguage := c.GetQuery("language")
+	if hasLanguage && !IsSurveyDefaultLanguage(language) {
+		httpapi.Fail(c, apperr.BadRequest("Unsupported survey default language"))
+		return
+	}
+	templates, err := h.svc.Templates(c.Request.Context(), sessionCaller(c), id, language)
 	if err != nil {
 		httpapi.Fail(c, err)
 		return
