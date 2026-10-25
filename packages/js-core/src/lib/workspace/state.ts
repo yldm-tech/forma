@@ -53,6 +53,12 @@ export const fetchWorkspaceState = async ({
       delete legacyData.workspace;
     }
 
+    if (rawData.data.truncated) {
+      Logger.getInstance().debug(
+        `${rawData.data.truncated.toString()} old surveys not in state, never shown`
+      );
+    }
+
     return ok(rawData);
   } catch (e: unknown) {
     const errorTyped = e as ApiErrorResponse;

@@ -75,7 +75,9 @@ export const triggerSurvey = async (
       survey.id
     );
     if (!shouldDisplaySurvey) {
-      logger.debug(`Survey display of "${survey.id}" skipped based on displayPercentage.`);
+      logger.debug(
+        `Survey ${survey.id} left out: user outside its ${survey.displayPercentage.toString()}% sample`
+      );
       return; // skip displaying the survey
     }
   }
@@ -97,7 +99,7 @@ export const renderWidget = async (
   const timeoutStack = TimeoutStack.getInstance();
 
   if (isSurveyRunning) {
-    logger.debug("A survey is already running. Skipping.");
+    logger.debug(`Survey ${survey.id} left out: another survey is showing`);
     return;
   }
 
@@ -135,7 +137,7 @@ export const renderWidget = async (
     const displayLanguage = getLanguageCode(survey, language);
     //if survey is not available in selected language, survey wont be shown
     if (!displayLanguage) {
-      logger.debug(`Survey "${survey.id}" is not available in specified language.`);
+      logger.debug(`Survey ${survey.id} left out: no translation for "${language ?? ""}"`);
       setIsSurveyRunning(false);
       return;
     }

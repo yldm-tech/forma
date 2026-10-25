@@ -129,6 +129,8 @@ export interface TWorkspaceState {
     actionClasses: TWorkspaceStateActionClass[];
     settings: TWorkspaceStateSettings;
     recaptchaSiteKey?: string;
+    // How many live app surveys the server left out of `surveys`, the oldest ones, because the workspace has more than the state lists. Absent when none were.
+    truncated?: number;
   };
 }
 

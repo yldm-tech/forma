@@ -1,6 +1,7 @@
 // utils.test.ts
 import { type Mock, afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { SAMPLING_ID_STORAGE_KEY } from "@/lib/common/constants";
+import { Logger } from "@/lib/common/logger";
 import { mockSurveyId } from "@/lib/common/tests/__mocks__/config.mock";
 import {
   checkUrlMatch,
@@ -14,6 +15,7 @@ import {
   getSamplingBucket,
   getSecureRandom,
   getStyling,
+  getSurveyExclusionReason,
   handleUrlFilters,
   isNowExpired,
   normalizeAppUrl,
@@ -1536,5 +1538,123 @@ describe("filterSurveys() — interaction targeting × recontact/display-cap mat
     const userState = buildUser(user);
     const result = filterSurveys(workspace, userState);
     expect(result.some((s) => s.id === SURVEY)).toBe(shown);
+  });
+});
+
+describe("getSurveyExclusionReason() — what debug mode says about a survey left out", () => {
+  const DAY = 1000 * 60 * 60 * 24;
+  const settings = {
+    recontactDays: 7,
+    clickOutsideClose: false,
+    overlay: "none",
+    placement: "bottomRight",
+    inAppSurveyBranding: true,
+    styling: { allowStyleOverwrite: false },
+  } as TWorkspaceStateSettings;
+  const survey = (overrides: Partial<TWorkspaceStateSurvey> = {}): TWorkspaceStateSurvey =>
+    ({
+      id: "checkout",
+      displayOption: "respondMultiple",
+      displayLimit: null,
+      recontactDays: null,
+      languages: [],
+      ...overrides,
+    }) as TWorkspaceStateSurvey;
+  const user = (data: Partial<TUserState["data"]> = {}): TUserState => ({
+    expiresAt: null,
+    data: {
+      userId: null,
+      contactId: null,
+      segments: [],
+      displays: [],
+      responses: [],
+      lastDisplayAt: null,
+      ...data,
+    },
+  });
+  const shownOnce = [{ surveyId: "checkout", createdAt: new Date() }];
+
+  test.each([
+    [
+      "shows only once and was shown",
+      survey({ displayOption: "displayOnce" }),
+      user({ displays: shownOnce }),
+      "shown once already",
+    ],
+    [
+      "shows until answered and was answered",
+      survey({ displayOption: "displayMultiple" }),
+      user({ responses: ["checkout"] }),
+      "already responded",
+    ],
+    [
+      "reached its display limit",
+      survey({ displayOption: "displaySome", displayLimit: 1 }),
+      user({ displays: shownOnce }),
+      "shown 1/1 times",
+    ],
+    [
+      "another survey reset the workspace cooldown",
+      survey(),
+      user({ lastDisplayAt: new Date(Date.now() - 2 * DAY) }),
+      "workspace cooldown 7d, last survey shown 2d ago",
+    ],
+    [
+      "its own cooldown has not passed",
+      survey({ recontactDays: 3 }),
+      user({ lastDisplayAt: new Date() }),
+      "survey cooldown 3d, last survey shown 0d ago",
+    ],
+    [
+      "targets a segment and the visitor is anonymous",
+      survey({ segment: { id: "pro", hasFilters: true } }),
+      user(),
+      "segment needs setUserId()",
+    ],
+    [
+      "the identified user is not in its segment",
+      survey({ segment: { id: "pro", hasFilters: true } }),
+      user({ userId: "u1", segments: ["free"] }),
+      "user not in its segment",
+    ],
+  ])("%s", (_, s, u, reason) => {
+    expect(getSurveyExclusionReason(s, settings, u)).toBe(reason);
+  });
+
+  test("an eligible survey has no reason, an ignore-cooldown one included", () => {
+    expect(getSurveyExclusionReason(survey(), settings, user())).toBeNull();
+    expect(
+      getSurveyExclusionReason(survey({ recontactDays: 0 }), settings, user({ lastDisplayAt: new Date() }))
+    ).toBeNull();
+    expect(
+      getSurveyExclusionReason(
+        survey({ segment: { id: "pro", hasFilters: true } }),
+        settings,
+        user({ userId: "u1", segments: ["pro"] })
+      )
+    ).toBeNull();
+  });
+
+  test("filterSurveys logs every survey it leaves out, with the reason, in debug mode", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const logger = Logger.getInstance();
+    logger.configure({ logLevel: "debug" });
+    try {
+      const workspace = {
+        expiresAt: new Date(),
+        data: { settings, actionClasses: [], surveys: [survey({ id: "pulse", recontactDays: 0 }), survey()] },
+      } as TWorkspaceState;
+
+      const result = filterSurveys(workspace, user({ lastDisplayAt: new Date() }));
+
+      expect(result.map((s) => s.id)).toEqual(["pulse"]);
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(log.mock.calls[0][0]).toContain(
+        "Survey checkout left out: workspace cooldown 7d, last survey shown 0d ago"
+      );
+    } finally {
+      logger.configure({ logLevel: "error" });
+      log.mockRestore();
+    }
   });
 });

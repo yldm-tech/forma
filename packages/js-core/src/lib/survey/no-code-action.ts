@@ -94,7 +94,13 @@ const checkTimeOnPage = (actionClasses: TWorkspaceStateActionClass[]): void => {
         `Time on page timer for "${actionName}" completed after ${timeInSeconds.toString()}s — firing action`
       );
       timeOnPageTimers.set(actionName, { status: "fired", pageKey: currentPageKey });
-      void queue.add(trackNoCodeTimeOnPageActionHandler, CommandType.GeneralAction, true, actionName);
+      void queue.add(
+        `action "${actionName}"`,
+        trackNoCodeTimeOnPageActionHandler,
+        CommandType.GeneralAction,
+        true,
+        actionName
+      );
     }, timeInSeconds * 1000);
     timeOnPageTimers.set(actionName, { status: "running", pageKey: currentPageKey, timerId });
   }
@@ -153,7 +159,13 @@ export const checkPageUrl = async (): Promise<Result<void, unknown>> => {
     const isValidUrl = handleUrlFilters(urlFilters, connector);
 
     if (isValidUrl) {
-      await queue.add(trackNoCodePageViewActionHandler, CommandType.GeneralAction, true, event.name);
+      await queue.add(
+        `action "${event.name}"`,
+        trackNoCodePageViewActionHandler,
+        CommandType.GeneralAction,
+        true,
+        event.name
+      );
     } else {
       const scheduledTimeouts = timeoutStack.getTimeouts();
 
@@ -235,7 +247,13 @@ const checkClickMatch = async (event: MouseEvent): Promise<void> => {
 
   for (const action of noCodeClickActionClasses) {
     if (evaluateNoCodeConfigClick(targetElement, action)) {
-      await queue.add(trackNoCodeClickActionHandler, CommandType.GeneralAction, true, action.name);
+      await queue.add(
+        `action "${action.name}"`,
+        trackNoCodeClickActionHandler,
+        CommandType.GeneralAction,
+        true,
+        action.name
+      );
     }
   }
 };
@@ -278,7 +296,13 @@ const checkExitIntent = async (e: MouseEvent): Promise<void> => {
 
       if (!isValidUrl) continue;
 
-      await queue.add(trackNoCodeExitIntentActionHandler, CommandType.GeneralAction, true, event.name);
+      await queue.add(
+        `action "${event.name}"`,
+        trackNoCodeExitIntentActionHandler,
+        CommandType.GeneralAction,
+        true,
+        event.name
+      );
     }
   }
 };
@@ -336,7 +360,13 @@ const checkScrollDepth = async (): Promise<void> => {
 
       if (!isValidUrl) continue;
 
-      await queue.add(trackNoCodeScrollActionHandler, CommandType.GeneralAction, true, event.name);
+      await queue.add(
+        `action "${event.name}"`,
+        trackNoCodeScrollActionHandler,
+        CommandType.GeneralAction,
+        true,
+        event.name
+      );
     }
   }
 };
