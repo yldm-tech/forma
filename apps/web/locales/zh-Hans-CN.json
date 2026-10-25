@@ -1730,6 +1730,7 @@
       "api_key_security_warning": "出于安全考虑，API 密钥仅在创建后显示一次。",
       "api_key_updated": "API 密钥已更新",
       "api_reference": "API 参考",
+      "check_key_hint": "用这个密钥调用 GET /api/v3/me，即可查看它能访问的范围：返回结果会列出密钥所属的组织和可用的工作区。完整的 API 说明见 /api/v3/openapi.json。",
       "delete_api_key_confirmation": "使用此密钥的任何应用将无法再访问你的 Forma 数据。",
       "disabled_description": "此密钥已于 {date} 停用，且无法重新启用。请为使用它的集成创建新密钥，然后删除此密钥。",
       "disabled_reason_creator_deleted": "创建者已注销账号。",

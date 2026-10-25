@@ -190,10 +190,12 @@ const renderPage = async (node: ReactNode) => {
   await router.load();
 };
 
-test("tells the creator of a key that v3 and MCP can lag, only while that key is listed", async () => {
+test("tells the creator of a key that v3 and MCP can lag, and how to check what it reaches, only while that key is listed", async () => {
   stubKeysServer();
   await renderPage(<ApiKeysPage organization={owner} />);
   const note = i18n.t("workspace.api_keys.v3_propagation_note");
+  const hint = i18n.t("workspace.api_keys.check_key_hint");
+  const command = `curl -H "x-api-key: $FORMA_API_KEY" ${window.location.origin}/api/v3/me`;
   await screen.findByText("Existing");
   expect(screen.queryByText(note)).toBeNull();
 
@@ -209,6 +211,9 @@ test("tells the creator of a key that v3 and MCP can lag, only while that key is
 
   expect((await screen.findByText(note)).getAttribute("role")).toBe("status");
   expect(await screen.findByText("fbk_plaintext")).toBeTruthy();
+  // The command keeps the key in an environment variable, never in the shell history.
+  expect(screen.getByText(hint)).toBeTruthy();
+  expect(screen.getByText(command).tagName).toBe("CODE");
 
   // Deleting the key just created takes the note and the plaintext with it: no listed key is new any more. Until then the label shows twice, in the notice and in the key's row.
   const row = within(screen.getByRole("table")).getByText("CI").closest("tr");
@@ -219,6 +224,7 @@ test("tells the creator of a key that v3 and MCP can lag, only while that key is
   await waitFor(() => expect(screen.queryAllByText("CI")).toEqual([]));
   expect(screen.queryByText("fbk_plaintext")).toBeNull();
   expect(screen.queryByText(note)).toBeNull();
+  expect(screen.queryByText(hint)).toBeNull();
   expect(screen.getByText("Existing")).toBeTruthy();
 });
 

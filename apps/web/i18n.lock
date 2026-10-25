@@ -1654,6 +1654,7 @@ checksums:
     workspace/api_keys/api_key_security_warning: 7c52e973ec6eaaa847beea823b506229
     workspace/api_keys/api_key_updated: 0e03754eb33742b4ee8d5fdad64c9b3f
     workspace/api_keys/api_reference: e7c0bc41e2bcc45582e0ea9879937070
+    workspace/api_keys/check_key_hint: c0463ae21703459876246e572c478a70
     workspace/api_keys/delete_api_key_confirmation: 05a784c03236093df32a902a795ed781
     workspace/api_keys/disabled_description: f77524c6030c1f8f33804c56e30bd7e1
     workspace/api_keys/disabled_reason_creator_deleted: 4ff9247d52d11ed2ef80bc7bfb0dbf1e

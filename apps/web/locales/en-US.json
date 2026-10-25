@@ -1730,6 +1730,7 @@
       "api_key_security_warning": "For security reasons, the API key will only be shown once after creation.",
       "api_key_updated": "API Key updated",
       "api_reference": "API reference",
+      "check_key_hint": "To check what a key can reach, call GET /api/v3/me with it: the answer lists its organization and the workspaces it may use. The whole API is described at /api/v3/openapi.json.",
       "delete_api_key_confirmation": "Any applications using this key will no longer be able to access your Forma data.",
       "disabled_description": "This key stopped working on {date} and can't be turned back on. Create a new key for the integrations that used it, then delete this one.",
       "disabled_reason_creator_deleted": "Its creator deleted their account.",

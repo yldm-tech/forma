@@ -312,9 +312,18 @@ const NewKeyNotice = ({ keys, secrets }: { keys: ApiKey[]; secrets: Record<strin
       <p role="status" className="text-sm text-slate-600">
         {t("workspace.api_keys.v3_propagation_note")}
       </p>
+      <div className="space-y-1">
+        <p className="text-sm text-slate-600">{t("workspace.api_keys.check_key_hint")}</p>
+        <code className="block rounded-md border border-slate-200 bg-white px-3 py-2 font-mono text-xs break-all">
+          {checkKeyCommand(window.location.origin)}
+        </code>
+      </div>
     </div>
   );
 };
+
+/** The command that asks the API which organization and workspaces a key reaches. The key stays in an environment variable, out of the shell history. */
+const checkKeyCommand = (origin: string): string => `curl -H "x-api-key: $FORMA_API_KEY" ${origin}/api/v3/me`;
 
 /** A plaintext key with a copy button. */
 const ApiKeyDisplay = ({ secret }: { secret: string }) => {
