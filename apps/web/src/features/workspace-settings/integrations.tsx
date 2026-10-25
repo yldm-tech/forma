@@ -80,7 +80,7 @@ const IntegrationCard = ({
 
 const logo = (src: string, alt: string) => <img src={src} alt={alt} className="size-8 object-contain" />;
 
-/** forma2's integrations page: the Javascript SDK, webhooks, the four OAuth integrations, and the automation platforms that subscribe webhooks through the v1 API, with how many each has. No platform has a published Forma app yet, so their cards open a guide to connecting one with a webhook instead of linking to an app page that does not exist. Read-only members see the cards but cannot open them, except webhooks and the SDK. */
+/** forma2's integrations page: the Javascript SDK, webhooks, the four OAuth integrations, and the automation platforms that subscribe webhooks through the v1 API, with how many each has. No platform has a published Forma app yet, so their cards open a guide to sending responses to one with a webhook instead of linking to an app page that does not exist. Their status still counts only the webhooks a platform subscribed through the v1 API (their source), not the user webhook the guide creates, which the Webhooks card counts; so the guide does not claim to connect the card. Read-only members see the cards but cannot open them, except webhooks and the SDK. */
 export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) => {
   const { t } = useTranslation();
   const integrations = useQuery(integrationsQuery(workspace.id));

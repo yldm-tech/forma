@@ -231,11 +231,13 @@ describe("integrations page", () => {
     );
     expect(external.map((a) => a.getAttribute("href"))).toEqual([]);
 
+    // The platform's own steps come before Forma's Add Webhook, which tests the URL and refuses one that answers 404: n8n's Production URL does until the workflow is active, and Activepieces' live URL only runs a published flow.
+    const key = (name: string) => `workspace.integrations.automation_guide_${name}`;
     const steps = {
-      Zapier: "workspace.integrations.automation_guide_zapier_step_create",
-      "Make.com": "workspace.integrations.automation_guide_make_step_create",
-      n8n: "workspace.integrations.automation_guide_n8n_step_create",
-      Activepieces: "workspace.integrations.automation_guide_activepieces_step_create",
+      Zapier: ["zapier_step_create", "zapier_step_copy"],
+      "Make.com": ["make_step_create", "make_step_copy"],
+      n8n: ["n8n_step_create", "n8n_step_copy", "n8n_step_activate"],
+      Activepieces: ["activepieces_step_create", "activepieces_step_copy", "activepieces_step_publish"],
     };
     const docs = {
       Zapier: "https://help.zapier.com/",
@@ -243,24 +245,25 @@ describe("integrations page", () => {
       n8n: "https://docs.n8n.io/",
       Activepieces: "https://www.activepieces.com/pieces/webhook",
     };
-    for (const [label, step] of Object.entries(steps)) {
+    for (const [label, platformSteps] of Object.entries(steps)) {
       const platform = card(label);
       expect(platform.queryByRole("link")).toBeNull();
       fireEvent.click(
         platform.getByRole("button", { name: t("workspace.integrations.automation_guide_button") })
       );
 
-      const guide = within(screen.getByRole("dialog"));
+      const dialog = screen.getByRole("dialog");
+      const guide = within(dialog);
       const name = label === "Make.com" ? "Make" : label;
-      expect(
-        guide.getByRole("heading", {
-          name: t("workspace.integrations.automation_guide_title", { platform: name }),
-        })
-      ).toBeTruthy();
+      const title = t("workspace.integrations.automation_guide_title", { platform: name });
+      expect(guide.getByRole("heading", { name: title })).toBeTruthy();
+      // The card keeps counting only webhooks a platform's own app subscribed, so it still reads Not Connected after the guide; the guide must not promise to connect it.
+      expect(title).not.toMatch(/connect/i);
+      // "a n8n", "a Activepieces": the description names the platform without an article.
+      expect(dialog.textContent).not.toMatch(new RegExp(`\\ban? ${name}\\b`));
       const items = guide.getAllByRole("listitem").map((item) => item.textContent);
       expect(items).toEqual([
-        t(step),
-        t(step.replace("_create", "_copy")),
+        ...platformSteps.map((step) => t(key(step))),
         t("workspace.integrations.automation_guide_step_add_webhook"),
         t("workspace.integrations.automation_guide_step_send_sample", { platform: name }),
       ]);

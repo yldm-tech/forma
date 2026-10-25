@@ -1859,19 +1859,21 @@ checksums:
     workspace/integrations/airtable/sync_responses_with_airtable: e83323cb06ecff6e3916eaf04e4123cc
     workspace/integrations/airtable/table_name: 49ca410dc433cbf3cfc046db7fe3d402
     workspace/integrations/airtable_integration_description: cdb9d7798937687ec442c8dd7491687c
-    workspace/integrations/automation_guide_activepieces_step_copy: 7744d3d37ce42e3916a148fe792e3a95
+    workspace/integrations/automation_guide_activepieces_step_copy: a2465f99328f09c6984d4e7305b4837d
     workspace/integrations/automation_guide_activepieces_step_create: c45e92817c6b300c747f2464c8c43a7d
+    workspace/integrations/automation_guide_activepieces_step_publish: 4bdbd75c31387c7921d6332a64fbc378
     workspace/integrations/automation_guide_button: 50fd8fcb7fc48e5138a89f5289b1edff
-    workspace/integrations/automation_guide_description: da0fac4425af93f96d372d33e11f4afc
+    workspace/integrations/automation_guide_description: 9cf1912ce1bd3c1c8879f4fadfe5e75b
     workspace/integrations/automation_guide_docs_link: 968689fdc3bd11891bb0c533173b90cd
     workspace/integrations/automation_guide_make_step_copy: a327ae7b2ed49b065aa0ddff72d06796
     workspace/integrations/automation_guide_make_step_create: 48c7cbe12310513f52e16d4b976b61e5
+    workspace/integrations/automation_guide_n8n_step_activate: 0ce3d1b49d98ce6a5de3bc8afbab78ed
     workspace/integrations/automation_guide_n8n_step_copy: d0ffe38a1bbbaf38d9f4ef355fb9531e
     workspace/integrations/automation_guide_n8n_step_create: 5cf2402141f98cbb45e2acac5faae124
     workspace/integrations/automation_guide_open_webhooks: 1dcb56d84506fff864b8b70fdb70a35e
     workspace/integrations/automation_guide_step_add_webhook: 0816797fb367454eeffc8078ace804b4
     workspace/integrations/automation_guide_step_send_sample: d693b7f6eee80e167d228ed399d5dc3c
-    workspace/integrations/automation_guide_title: 5b4e0882cfb1bfec1c97ad15c787023b
+    workspace/integrations/automation_guide_title: 6059bc7fc1b9b0c280ea6cd73185b382
     workspace/integrations/automation_guide_zapier_step_copy: 69f8edfc3efba29e04946b7ea9e0c405
     workspace/integrations/automation_guide_zapier_step_create: e7e795cf3a7b5bcb7670b366bd2400b5
     workspace/integrations/connected_with_email: eb8fb47349c1927adfb34691888a0efb

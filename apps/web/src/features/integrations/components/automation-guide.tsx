@@ -26,8 +26,8 @@ export const AUTOMATION_PLATFORMS: Record<AutomationPlatform, { name: string; do
   activepieces: { name: "Activepieces", docsUrl: "https://www.activepieces.com/pieces/webhook" },
 };
 
-/** The steps on the platform's side: create its webhook trigger, then copy the URL it listens on. The keys are written out so the catalogue check sees every one. */
-const platformSteps = (t: TFunction, platform: AutomationPlatform): [string, string] => {
+/** The steps on the platform's side, all done before Forma's Add Webhook: create its webhook trigger, copy the URL it listens on, and, where that URL only answers once the workflow is live, make it live. Add Webhook tests the URL and refuses one that answers 404, which n8n's Production URL does until the workflow is active. The keys are written out so the catalogue check sees every one. */
+const platformSteps = (t: TFunction, platform: AutomationPlatform): string[] => {
   switch (platform) {
     case "zapier":
       return [
@@ -43,11 +43,13 @@ const platformSteps = (t: TFunction, platform: AutomationPlatform): [string, str
       return [
         t("workspace.integrations.automation_guide_n8n_step_create"),
         t("workspace.integrations.automation_guide_n8n_step_copy"),
+        t("workspace.integrations.automation_guide_n8n_step_activate"),
       ];
     case "activepieces":
       return [
         t("workspace.integrations.automation_guide_activepieces_step_create"),
         t("workspace.integrations.automation_guide_activepieces_step_copy"),
+        t("workspace.integrations.automation_guide_activepieces_step_publish"),
       ];
   }
 };
