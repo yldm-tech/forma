@@ -22,6 +22,8 @@ type DeliverArgs struct {
 	Event       string    `json:"event"`
 	WorkspaceID uuid.UUID `json:"workspaceId"`
 	SurveyID    uuid.UUID `json:"surveyId"`
+	// ResponseID is the response the event is about. It is not part of the uniqueness, which JobKey already carries; every attempt checks the response still exists, so a response deleted during the retries, or its survey, stops the delivery of its data.
+	ResponseID uuid.UUID `json:"responseId"`
 	// Data is the event's data as the pipeline encoded it, kept as JSON text: River stores job args as jsonb, which would reorder the keys of an embedded object, and the delivered body is frozen byte for byte.
 	Data string `json:"data"`
 }
@@ -38,10 +40,10 @@ func (DeliverArgs) InsertOpts() river.InsertOpts {
 	return river.InsertOpts{MaxAttempts: deliveryAttempts, UniqueOpts: river.UniqueOpts{ByArgs: true}}
 }
 
-// Enqueue queues the delivery of event to each of hooks inside tx. jobKey is the pipeline job's key and data the event's encoded data.
-func Enqueue(ctx context.Context, tx *jobs.Tx, hooks []*Webhook, event, jobKey string, workspaceID, surveyID uuid.UUID, data json.RawMessage) error {
+// Enqueue queues the delivery of event to each of hooks inside tx. jobKey is the pipeline job's key, responseID the response the event is about and data the event's encoded data.
+func Enqueue(ctx context.Context, tx *jobs.Tx, hooks []*Webhook, event, jobKey string, workspaceID, surveyID, responseID uuid.UUID, data json.RawMessage) error {
 	for _, h := range hooks {
-		args := DeliverArgs{WebhookID: h.ID, JobKey: jobKey, Event: event, WorkspaceID: workspaceID, SurveyID: surveyID, Data: string(data)}
+		args := DeliverArgs{WebhookID: h.ID, JobKey: jobKey, Event: event, WorkspaceID: workspaceID, SurveyID: surveyID, ResponseID: responseID, Data: string(data)}
 		if err := tx.Enqueue(ctx, args, nil); err != nil {
 			return fmt.Errorf("queue delivery to webhook %s: %w", h.ID, err)
 		}
@@ -70,11 +72,19 @@ func retryDelay(attempt int) time.Duration {
 	return retrySchedule[min(max(attempt, 1), len(retrySchedule))-1]
 }
 
-// Work delivers the event to the webhook as it is now: its current URL and secret, and only while it still exists and subscribes to the event for the survey, so a webhook deleted or narrowed during the retries stops receiving it.
+// Work delivers the event to the webhook as it is now: its current URL and secret, and only while it still exists and subscribes to the event for the survey, so a webhook deleted or narrowed during the retries stops receiving it. A response deleted during the retries, or its survey, stops it too, so its data is not sent on after an erasure.
 func (w *deliverWorker) Work(ctx context.Context, job *river.Job[DeliverArgs]) error {
 	a := job.Args
 	log := w.log.With("job_id", job.ID, "attempt", job.Attempt, "max_attempts", job.MaxAttempts, "webhook_id", a.WebhookID, "event", a.Event,
 		"workspace_id", a.WorkspaceID, "survey_id", a.SurveyID)
+	exists, err := w.deliverer.repo.responseExists(ctx, a.WorkspaceID, a.SurveyID, a.ResponseID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		log.InfoContext(ctx, "Webhook delivery skipped: the response or its survey was deleted", "response_id", a.ResponseID)
+		return nil
+	}
 	hooks, err := w.deliverer.Matching(ctx, a.WorkspaceID, a.Event, a.SurveyID)
 	if err != nil {
 		return err

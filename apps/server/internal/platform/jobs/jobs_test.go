@@ -282,3 +282,22 @@ func TestDailyJobCatchesUpAMissedSlotOnce(t *testing.T) {
 		t.Fatalf("%d daily jobs after a second start within the slot, want 1", n)
 	}
 }
+
+// A job of a kind this binary has no worker for (one a newer release queued, seen by an older pod during a rolling deploy or after a rollback) is left queued without spending its attempts, for a binary that knows the kind.
+func TestUnknownKindIsLeftQueued(t *testing.T) {
+	cfg := testConfig(pgtest.DSN(t))
+	pool := openPool(t, cfg)
+	unknown := insert(t, pool, recordArgs{Note: "for a newer release"})
+	startWorker(t, cfg, pool, jobs.NewRegistry(discard))
+
+	known := insert(t, pool, jobs.TestLogArgs{Message: "known"})
+	waitFor(t, "the known job to complete", func() bool { return jobState(t, pool, known) == "completed" })
+	var state string
+	var attempt int
+	if err := pool.QueryRow(context.Background(), "SELECT state, attempt FROM river_job WHERE id = $1", unknown).Scan(&state, &attempt); err != nil {
+		t.Fatal(err)
+	}
+	if state != "available" || attempt != 0 {
+		t.Fatalf("unknown kind job is %s after %d attempts, want available after none", state, attempt)
+	}
+}

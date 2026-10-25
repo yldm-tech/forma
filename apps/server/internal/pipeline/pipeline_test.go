@@ -212,8 +212,8 @@ func TestDeliveryFollowsTheWebhook(t *testing.T) {
 	deleted, unsubscribed := newReceiver(t), newReceiver(t)
 	deletedHook := e.webhook(f.ws, deleted.URL, "", "{responseFinished}")
 	unsubscribedHook := e.webhook(f.ws, unsubscribed.URL, "", "{responseFinished}")
-	deleted.failNext(1)
-	unsubscribed.failNext(1)
+	deleted.failOnce()
+	unsubscribed.failOnce()
 	if err := e.work(job(response.EventResponseFinished, f, e.respond(f, true, `{}`), 1)); err != nil {
 		t.Fatal(err)
 	}
@@ -229,6 +229,37 @@ func TestDeliveryFollowsTheWebhook(t *testing.T) {
 	}
 	if len(deleted.received()) != 1 || len(unsubscribed.received()) != 1 {
 		t.Errorf("retried after the webhook changed: %d and %d deliveries", len(deleted.received()), len(unsubscribed.received()))
+	}
+}
+
+// A delivery retried after its response was deleted (an erasure request), or its survey with it, is dropped instead of sending the response data on.
+func TestDeliveryFollowsTheResponse(t *testing.T) {
+	e := newEnv(t, Handoffs{})
+	erased, removed := e.fixture(), e.fixture()
+	erasedRec, removedRec := newReceiver(t), newReceiver(t)
+	erasedHook := e.webhook(erased.ws, erasedRec.URL, "", "{responseFinished}", erased.survey)
+	removedHook := e.webhook(removed.ws, removedRec.URL, "", "{responseFinished}")
+	erasedRec.failOnce()
+	removedRec.failOnce()
+	r := e.respond(erased, true, `{"q1":"a@example.com"}`)
+	if err := e.work(job(response.EventResponseFinished, erased, r, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.work(job(response.EventResponseFinished, removed, e.respond(removed, true, `{}`), 1)); err != nil {
+		t.Fatal(err)
+	}
+	e.deliver()
+	e.exec(`DELETE FROM responses WHERE id = ?`, r.ID)
+	e.exec(`DELETE FROM surveys WHERE id = ?`, removed.survey)
+	e.exec(`UPDATE river_job SET state = 'available', scheduled_at = now() WHERE kind = 'webhook.deliver'`)
+	e.deliver()
+	for name, hook := range map[string]uuid.UUID{"deleted response": erasedHook, "deleted survey": removedHook} {
+		if j := e.deliveryJob(hook); j.State != string(rivertype.JobStateCompleted) {
+			t.Errorf("%s: delivery job = %+v, want completed", name, j)
+		}
+	}
+	if len(erasedRec.received()) != 1 || len(removedRec.received()) != 1 {
+		t.Errorf("retried after the response was deleted: %d and %d deliveries", len(erasedRec.received()), len(removedRec.received()))
 	}
 }
 
@@ -453,7 +484,7 @@ func TestRiverEndToEnd(t *testing.T) {
 	e.exec(`INSERT INTO survey_follow_ups (survey_id, name, trigger, action) VALUES (?, 'Thanks', '{"type":"response","properties":null}', ?::jsonb)`, f.survey,
 		`{"type":"send-email","properties":{"to":"q1","from":"x@example.com","replyTo":["owner@example.com"],"subject":"Thanks","body":"<p>Thanks</p>","attachResponseData":false}}`)
 	rec := newReceiver(t)
-	rec.failNext(1)
+	rec.failOnce()
 	e.webhook(f.ws, rec.URL, webhook.GenerateSecret(), "{responseFinished}")
 	r := e.respond(f, true, `{"q1":"jane@example.com"}`)
 

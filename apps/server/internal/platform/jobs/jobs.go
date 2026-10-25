@@ -130,6 +130,8 @@ func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.L
 		Middleware:                  []rivertype.Middleware{&metricsMiddleware{metrics: defaultJobMetrics()}},
 		CompletedJobRetentionPeriod: completedRetention,
 		DiscardedJobRetentionPeriod: discardedRetention,
+		// A job of a kind this binary has no worker for stays queued for one that has, instead of failing an attempt here: a newer release's jobs seen by an older pod during a rolling deploy or after a rollback would otherwise be discarded within minutes on this client's backoff.
+		FetchOnlyKnownKinds: true,
 		// On shutdown, running jobs get the same grace period as in-flight HTTP requests before their contexts are cancelled.
 		SoftStopTimeout: cfg.ShutdownTimeout,
 	})

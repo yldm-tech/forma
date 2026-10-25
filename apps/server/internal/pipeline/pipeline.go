@@ -174,7 +174,7 @@ func (w *Worker) queueWebhooks(ctx context.Context, ev *Event, hooks []*webhook.
 		return err
 	}
 	return w.jobs.Transaction(ctx, w.db, func(tx *jobs.Tx) error {
-		return webhook.Enqueue(ctx, tx, hooks, ev.Name, ev.JobKey, ev.WorkspaceID, ev.Survey.ID, data)
+		return webhook.Enqueue(ctx, tx, hooks, ev.Name, ev.JobKey, ev.WorkspaceID, ev.Survey.ID, ev.Response.ID, data)
 	})
 }
 

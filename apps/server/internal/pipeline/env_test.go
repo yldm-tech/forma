@@ -225,10 +225,11 @@ func newReceiver(t *testing.T) *receiver {
 	return r
 }
 
-func (r *receiver) failNext(n int) {
+// failOnce makes the next request fail.
+func (r *receiver) failOnce() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.fail = n
+	r.fail = 1
 }
 
 // failWith makes the next n requests answer status.
