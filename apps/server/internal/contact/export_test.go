@@ -2,6 +2,7 @@ package contact
 
 import (
 	"encoding/csv"
+	"maps"
 	"net/http"
 	"regexp"
 	"slices"
@@ -116,25 +117,101 @@ func TestExportContactsAcrossBatches(t *testing.T) {
 	}
 }
 
-// What the export writes imports again: the header names the keys, and the values parse as their types.
+// exportFile is an export as the bytes a browser saves, byte order mark included.
+func exportFile(t *testing.T, e *env, user, ws uuid.UUID) string {
+	t.Helper()
+	rec := e.do(user, http.MethodPost, wsPath(ws, "/contacts/export"), map[string]any{"search": ""})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("export: %d %s", rec.Code, rec.Body.String())
+	}
+	return rec.Body.String()
+}
+
+// What the export writes imports again and gives the contacts the values they had: the header names the keys, the values parse as their types, a defanged text loses its apostrophe, and a key a contact does not have stays unset.
 func TestExportedFileImportsAgain(t *testing.T) {
 	e := newEnv(t)
 	owner := e.user()
 	_, ws := e.organization(owner)
-	ada := e.contact(ws, map[string]string{"email": "ada@example.com", "firstName": "Ada"})
+	ada := e.contact(ws, map[string]string{"email": "ada@example.com", "firstName": "Ada", "phone": "+81 90 1234 5678", "note": "=1+1", "handle": "@ada", "tag": "'-5"})
 	e.setNumber(ws, ada, "balance", -5)
 	e.setDate(ws, ada, "renewal", time.Date(2027, 1, 2, 0, 0, 0, 0, time.UTC))
-	records := exportCSV(t, e, owner, ws, "")
-	var b strings.Builder
-	w := csv.NewWriter(&b)
-	_ = w.WriteAll(records)
+	// Grace has none of Ada's other keys, and an empty text of her own.
+	grace := e.contact(ws, map[string]string{"email": "grace@example.com", "lastName": "Hopper", "nickname": ""})
+	want := map[uuid.UUID]map[string]string{ada: e.values(ada), grace: e.values(grace)}
+	if len(want[grace]) != 3 {
+		t.Fatalf("grace %v", want[grace])
+	}
+	file := exportFile(t, e, owner, ws)
+	if !strings.Contains(file, "'+81 90 1234 5678") || !strings.Contains(file, "'=1+1") {
+		t.Fatalf("the export defangs formula-like texts:\n%s", file)
+	}
+
+	same := func(step string, ids map[string]uuid.UUID) {
+		t.Helper()
+		for email, id := range ids {
+			orig := want[ada]
+			if email == "grace@example.com" {
+				orig = want[grace]
+			}
+			if got := e.values(id); !maps.Equal(got, orig) {
+				t.Fatalf("%s: %s re-imported as %v, want %v", step, email, got, orig)
+			}
+		}
+	}
+	for _, action := range []string{DuplicateUpdate, DuplicateOverwrite} {
+		res := importResult(t, e, owner, ws, file, action, nil)
+		if res.Updated != 2 || res.Created != 0 {
+			t.Fatalf("%s: %+v", action, res)
+		}
+		// Overwrite stores only what the file has, so Grace's empty text, an empty cell like her missing keys, is gone.
+		if action == DuplicateOverwrite {
+			delete(want[grace], "nickname")
+		}
+		same(action, map[string]uuid.UUID{"ada@example.com": ada, "grace@example.com": grace})
+	}
 
 	e.exec(`DELETE FROM contacts WHERE workspace_id = ?`, ws)
-	res := importResult(t, e, owner, ws, b.String(), DuplicateSkip, nil)
-	if len(res.Contacts) != 1 {
-		t.Fatalf("imported %+v", res.Contacts)
+	res := importResult(t, e, owner, ws, file, DuplicateSkip, nil)
+	if res.Created != 2 {
+		t.Fatalf("imported %+v", res)
 	}
-	if got := res.Contacts[0].Attributes; got["email"] != "ada@example.com" || got["firstName"] != "Ada" || got["balance"] != "-5" || got["renewal"] != "2027-01-02T00:00:00.000Z" {
-		t.Fatalf("re-imported values %v", got)
+	ids := map[string]uuid.UUID{}
+	for _, c := range res.Contacts {
+		ids[c.Attributes["email"]] = c.ID
+	}
+	same("new contacts", ids)
+}
+
+// A contact without an email (one the SDK made from a userId) is exported with an empty email cell, and the import, which needs an email on every row, refuses the file.
+func TestExportedFileWithoutEmailIsRefused(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	e.contact(ws, map[string]string{"email": "ada@example.com", "userId": "ada"})
+	e.contact(ws, map[string]string{"userId": "sdk-only"})
+
+	records := exportCSV(t, e, owner, ws, "")
+	email, userID := slices.Index(records[0], "email"), slices.Index(records[0], "userId")
+	byUserID := map[string]string{}
+	for _, r := range records[1:] {
+		byUserID[r[userID]] = r[email]
+	}
+	if len(records) != 3 || byUserID["sdk-only"] != "" || byUserID["ada"] != "ada@example.com" {
+		t.Fatalf("export %v", records)
+	}
+	e.fails(e.upload(owner, ws, exportFile(t, e, owner, ws), DuplicateUpdate, nil), http.StatusBadRequest, CodeInvalidCSVRecords, "Email field is empty for one or more records")
+}
+
+func TestUndefangCell(t *testing.T) {
+	for _, s := range []string{"", "a", "'", "''", "+81 90 1234 5678", "=1+1", "-x", "@ada", "\tx", "\rx", "-5", "+1", "'-5", "'abc", "''=x"} {
+		if got := undefangCell(defangCell(s)); got != s {
+			t.Errorf("undefangCell(defangCell(%q)) = %q", s, got)
+		}
+	}
+	// A user's own file: an apostrophe the export would not have written stays.
+	for _, s := range []string{"'-5", "'abc", "'", "'+1"} {
+		if got := undefangCell(s); got != s {
+			t.Errorf("undefangCell(%q) = %q", s, got)
+		}
 	}
 }

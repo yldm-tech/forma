@@ -21,7 +21,7 @@ const exportBatchSize = 500
 // ContentTypeCSV is the type of the contacts export.
 const ContentTypeCSV = "text/csv;charset=utf-8"
 
-// Export writes the workspace's contacts that a search matches (the contacts list's search; an empty one matches all of them), newest first, to w as CSV, and returns the file's name. The header row is the workspace's attribute keys, oldest first, so the file goes back in through the CSV import; each row is a contact's values as the list shows them, empty where it has none. A value a spreadsheet would read as a formula gets a leading apostrophe, as in the response export; a number (-5) is not one and is written as it is, so it imports again. The contacts are read in batches, newest first by keyset, so nothing is held beyond one batch. Whoever may list the workspace's contacts may export them; the export is audited.
+// Export writes the workspace's contacts that a search matches (the contacts list's search; an empty one matches all of them), newest first, to w as CSV, and returns the file's name. The header row is the workspace's attribute keys, oldest first, so the file goes back in through the CSV import; each row is a contact's values as the list shows them, empty where it has none. A value a spreadsheet would read as a formula gets a leading apostrophe, as in the response export; a number (-5) is not one and is written as it is, so it imports again. The import takes that apostrophe off again (undefangCell) and leaves a key alone where a cell is empty, so a re-imported file gives the contacts the values they had. The import needs an email on every row, though: a file with a contact that has no email (one the SDK created from a userId alone) is refused as a whole, as any file with an empty email cell is. The contacts are read in batches, newest first by keyset, so nothing is held beyond one batch. Whoever may list the workspace's contacts may export them; the export is audited.
 func (s *Service) Export(ctx context.Context, userID, workspaceID uuid.UUID, search string, w io.Writer) (name string, err error) {
 	ev := audit.Event{Action: audit.ActionExported, TargetType: audit.TargetContact}
 	defer func() { s.record(ctx, ev, err) }()
@@ -97,6 +97,17 @@ func defangCell(s string) string {
 	}
 	if _, err := strconv.ParseFloat(s, 64); err != nil {
 		return "'" + s
+	}
+	return s
+}
+
+// undefangCell is the inverse of defangCell, which the CSV import applies to every cell: an apostrophe is taken off where defangCell would have put it, before a text that starts with =, +, -, @, a tab or a carriage return and is not a number. Any other apostrophe ('-5, 'abc) is kept. A value that itself starts with such an apostrophe cannot be told from a defanged one and loses it.
+func undefangCell(s string) string {
+	if len(s) < 2 || s[0] != '\'' {
+		return s
+	}
+	if rest := s[1:]; defangCell(rest) == s {
+		return rest
 	}
 	return s
 }
