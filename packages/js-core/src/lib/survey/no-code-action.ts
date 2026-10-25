@@ -118,13 +118,29 @@ const checkTimeOnPage = (actionClasses: TWorkspaceStateActionClass[]): void => {
   }
 };
 
+// The href the page-view and time-on-page actions were last evaluated for. One navigation reaches checkPageUrl more than once: the patched pushState fires, the integrator calls registerRouteChange() as the docs used to ask, setup() runs its own check next to the snippet's, and frameworks call replaceState with an unchanged URL for scroll restoration or state updates. Each repeat would track the page view again, re-show a survey that was just dismissed and re-roll its sampling, so a check for an unchanged href is a no-op.
+let lastCheckedPageUrl: string | null = null;
+
+/** Forget the last evaluated href, so the next checkPageUrl evaluates the page again. Called when the page URL listeners are removed. */
+export const resetLastCheckedPageUrl = (): void => {
+  lastCheckedPageUrl = null;
+};
+
 export const checkPageUrl = async (): Promise<Result<void, unknown>> => {
   const queue = CommandQueue.getInstance();
   const appConfig = Config.getInstance();
   const logger = Logger.getInstance();
   const timeoutStack = TimeoutStack.getInstance();
 
-  logger.debug(`Checking page url: ${window.location.href}`);
+  const currentUrl = window.location.href;
+  if (currentUrl === lastCheckedPageUrl) {
+    logger.debug(`Page url unchanged, skipping page view check: ${currentUrl}`);
+    return { ok: true, data: undefined };
+  }
+  // Recorded before the first await, so a second check that arrives while this one is still tracking is already deduplicated.
+  lastCheckedPageUrl = currentUrl;
+
+  logger.debug(`Checking page url: ${currentUrl}`);
   const actionClasses = appConfig.get().workspace.data.actionClasses;
 
   const noCodePageViewActionClasses = actionClasses.filter(
@@ -197,6 +213,7 @@ export const removePageUrlEventListeners = (): void => {
     window.removeEventListener(event, checkPageUrlWrapper);
   });
   arePageUrlEventListenersAdded = false;
+  resetLastCheckedPageUrl();
 };
 
 // Click Event Handlers

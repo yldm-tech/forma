@@ -162,10 +162,20 @@ export class UpdateQueue {
                 if (isNewUser) {
                   logger.debug(`User successfully identified: ${effectiveUserId}`);
                 }
-                // Only log success message if there were no warnings (e.g., skipped attributes)
-                if (hasAttributes && !result.data.hasWarnings) {
-                  const attributeKeys = Object.keys(currentUpdates.attributes ?? {}).join(", ");
-                  logger.debug(`Attributes successfully set: ${attributeKeys}`);
+                // Name only the keys that were written: one the server skipped (wrong type, invalid or reserved key, an email or userId another contact already has) is reported by its own message, and listing it here as well would claim it was stored.
+                if (hasAttributes) {
+                  const { skippedAttributeKeys, attributeLimitExceeded } = result.data;
+                  const writtenKeys = Object.keys(currentUpdates.attributes ?? {}).filter(
+                    (key) => !skippedAttributeKeys.has(key)
+                  );
+                  if (writtenKeys.length > 0) {
+                    // At the attribute limit the server creates none of the new keys and does not say which keys were new, so none of these can be claimed as written.
+                    logger.debug(
+                      attributeLimitExceeded
+                        ? `Attributes sent: ${writtenKeys.join(", ")}. New keys among them were not created: attribute limit reached.`
+                        : `Attributes successfully set: ${writtenKeys.join(", ")}`
+                    );
+                  }
                 }
               } else {
                 logger.error(

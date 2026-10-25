@@ -13,7 +13,12 @@ import { onFormaEvent, resetFormaEventSubscribers } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
 import { loadRecaptchaScript } from "@/lib/common/recaptcha";
 import type * as CommonUtils from "@/lib/common/utils";
-import { filterSurveys, getLanguageCode, shouldDisplayBasedOnPercentage } from "@/lib/common/utils";
+import {
+  filterSurveys,
+  getAnonymousSamplingId,
+  getLanguageCode,
+  shouldDisplayBasedOnPercentage,
+} from "@/lib/common/utils";
 import { EmbeddedDataStore } from "@/lib/survey/embedded-data";
 import { mockSurvey } from "@/lib/survey/tests/__mocks__/widget.mock";
 import * as widget from "@/lib/survey/widget";
@@ -72,6 +77,7 @@ vi.mock("@/lib/common/utils", async (importOriginal) => {
     getLanguageCode: vi.fn(),
     getStyling: vi.fn(),
     shouldDisplayBasedOnPercentage: vi.fn(),
+    getAnonymousSamplingId: vi.fn(),
     wrapThrowsAsync: vi.fn(),
   };
 });
@@ -136,8 +142,15 @@ describe("widget-file", () => {
     }).not.toThrow();
   });
 
+  const mockUserConfig = (contactId: string | null): void => {
+    getInstanceConfigMock.mockReturnValue({
+      get: vi.fn().mockReturnValue({ user: { data: { contactId } } }),
+    } as unknown as Config);
+  };
+
   test("triggerSurvey skips if shouldDisplayBasedOnPercentage returns false", async () => {
     getInstanceLoggerMock.mockReturnValue(mockLogger as unknown as Logger);
+    mockUserConfig("contact_1");
     (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(false);
 
     await widget.triggerSurvey(mockSurvey);
@@ -147,8 +160,29 @@ describe("widget-file", () => {
     );
   });
 
+  test("triggerSurvey samples an identified user by contact id", async () => {
+    mockUserConfig("contact_1");
+    (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(false);
+
+    await widget.triggerSurvey({ ...mockSurvey, displayPercentage: 10 });
+
+    expect(shouldDisplayBasedOnPercentage).toHaveBeenCalledWith(10, "contact_1", mockSurvey.id);
+    expect(getAnonymousSamplingId).not.toHaveBeenCalled();
+  });
+
+  test("triggerSurvey samples an anonymous visitor by the id persisted in this browser", async () => {
+    mockUserConfig(null);
+    (getAnonymousSamplingId as Mock).mockReturnValueOnce("anon_1");
+    (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(false);
+
+    await widget.triggerSurvey({ ...mockSurvey, displayPercentage: 10 });
+
+    expect(shouldDisplayBasedOnPercentage).toHaveBeenCalledWith(10, "anon_1", mockSurvey.id);
+  });
+
   test("triggerSurvey short-circuits via renderWidget when a survey is already running", async () => {
     widget.setIsSurveyRunning(true);
+    mockUserConfig("contact_1");
     (shouldDisplayBasedOnPercentage as Mock).mockReturnValueOnce(true);
 
     await widget.triggerSurvey(mockSurvey);
@@ -980,7 +1014,15 @@ describe("widget-file", () => {
       callbacks.onResponseCreated("resp_123");
       callbacks.onFinished("resp_123");
 
-      const base = { workspaceId: null, surveyId: null, responseId: null, finished: null, action: null };
+      const base = {
+        workspaceId: null,
+        surveyId: null,
+        responseId: null,
+        finished: null,
+        action: null,
+        code: null,
+        message: null,
+      };
       expect(window.dataLayer).toEqual([
         { event: "forma_survey_shown", forma: { ...base, surveyId: mockSurvey.id } },
         {
@@ -1088,7 +1130,15 @@ describe("widget-file", () => {
       expect(handler).toHaveBeenCalledTimes(1);
       expect(handler).toHaveBeenCalledWith({ surveyId: mockSurvey.id });
       // The same moment reaches GTM through the dataLayer transport, paired with the render's shown.
-      const base = { workspaceId: null, surveyId: null, responseId: null, finished: null, action: null };
+      const base = {
+        workspaceId: null,
+        surveyId: null,
+        responseId: null,
+        finished: null,
+        action: null,
+        code: null,
+        message: null,
+      };
       expect(window.dataLayer).toEqual([
         { event: "forma_survey_shown", forma: { ...base, surveyId: mockSurvey.id } },
         { event: "forma_survey_closed", forma: { ...base, surveyId: mockSurvey.id } },

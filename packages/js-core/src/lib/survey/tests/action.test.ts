@@ -124,6 +124,8 @@ describe("survey/action.ts", () => {
             responseId: null,
             finished: null,
             action: "aliasedCode",
+            code: null,
+            message: null,
           },
         },
       ]);

@@ -166,6 +166,9 @@ export type TConfigUpdateInput = Omit<TConfig, "status"> & {
 
 export type TAttributes = Record<string, string | number>;
 
+/** What setAttribute() / setAttributes() accept. Dates are sent as ISO 8601 strings, which the server stores as a date attribute. */
+export type TAttributeValue = string | number | Date;
+
 export interface TConfigInput {
   /** @deprecated Use `workspaceId` instead. Still works as a backward-compatible alias. */
   environmentId?: string;
