@@ -189,7 +189,7 @@ func TestIdentifyState(t *testing.T) {
 	}
 }
 
-// Device filters are evaluated for the device the identify comes from, read from its User-Agent: a phone for a mobile one, a desktop for anything else, tablets included. forma2 evaluated every identify as a phone.
+// Device filters are evaluated for the device the identify comes from, read from its User-Agent: a phone for a mobile browser or a native app, a desktop for any other browser, tablets included, and for a missing User-Agent. forma2 evaluated every identify as a phone.
 func TestIdentifySegmentsByDevice(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
@@ -205,6 +205,11 @@ func TestIdentifySegmentsByDevice(t *testing.T) {
 		{"Android phone", "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36", phone},
 		{"iPad counts as a desktop", "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", desktop},
 		{"no User-Agent", "", desktop},
+		{"iOS app on URLSession", "MyApp/1.0 CFNetwork/1568.100.1 Darwin/24.0.0", phone},
+		{"React Native on iOS", "MyApp/1 CFNetwork/1494.0.7 Darwin/23.4.0", phone},
+		{"Android app on OkHttp", "okhttp/4.12.0", phone},
+		{"Android app on HttpURLConnection", "Dalvik/2.1.0 (Linux; U; Android 14; Pixel 8 Build/UQ1A.240205.004)", phone},
+		{"Android tablet app", "Dalvik/2.1.0 (Linux; U; Android 14; SM-X710 Build/UP1A.231005.007)", desktop},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e.clock.nextWindow()

@@ -25,10 +25,15 @@ const (
 	languagesTTL = time.Minute
 )
 
-// segmentDevice is the device a segment's device filter is evaluated for on this identify, read from the request's User-Agent: a phone for a mobile User-Agent, a desktop for anything else. Tablets count as desktops for now, as do consoles, TVs, headsets and a missing or unrecognised User-Agent, since the filter offers only phone and desktop. forma2 always chose phone (its `device ? "phone" : "desktop"` tested an object that is never empty), so a desktop visitor matched phone segments and never desktop ones.
+// segmentDevice is the device a segment's device filter is evaluated for on this identify, read from the request's User-Agent. A recognised device type decides it: a phone for a mobile one, a desktop for any other, so tablets count as desktops for now, as do consoles, TVs and headsets, since the filter offers only phone and desktop. An unrecognised User-Agent is a desktop when it comes from a browser (every browser's starts with "Mozilla/") or is missing, and a phone otherwise: native apps call through their platform's HTTP client, whose User-Agent names no device ("MyApp/1 CFNetwork/1568 Darwin/24.0.0" on iOS, "okhttp/4.12.0" or "Dalvik/2.1.0 (Linux; U; Android 14; ...)" on Android), and the iOS, Android and React Native SDKs run on phones. forma2 always chose phone (its `device ? "phone" : "desktop"` tested an object that is never empty), so a desktop visitor matched phone segments and never desktop ones.
 func segmentDevice(userAgent string) string {
-	if deviceType(userAgent) == "mobile" {
+	switch deviceType(userAgent) {
+	case "mobile":
 		return contact.DevicePhone
+	case "":
+		if userAgent != "" && !strings.HasPrefix(userAgent, "Mozilla/") {
+			return contact.DevicePhone
+		}
 	}
 	return contact.DeviceDesktop
 }
