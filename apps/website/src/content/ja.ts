@@ -255,7 +255,7 @@ export const ja: SiteContent = {
       },
       webhooks: {
         title: "Webhook",
-        body: "回答の作成・更新・完了時に、指定したエンドポイントへ HTTP リクエストを送信します。",
+        body: "回答の作成・更新・完了時に、指定したエンドポイントへ HTTP リクエストを送信します。Webhook ごとに配信の成否と最近の配信履歴を確認でき、どの配信も再送できます。",
       },
       automation: {
         title: "自動化ツール",
