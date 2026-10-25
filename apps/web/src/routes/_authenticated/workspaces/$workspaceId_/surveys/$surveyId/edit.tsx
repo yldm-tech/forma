@@ -21,7 +21,7 @@ import { workspaceQuery } from "../../../../../../lib/queries/workspaces";
 import { guardPageError } from "../../../../../../lib/route-guards";
 
 interface EditorSearch {
-  /** forma2's ?mode=cx: the reduced editor of the CX templates, without settings, languages and follow-ups. */
+  /** forma2's ?mode=cx: the reduced editor of the CX templates, without languages and follow-ups. */
   mode?: "cx";
 }
 

@@ -42,10 +42,14 @@ beforeAll(async () => {
   };
 });
 
+// jsdom has no scrollIntoView; the tests that follow a scroll put a recorder in its place.
+const originalScrollIntoView = Element.prototype.scrollIntoView;
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  Element.prototype.scrollIntoView = originalScrollIntoView;
 });
 
 const survey = (overrides: Partial<TSurvey> = {}): TSurvey =>
@@ -205,34 +209,43 @@ const stubAppSurveyEndpoints = (): SaveRequest[] => {
   return requests;
 };
 
-/** The menu bar inside a router that has the editor and the survey summary it leaves for, opened on the editor with no history behind it, as a new tab or a pasted URL opens it. */
-const renderMenuBar = (persisted: TSurvey) => {
+/** The menu bar inside a router that has the editor and the survey summary it leaves for, opened on the editor with no history behind it, as a new tab or a pasted URL opens it. The editor shows the open tab, and on the Questions tab the cards of the survey's questions, as the editor mounts them. */
+const renderMenuBar = (
+  persisted: TSurvey,
+  { initialTab = "elements" }: { initialTab?: TSurveyEditorTabs } = {}
+) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(surveyEditorKeys.survey(persisted.id), persisted);
 
   const Editor = () => {
     const [localSurvey, setLocalSurvey] = useState(persisted);
-    const [activeId, setActiveId] = useState<TSurveyEditorTabs>("elements");
+    const [activeId, setActiveId] = useState<TSurveyEditorTabs>(initialTab);
     const [, setInvalidElements] = useState<string[] | null>(null);
     const [, setHasTriggerError] = useState(false);
     return (
-      <SurveyMenuBar
-        localSurvey={localSurvey}
-        survey={persisted}
-        setLocalSurvey={setLocalSurvey}
-        activeId={activeId}
-        setActiveId={setActiveId}
-        setInvalidElements={setInvalidElements}
-        setHasTriggerError={setHasTriggerError}
-        workspace={{ id: WORKSPACE_ID, name: "Acme" } as TWorkspace}
-        responseCount={0}
-        finishedResponseCount={0}
-        selectedLanguageCode="default"
-        isCxMode={false}
-        locale="en-US"
-        setIsCautionDialogOpen={() => {}}
-        schedulingTimeZone="Pacific/Auckland"
-      />
+      <>
+        <SurveyMenuBar
+          localSurvey={localSurvey}
+          survey={persisted}
+          setLocalSurvey={setLocalSurvey}
+          activeId={activeId}
+          setActiveId={setActiveId}
+          setInvalidElements={setInvalidElements}
+          setHasTriggerError={setHasTriggerError}
+          workspace={{ id: WORKSPACE_ID, name: "Acme" } as TWorkspace}
+          responseCount={0}
+          finishedResponseCount={0}
+          selectedLanguageCode="default"
+          locale="en-US"
+          setIsCautionDialogOpen={() => {}}
+          schedulingTimeZone="Pacific/Auckland"
+        />
+        <p data-testid="active-tab">{activeId}</p>
+        {activeId === "elements" &&
+          localSurvey.blocks
+            .flatMap((block) => block.elements)
+            .map((element) => <div key={element.id} id={element.id} />)}
+      </>
     );
   };
 
@@ -637,5 +650,128 @@ describe("SurveyMenuBar", () => {
     await waitFor(() =>
       expect(screen.queryByText(i18n.t("common.storage_not_configured")) !== null).toBe(shown)
     );
+  });
+
+  /** Records the ids of the elements scrolled into view; jsdom lays nothing out and has no scrollIntoView. */
+  const recordScrolls = (): string[] => {
+    const scrolled: string[] = [];
+    Element.prototype.scrollIntoView = function scrollIntoView(this: Element) {
+      scrolled.push(this.id);
+    };
+    return scrolled;
+  };
+
+  /** A save the server refuses as invalid, with one issue. */
+  const stubRefusedSave = (issue: Record<string, unknown>) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { code: "validation_error", message: String(issue.message), details: { issues: [issue] } },
+          { status: 400 }
+        )
+      )
+    );
+
+  test("a publish refused for a question, clicked on the Settings tab, opens the Questions tab on that question", async () => {
+    const scrolled = recordScrolls();
+    stubRefusedSave({ path: ["blocks", 0, "elements", 0, "headline"], message: "Question text is too long" });
+    const { router } = renderMenuBar(survey(), { initialTab: "settings" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Publish" }));
+
+    await waitFor(() => expect(screen.getByTestId("active-tab").textContent).toBe("elements"));
+    await waitFor(() => expect(scrolled).toEqual(["q1"]));
+    expect(router.state.location.pathname).toBe(EDITOR_PATH);
+  });
+
+  test("a publish refused for a translation opens the Language tab, where it is fixed", async () => {
+    const scrolled = recordScrolls();
+    stubRefusedSave({
+      path: ["blocks", 0, "elements", 0, "headline"],
+      message: "The question text is missing in-fLang-",
+      params: { invalidLanguageCodes: ["de"] },
+    });
+    renderMenuBar(survey(), { initialTab: "styling" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Publish" }));
+
+    await waitFor(() => expect(screen.getByTestId("active-tab").textContent).toBe("language"));
+    expect(scrolled).toEqual([]);
+  });
+
+  const templateSurvey = () =>
+    survey({
+      blocks: [
+        {
+          id: "blockone0000000000000000",
+          name: "Block 1",
+          elements: [
+            {
+              id: "q1",
+              type: TSurveyElementTypeEnum.OpenText,
+              headline: { default: "How likely are you to recommend My workspace to a friend or colleague?" },
+              subheader: { default: "It helps us improve [ADD FEATURE]." },
+              required: true,
+              inputType: "text",
+              charLimit: { enabled: false },
+            },
+          ],
+        },
+      ],
+    } as Partial<TSurvey>);
+
+  test("Publish of a survey that still carries template text asks first, and Publish anyway publishes it", async () => {
+    const saves = stubSaveEndpoint();
+    const { router } = renderMenuBar(templateSurvey());
+
+    fireEvent.click(await screen.findByRole("button", { name: "Publish" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Template text left in your survey")).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        "Question 1 in block 1 mentions “My workspace”, the default workspace name. Replace it with your product or company name."
+      )
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByText("Question 1 in block 1 still contains the template placeholder [ADD FEATURE].")
+    ).toBeTruthy();
+    expect(saves).toHaveLength(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Publish anyway" }));
+
+    expect(await screen.findByRole("heading", { name: "Survey summary" })).toBeTruthy();
+    expect(router.state.location.search).toEqual({ success: true });
+    expect(saves).toHaveLength(1);
+    expect(saves[0]?.body.status).toBe("inProgress");
+  });
+
+  test("Keep editing on the template text warning publishes nothing and opens the question it names", async () => {
+    const scrolled = recordScrolls();
+    const saves = stubSaveEndpoint();
+    const { router } = renderMenuBar(templateSurvey(), { initialTab: "settings" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Publish" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Keep editing" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByTestId("active-tab").textContent).toBe("elements");
+    await waitFor(() => expect(scrolled).toEqual(["q1"]));
+    expect(saves).toHaveLength(0);
+    expect(router.state.location.pathname).toBe(EDITOR_PATH);
+  });
+
+  test("Save as draft of a survey that still carries template text saves the draft without asking and stays in the editor", async () => {
+    const saves = stubSaveEndpoint();
+    const { router } = renderMenuBar(templateSurvey());
+
+    fireEvent.click(await screen.findByRole("button", { name: "Save as draft" }));
+
+    await waitFor(() => expect(saves).toHaveLength(1));
+    expect(saves[0]?.path).toBe(`/api/app/surveys/${SURVEY_ID}/draft`);
+    expect(saves[0]?.body.status).toBe("draft");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(router.state.location.pathname).toBe(EDITOR_PATH);
   });
 });

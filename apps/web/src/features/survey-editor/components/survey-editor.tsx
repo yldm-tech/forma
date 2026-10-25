@@ -154,7 +154,6 @@ export const SurveyEditor = ({
         responseCount={responseCount}
         finishedResponseCount={finishedResponseCount}
         selectedLanguageCode={selectedLanguageCode}
-        isCxMode={isCxMode}
         locale={locale}
         setIsCautionDialogOpen={setIsCautionDialogOpen}
         schedulingTimeZone={surveySchedulingConfig.timeZone}
