@@ -36,6 +36,8 @@
     "response_saved_offline": "Javobingiz hali yuborilmadi. Internetga ulanganingizdan so'ng avtomatik ravishda yuboriladi.",
     "retry": "Qayta urinib ko'ring",
     "retrying": "Qayta urinilmoqda...",
+    "saving_offline": "Siz oflaynsiz. Javob berishda davom etishingiz mumkin; internetga qayta ulanganingizda javoblaringiz saqlanadi.",
+    "saving_reconnecting": "Ba'zi javoblar hali saqlanmadi. Siz davom etayotganingizda urinishda davom etamiz.",
     "scheduling_calendar": "Rejalashtirish taqvimi",
     "scroll_to_bottom": "Pastga aylantirish",
     "search": "Qidirish...",

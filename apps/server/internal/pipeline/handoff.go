@@ -38,7 +38,7 @@ type WorkflowEnqueuer interface {
 	EnqueueResponseCompleted(ctx context.Context, ev *Event) error
 }
 
-// UsageMeter records billable usage, forma2's Stripe metering: one meter event per created response, which the pipeline reports after a responseCreated event's webhooks, and one per new workflow run that is not a dry run, which the workflow runner reports. It never fails its caller; a failure is logged where it happens. stripeCustomerID is the organization's, nil when it has none.
+// UsageMeter records billable usage, forma2's Stripe metering: one meter event per created response, which the pipeline reports once a responseCreated event's webhook deliveries are queued, and one per new workflow run that is not a dry run, which the workflow runner reports. It never fails its caller; a failure is logged where it happens. stripeCustomerID is the organization's, nil when it has none.
 type UsageMeter interface {
 	ResponseCreated(ctx context.Context, stripeCustomerID *string, responseID uuid.UUID, createdAt time.Time)
 	WorkflowRunCreated(ctx context.Context, stripeCustomerID *string, runID uuid.UUID, createdAt time.Time)

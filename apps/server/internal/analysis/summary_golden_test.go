@@ -65,7 +65,7 @@ func (g *goldenCase) doc(t *testing.T) *surveyDoc {
 	return sv
 }
 
-// TestSummaryMatchesGolden runs the summary over seeded datasets and compares every number, sample and ordering with the expected summary, which the analysis pages show: unexpected rating and NPS values opening NaN buckets, numeric choice labels sorted first, answers in a second language, dismissals, "Other" and "None", matrix answers in either language, ranking with unknown items, CTA impressions, hidden fields, truncated samples and the drop-off table with the welcome card on and off.
+// TestSummaryMatchesGolden runs the summary over seeded datasets and compares every number, sample and ordering with the expected summary, which the analysis pages show: unexpected rating and NPS values opening NaN buckets, an optional NPS whose skips stay out of its score, numeric choice labels sorted first, answers in a second language, dismissals, "Other" and "None", matrix answers in either language (an untranslated row or column read under its default label, as the respondent stored it), ranking with unknown items, CTA impressions, hidden fields, truncated samples and the drop-off table with the welcome card on and off.
 func TestSummaryMatchesGolden(t *testing.T) {
 	files, err := filepath.Glob("testdata/summary/*.json")
 	if err != nil || len(files) == 0 {

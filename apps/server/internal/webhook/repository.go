@@ -88,6 +88,15 @@ func (r *Repository) Matching(ctx context.Context, workspaceID uuid.UUID, event 
 		ORDER BY w.created_at, w.id`, workspaceID, event, surveyID)
 }
 
+// responseExists reports whether responseID is still a response to surveyID, a survey of the workspace: deleting the survey deletes its responses.
+func (r *Repository) responseExists(ctx context.Context, workspaceID, surveyID, responseID uuid.UUID) (bool, error) {
+	var exists bool
+	if err := r.db.WithContext(ctx).Raw(`SELECT EXISTS (SELECT 1 FROM responses r JOIN surveys s ON s.id = r.survey_id WHERE r.id = ? AND s.id = ? AND s.workspace_id = ?)`, responseID, surveyID, workspaceID).Row().Scan(&exists); err != nil {
+		return false, fmt.Errorf("check webhook event response: %w", err)
+	}
+	return exists, nil
+}
+
 // foreignSurveys returns the ids among surveyIDs that are not surveys of the workspace.
 func (r *Repository) foreignSurveys(ctx context.Context, workspaceID uuid.UUID, surveyIDs []uuid.UUID) ([]uuid.UUID, error) {
 	if len(surveyIDs) == 0 {

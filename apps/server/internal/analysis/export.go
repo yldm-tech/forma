@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -226,6 +227,44 @@ func processResponseData(v any) string {
 	return ""
 }
 
+// numberText is the text a number input keeps: a decimal with an optional sign and exponent.
+var numberText = regexp.MustCompile(`^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?$`)
+
+// maxExactDigits is how many significant digits a float64 always holds exactly; a longer number input stays text so no digit is lost.
+const maxExactDigits = 15
+
+// numberInput is a number input's answer as an export cell: the XLSX writes the number it holds, so a spreadsheet computes with it; the CSV writes the text as the respondent typed it, which keeps leading zeros, trailing fractional zeros and exponents for an ID or postal code read by a script.
+type numberInput struct {
+	value float64
+	text  string
+}
+
+// exportAnswer is an element's answer as its export cell: a number as a number, so a spreadsheet computes with rating, NPS, CSAT and CES scores; the text of a number input as a numberInput; anything else as processResponseData's text.
+func exportAnswer(el *element, answer any) any {
+	switch x := answer.(type) {
+	case float64:
+		return x
+	case string:
+		text := strings.TrimSpace(x)
+		if el.Type != surveydoc.ElementOpenText || el.OpenTextInputType() != "number" || !numberText.MatchString(text) {
+			break
+		}
+		mantissa, _, _ := strings.Cut(strings.ToLower(text), "e")
+		if digits := strings.TrimLeft(strings.Map(func(r rune) rune {
+			if r >= '0' && r <= '9' {
+				return r
+			}
+			return -1
+		}, mantissa), "0"); len(digits) > maxExactDigits {
+			break
+		}
+		if n, err := strconv.ParseFloat(text, 64); err == nil && !math.IsInf(n, 0) {
+			return numberInput{value: n, text: x}
+		}
+	}
+	return processResponseData(answer)
+}
+
 // joinJS is Array.prototype.join: null entries as empty strings.
 func joinJS(list []any, sep string) string {
 	parts := make([]string, len(list))
@@ -337,6 +376,8 @@ func (s *Service) exportRow(sv *surveyDoc, cols exportColumns, n int, r *respons
 	if r.Language != nil && *r.Language != "" {
 		language = *r.Language
 	}
+	// Answers are exported under the default-language labels, as the summary counts them, so a column holds one value per choice whatever language each response was given in.
+	lang := sv.languageCode(r.Language)
 	for i, labels := range cols.elements {
 		el := &sv.Elements[i]
 		answer := member(resolved, el.ID)
@@ -348,17 +389,23 @@ func (s *Service) exportRow(sv *surveyDoc, cols exportColumns, n int, r *respons
 			cells, _ := answer.(map[string]any)
 			for j, label := range labels {
 				row[label] = ""
-				if def := el.Rows[j].Label.Default(); def != "" {
-					if v, ok := cells[def]; ok {
-						row[label] = v
-					}
+				value, column, ok := matrixAnswer(el, cells, el.Rows[j], lang)
+				switch {
+				case column != nil && column.Label.Default() != "":
+					row[label] = column.Label.Default()
+				case ok:
+					row[label] = value
 				}
 			}
 		case surveydoc.ElementMultipleChoiceMulti, surveydoc.ElementMultipleChoiceSingle, surveydoc.ElementRanking:
-			row[labels[0]] = processResponseData(answer)
+			shown := answer
+			if lang != "default" {
+				shown = translated(el, answer, lang)
+			}
+			row[labels[0]] = processResponseData(shown)
 			row[labels[1]] = strings.Join(choiceIDs(el, answer, language), ", ")
 		default:
-			row[labels[0]] = processResponseData(answer)
+			row[labels[0]] = exportAnswer(el, answer)
 		}
 	}
 
@@ -395,12 +442,12 @@ func (s *Service) exportRow(sv *surveyDoc, cols exportColumns, n int, r *respons
 // formulaTrigger matches a cell a spreadsheet would evaluate as a formula.
 var formulaTrigger = regexp.MustCompile(`^[=+\-@\t\r]`)
 
-// defang is forma2's sanitizeFormulaInjection: a text cell or header a spreadsheet would read as a formula gets a leading apostrophe. Numbers are left alone.
-func defang(v any) any {
-	if s, ok := v.(string); ok && formulaTrigger.MatchString(s) {
+// defang is forma2's sanitizeFormulaInjection for CSV: a text cell or header a spreadsheet would read as a formula gets a leading apostrophe. The XLSX export keeps the text as given and marks the cell quote-prefixed instead, since an XLSX text cell is never evaluated and a literal apostrophe there would show.
+func defang(s string) string {
+	if formulaTrigger.MatchString(s) {
 		return "'" + s
 	}
-	return v
+	return s
 }
 
 // sheetWriter writes the export's rows.
@@ -409,7 +456,7 @@ type sheetWriter interface {
 	close() error
 }
 
-// csvWriter is forma2's convertToCsv (json2csv's defaults: every header and text quoted, numbers and booleans bare, an undefined or null cell empty, rows joined by "\n") behind the byte order mark the download added.
+// csvWriter is forma2's convertToCsv (json2csv's defaults: every header and text quoted, numbers and booleans bare, an undefined or null cell empty, rows joined by "\n") behind the byte order mark the download added. Text is defanged as it is written; a number input is written as the text typed, not the number it holds.
 type csvWriter struct {
 	w    *bufio.Writer
 	rows int
@@ -435,9 +482,11 @@ func (c *csvWriter) row(cells []any) error {
 		switch x := v.(type) {
 		case nil:
 		case string:
-			_, _ = c.w.WriteString(csvQuote(x))
+			_, _ = c.w.WriteString(csvQuote(defang(x)))
 		case float64:
 			_, _ = c.w.WriteString(jsvalue.FormatNumber(x))
+		case numberInput:
+			_, _ = c.w.WriteString(csvQuote(defang(x.text)))
 		case bool:
 			_, _ = c.w.WriteString(strconv.FormatBool(x))
 		default:
@@ -453,21 +502,40 @@ func (c *csvWriter) row(cells []any) error {
 
 func (c *csvWriter) close() error { return c.w.Flush() }
 
-// xlsxWriter is forma2's convertToXlsxBuffer: one sheet, "Sheet1", a number cell for a number, a text cell for text, no cell for an undefined or null value.
+// xlsxWriter is forma2's convertToXlsxBuffer: one sheet, "Sheet1", a number cell for a number, a text cell for text, no cell for an undefined or null value. Text a spreadsheet would read as a formula is written as given, in a quote-prefixed cell.
 type xlsxWriter struct {
-	f   *excelize.File
-	sw  *excelize.StreamWriter
-	out io.Writer
-	n   int
+	f      *excelize.File
+	sw     *excelize.StreamWriter
+	out    io.Writer
+	n      int
+	quoted int
 }
 
 func newXLSXWriter(w io.Writer) (*xlsxWriter, error) {
 	f := excelize.NewFile()
+	quoted, err := quotePrefixStyle(f)
+	if err != nil {
+		return nil, err
+	}
 	sw, err := f.NewStreamWriter("Sheet1")
 	if err != nil {
 		return nil, fmt.Errorf("start xlsx sheet: %w", err)
 	}
-	return &xlsxWriter{f: f, sw: sw, out: w}, nil
+	return &xlsxWriter{f: f, sw: sw, out: w, quoted: quoted}, nil
+}
+
+// quotePrefixStyle adds the style of a text cell that starts like a formula: the text number format with Excel's quote prefix, the hidden apostrophe that keeps the cell text when it is edited and is not part of its value. excelize's Style has no quote prefix, so it is set on the cell format NewStyle added.
+func quotePrefixStyle(f *excelize.File) (int, error) {
+	id, err := f.NewStyle(&excelize.Style{NumFmt: 49})
+	if err != nil {
+		return 0, fmt.Errorf("add xlsx text style: %w", err)
+	}
+	if id == 0 || f.Styles == nil || f.Styles.CellXfs == nil || id >= len(f.Styles.CellXfs.Xf) {
+		return 0, fmt.Errorf("add xlsx text style: no cell format of its own (%d)", id)
+	}
+	quotePrefix := true
+	f.Styles.CellXfs.Xf[id].QuotePrefix = &quotePrefix
+	return id, nil
 }
 
 func (x *xlsxWriter) row(cells []any) error {
@@ -475,8 +543,15 @@ func (x *xlsxWriter) row(cells []any) error {
 	values := make([]any, len(cells))
 	for i, v := range cells {
 		switch c := v.(type) {
-		case nil, string, float64, bool:
+		case string:
 			values[i] = c
+			if formulaTrigger.MatchString(c) {
+				values[i] = excelize.Cell{StyleID: x.quoted, Value: c}
+			}
+		case nil, float64, bool:
+			values[i] = c
+		case numberInput:
+			values[i] = c.value
 		default:
 			b, err := json.Marshal(c)
 			if err != nil {
@@ -549,7 +624,7 @@ func (s *Service) Export(ctx context.Context, userID, surveyID uuid.UUID, format
 		}
 		cells := make([]any, len(headers))
 		for i, h := range headers {
-			cells[i] = defang(h)
+			cells[i] = h
 		}
 		if err := out.row(cells); err != nil {
 			return err
@@ -568,7 +643,7 @@ func (s *Service) Export(ctx context.Context, userID, surveyID uuid.UUID, format
 					return err
 				}
 				for j, h := range headers {
-					cells[j] = defang(row[h])
+					cells[j] = row[h]
 				}
 				if err := out.row(cells); err != nil {
 					return err

@@ -399,6 +399,20 @@ describe("the survey", () => {
     expect(document.head.querySelector('script[data-from="workspace"]')).toBeNull();
   });
 
+  // The page re-renders on every card (its title follows the card). Rendering the survey again on each of those handed the runtime fresh callbacks, which replaced its response queue and lost the answers waiting in the old one (R-01).
+  test("does not render the survey again when the page re-renders for a new card", async () => {
+    globalThis.history.replaceState({}, "", "/s/survey-1?CAMPAIGN=spring");
+    renderPage({ view: "survey", locale: "en-US", survey: surveyProps() });
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    const renders = renderSurvey.mock.calls.length;
+
+    act(() => lastRender().onPageChange?.({ index: 1, total: 3, label: "Question 1 of 3" }));
+    act(() => lastRender().onPageChange?.({ index: 2, total: 3, label: "Question 2 of 3" }));
+    expect(document.title).toBe("Feedback | Forma — Question 2 of 3");
+
+    expect(renderSurvey).toHaveBeenCalledTimes(renders);
+  });
+
   test("titles the document with the card the respondent is on, and follows the survey's language", async () => {
     renderPage({
       view: "survey",
