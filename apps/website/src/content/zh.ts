@@ -12,6 +12,7 @@ export const zh: SiteContent = {
       inAppSurveys: "应用内问卷",
       integrations: "集成",
       developers: "开发者",
+      sdk: "SDK 参考",
       selfHosting: "私有化部署",
       github: "GitHub",
       openMenu: "打开菜单",
@@ -266,7 +267,8 @@ export const zh: SiteContent = {
       sub: "一段 script 标签负责产品内问卷，其余一切交给 REST API。",
       snippet: {
         title: "JavaScript 代码片段",
-        body: "从你的 Forma 实例加载 `/js/forma.umd.cjs`，并在页面上渲染问卷。",
+        body: "从你的 Forma 实例加载 `/js/forma.umd.js`，并在页面上渲染问卷。加载完成前的调用会先排队。",
+        link: "SDK 参考 →",
       },
       api: {
         title: "REST API v3",
@@ -324,6 +326,99 @@ export const zh: SiteContent = {
             {
               term: "API 密钥",
               body: "不支持 OAuth 的客户端可以像调用 REST API 一样，在请求头中发送 API 密钥。只读密钥可以查看；有写入或管理权限的密钥还可以创建和编辑。",
+            },
+          ],
+        },
+      },
+    },
+    sdk: {
+      meta: {
+        title: "Forma JavaScript SDK 参考",
+        description: "用一个 script 标签安装 Forma SDK，识别用户、设置属性、追踪操作、监听事件并调试集成。",
+      },
+      title: "JavaScript SDK 参考",
+      sub: "一个 script 标签即可展示网站问卷和应用内问卷，其余操作都是对 `window.forma` 的调用。",
+      install: {
+        title: "安装",
+        body: "在 Forma 的“集成 → Web 和移动 SDK”中复制代码片段（已填好你的工作区 ID 和实例 URL），粘贴到每个页面的 `<head>` 中。使用 Google Tag Manager 时，将其粘贴到触发条件为“所有页面”的自定义 HTML 代码中。",
+        frameworks:
+          "React 和 Vue：粘贴到 `index.html`。Next.js：在根布局中用 `next/script` 渲染同一段 JavaScript，无需路由 hook。SDK 尚未发布到 npm，移动端 SDK 和 WordPress 插件也暂未提供。",
+        queue:
+          "脚本加载完成前，`window.forma` 是一个占位对象：调用会先进入队列而不会报错，SDK 加载并完成初始化后按顺序执行。排队中的调用没有返回值，请不要 await。使用 TypeScript 时，声明一次全局变量：`interface Window { forma: { [method: string]: (...args: unknown[]) => unknown } }`。",
+      },
+      reference: {
+        title: "方法",
+        lead: "所有方法都通过 `window.forma` 调用。代码片段会替你调用 `setup({ workspaceId, appUrl })`；只有不使用代码片段、直接加载 `/js/forma.umd.js` 时才需要自己调用，并且要最先调用。",
+        identify: {
+          title: "识别用户",
+          facts: [
+            {
+              term: "setUserId(userId)",
+              body: "将访客识别为该 ID 对应的联系人（首次使用时创建），使分群定向和“只显示一次”规则按人生效。ID 最长 255 个字符；设置不同的 ID 时会先清除上一位用户的状态。",
+            },
+            {
+              term: "setAttributes(attributes)、setAttribute(key, value)",
+              body: "设置用于分群的联系人属性，需先调用 `setUserId`。字符串、数字或 `Date` 决定新属性的类型；之后的值必须是同一类型，否则服务端不会保存。",
+            },
+            {
+              term: "setLanguage(language)",
+              body: "以该语言展示问卷：语言代码（如 `de`）或你配置的别名。匿名访客同样适用。",
+            },
+            {
+              term: "logout()",
+              body: "在当前浏览器中忘记该用户。请在用户退出登录时调用，避免同一设备上的下一个人被当作上一个人。",
+            },
+          ],
+        },
+        actions: {
+          title: "操作与单页应用",
+          facts: [
+            {
+              term: "track(code, { hiddenFields })",
+              body: "触发该键对应的代码操作（在 Forma 的“操作”中设置），可能会弹出问卷。`hiddenFields` 用于填充问卷的隐藏字段并随回答保存；该参数已弃用，将在后续版本中移除。",
+            },
+            {
+              term: "页面浏览与路由",
+              body: "SDK 会修补 `history.pushState` 和 `replaceState`，并监听 `popstate` 和 `hashchange`，因此客户端导航本身就算一次页面浏览。对于两者都不使用的路由，可调用 `registerRouteChange()` 手动重新检查 URL。",
+            },
+            {
+              term: "setEmbeddedData(data)、clearEmbeddedData(key?)",
+              body: "为之后的回答附加数据而不触发任何操作；`{ key: null }` 会删除该键，只有问卷声明为接收的嵌入数据字段会被保留。同步执行，不发送网络请求。",
+            },
+          ],
+        },
+        events: {
+          title: "事件",
+          body: "`on(event, handler)` 返回一个取消订阅的函数，`off(event, handler)` 作用相同。同样的事件也会以 `forma` 键推送到 `window.dataLayer`，供 Google Tag Manager 使用。事件数据只包含 ID，不包含回答内容。",
+          facts: [
+            { term: "forma_setup_successful", body: "`{ workspaceId }`：初始化完成，SDK 已就绪。" },
+            {
+              term: "forma_setup_failed",
+              body: "`{ workspaceId, code, message }`：初始化未完成。`code` 为 `missing_field`、`invalid_config`、`network_error` 或 `error_state`。",
+            },
+            { term: "forma_action_tracked", body: "`{ action }`：通过 `track()` 或在页面上追踪到一次操作。" },
+            { term: "forma_survey_shown", body: "`{ surveyId }`：问卷已显示在屏幕上。" },
+            {
+              term: "forma_response_submitted",
+              body: "`{ surveyId, responseId, finished }`：第一次作答时（`finished: false`）触发，完成的回答保存后再次触发。",
+            },
+            { term: "forma_survey_closed", body: "`{ surveyId }`：问卷被关闭或已完成。" },
+          ],
+        },
+        debugging: {
+          title: "调试与安全",
+          facts: [
+            {
+              term: "?formaDebug=true",
+              body: "加到页面 URL 上后，SDK 会在控制台以 `🧱 Forma` 前缀记录每一步，重新获取工作区状态而不使用缓存，并忽略已保存的错误状态。",
+            },
+            {
+              term: "setNonce(nonce)",
+              body: "若样式使用基于 nonce 的内容安全策略，请在问卷渲染前传入 nonce（不含 `nonce-`）。并在 `script-src` 和 `connect-src` 中允许你的 Forma 实例。",
+            },
+            {
+              term: "缓存",
+              body: "工作区状态有缓存，因此问卷和操作的修改可能需要几分钟才会到达已加载 SDK 的页面。调试模式会跳过缓存。",
             },
           ],
         },

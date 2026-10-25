@@ -25,6 +25,7 @@ export const PAGES = [
   "inAppSurvey",
   "integrations",
   "developers",
+  "sdk",
   "selfHosting",
   "security",
 ] as const;
@@ -38,6 +39,7 @@ export const PAGE_SLUG: Record<PageId, string> = {
   inAppSurvey: "in-app-survey/",
   integrations: "integrations/",
   developers: "developers/",
+  sdk: "developers/sdk/",
   selfHosting: "self-hosting/",
   security: "security/",
 };
@@ -169,12 +171,33 @@ export const SELF_HOSTING_SOURCES = {
 export const primaryCtaHref = (locale: Locale): string =>
   SIGNUP_OPEN ? appSignupHref(locale) : pagePath(locale, "selfHosting");
 
-// The HTML snippet that loads the SDK from a Forma instance (/js/forma.umd.cjs) and sets it up once the script has loaded.
+// The HTML snippet that loads the SDK from a Forma instance (/js/forma.umd.js) and sets it up once the script has loaded. It is the app's install snippet (apps/web/src/lib/sdk-snippets.ts) with placeholders: until the script arrives, window.forma is a stub that queues calls and replays them after setup.
 export const JS_SNIPPET = `<!-- START Forma Surveys -->
 <script type="text/javascript">
 !function(){
     var appUrl = "https://forma.yldm.ai"; // use PUBLIC_URL if you are using multi-domain setup, otherwise use WEBAPP_URL
     var workspaceId = "<your-workspace-id>";
-var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/forma.umd.cjs";t.onload=function(){window.forma.setup({workspaceId: workspaceId, appUrl: appUrl})};var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e)}();
+    var f=window.forma=window.forma||{};if(f.setup||f.q)return;f.q=[];
+    "setUserId setEmail setAttribute setAttributes setLanguage track logout registerRouteChange setNonce setEmbeddedData clearEmbeddedData on off".split(" ").forEach(function(m){f[m]=function(){f.q.push([m,arguments])}});
+    var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=appUrl+"/js/forma.umd.js";
+    t.onload=function(){var s=window.forma,i=/^(on|off|setNonce|setEmbeddedData|clearEmbeddedData)$/,r=function(p){f.q.forEach(function(c){if(i.test(c[0])===p)s[c[0]].apply(s,c[1])})};r(!0);s.setup({workspaceId: workspaceId, appUrl: appUrl});r(!1)};
+    var e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(t,e)}();
 </script>
 <!-- END Forma Surveys -->`;
+
+/** The SDK reference page's example of identifying a user and tracking an action. */
+export const SDK_IDENTIFY_SNIPPET = `// After sign-in
+window.forma.setUserId("user-123");
+window.forma.setAttributes({ plan: "pro", seats: 30 });
+window.forma.setLanguage("de");
+
+// When something worth a survey happens
+window.forma.track("upgrade_clicked");
+
+// On sign-out
+window.forma.logout();`;
+
+/** The SDK reference page's example of subscribing to an SDK event. */
+export const SDK_EVENTS_SNIPPET = `window.forma.on("forma_response_submitted", ({ surveyId, finished }) => {
+  if (finished) analytics.track("Survey completed", { surveyId });
+});`;

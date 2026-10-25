@@ -18,6 +18,8 @@ import {
   NATIVE_INTEGRATIONS,
   GITHUB_URL,
   JS_SNIPPET,
+  SDK_EVENTS_SNIPPET,
+  SDK_IDENTIFY_SNIPPET,
   SELF_HOSTING_SOURCES,
   SECURITY_EMAIL,
   SECURITY_POLICY_URL,
@@ -108,8 +110,11 @@ export const DevelopersPage = () => {
         title={page.snippet.title}
         body={page.snippet.body}
         visual={<CodeBlock code={JS_SNIPPET} label="HTML" />}
-        muted
-      />
+        muted>
+        <SmartLink href={pagePath(locale, "sdk")} className="link">
+          {page.snippet.link}
+        </SmartLink>
+      </SplitSection>
       <section className="section-pad">
         <div className="container-site grid gap-6 lg:grid-cols-3">
           <FeatureCard
@@ -159,6 +164,91 @@ export const DevelopersPage = () => {
               </h3>
               <ReferenceFacts facts={reference.mcp.facts} />
             </div>
+          </div>
+        </div>
+      </section>
+      <CtaBand />
+    </>
+  );
+};
+
+/** One card of the SDK reference: a group of methods, and optionally an example below them. */
+const ReferenceCard = ({
+  id,
+  title,
+  body,
+  facts,
+  example,
+}: {
+  id: string;
+  title: string;
+  body?: string;
+  facts: readonly { term: string; body: string }[];
+  example?: string;
+}) => (
+  <div data-reveal className="card min-w-0 p-6 lg:p-8">
+    <h3 id={id} className="text-h3">
+      {title}
+    </h3>
+    {body ? (
+      <p className="text-ink-700 mt-4">
+        <Rich text={body} />
+      </p>
+    ) : null}
+    <ReferenceFacts facts={facts} />
+    {example ? (
+      <div className="mt-6">
+        <CodeBlock code={example} label="JavaScript" />
+      </div>
+    ) : null}
+  </div>
+);
+
+export const SdkPage = () => {
+  const { content } = useSite();
+  const page = content.pages.sdk;
+  const reference = page.reference;
+  return (
+    <>
+      <PageHero title={page.title} sub={page.sub} />
+      <SplitSection
+        id="install"
+        title={page.install.title}
+        body={page.install.body}
+        visual={<CodeBlock code={JS_SNIPPET} label="HTML" />}
+        muted>
+        <div className="text-ink-700 flex flex-col gap-4">
+          <p>
+            <Rich text={page.install.frameworks} />
+          </p>
+          <p className="[overflow-wrap:anywhere]">
+            <Rich text={page.install.queue} />
+          </p>
+        </div>
+      </SplitSection>
+      <section aria-labelledby="methods" className="section-pad">
+        <div className="container-site">
+          <SectionHeading id="methods" title={reference.title} lead={reference.lead} />
+          <div className="mt-10 grid items-start gap-6 lg:grid-cols-2">
+            <ReferenceCard
+              id="identify"
+              title={reference.identify.title}
+              facts={reference.identify.facts}
+              example={SDK_IDENTIFY_SNIPPET}
+            />
+            <ReferenceCard id="actions" title={reference.actions.title} facts={reference.actions.facts} />
+            <ReferenceCard
+              id="events"
+              title={reference.events.title}
+              body={reference.events.body}
+              facts={reference.events.facts}
+              example={SDK_EVENTS_SNIPPET}
+            />
+            <ReferenceCard
+              id="debugging"
+              title={reference.debugging.title}
+              facts={reference.debugging.facts}
+            />
           </div>
         </div>
       </section>

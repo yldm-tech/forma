@@ -12,6 +12,7 @@ export const ja: SiteContent = {
       inAppSurveys: "アプリ内アンケート",
       integrations: "連携",
       developers: "開発者向け",
+      sdk: "SDK リファレンス",
       selfHosting: "セルフホスト",
       github: "GitHub",
       openMenu: "メニューを開く",
@@ -276,7 +277,8 @@ export const ja: SiteContent = {
       sub: "プロダクト内のアンケートは script タグで、それ以外は REST API で。",
       snippet: {
         title: "JavaScript スニペット",
-        body: "Forma インスタンスから `/js/forma.umd.cjs` を読み込み、ページ上にアンケートを表示します。",
+        body: "Forma インスタンスから `/js/forma.umd.js` を読み込み、ページ上にアンケートを表示します。読み込み前の呼び出しはキューに入ります。",
+        link: "SDK リファレンス →",
       },
       api: {
         title: "REST API v3",
@@ -334,6 +336,106 @@ export const ja: SiteContent = {
             {
               term: "API キー",
               body: "OAuth に対応していないクライアントは、REST API と同じようにヘッダーで API キーを送ります。読み取りキーは一覧と取得のみ、書き込みまたは管理の権限があるキーは作成と編集もできます。",
+            },
+          ],
+        },
+      },
+    },
+    sdk: {
+      meta: {
+        title: "Forma JavaScript SDK リファレンス",
+        description:
+          "script タグで Forma SDK をインストールし、ユーザーの識別、属性の設定、アクションのトラッキング、イベントの購読、デバッグを行う方法。",
+      },
+      title: "JavaScript SDK リファレンス",
+      sub: "script タグ 1 つでウェブサイトとアプリ内のアンケートを表示します。それ以外はすべて `window.forma` の呼び出しです。",
+      install: {
+        title: "インストール",
+        body: "Forma の「連携 → Web・モバイル SDK」からスニペットをコピーし（ワークスペース ID とインスタンスの URL は入力済みです）、すべてのページの `<head>` に貼り付けます。Google Tag Manager では、すべてのページで配信されるカスタム HTML タグに貼り付けます。",
+        frameworks:
+          "React と Vue：`index.html` に貼り付けます。Next.js：ルートレイアウトで同じ JavaScript を `next/script` で読み込みます。ルート用の hook は不要です。SDK は npm では公開されておらず、モバイル SDK と WordPress プラグインもまだ提供していません。",
+        queue:
+          "スクリプトが届くまで、`window.forma` はスタブです。呼び出しはエラーにならずキューに入り、SDK の読み込みとセットアップが終わると順番に実行されます。キューに入った呼び出しは何も返さないので、await しないでください。TypeScript では、グローバルを一度だけ宣言します：`interface Window { forma: { [method: string]: (...args: unknown[]) => unknown } }`。",
+      },
+      reference: {
+        title: "メソッド",
+        lead: "すべてのメソッドは `window.forma` で呼び出します。`setup({ workspaceId, appUrl })` はスニペットが呼び出します。スニペットを使わずに `/js/forma.umd.js` を読み込む場合にだけ、ほかの呼び出しより先に自分で呼び出してください。",
+        identify: {
+          title: "ユーザーの識別",
+          facts: [
+            {
+              term: "setUserId(userId)",
+              body: "訪問者をその ID のコンタクトとして識別します（初回に作成）。セグメントの絞り込みや「一度だけ表示」がその人に対して働きます。ID は 255 文字まで。別の ID を設定すると、前のユーザーの状態を先に消去します。",
+            },
+            {
+              term: "setAttributes(attributes)、setAttribute(key, value)",
+              body: "セグメントに使うコンタクト属性を設定します。先に `setUserId` を呼び出してください。文字列・数値・`Date` が新しい属性の型を決め、以降の値が同じ型でなければサーバーは保存しません。",
+            },
+            {
+              term: "setLanguage(language)",
+              body: "アンケートをその言語で表示します。`de` のような言語コード、または設定したエイリアスを指定します。匿名の訪問者にも使えます。",
+            },
+            {
+              term: "logout()",
+              body: "このブラウザーでユーザーを忘れます。サインアウト時に呼び出し、同じ端末の次の人が前の人として扱われないようにしてください。",
+            },
+          ],
+        },
+        actions: {
+          title: "アクションとシングルページアプリ",
+          facts: [
+            {
+              term: "track(code, { hiddenFields })",
+              body: "そのキーのコードアクション（Forma の「アクション」で設定）を発火し、アンケートが表示されることがあります。`hiddenFields` はアンケートの非表示フィールドを埋め、回答と一緒に保存されます。このオプションは非推奨で、今後のバージョンで削除されます。",
+            },
+            {
+              term: "ページビューとルーティング",
+              body: "SDK は `history.pushState` と `replaceState` を差し替え、`popstate` と `hashchange` を監視するので、クライアント側の画面遷移はそれだけでページビューになります。どちらも使わないルーターでは `registerRouteChange()` で URL を手動で再評価します。",
+            },
+            {
+              term: "setEmbeddedData(data)、clearEmbeddedData(key?)",
+              body: "何も発火させずに、以降の回答へデータを付けます。`{ key: null }` でキーを削除し、アンケートが受け取ると宣言した埋め込みデータのフィールドだけが残ります。同期処理で、通信は発生しません。",
+            },
+          ],
+        },
+        events: {
+          title: "イベント",
+          body: "`on(event, handler)` は購読を解除する関数を返し、`off(event, handler)` も同じ働きをします。同じイベントが Google Tag Manager 向けに `forma` キーで `window.dataLayer` にも送られます。ペイロードに含まれるのは ID だけで、回答の内容は含まれません。",
+          facts: [
+            {
+              term: "forma_setup_successful",
+              body: "`{ workspaceId }`：セットアップが終わり、SDK の準備ができました。",
+            },
+            {
+              term: "forma_setup_failed",
+              body: "`{ workspaceId, code, message }`：セットアップが完了しませんでした。`code` は `missing_field`、`invalid_config`、`network_error`、`error_state` のいずれかです。",
+            },
+            {
+              term: "forma_action_tracked",
+              body: "`{ action }`：`track()` またはページ上でアクションが記録されました。",
+            },
+            { term: "forma_survey_shown", body: "`{ surveyId }`：アンケートが画面に表示されました。" },
+            {
+              term: "forma_response_submitted",
+              body: "`{ surveyId, responseId, finished }`：最初の回答時（`finished: false`）と、完了した回答が保存されたときに送られます。",
+            },
+            { term: "forma_survey_closed", body: "`{ surveyId }`：アンケートが閉じられたか、完了しました。" },
+          ],
+        },
+        debugging: {
+          title: "デバッグとセキュリティ",
+          facts: [
+            {
+              term: "?formaDebug=true",
+              body: "ページの URL に付けると、SDK は各ステップを `🧱 Forma` の接頭辞付きでコンソールに記録し、キャッシュを使わずにワークスペースの状態を取り直し、保存されたエラー状態を無視します。",
+            },
+            {
+              term: "setNonce(nonce)",
+              body: "スタイルに nonce ベースのコンテンツセキュリティポリシーを使う場合は、アンケートの表示前に nonce（`nonce-` を除く）を渡します。`script-src` と `connect-src` では Forma インスタンスを許可してください。",
+            },
+            {
+              term: "キャッシュ",
+              body: "ワークスペースの状態はキャッシュされるため、アンケートやアクションの変更が SDK を読み込み済みのページに届くまで数分かかることがあります。デバッグモードではキャッシュを使いません。",
             },
           ],
         },
