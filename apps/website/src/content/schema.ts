@@ -150,9 +150,9 @@ const developers = obj({
     lead: text,
     rest: obj({
       title: text,
-      facts: z.tuple([fact, fact, fact]),
+      facts: z.tuple([fact, fact, fact, fact]),
       resourcesTitle: text,
-      resources: z.tuple([text, text, text, text]),
+      resources: z.tuple([text, text, text, text, text]),
     }),
     mcp: obj({ title: text, facts: z.tuple([fact, fact, fact]) }),
   }),

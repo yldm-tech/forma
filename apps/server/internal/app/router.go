@@ -45,6 +45,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/team"
 	"github.com/yldm-tech/forma/apps/server/internal/unsplash"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/v3api/discovery"
 	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 	"github.com/yldm-tech/forma/apps/server/internal/webui"
 	"github.com/yldm-tech/forma/apps/server/internal/workflow"
@@ -73,7 +74,7 @@ type v3Registrar interface {
 }
 
 // NewRouter mounts every feature on one engine. The SPA goes last because it owns NoRoute.
-func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, analysisHandler *analysis.Handler, aiHandler *ai.Handler, storageHandler *storage.Handler, linkSurveyHandler *linksurvey.Handler, clientAPIHandler *clientapi.Handler, webhookHandler *webhook.Handler, webhookV1Handler *webhook.V1Handler, managementHandler *mgmtapi.Handler, integrationHandler *integration.Handler, integrationOAuthHandler *integration.OAuthHandler, notificationHandler *notification.Handler, attachmentsHandler *analysis.AttachmentsHandler, workflowHandler *workflow.Handler, oauthHandler *oauthserver.Handler, oauthAppHandler *oauthserver.AppHandler, mcpHandler *mcp.Handler, billingHandler *billing.Handler, stripeWebhookHandler *billing.WebhookHandler, instanceHandler *instance.Handler, web *webui.Handler, unsplashHandler *unsplash.Handler, contactSurveyHandler *contactsurvey.Handler, emailEmbedHandler *emailembed.Handler, plainHandler *plain.Handler, sdkIdentityHandler *sdkidentity.Handler) *gin.Engine {
+func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authenticator, healthHandler *health.Handler, authHandler *auth.Handler, ssoHandler *auth.SSOHandler, orgHandler *org.Handler, workspaceHandler *workspace.Handler, teamHandler *team.Handler, inviteHandler *invite.Handler, apikeyHandler *apikey.Handler, surveyHandler *survey.Handler, contactHandler *contact.Handler, contactV3Handler *contact.V3Handler, actionClassHandler *actionclass.Handler, tagHandler *tag.Handler, responseHandler *response.Handler, analysisHandler *analysis.Handler, aiHandler *ai.Handler, storageHandler *storage.Handler, linkSurveyHandler *linksurvey.Handler, clientAPIHandler *clientapi.Handler, webhookHandler *webhook.Handler, webhookV1Handler *webhook.V1Handler, managementHandler *mgmtapi.Handler, integrationHandler *integration.Handler, integrationOAuthHandler *integration.OAuthHandler, notificationHandler *notification.Handler, attachmentsHandler *analysis.AttachmentsHandler, workflowHandler *workflow.Handler, oauthHandler *oauthserver.Handler, oauthAppHandler *oauthserver.AppHandler, mcpHandler *mcp.Handler, billingHandler *billing.Handler, stripeWebhookHandler *billing.WebhookHandler, instanceHandler *instance.Handler, web *webui.Handler, unsplashHandler *unsplash.Handler, contactSurveyHandler *contactsurvey.Handler, emailEmbedHandler *emailembed.Handler, plainHandler *plain.Handler, sdkIdentityHandler *sdkidentity.Handler, discoveryHandler *discovery.Handler) *gin.Engine {
 	r := httpserver.NewEngine(p.Config, p.Log, telemetry.Middleware(p.Config.Telemetry.ServiceName))
 	r.Use(authz.Surface(), httpserver.PublicDomainGate(p.Config), p.ClientIP.Middleware())
 	healthHandler.Register(r)
@@ -88,11 +89,11 @@ func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authen
 	// The Stripe webhook at the path registered in Stripe's dashboard, authenticated by its signature: forma2's path and answers, outside /api/app.
 	stripeWebhookHandler.Register(r)
 	mountAppAPI(r, p, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, actionClassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, webhookHandler, integrationHandler, workflowHandler, oauthAppHandler, billingHandler, instanceHandler, unsplashHandler, contactSurveyHandler, emailEmbedHandler, plainHandler, sdkIdentityHandler)
-	// The v3 management API answers with RFC 9457 problems and authenticates by session or API key, outside /api/app and its envelope. Its modules were built on three middleware stacks, each mounted on its own /api/v3 group: the guard of the survey and workflow modules, the contact module's group-wide authentication, and the per-route v3api middleware of action classes and tags.
+	// The v3 management API answers with RFC 9457 problems and authenticates by session or API key, outside /api/app and its envelope. Its modules were built on three middleware stacks, each mounted on its own /api/v3 group: the guard of the survey and workflow modules, the contact module's group-wide authentication, and the per-route v3api middleware of action classes, tags and the discovery routes (GET /api/v3/me, and the OpenAPI document, which needs no credentials).
 	surveyHandler.RegisterV3(r)
 	workflowHandler.RegisterV3(r)
 	mountAuthenticatedV3API(r, p, sessions, apiKeys, contactV3Handler)
-	mountV3API(r, p, sessions, actionClassHandler, tagHandler)
+	mountV3API(r, p, sessions, actionClassHandler, tagHandler, discoveryHandler)
 	// forma2's internal routes outside /api/v3 that follow its conventions without its contract: the attachment ZIP export.
 	mountInternalAPI(r, p, sessions, attachmentsHandler)
 	// The identity providers' redirect URIs and SAML's assertion consumer service: browser navigations that end in a redirect, outside /api/app, its JSON envelope and its CSRF check.

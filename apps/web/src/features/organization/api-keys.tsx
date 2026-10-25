@@ -312,6 +312,43 @@ const NewKeyNotice = ({ keys, secrets }: { keys: ApiKey[]; secrets: Record<strin
       <p role="status" className="text-sm text-slate-600">
         {t("workspace.api_keys.v3_propagation_note")}
       </p>
+      <div className="space-y-1">
+        <p className="text-sm text-slate-600">{t("workspace.api_keys.check_key_hint")}</p>
+        <CommandDisplay command={checkKeyCommand(window.location.origin)} />
+        <p className="text-sm text-slate-600">
+          {t("workspace.api_keys.openapi_document_hint")}{" "}
+          <a
+            href={openAPIDocumentUrl(window.location.origin)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-xs break-all text-slate-800 underline">
+            {openAPIDocumentUrl(window.location.origin)}
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/** The command that asks the API which organization and workspaces a key reaches. The key stays in an environment variable, out of the shell history; the hint above it says to set the variable first. */
+const checkKeyCommand = (origin: string): string => `curl -H "x-api-key: $FORMA_API_KEY" ${origin}/api/v3/me`;
+
+/** The instance's OpenAPI document of the v3 API, which needs no credentials. */
+const openAPIDocumentUrl = (origin: string): string => `${origin}/api/v3/openapi.json`;
+
+/** A shell command with a copy button, laid out like ApiKeyDisplay. */
+const CommandDisplay = ({ command }: { command: string }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2">
+      <code className="font-mono text-xs break-all">{command}</code>
+      <button
+        type="button"
+        className="shrink-0 text-slate-500 hover:text-slate-800"
+        aria-label={t("common.copy")}
+        onClick={() => void copyText(command, t)}>
+        <FilesIcon className="size-4" />
+      </button>
     </div>
   );
 };

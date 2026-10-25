@@ -58,6 +58,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/unsplash"
 	"github.com/yldm-tech/forma/apps/server/internal/usagereport"
 	v3api2 "github.com/yldm-tech/forma/apps/server/internal/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/v3api/discovery"
 	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 	"github.com/yldm-tech/forma/apps/server/internal/webui"
 	"github.com/yldm-tech/forma/apps/server/internal/workflow"
@@ -268,7 +269,14 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	plainHandler := plain.NewHandler(cfg, db, sessions)
 	sdkidentityService := sdkidentity.NewService(db, cipher, authorizer, limiter, emitter)
 	sdkidentityHandler := sdkidentity.NewHandler(sdkidentityService, sessions)
-	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, instanceHandler, webuiHandler, unsplashHandler, contactsurveyHandler, emailembedHandler, plainHandler, sdkidentityHandler)
+	discoveryHandler, err := discovery.NewHandler(cfg, db, authorizer, middleware)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	ginEngine := NewRouter(platform, sessions, authenticator, handler, authHandler, ssoHandler, orgHandler, workspaceHandler, teamHandler, inviteHandler, apikeyHandler, surveyHandler, contactHandler, v3Handler, actionclassHandler, tagHandler, responseHandler, analysisHandler, aiHandler, storageHandler, linksurveyHandler, clientapiHandler, webhookHandler, v1Handler, mgmtapiHandler, integrationHandler, oAuthHandler, notificationHandler, attachmentsHandler, workflowHandler, oauthserverHandler, appHandler, mcpHandler, billingHandler, billingWebhookHandler, instanceHandler, webuiHandler, unsplashHandler, contactsurveyHandler, emailembedHandler, plainHandler, sdkidentityHandler, discoveryHandler)
 	server := httpserver.New(cfg, ginEngine, log)
 	return server, func() {
 		cleanup3()
@@ -400,8 +408,8 @@ var aiSet = wire.NewSet(ai.NewClient, ai.NewRepository, ai.NewService, ai.NewExa
 // surveySet is the survey definition module: /api/app/surveys, /api/app/quotas and /api/v3/surveys, the latter authenticated by session or API key.
 var surveySet = wire.NewSet(surveydoc.NewValidator, survey.LoadCatalog, survey.NewRepository, survey.NewService, v3api.NewGuard, survey.NewHandler)
 
-// v3Set is the /api/v3 conventions of action classes and tags: authentication by session or API key, the api:v3 rate limit and audit events.
-var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor)
+// v3Set is the /api/v3 conventions of action classes and tags: authentication by session or API key, the api:v3 rate limit and audit events; and the v3 discovery routes, GET /api/v3/me and the OpenAPI document.
+var v3Set = wire.NewSet(v3api2.NewMiddleware, v3api2.NewAuditor, discovery.NewHandler)
 
 // surveyConfigSet is the workspace-level survey configuration: action classes and tags, under /api/app and /api/v3.
 var surveyConfigSet = wire.NewSet(actionclass.NewRepository, actionclass.NewService, actionclass.NewHandler, tag.NewRepository, tag.NewService, tag.NewHandler)

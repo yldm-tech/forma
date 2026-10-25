@@ -23,6 +23,8 @@ const (
 	AuthSession AuthMode = iota
 	// AuthBoth accepts a session or an API key; a request that carries a key is authenticated by the key alone.
 	AuthBoth
+	// AuthBothOrganizationKey is AuthBoth that also accepts a key with no workspace grant, only organization access. It is for routes that reveal nothing beyond the key's own grants, such as GET /api/v3/me; every other v3 route refuses such a key.
+	AuthBothOrganizationKey
 )
 
 // Principal is who a v3 request acts as: a signed-in user, or an API key.
@@ -93,8 +95,8 @@ func (m *Middleware) Auth(mode AuthMode) gin.HandlerFunc {
 
 func (m *Middleware) authenticate(c *gin.Context, mode AuthMode) (*Principal, error) {
 	ctx := c.Request.Context()
-	if mode == AuthBoth && apikey.KeyFromHeaders(c.Request.Header) != "" {
-		return m.apiKey(ctx, c.Request.Header)
+	if mode != AuthSession && apikey.KeyFromHeaders(c.Request.Header) != "" {
+		return m.apiKey(ctx, c.Request.Header, apikey.Options{AllowOrganizationOnly: mode == AuthBothOrganizationKey})
 	}
 	if a, ok := httpapi.ActorFrom(ctx); ok {
 		return &Principal{UserID: a.UserID}, nil
@@ -102,9 +104,9 @@ func (m *Middleware) authenticate(c *gin.Context, mode AuthMode) (*Principal, er
 	return nil, nil
 }
 
-// apiKey resolves the request's key. v3 never accepted a key without a workspace grant.
-func (m *Middleware) apiKey(ctx context.Context, h http.Header) (*Principal, error) {
-	key, err := m.keys.Authenticate(ctx, h, apikey.Options{})
+// apiKey resolves the request's key. v3 never accepted a key without a workspace grant; only AuthBothOrganizationKey routes pass opts that allow one.
+func (m *Middleware) apiKey(ctx context.Context, h http.Header, opts apikey.Options) (*Principal, error) {
+	key, err := m.keys.Authenticate(ctx, h, opts)
 	if err != nil || key == nil {
 		return nil, err
 	}

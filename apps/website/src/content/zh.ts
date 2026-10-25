@@ -303,9 +303,14 @@ export const zh: SiteContent = {
               term: "API 密钥",
               body: "由组织所有者或管理者在应用中打开“组织设置 → API 密钥 → 添加 API 密钥”，按工作区逐一授予读取、写入或管理权限，然后复制密钥。密钥只显示一次。创建密钥的成员离开组织、被移出组织、注销账号或角色被调整为低于管理者时，该密钥会被永久停用。可以在“API 密钥”页面查看哪些密钥已停用及原因。",
             },
+            {
+              term: "OpenAPI",
+              body: "`/api/v3/openapi.json` 以 OpenAPI 3.1 格式描述了 API 密钥可以调用的全部操作，可直接导入 API 客户端或代码生成工具。获取它不需要密钥。",
+            },
           ],
           resourcesTitle: "主要资源",
           resources: [
+            "`/api/v3/me`：密钥所属的组织，以及它可以使用的工作区和在每个工作区中的权限。需要查找 `workspaceId` 时从这里开始。",
             "`/api/v3/surveys`：列出、创建、校验、读取、更新、归档、恢复和删除问卷。",
             "`/api/v3/workflows`：创建和编辑工作流，启用、停用或测试，并查看运行记录。",
             "`/api/v3/action-classes` 和 `/api/v3/contact-attribute-keys`：应用内问卷所针对的动作和属性，只读。",

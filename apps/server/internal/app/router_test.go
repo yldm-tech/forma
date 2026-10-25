@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -50,6 +51,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/team"
 	"github.com/yldm-tech/forma/apps/server/internal/unsplash"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api"
+	"github.com/yldm-tech/forma/apps/server/internal/v3api/discovery"
 	"github.com/yldm-tech/forma/apps/server/internal/webhook"
 	"github.com/yldm-tech/forma/apps/server/internal/webui"
 	"github.com/yldm-tech/forma/apps/server/internal/workflow"
@@ -132,7 +134,11 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 	surveys.RegisterV3(r)
 	workflows.RegisterV3(r)
 	mountAuthenticatedV3API(r, p, sessions, nil, contact.NewV3Handler(nil))
-	mountV3API(r, p, sessions, actionClasses, tags)
+	discoveryHandler, err := discovery.NewHandler(cfg, nil, nil, v3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mountV3API(r, p, sessions, actionClasses, tags, discoveryHandler)
 	sso.RegisterCallbacks(r)
 	web, err := webui.NewFromFS(fstest.MapFS{})
 	if err != nil {
@@ -194,6 +200,8 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"PATCH /api/app/workspaces/:workspaceId/sdk-identity":                         true,
 		"POST /api/app/workspaces/:workspaceId/sdk-identity/secret":                   true,
 		"GET /api/v3/action-classes":                                                  true,
+		"GET /api/v3/me":                                                              true,
+		"GET /api/v3/openapi.json":                                                    true,
 		"GET /api/v3/tags":                                                            true,
 		"POST /api/v3/tags/:tagId/merge":                                              true,
 		"GET /api/v3/workflows":                                                       true,
@@ -305,6 +313,10 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		t.Fatal(err)
 	}
 	v1 := mgmtv1.New(cfg, nil, nil, nil, nil, nil, log)
+	discoveryHandler, err := discovery.NewHandler(cfg, nil, nil, v3)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return NewRouter(p, sessions, nil,
 		health.NewHandler(nil, log),
@@ -346,5 +358,98 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		emailembed.NewHandler(nil, sessions),
 		plain.NewHandler(cfg, nil, sessions),
 		sdkidentity.NewHandler(nil, sessions),
+		discoveryHandler,
 	)
+}
+
+// v3SessionOnlyRoutes are the /api/v3 routes that refuse API keys, which the published OpenAPI document leaves out: the tag routes the responses page calls, and creating a survey from a template, which the SPA's template gallery calls.
+var v3SessionOnlyRoutes = []string{
+	"POST /api/v3/surveys/templates",
+	"GET /api/v3/tags",
+	"PATCH /api/v3/tags/{tagId}",
+	"DELETE /api/v3/tags/{tagId}",
+	"POST /api/v3/tags/{tagId}/merge",
+}
+
+// The OpenAPI document at /api/v3/openapi.json describes exactly the /api/v3 routes the production router mounts that an API key can call: a new route fails here until its module's V3OpenAPI describes it, and a route the document names must exist.
+func TestOpenAPIDocumentCoversV3Routes(t *testing.T) {
+	webURL, _ := url.Parse("https://app.example.com")
+	cfg := config.Config{WebAppURL: webURL, SessionMaxAge: 86400}
+	r := newProductionRouter(t, cfg)
+
+	raw, err := discovery.Document(webURL.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Paths map[string]map[string]json.RawMessage `json:"paths"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	documented := map[string]bool{}
+	for path, item := range doc.Paths {
+		for method := range item {
+			documented[strings.ToUpper(method)+" "+path] = true
+		}
+	}
+
+	mounted := map[string]bool{}
+	for _, route := range r.Routes() {
+		if !strings.HasPrefix(route.Path, "/api/v3/") {
+			continue
+		}
+		segments := strings.Split(route.Path, "/")
+		for i, s := range segments {
+			if strings.HasPrefix(s, ":") {
+				segments[i] = "{" + s[1:] + "}"
+			}
+		}
+		mounted[route.Method+" "+strings.Join(segments, "/")] = true
+	}
+	for _, route := range v3SessionOnlyRoutes {
+		if !mounted[route] {
+			t.Errorf("%s is listed as session-only but not mounted", route)
+		}
+		if documented[route] {
+			t.Errorf("%s is session-only but documented", route)
+		}
+		delete(mounted, route)
+	}
+	var missing, extra []string
+	for route := range mounted {
+		if !documented[route] {
+			missing = append(missing, route)
+		}
+	}
+	for route := range documented {
+		if !mounted[route] {
+			extra = append(extra, route)
+		}
+	}
+	sort.Strings(missing)
+	sort.Strings(extra)
+	if len(missing) > 0 || len(extra) > 0 {
+		t.Fatalf("v3 routes missing from the OpenAPI document: %q; documented but not mounted: %q", missing, extra)
+	}
+
+	// The session-only routes do refuse a request that carries only an API key, before any key is looked up.
+	for _, route := range v3SessionOnlyRoutes {
+		method, path, _ := strings.Cut(route, " ")
+		path = strings.ReplaceAll(path, "{tagId}", "0197c1d2-0000-7000-8000-000000000001")
+		req := httptest.NewRequest(method, path, strings.NewReader("{}"))
+		req.Header.Set("X-Api-Key", "fbk_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		if rec.Code != http.StatusUnauthorized || !strings.Contains(rec.Body.String(), "Session required") {
+			t.Errorf("%s with an API key = %d %s, want 401 Session required", route, rec.Code, rec.Body.String())
+		}
+	}
+
+	// The document itself needs no credentials and may be read from any origin.
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v3/openapi.json", nil))
+	if rec.Code != http.StatusOK || rec.Header().Get("Access-Control-Allow-Origin") != "*" || rec.Body.String() != string(raw) {
+		t.Fatalf("GET /api/v3/openapi.json = %d %v", rec.Code, rec.Header())
+	}
 }

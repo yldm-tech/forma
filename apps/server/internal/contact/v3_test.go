@@ -12,6 +12,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/apikey"
 	"github.com/yldm-tech/forma/apps/server/internal/apiv3"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/v3api/openapi/openapitest"
 )
 
 // Ported from forma2's api/v3/contact-attribute-keys/lib/operations.test.ts and lib/auth.ts.
@@ -51,6 +52,9 @@ func TestV3ListContactAttributeKeys(t *testing.T) {
 	rec := e.v3(&reader, "?workspaceId="+ws.String(), nil)
 	var list v3List
 	e.ok(rec, http.StatusOK, &list)
+	// The answers are the ones the published OpenAPI document describes.
+	doc := openapitest.New(t, V3OpenAPI())
+	doc.Check(t, http.MethodGet, "/api/v3/contact-attribute-keys", rec)
 	if rec.Header().Get("Cache-Control") != "private, no-store" || rec.Header().Get("X-Request-Id") == "" {
 		t.Fatalf("headers %v", rec.Header())
 	}
@@ -94,6 +98,8 @@ func TestV3ListContactAttributeKeys(t *testing.T) {
 	if p.Detail != "Invalid pagination cursor" || len(p.InvalidParams) != 1 || p.InvalidParams[0].Name != "cursor" {
 		t.Fatalf("cursor problem %+v", p)
 	}
+	doc.Check(t, http.MethodGet, "/api/v3/contact-attribute-keys", e.v3(&reader, "?workspaceId=nope&limit=251&extra=1", nil))
+	doc.Check(t, http.MethodGet, "/api/v3/contact-attribute-keys", e.v3(nil, "?workspaceId="+ws.String(), nil))
 	p = e.problem(e.v3(&reader, "?workspaceId=nope&limit=251&extra=1", nil), http.StatusBadRequest, "bad_request")
 	if p.Detail != "Invalid query parameters" || len(p.InvalidParams) != 3 || p.InvalidParams[0].Name != "workspaceId" || p.InvalidParams[1].Reason != "Too big: expected number to be <=250" || p.InvalidParams[2].Reason != `Unrecognized key: "extra"` {
 		t.Fatalf("query problem %+v", p)
