@@ -3,7 +3,7 @@ import type { TResponseWithQuotas } from "@forma/types/responses";
 import type { TBaseFilters } from "@forma/types/segment";
 import { infiniteQueryOptions, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseResponse } from "../../features/survey-analysis/api";
-import { api } from "../api";
+import { type DownloadedFile, api, downloadFile } from "../api";
 import type { AttributeKey } from "../attribute-keys";
 import type { DuplicateContactsAction } from "../contacts-csv";
 
@@ -276,6 +276,10 @@ export const useImportContacts = (workspaceId: string) => {
       ]),
   });
 };
+
+/** The workspace's contacts a search matches (the list's search; empty for all of them), as the CSV file the server writes: one column per attribute key, in a shape the import reads again. */
+export const exportContacts = (workspaceId: string, search: string): Promise<DownloadedFile> =>
+  downloadFile(`/api/app/workspaces/${workspaceId}/contacts/export`, { search });
 
 const useKeyMutation = <V>(workspaceId: string, mutationFn: (variables: V) => Promise<unknown>) => {
   const queryClient = useQueryClient();
