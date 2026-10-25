@@ -133,6 +133,8 @@
   "workspace.settings.general.error_deleting_organization_please_try_again",
   "workspace.settings.general.organization_deletion_disabled",
   "workspace.settings.general.organization_name_description",
+  "workspace.settings.general.security_list_tip",
+  "workspace.settings.general.security_list_tip_link",
   "workspace.settings.profile.warning_cannot_delete_account",
   "workspace.surveys.ai_create.create_with_ai_description",
   "workspace.surveys.ai_create.status_starting",

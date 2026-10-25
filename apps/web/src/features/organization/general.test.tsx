@@ -73,6 +73,12 @@ const stubServer = () =>
     })
   );
 
+/** The security tip's link, to the GitHub page where Forma publishes its security advisories. */
+const securityTipLink = () =>
+  document.querySelector<HTMLAnchorElement>(
+    'a[href="https://github.com/yldm-tech/forma/security/advisories"]'
+  );
+
 /** The page on an instance with or without file storage, self-hosted or on Forma Cloud, both already known as the settings shell would have loaded them. */
 const renderPage = ({
   storageConfigured,
@@ -114,11 +120,15 @@ const renderPage = ({
 };
 
 describe("OrganizationGeneralPage", () => {
-  test("self-hosted without file storage: the storage warning, the security list tip and the version", async () => {
+  test("self-hosted without file storage: the storage warning, the security tip and the version", async () => {
     renderPage({ storageConfigured: false, isFormaCloud: false });
     expect(await screen.findByText(t("common.storage_not_configured"))).toBeTruthy();
-    expect(await screen.findByText(t("workspace.settings.general.security_list_tip_link"))).toBeTruthy();
     expect(await screen.findByText(t("common.forma_version"))).toBeTruthy();
+    // forma2's tip invited owners to a mailing list Forma does not have; it points at the GitHub advisories instead.
+    const link = securityTipLink();
+    expect(link?.textContent).toBe("Forma's security advisories on GitHub");
+    expect(link?.target).toBe("_blank");
+    expect(link?.closest("p")?.textContent).toContain("Watch → Custom → Releases and Security alerts");
     expect(screen.getByText("0.2.42")).toBeTruthy();
     expect(screen.getByText(t("workspace.look.email_customization"))).toBeTruthy();
   });
@@ -127,8 +137,18 @@ describe("OrganizationGeneralPage", () => {
     renderPage({ storageConfigured: true, isFormaCloud: true });
     expect(await screen.findByText("0.2.42")).toBeTruthy();
     expect(screen.queryByText(t("common.storage_not_configured"))).toBeNull();
-    expect(screen.queryByText(t("workspace.settings.general.security_list_tip_link"))).toBeNull();
+    expect(securityTipLink()).toBeNull();
   });
+
+  // Keeping the instance patched is the owner's job; a manager or member cannot act on the tip.
+  test.each(["manager", "member"] as const)(
+    "self-hosted, a %s is not shown the security tip",
+    async (role) => {
+      renderPage({ storageConfigured: true, isFormaCloud: false, role });
+      expect(await screen.findByText("0.2.42")).toBeTruthy();
+      expect(securityTipLink()).toBeNull();
+    }
+  );
 
   test.each(["member", "billing"] as const)(
     "a %s, who can change nothing, is told so once at the top instead of in every card",

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { untilAuthorized } from "../../lib/consistency";
 import { errorMessage } from "../../lib/errors";
@@ -17,7 +17,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { MultiSelect } from "../ui/multi-select";
 
-/** forma2's CreateWorkspaceModal: a name, and optionally the teams that get access to the new workspace. */
+/** forma2's CreateWorkspaceModal: a name, and optionally the teams that get access to the new workspace. A submission stays in progress from the click until the browser is on the new workspace, through the few seconds its permissions take to arrive after the POST (untilAuthorized); a button that came back during that wait sent a second POST. The ref ignores a second submit in the same tick, before the disabled button has rendered, and the dialog cannot be dismissed meanwhile, since the navigation would follow anyway. */
 export const CreateWorkspaceModal = ({
   open,
   setOpen,
@@ -33,6 +33,8 @@ export const CreateWorkspaceModal = ({
   const [name, setName] = useState("");
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const [nameError, setNameError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitting = useRef(false);
   const teams = useQuery({ ...teamsQuery(organizationId), enabled: open });
   const create = useCreateWorkspace(organizationId);
 
@@ -50,25 +52,36 @@ export const CreateWorkspaceModal = ({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     const invalid = workspaceNameError(name);
     if (invalid) {
       setNameError(invalid);
       return;
     }
+    submitting.current = true;
+    setIsSubmitting(true);
     try {
       const workspace = await create.mutateAsync({ name: name.trim(), teamIds });
       await untilAuthorized(() => queryClient.fetchQuery(workspaceQuery(workspace.id)));
       await queryClient.invalidateQueries({ queryKey: organizationKeys.detail(organizationId) });
       toast.success(t("common.workspace_created_successfully"));
-      close();
       await navigate({ href: workspaceHomePath(workspace.id) });
+      close();
     } catch (error) {
       toast.error(errorMessage(t, error));
+    } finally {
+      submitting.current = false;
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setOpen(true);
+        else if (!submitting.current) close();
+      }}>
       <DialogHeader>
         <DialogTitle>{t("common.create_workspace")}</DialogTitle>
         <DialogDescription>{t("common.workspace_creation_description")}</DialogDescription>
@@ -104,10 +117,10 @@ export const CreateWorkspaceModal = ({
           )}
         </DialogBody>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={close}>
+          <Button type="button" variant="secondary" onClick={close} disabled={isSubmitting}>
             {t("common.cancel")}
           </Button>
-          <Button type="submit" loading={create.isPending}>
+          <Button type="submit" loading={isSubmitting}>
             {t("common.create_workspace")}
           </Button>
         </DialogFooter>
