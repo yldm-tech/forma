@@ -149,6 +149,13 @@ func (h *Handler) serve(c *gin.Context) {
 	if !ok {
 		return
 	}
+	// A tool whose scope came after the token was granted is refused here, so the client can authorize again (stepUpScopes).
+	if required, request := stepUpScopes(p, body); required != nil {
+		h.log.WarnContext(c.Request.Context(), "MCP OAuth token missing a tool's MCP scope", "request_id", httpserver.RequestID(c), "status_code", http.StatusForbidden, "client_id", p.clientID)
+		c.Header("WWW-Authenticate", h.insufficientScopeChallenge(request))
+		v3api.WriteProblem(c, v3api.Forbidden("OAuth token does not include the required MCP scope: "+strings.Join(required, " ")+". Reconnect the MCP client to grant it."))
+		return
+	}
 	c.Request.Body = io.NopCloser(bytes.NewReader(body))
 	c.Request.ContentLength = int64(len(body))
 	p.requestID = httpserver.RequestID(c)

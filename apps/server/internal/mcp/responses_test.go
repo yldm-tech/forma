@@ -2,13 +2,14 @@ package mcp
 
 import (
 	"encoding/json"
+	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 )
 
-// responsesFixture is a survey of the fixture's first workspace with an open-text and an NPS question and a hidden field, and three responses to it: r1 finished, with a contact, a tag, a hidden field value and an answer to a question since removed; r2 partial; r3 finished.
+// responsesFixture is a survey of the fixture's first workspace with an open-text and an NPS question and a hidden field, and three responses to it: r1 finished, with a contact, a tag, a hidden field value, an answer to a question since removed, and the address and verification token an email-verified survey records; r2 partial; r3 finished.
 type responsesFixture struct {
 	fixture
 	survey, contact, r1, r2, r3 uuid.UUID
@@ -24,8 +25,8 @@ func (e *env) responsesFixture() responsesFixture {
 	f.survey = e.insert(`INSERT INTO surveys (workspace_id, name, type, status, blocks, hidden_fields) VALUES (?, 'Customer Satisfaction 2026', 'link', 'inProgress', ?::jsonb, '{"enabled":true,"fieldIds":["source"]}'::jsonb) RETURNING id`, f.ws, responsesBlocks)
 	f.contact = e.insert(`INSERT INTO contacts (workspace_id) VALUES (?) RETURNING id`, f.ws)
 	f.r1 = e.insert(`INSERT INTO responses (survey_id, contact_id, created_at, updated_at, finished, data, contact_attributes, meta) VALUES (?, ?, '2026-10-01T10:00:00Z', '2026-10-01T10:00:00Z', true,
-		'{"q1":"A faster pricing page","q2":9,"source":"newsletter","removed":"old answer"}'::jsonb, '{"email":"ann@example.com"}'::jsonb,
-		'{"url":"https://example.com/feedback","country":"JP","ipAddress":"203.0.113.7"}'::jsonb) RETURNING id`, f.survey, f.contact)
+		'{"q1":"A faster pricing page","q2":9,"source":"newsletter","removed":"old answer","verifiedEmail":"ann.verified@example.com"}'::jsonb, '{"email":"ann@example.com"}'::jsonb,
+		'{"url":"https://example.com/s/abc?verify=eyJsecret.token&lang=ja","country":"JP","ipAddress":"203.0.113.7"}'::jsonb) RETURNING id`, f.survey, f.contact)
 	f.r2 = e.insert(`INSERT INTO responses (survey_id, created_at, updated_at, finished, data) VALUES (?, '2026-10-02T10:00:00Z', '2026-10-02T10:00:00Z', false, '{"q1":"More integrations","q2":3}'::jsonb) RETURNING id`, f.survey)
 	f.r3 = e.insert(`INSERT INTO responses (survey_id, created_at, updated_at, finished, data) VALUES (?, '2026-10-03T10:00:00Z', '2026-10-03T10:00:00Z', true, '{"q2":10}'::jsonb) RETURNING id`, f.survey)
 	tag := e.insert(`INSERT INTO tags (workspace_id, name) VALUES (?, 'vip') RETURNING id`, f.ws)
@@ -85,8 +86,11 @@ func TestListResponses(t *testing.T) {
 		t.Fatalf("response: %v", r1)
 	}
 	if _, ok := r1["contact"]; ok || r1["contactAttributes"] != nil || strings.Contains(text, "ann@example.com") || strings.Contains(text, "203.0.113.7") ||
-		r1["meta"].(map[string]any)["country"] != "JP" {
+		strings.Contains(text, "ann.verified@example.com") || r1["meta"].(map[string]any)["country"] != "JP" {
 		t.Fatalf("the respondent is named without includeContact: %s", text)
+	}
+	if strings.Contains(text, "eyJsecret") || r1["meta"].(map[string]any)["url"] != "https://example.com/s/abc?lang=ja" {
+		t.Fatalf("the email verification token is returned: %s", text)
 	}
 
 	failed, page, text = e.tool(token, "list_responses", map[string]any{"surveyId": f.survey.String(), "includeContact": true, "search": "PRICING"})
@@ -94,8 +98,12 @@ func TestListResponses(t *testing.T) {
 		t.Fatalf("search: %s", text)
 	}
 	r1 = page["data"].([]any)[0].(map[string]any)
-	if r1["contact"].(map[string]any)["id"] != f.contact.String() || r1["contactAttributes"].(map[string]any)["email"] != "ann@example.com" || r1["meta"].(map[string]any)["ipAddress"] != "203.0.113.7" {
+	if r1["contact"].(map[string]any)["id"] != f.contact.String() || r1["contactAttributes"].(map[string]any)["email"] != "ann@example.com" || r1["meta"].(map[string]any)["ipAddress"] != "203.0.113.7" ||
+		r1["otherData"].(map[string]any)["verifiedEmail"] != "ann.verified@example.com" {
 		t.Fatalf("includeContact: %v", r1)
+	}
+	if strings.Contains(text, "eyJsecret") {
+		t.Fatalf("the email verification token is returned with includeContact: %s", text)
 	}
 
 	cases := []struct {
@@ -175,6 +183,34 @@ func TestGetSurveySummary(t *testing.T) {
 			t.Fatalf("samplesPerQuestion 1: %v", card)
 		}
 	}
+
+	// samplesPerQuestion bounds a hidden field's breakdown too, the values it drops counted in the rest.
+	e.insert(`INSERT INTO responses (survey_id, created_at, updated_at, finished, data) VALUES (?, '2026-10-04T10:00:00Z', '2026-10-04T10:00:00Z', true, '{"source":"ads"}'::jsonb) RETURNING id`, f.survey)
+	e.insert(`INSERT INTO responses (survey_id, created_at, updated_at, finished, data) VALUES (?, '2026-10-05T10:00:00Z', '2026-10-05T10:00:00Z', true, '{"source":"ads"}'::jsonb) RETURNING id`, f.survey)
+	hidden := func(samples int) map[string]any {
+		t.Helper()
+		failed, payload, text := e.tool(token, "get_survey_summary", map[string]any{"surveyId": f.survey.String(), "samplesPerQuestion": samples})
+		if failed {
+			t.Fatalf("summary, samplesPerQuestion %d: %s", samples, text)
+		}
+		for _, c := range payload["data"].(map[string]any)["summary"].([]any) {
+			if card := c.(map[string]any); card["type"] == "hiddenField" && card["id"] == "source" {
+				return card
+			}
+		}
+		t.Fatalf("no hidden field card: %s", text)
+		return nil
+	}
+	if b := mustString(hidden(10)["breakdown"]); b != `{"restCount":0,"restPercentage":0,"values":[{"count":2,"percentage":66.67,"value":"ads"},{"count":1,"percentage":33.33,"value":"newsletter"}]}` {
+		t.Fatalf("breakdown: %s", b)
+	}
+	if b := mustString(hidden(1)["breakdown"]); b != `{"restCount":1,"restPercentage":33.33,"values":[{"count":2,"percentage":66.67,"value":"ads"}]}` {
+		t.Fatalf("breakdown, samplesPerQuestion 1: %s", b)
+	}
+	card := hidden(0)
+	if b := mustString(card["breakdown"]); b != `{"restCount":3,"restPercentage":100,"values":[]}` || len(card["samples"].([]any)) != 0 {
+		t.Fatalf("samplesPerQuestion 0: %v", card)
+	}
 }
 
 // The response tools need responses:read, which surveys:read does not imply, and read access to the survey's workspace; an unknown survey, a survey of another organization or workspace, and a cuid2 id all get the 403 that hides whether the survey exists. Every API key may read responses, as /api/v2/management/responses lets it.
@@ -182,12 +218,17 @@ func TestResponseToolsAuthorization(t *testing.T) {
 	e := newEnv(t)
 	f := e.responsesFixture()
 
-	surveysOnly := bearer(e.accessToken(f.owner, "surveys:read surveys:write workflows:read workflows:write"))
+	// A token granted before responses:read existed is refused at the transport with the insufficient_scope challenge, asking for its own scopes and responses:read, so the client authorizes again; the other tools still answer it.
+	surveysOnly := bearer(e.accessToken(f.owner, "offline_access surveys:read workflows:read"))
 	for _, tool := range []string{"list_responses", "get_survey_summary"} {
-		failed, payload, text := e.tool(surveysOnly, tool, map[string]any{"surveyId": f.survey.String()})
-		if errObj, _ := payload["error"].(map[string]any); !failed || errObj["status"] != float64(403) || errObj["detail"] != "OAuth token does not include the required MCP scope: responses:read" {
-			t.Fatalf("%s without responses:read: %s", tool, text)
+		res, out := e.rpc(surveysOnly, "tools/call", map[string]any{"name": tool, "arguments": map[string]any{"surveyId": f.survey.String()}})
+		if res.StatusCode != http.StatusForbidden || out["detail"] != "OAuth token does not include the required MCP scope: responses:read. Reconnect the MCP client to grant it." ||
+			res.Header.Get("WWW-Authenticate") != `Bearer error="insufficient_scope", scope="offline_access surveys:read workflows:read responses:read", resource_metadata="`+e.url("/.well-known/oauth-protected-resource/api/mcp")+`", error_description="The OAuth access token does not include the required MCP scope."` {
+			t.Fatalf("%s without responses:read: %d %v %v", tool, res.StatusCode, out, res.Header)
 		}
+	}
+	if failed, _, text := e.tool(surveysOnly, "list_surveys", map[string]any{"workspaceId": f.ws.String()}); failed {
+		t.Fatalf("list_surveys without responses:read: %s", text)
 	}
 	responsesOnly := bearer(e.accessToken(f.owner, "responses:read"))
 	if failed, payload, text := e.tool(responsesOnly, "list_workspaces", map[string]any{}); failed || len(payload["data"].([]any)) != 2 {

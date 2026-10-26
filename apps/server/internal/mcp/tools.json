@@ -1851,7 +1851,7 @@
   {
     "name": "list_responses",
     "title": "List responses",
-    "description": "List the responses to a Forma survey, newest first, with each answer keyed by question id and shown with the question's headline. Answers to questions no longer in the survey, hidden fields and embedded data are under otherData. Respondents are not identified unless includeContact is true. Requires the responses:read scope and read access to the survey's workspace.",
+    "description": "List the responses to a Forma survey, newest first, with each answer keyed by question id and shown with the question's headline. Answers to questions no longer in the survey, hidden fields and embedded data are under otherData. Unless includeContact is true, each response's contact, contact attributes, IP address and verified email are withheld; answers to questions that ask for contact details, such as a contact info or address question, are returned like any other answer. Requires the responses:read scope and read access to the survey's workspace.",
     "inputSchema": {
       "type": "object",
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1896,7 +1896,7 @@
         "includeContact": {
           "default": false,
           "type": "boolean",
-          "description": "Also return who answered: each response's contact (id and userId) when it has one, the contact attributes captured with it, and its IP address when the survey captured one. Defaults to false; leave it off unless the user needs to identify respondents."
+          "description": "Also return who answered: each response's contact (id and userId) when it has one, the contact attributes captured with it, its IP address when the survey captured one, and, on a survey that requires email verification, the verified email address under otherData.verifiedEmail. Defaults to false; leave it off unless the user needs to identify respondents."
         }
       },
       "required": [
@@ -1914,7 +1914,7 @@
   {
     "name": "get_survey_summary",
     "title": "Get survey summary",
-    "description": "Summarize the responses to a Forma survey as its summary page does: impressions, starts, completions and drop-off, then per question the response count and its statistics (choice counts and percentages, rating averages, NPS score, CSAT, matrix and ranking results) and the most recent open-text answers, plus quotas and the total score when the survey has them. Respondents are never identified. Requires the responses:read scope and read access to the survey's workspace.",
+    "description": "Summarize the responses to a Forma survey as its summary page does: impressions, starts, completions and drop-off, then per question the response count and its statistics (choice counts and percentages, rating averages, NPS score, CSAT, matrix and ranking results) and the most recent open-text answers, plus quotas and the total score when the survey has them. No contact, contact attributes, IP address or verified email is returned; the listed answers to questions that ask for contact details, such as a contact info or address question, are returned like any other answer. Requires the responses:read scope and read access to the survey's workspace.",
     "inputSchema": {
       "type": "object",
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1949,7 +1949,7 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 50,
-          "description": "How many individual answers to keep for questions that list them (open text, Other options, hidden fields, file uploads), newest first. Counts always cover every matching response. Defaults to 10."
+          "description": "How many individual answers to keep for questions that list them (open text, Other options, hidden fields, file uploads), newest first, and how many of the most frequent values to keep in the value breakdowns of hidden fields and Other options, the rest counted together. Counts always cover every matching response. Defaults to 10."
         }
       },
       "required": [

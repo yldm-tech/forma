@@ -343,7 +343,7 @@ export const en: SiteContent = {
             },
             {
               term: "Responses",
-              body: "`list_responses` reads a survey's responses page by page, each answer with its question, and `get_survey_summary` its statistics: completion, drop-off, choice counts, ratings, NPS and the latest open-text answers. Both need the `responses:read` scope, which the consent page lists on its own line, and read access to the survey's workspace; every API key may use them, as it may list responses over the REST API. Respondents are not identified unless a call asks for their contact details.",
+              body: "`list_responses` reads a survey's responses page by page, each answer with its question, and `get_survey_summary` its statistics: completion, drop-off, choice counts, ratings, NPS and the latest open-text answers. Both need the `responses:read` scope, which the consent page lists on its own line, and read access to the survey's workspace; every API key may use them, as it may list responses over the REST API. A response's contact, contact attributes, IP address and verified email come back only when a call asks for them; answers to questions that ask for contact details, such as a contact info question, are returned like any other answer.",
             },
           ],
         },

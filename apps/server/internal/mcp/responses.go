@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -24,7 +26,7 @@ import (
 
 // This file is the two tools that read what respondents answered, list_responses and get_survey_summary (owner decision D-AO11 of 2026-10-25); forma2 had neither. They need the responses:read scope and, like the response views, read access to the survey's workspace. They have no v3 operation to run: they answer in the v3 tools' shapes, {data, meta} and the problem fields, from the response and analysis modules directly.
 //
-// Respondents are not named by default: a response's contact, the contact attributes captured with it and its IP address come back only when the call asks for them with includeContact, and the summary never carries them.
+// Respondents are not named by default: a response's contact, the contact attributes captured with it, its IP address and the address an email-verified survey recorded for it (verifiedEmail) come back only when the call asks for them with includeContact, and the summary never carries them. Answers to questions that ask for contact details are answers like any other and are returned. The email verification token in a response's page URL is a credential and is never returned.
 
 const (
 	responsesDefaultLimit = 20
@@ -34,6 +36,9 @@ const (
 )
 
 const invalidCursorDetail = "Invalid pagination cursor"
+
+// verifiedEmailKey is the key under which the verified-email gate (clientapi's verifiedEmailGate) stores the address a response was verified with: the respondent's identity, which the CSV export lists as its Verified Email column, not an answer they typed.
+const verifiedEmailKey = "verifiedEmail"
 
 // problemResult is a v3 problem as a tool result.
 func problemResult(p *v3api.Problem, requestID string) *sdk.CallToolResult {
@@ -194,12 +199,35 @@ func newResponseItem(sv *response.Survey, r response.Response, includeContact bo
 		}
 	}
 	item.OtherData = data
+	withoutVerifyToken(item.Meta)
 	if includeContact {
 		item.Contact, item.ContactAttributes = r.Contact, r.ContactAttributes
 	} else {
 		delete(item.Meta, "ipAddress")
+		delete(item.OtherData, verifiedEmailKey)
 	}
 	return item, nil
+}
+
+// withoutVerifyToken takes the email verification token out of the page URL a response was submitted from. A survey that requires email verification takes a response only from a URL whose verify parameter is a token for it, valid for seven days and naming the respondent's address, so the stored URL carries a credential that would let whoever reads it submit responses as that address. It is not respondent data and is never returned.
+func withoutVerifyToken(meta map[string]any) {
+	raw, ok := meta["url"].(string)
+	if !ok {
+		return
+	}
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		// The gate refuses a URL it cannot parse, so this one carried no accepted token; it is dropped rather than returned unchecked.
+		delete(meta, "url")
+		return
+	}
+	q := u.Query()
+	if !q.Has("verify") {
+		return
+	}
+	q.Del("verify")
+	u.RawQuery = q.Encode()
+	meta["url"] = u.String()
 }
 
 // listResponses is list_responses: a page of the survey's responses, newest first, matching the filter.
@@ -261,7 +289,7 @@ func (h *Handler) listResponses(ctx context.Context, p *principal, args map[stri
 	return toolResult(http.StatusOK, http.Header{}, body, p.requestID)
 }
 
-// getSurveySummary is get_survey_summary: the statistics the survey's summary page shows, over the responses matching the filter. Each card names its question by id, type and headline instead of carrying the whole element, keeps at most samplesPerQuestion of the individual answers it lists, and none of them names a contact.
+// getSurveySummary is get_survey_summary: the statistics the survey's summary page shows, over the responses matching the filter. Each card names its question by id, type and headline instead of carrying the whole element, keeps at most samplesPerQuestion of the individual answers and of the breakdown values it lists, and none of them names a contact.
 func (h *Handler) getSurveySummary(ctx context.Context, p *principal, args map[string]any) *sdk.CallToolResult {
 	filter, problem := responseFilter(args)
 	if problem != nil {
@@ -327,7 +355,10 @@ func compactElement(el map[string]any) map[string]any {
 	return map[string]any{"id": el["id"], "type": el["type"], "headline": headline}
 }
 
-// withoutRespondents removes contact and contactAttributes everywhere under node and cuts the sample lists to samples entries.
+// breakdowns are the keys under which a summary groups a free-text field's values with their counts: a hidden field's values and a choice's Other values. Each lists raw values as respondents gave them, so it is cut to samples values like the sample lists.
+var breakdowns = map[string]bool{"breakdown": true, "othersBreakdown": true}
+
+// withoutRespondents removes contact and contactAttributes everywhere under node and cuts the sample lists and the breakdowns to samples entries.
 func withoutRespondents(node any, samples int) {
 	switch v := node.(type) {
 	case map[string]any:
@@ -337,6 +368,9 @@ func withoutRespondents(node any, samples int) {
 			if list, ok := child.([]any); ok && sampleLists[key] && len(list) > samples {
 				v[key] = list[:samples]
 			}
+			if b, ok := child.(map[string]any); ok && breakdowns[key] {
+				cutBreakdown(b, samples)
+			}
 			withoutRespondents(v[key], samples)
 		}
 	case []any:
@@ -344,4 +378,37 @@ func withoutRespondents(node any, samples int) {
 			withoutRespondents(child, samples)
 		}
 	}
+}
+
+// cutBreakdown keeps a breakdown's samples most frequent values and adds the answers of the values it drops to the rest, whose share is recomputed over every answer the breakdown counts, as the analysis computes it.
+func cutBreakdown(b map[string]any, samples int) {
+	values, _ := b["values"].([]any)
+	if len(values) <= samples {
+		return
+	}
+	rest := jsonInt(b["restCount"])
+	total := rest
+	for i, value := range values {
+		n := 0
+		if m, ok := value.(map[string]any); ok {
+			n = jsonInt(m["count"])
+		}
+		total += n
+		if i >= samples {
+			rest += n
+		}
+	}
+	b["values"] = values[:samples]
+	b["restCount"] = rest
+	b["restPercentage"] = 0.0
+	if total > 0 {
+		b["restPercentage"] = math.Round(float64(rest)/float64(total)*100*100) / 100
+	}
+}
+
+// jsonInt is a count decoded with UseNumber, 0 when it is not one.
+func jsonInt(v any) int {
+	n, _ := v.(json.Number)
+	i, _ := n.Int64()
+	return int(i)
 }
