@@ -359,17 +359,19 @@ export const HiddenFieldsSummary = ({
   );
 };
 
-/** forma2's OpenTextSummary: the text answers, ten at a time, each opening its response. */
+/** forma2's OpenTextSummary: the text answers, ten at a time, each opening its response, under their AI summary (aiSummary). */
 export const OpenTextSummary = ({
   elementSummary,
   survey,
   locale,
   isReadOnly,
+  aiSummary,
 }: {
   elementSummary: TSurveyElementSummaryOpenText;
   survey: TSurvey;
   locale: string;
   isReadOnly: boolean;
+  aiSummary?: ReactNode;
 }) => {
   const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null);
   // A results link has no responses to open.
@@ -378,6 +380,7 @@ export const OpenTextSummary = ({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
       <ElementSummaryHeader elementSummary={elementSummary} survey={survey} />
+      {aiSummary}
       <SampleGrid
         samples={elementSummary.samples}
         responseCount={elementSummary.responseCount}

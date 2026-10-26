@@ -38,6 +38,7 @@ import {
   SliderSummary,
 } from "./score-summaries";
 import type { SetSummaryFilter } from "./summary-parts";
+import { TextSummaryPanel } from "./text-summary-panel";
 import { WithheldSummary } from "./withheld-summary";
 
 /** forma2's EmptyAppSurveys: an app survey of a workspace whose SDK has never connected. */
@@ -129,12 +130,38 @@ export const SummaryList = ({
             survey={survey}
             locale={locale}
             isReadOnly={isReadOnly}
+            aiSummary={
+              <TextSummaryPanel
+                survey={survey}
+                elementId={key}
+                target="answers"
+                answerCount={entry.responseCount}
+                locale={locale}
+                isReadOnly={isReadOnly}
+              />
+            }
           />
         );
       case TSurveyElementTypeEnum.MultipleChoiceSingle:
       case TSurveyElementTypeEnum.MultipleChoiceMulti:
         return (
-          <MultipleChoiceSummary key={key} elementSummary={entry} survey={survey} setFilter={setFilter} />
+          <MultipleChoiceSummary
+            key={key}
+            elementSummary={entry}
+            survey={survey}
+            setFilter={setFilter}
+            otherAISummary={
+              <TextSummaryPanel
+                survey={survey}
+                elementId={key}
+                target="other"
+                answerCount={entry.choices.find((choice) => choice.others !== undefined)?.count ?? 0}
+                locale={locale}
+                isReadOnly={isReadOnly}
+                className="mt-4"
+              />
+            }
+          />
         );
       case TSurveyElementTypeEnum.NPS:
         return <NPSSummary key={key} elementSummary={entry} survey={survey} setFilter={setFilter} />;

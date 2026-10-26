@@ -8,7 +8,7 @@ import type {
 } from "@forma/types/surveys/types";
 import { Link } from "@tanstack/react-router";
 import { InboxIcon } from "lucide-react";
-import { Fragment, type KeyboardEvent, useState } from "react";
+import { Fragment, type KeyboardEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PersonAvatar } from "../../../../components/ui/avatar";
 import { Button } from "../../../../components/ui/button";
@@ -42,15 +42,17 @@ const ChoiceScoreBadge = ({ score }: { score: number | undefined }) => {
   );
 };
 
-/** forma2's MultipleChoiceSummary: each choice's share, a click filtering by the choice, and the values typed into Other, grouped into bars or listed one by one. */
+/** forma2's MultipleChoiceSummary: each choice's share, a click filtering by the choice, and the values typed into Other, grouped into bars or listed one by one, with the AI summary of those values (otherAISummary) under them. */
 export const MultipleChoiceSummary = ({
   elementSummary,
   survey,
   setFilter,
+  otherAISummary,
 }: {
   elementSummary: TSurveyElementSummaryMultipleChoice;
   survey: TSurvey;
   setFilter: SetSummaryFilter;
+  otherAISummary?: ReactNode;
 }) => {
   const { t } = useTranslation();
   const isShared = useIsSharedSummary();
@@ -223,6 +225,7 @@ export const MultipleChoiceSummary = ({
                     )}
                   </div>
                 )}
+                {hasOthers && otherAISummary}
               </Fragment>
             );
           })}
