@@ -29,7 +29,7 @@ func TestRetention(t *testing.T) {
 	if r.WorkflowRunRetentionDays != nil || r.DisplayRetentionDays != nil || !r.DryRun || r.LastSweep != nil {
 		t.Fatalf("a new organization's retention = %+v, want every window off, a dry run and no sweep", r)
 	}
-	if next := r.NextSweepAt.UTC(); !next.After(time.Now()) || next.Sub(time.Now()) > 24*time.Hour || next.Hour() != 0 || next.Minute() != 0 {
+	if next := r.NextSweepAt.UTC(); !next.After(time.Now()) || time.Until(next) > 24*time.Hour || next.Hour() != 0 || next.Minute() != 0 {
 		t.Fatalf("next sweep at %v, want the coming midnight UTC", r.NextSweepAt)
 	}
 
