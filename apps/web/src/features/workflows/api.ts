@@ -131,6 +131,13 @@ export interface TWorkflowAuthoringContextWire {
   mailFrom: string;
 }
 
+/** A test send's outcome (POST /api/app/workflows/{id}/steps/{stepId}/test-send): whether the receiver accepted it, its status, and why it failed. */
+export interface TWorkflowTestSendResult {
+  ok: boolean;
+  status?: number;
+  message?: string;
+}
+
 // Bounds mutation calls so a stalled request cannot leave the editor's save or transition spinner stuck; the rejection surfaces as the normal error toast.
 export const MUTATION_TIMEOUT_MS = 15_000;
 
@@ -224,6 +231,12 @@ export const workflowsApi = {
     ),
   getRun: async (runId: string, signal?: AbortSignal) =>
     (await api.get<{ data: TWorkflowRunDetail }>(`/api/v3/workflows/runs/${runId}`, { signal })).data,
+  testSend: (workflowId: string, stepId: string) =>
+    api.post<TWorkflowTestSendResult>(
+      `/api/app/workflows/${workflowId}/steps/${encodeURIComponent(stepId)}/test-send`,
+      undefined,
+      mutationSignal()
+    ),
   authoringContext: (workspaceId: string, signal?: AbortSignal) =>
     api.get<TWorkflowAuthoringContextWire>(`/api/app/workspaces/${workspaceId}/workflows/authoring-context`, {
       signal,

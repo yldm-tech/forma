@@ -5,6 +5,8 @@ import { atom } from "jotai";
 import type { SetStateAction } from "react";
 import type { TWorkflowResource } from "../api";
 import {
+  type TWorkflowActionNode,
+  type TWorkflowActionType,
   type TWorkflowDefinition,
   type TWorkflowTriggerType,
   WORKFLOW_ACTIONS,
@@ -15,7 +17,16 @@ import {
 // The workflow builder's state, forma2's modules/workflows/state/editor.ts: one editor atom holding the loaded workflow and the editable draft, the atoms derived from it, and the writes the canvas, the inspector and the save flow make.
 
 export type TWorkflowNodeCategory = "trigger" | "flow" | "action";
-export type TWorkflowNodeIcon = "trigger" | "ifElse" | "email";
+export type TWorkflowNodeIcon =
+  | "trigger"
+  | "ifElse"
+  | "email"
+  | "http"
+  | "slack"
+  | "discord"
+  | "teams"
+  | "tag"
+  | "attribute";
 
 export type TWorkflowNodeIssue = {
   /** "setup": a draft that is simply not configured yet (amber, guiding); "error": a live or previously live workflow that cannot run as configured (red). */
@@ -116,6 +127,9 @@ export const isWorkflowTransitioningAtom = atom((get) => get(workflowEditorAtom)
 
 // Whether the trigger's surveyId resolves to a survey of the workspace. The builder page owns it; it defaults to true so nothing flashes as broken before the page syncs it.
 export const hasBoundTriggerSurveyAtom = atom<boolean>(true);
+
+// Whether the member can manage the workspace, which adding or changing an HTTP request step needs (the API refuses it otherwise). The builder page owns it; false until it syncs, so the step is never offered to someone who cannot keep it.
+export const canManageWorkspaceAtom = atom<boolean>(false);
 
 // Trigger ending ids the reconcile dropped this session. An emptied list reads as "all endings", which cannot say that the user's specific pick was emptied by deleted endings, so the trigger form keeps the "specific" scope and asks for a fresh pick.
 export const prunedTriggerEndingCardIdsAtom = atom<string[]>([]);
@@ -592,49 +606,82 @@ export const addWorkflowTriggerAtom = atom(null, (get, set, triggerType: TWorkfl
 // Where a new node goes when the node or edge it is placed against has no stored position.
 const SEND_EMAIL_FALLBACK_POSITION = { x: 220, y: 200 };
 
-// The send_email node both insertions create. No label, so the title falls back to the translated default; the position is cloned so no two nodes share one object.
+// A new action node's config: empty fields to fill in. A new HTTP request posts JSON, the common case.
+const createDefaultActionNode = (
+  actionType: TWorkflowActionType,
+  position: { x: number; y: number }
+): TWorkflowActionNode => {
+  // No label, so the title falls back to the translated default; the position is cloned so no two nodes share one object.
+  const base = { id: createId(), type: "action" as const, ui: { position: { ...position } } };
+  switch (actionType) {
+    case WORKFLOW_ACTIONS.SEND_EMAIL:
+      return {
+        ...base,
+        actionType,
+        config: {
+          to: "",
+          from: "team@example.com",
+          replyTo: [],
+          subject: "",
+          body: "",
+          attachResponseData: false,
+        },
+      };
+    case WORKFLOW_ACTIONS.HTTP_REQUEST:
+      return {
+        ...base,
+        actionType,
+        config: { method: "POST", url: "", headers: [], body: "", signingSecret: null },
+      };
+    case WORKFLOW_ACTIONS.SLACK_MESSAGE:
+    case WORKFLOW_ACTIONS.DISCORD_MESSAGE:
+    case WORKFLOW_ACTIONS.TEAMS_MESSAGE:
+      return { ...base, actionType, config: { webhookUrl: {}, message: "" } };
+    case WORKFLOW_ACTIONS.TAG_RESPONSE:
+      return { ...base, actionType, config: { tagId: "" } };
+    case WORKFLOW_ACTIONS.SET_CONTACT_ATTRIBUTE:
+      return { ...base, actionType, config: { attributeKey: "", value: "" } };
+  }
+};
+
+// The send_email node the edge insertion creates.
 const createDefaultSendEmailNode = (position: {
   x: number;
   y: number;
-}): TWorkflowDefinition["nodes"][number] => ({
-  id: createId(),
-  type: "action",
-  actionType: WORKFLOW_ACTIONS.SEND_EMAIL,
-  config: {
-    to: "",
-    from: "team@example.com",
-    replyTo: [],
-    subject: "",
-    body: "",
-    attachResponseData: false,
-  },
-  ui: { position: { ...position } },
-});
+}): TWorkflowDefinition["nodes"][number] => createDefaultActionNode(WORKFLOW_ACTIONS.SEND_EMAIL, position);
+
+// Appends an action of the given type after sourceNodeId, 120px below it, and opens it.
+export const appendActionAfterNodeAtom = atom(
+  null,
+  (get, set, { sourceNodeId, actionType }: { sourceNodeId: string; actionType: TWorkflowActionType }) => {
+    set(
+      workflowEditorAtom,
+      produce(get(workflowEditorAtom), (draft) => {
+        const definition = draft.definition;
+        if (!definition) return;
+
+        const sourcePosition =
+          definition.trigger?.id === sourceNodeId
+            ? definition.trigger.ui?.position
+            : definition.nodes.find((node) => node.id === sourceNodeId)?.ui?.position;
+        const newPosition = sourcePosition
+          ? { x: sourcePosition.x, y: sourcePosition.y + 120 }
+          : SEND_EMAIL_FALLBACK_POSITION;
+
+        const newNode = createDefaultActionNode(actionType, newPosition);
+        definition.nodes.push(newNode);
+        definition.edges.push({ id: createId(), source: sourceNodeId, target: newNode.id });
+
+        draft.selectedNodeId = newNode.id;
+        draft.isNodeConfigModalOpen = true;
+      })
+    );
+  }
+);
 
 // Appends a send_email node after sourceNodeId, 120px below it.
-export const appendSendEmailAfterNodeAtom = atom(null, (get, set, sourceNodeId: string) => {
-  set(
-    workflowEditorAtom,
-    produce(get(workflowEditorAtom), (draft) => {
-      const definition = draft.definition;
-      if (!definition) return;
-
-      const sourcePosition =
-        definition.trigger?.id === sourceNodeId
-          ? definition.trigger.ui?.position
-          : definition.nodes.find((node) => node.id === sourceNodeId)?.ui?.position;
-      const newPosition = sourcePosition
-        ? { x: sourcePosition.x, y: sourcePosition.y + 120 }
-        : SEND_EMAIL_FALLBACK_POSITION;
-
-      const newNode = createDefaultSendEmailNode(newPosition);
-      definition.nodes.push(newNode);
-      definition.edges.push({ id: createId(), source: sourceNodeId, target: newNode.id });
-
-      draft.selectedNodeId = newNode.id;
-      draft.isNodeConfigModalOpen = true;
-    })
-  );
+export const appendSendEmailAfterNodeAtom = atom(null, (_get, set, sourceNodeId: string) => {
+  set(appendActionAfterNodeAtom, { sourceNodeId, actionType: WORKFLOW_ACTIONS.SEND_EMAIL });
 });
 
 // Splits an edge with a send_email node at its midpoint, keeping the edge's sourceHandle on the first half.

@@ -162,6 +162,38 @@ describe("problem field paths stay shared between producer and consumer", () => 
     });
   });
 
+  test("a step_incomplete problem of another step resolves to its first problem field", () => {
+    const withHeaders = {
+      ...definition,
+      nodes: [
+        {
+          id: "http-1",
+          type: "action",
+          actionType: "http_request",
+          config: {
+            method: "POST",
+            url: "https://api.example.com",
+            headers: [{ name: "", value: "x" }],
+            body: "",
+            signingSecret: null,
+          },
+        },
+      ],
+      edges: [{ id: "e1", source: "trigger-1", target: "http-1" }],
+    } as unknown as TWorkflowDefinition;
+    const { problems } = deriveWorkflowValidation({
+      workflowName: "wf",
+      definition: withHeaders,
+      hasBoundTriggerSurvey: true,
+    });
+    const stepProblem = problems.find((p) => p.code === "step_incomplete");
+    expect(stepProblem?.field).toBe("nodes.0.config");
+    expect(getWorkflowValidationProblemFocusTarget(stepProblem!, withHeaders)).toEqual({
+      nodeId: "http-1",
+      field: "headers.0.name",
+    });
+  });
+
   test("an unbound-survey problem the producer emitted resolves to the survey picker", () => {
     const { problems } = deriveWorkflowValidation({
       workflowName: "wf",

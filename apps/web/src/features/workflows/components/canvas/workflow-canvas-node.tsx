@@ -2,12 +2,18 @@ import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
   GitBranchIcon,
+  GlobeIcon,
+  HashIcon,
   type LucideIcon,
   MailIcon,
+  MessageCircleIcon,
   MoreVerticalIcon,
   PlusIcon,
+  TagIcon,
   Trash2Icon,
   TriangleAlertIcon,
+  UserIcon,
+  UsersIcon,
   ZapIcon,
 } from "lucide-react";
 import { memo } from "react";
@@ -22,20 +28,27 @@ import {
   DropdownMenuTrigger,
 } from "../../../../components/ui/dropdown-menu";
 import { cn } from "../../../../lib/cn";
-import { WORKFLOW_ACTIONS } from "../../definition";
 import { WORKFLOW_CLIENT_EVENTS, trackWorkflowEvent } from "../../lib/analytics";
+import { getWorkflowActionOptions } from "../../lib/node-registry";
 import {
   type TWorkflowNodeData,
   type TWorkflowNodeIcon,
-  appendSendEmailAfterNodeAtom,
+  appendActionAfterNodeAtom,
+  canManageWorkspaceAtom,
   canMutateCanvasAtom,
   deleteWorkflowNodeAtom,
 } from "../../state/editor";
 
-const NODE_ICONS: Record<TWorkflowNodeIcon, LucideIcon> = {
+export const NODE_ICONS: Record<TWorkflowNodeIcon, LucideIcon> = {
   trigger: ZapIcon,
   ifElse: GitBranchIcon,
   email: MailIcon,
+  http: GlobeIcon,
+  slack: HashIcon,
+  discord: MessageCircleIcon,
+  teams: UsersIcon,
+  tag: TagIcon,
+  attribute: UserIcon,
 };
 
 /** The category colours, shared with the pickers so their icons match the canvas cards. */
@@ -47,15 +60,19 @@ export const CATEGORY_CHIP_CLASS_NAMES: Record<TWorkflowNodeData["category"], st
 
 const HANDLE_CLASS_NAMES = "!h-0 !w-0 !min-h-0 !min-w-0 !border-0 !bg-transparent !opacity-0";
 
-/** forma2's WorkflowCanvasNode: a node's card with its title and either its summary or the reason it cannot run; actions get a delete menu, and a trigger without a next step a `+` that adds one. */
+/** forma2's WorkflowCanvasNode: a node's card with its title and either its summary or the reason it cannot run; actions get a delete menu, and the last step of the chain (the trigger or an action) a `+` that adds the next one. */
 export const WorkflowCanvasNode = memo(
   ({ id, data, selected }: Readonly<NodeProps<Node<TWorkflowNodeData>>>) => {
     const { t } = useTranslation();
     const deleteNode = useSetAtom(deleteWorkflowNodeAtom);
-    const appendSendEmail = useSetAtom(appendSendEmailAfterNodeAtom);
+    const appendAction = useSetAtom(appendActionAfterNodeAtom);
     const canMutate = useAtomValue(canMutateCanvasAtom);
+    const canManage = useAtomValue(canManageWorkspaceAtom);
     const Icon = NODE_ICONS[data.icon];
     const isTrigger = data.category === "trigger";
+    // Steps run in a chain, so the next one is added after the last; a branch has no form yet and gets none.
+    const canAppend = data.isLeaf && canMutate && (isTrigger || data.category === "action");
+    const actionOptions = getWorkflowActionOptions(t).filter((option) => canManage || !option.needsManage);
 
     return (
       <div className="flex flex-col items-center">
@@ -118,8 +135,8 @@ export const WorkflowCanvasNode = memo(
           )}
           <Handle type="source" position={Position.Bottom} className={HANDLE_CLASS_NAMES} />
         </div>
-        {isTrigger && data.isLeaf && canMutate && (
-          // Only the trigger gets a `+`: a workflow holds one action after its trigger, and the `+` opens a picker so each step is a conscious choice.
+        {canAppend && (
+          // The `+` opens a picker so each step is a conscious choice.
           <div className="mt-2 flex flex-col items-center gap-1">
             <div className="h-3 w-px bg-slate-300" />
             <DropdownMenu>
@@ -134,32 +151,36 @@ export const WorkflowCanvasNode = memo(
                   <PlusIcon />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="w-64 motion-reduce:animate-none">
+              <DropdownMenuContent align="center" className="w-72 motion-reduce:animate-none">
                 <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    trackWorkflowEvent(WORKFLOW_CLIENT_EVENTS.actionAdded, {
-                      action_type: WORKFLOW_ACTIONS.SEND_EMAIL,
-                      after_node_type: data.nodeType,
-                    });
-                    appendSendEmail(id);
-                  }}>
-                  <span
-                    className={cn(
-                      "flex size-6 shrink-0 items-center justify-center rounded-md",
-                      CATEGORY_CHIP_CLASS_NAMES.action
-                    )}>
-                    <MailIcon className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
-                  </span>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="text-sm text-slate-700">{t("workspace.workflows.send_email")}</span>
-                    <span className="text-xs text-slate-500">
-                      {t("workspace.workflows.send_email_description")}
-                    </span>
-                  </span>
-                </DropdownMenuItem>
+                {actionOptions.map((option) => {
+                  const OptionIcon = NODE_ICONS[option.icon];
+                  return (
+                    <DropdownMenuItem
+                      key={option.actionType}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        trackWorkflowEvent(WORKFLOW_CLIENT_EVENTS.actionAdded, {
+                          action_type: option.actionType,
+                          after_node_type: data.nodeType,
+                        });
+                        appendAction({ sourceNodeId: id, actionType: option.actionType });
+                      }}>
+                      <span
+                        className={cn(
+                          "flex size-6 shrink-0 items-center justify-center rounded-md",
+                          CATEGORY_CHIP_CLASS_NAMES.action
+                        )}>
+                        <OptionIcon className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
+                      </span>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="text-sm text-slate-700">{option.title}</span>
+                        <span className="text-xs text-slate-500">{option.description}</span>
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

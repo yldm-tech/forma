@@ -4,6 +4,7 @@ import type { TWorkflowResource } from "../api";
 import type { TWorkflowDefinition } from "../definition";
 import {
   addWorkflowTriggerAtom,
+  appendActionAfterNodeAtom,
   appendSendEmailAfterNodeAtom,
   canEditWorkflowDefinitionAtom,
   canMutateCanvasAtom,
@@ -401,6 +402,31 @@ describe("appendSendEmailAfterNodeAtom", () => {
   });
 });
 
+describe("appendActionAfterNodeAtom", () => {
+  test("appends the chosen action with its empty config after the last step", () => {
+    const store = createStore();
+    store.set(setWorkflowDefinitionAtom, graphDefinition());
+    const configs = {
+      http_request: { method: "POST", url: "", headers: [], body: "", signingSecret: null },
+      slack_message: { webhookUrl: {}, message: "" },
+      tag_response: { tagId: "" },
+      set_contact_attribute: { attributeKey: "", value: "" },
+    } as const;
+    for (const [actionType, config] of Object.entries(configs)) {
+      const before = store.get(workflowDefinitionAtom)!.nodes.length;
+      store.set(appendActionAfterNodeAtom, {
+        sourceNodeId: "trigger-1",
+        actionType: actionType as keyof typeof configs,
+      });
+      const def = store.get(workflowDefinitionAtom)!;
+      const added = def.nodes[before]!;
+      expect(added).toMatchObject({ type: "action", actionType, config });
+      expect(def.edges.some((e) => e.source === "trigger-1" && e.target === added.id)).toBe(true);
+      expect(store.get(selectedWorkflowNodeIdAtom)).toBe(added.id);
+    }
+  });
+});
+
 describe("insertSendEmailAfterEdgeAtom", () => {
   test("no-ops when there is no definition", () => {
     const store = createStore();
@@ -750,7 +776,9 @@ describe("workflowValidityAtom", () => {
         ? {
             ...current,
             nodes: current.nodes.map((node) =>
-              node.type === "action" ? { ...node, config: { ...node.config, to: "" } } : node
+              node.type === "action" && node.actionType === "send_email"
+                ? { ...node, config: { ...node.config, to: "" } }
+                : node
             ),
           }
         : current

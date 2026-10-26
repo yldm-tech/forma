@@ -10,7 +10,21 @@ export const WORKFLOW_TRIGGERS = {
 
 export const WORKFLOW_ACTIONS = {
   SEND_EMAIL: "send_email",
+  HTTP_REQUEST: "http_request",
+  SLACK_MESSAGE: "slack_message",
+  DISCORD_MESSAGE: "discord_message",
+  TEAMS_MESSAGE: "teams_message",
+  TAG_RESPONSE: "tag_response",
+  SET_CONTACT_ATTRIBUTE: "set_contact_attribute",
 } as const;
+export type TWorkflowActionType = (typeof WORKFLOW_ACTIONS)[keyof typeof WORKFLOW_ACTIONS];
+
+export const WORKFLOW_CHAT_ACTIONS = [
+  WORKFLOW_ACTIONS.SLACK_MESSAGE,
+  WORKFLOW_ACTIONS.DISCORD_MESSAGE,
+  WORKFLOW_ACTIONS.TEAMS_MESSAGE,
+] as const;
+export type TWorkflowChatActionType = (typeof WORKFLOW_CHAT_ACTIONS)[number];
 
 export const ZWorkflowStatus = z.enum(["draft", "enabled", "disabled", "archived"]);
 export type TWorkflowStatus = z.infer<typeof ZWorkflowStatus>;
@@ -116,7 +130,264 @@ export const ZWorkflowSendEmailActionNode = ZWorkflowNodeBase.extend({
 });
 export type TWorkflowSendEmailActionNode = z.infer<typeof ZWorkflowSendEmailActionNode>;
 
-const ZWorkflowActionNode = z.discriminatedUnion("actionType", [ZWorkflowSendEmailActionNode]);
+// ---- The actions after send_email (apps/server/internal/workflow/actions.go) ----
+
+/** A value the API takes in plaintext and stores only sealed: written as `{ value }`, read back as `{ sealed, hint }`, sent back unchanged to keep it. Empty, the author has not entered it yet. */
+export const ZWorkflowSecretValue = z
+  .object({
+    value: z.string().max(4096).optional(),
+    sealed: z.string().max(8192).optional(),
+    hint: z.string().max(160).optional(),
+  })
+  .superRefine((secret, ctx) => {
+    if (secret.value !== undefined && secret.sealed) {
+      ctx.addIssue({
+        code: "custom",
+        message: "A secret carries either a new value or its sealed form, not both",
+      });
+    }
+  });
+export type TWorkflowSecretValue = z.infer<typeof ZWorkflowSecretValue>;
+
+/** Whether a secret holds something to send: a sealed value, or a new one the next save seals. */
+export const isWorkflowSecretFilled = (secret: TWorkflowSecretValue | null | undefined): boolean =>
+  Boolean(secret?.sealed) || (secret?.value ?? "").trim().length > 0;
+
+export const WORKFLOW_HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+export type TWorkflowHttpMethod = (typeof WORKFLOW_HTTP_METHODS)[number];
+
+export const MAX_WORKFLOW_HTTP_HEADERS = 20;
+
+export const ZWorkflowHttpHeader = z
+  .object({
+    name: z.string().max(256),
+    value: z.string().max(4096).optional(),
+    secret: ZWorkflowSecretValue.optional(),
+  })
+  .superRefine((header, ctx) => {
+    if (header.value !== undefined && header.secret !== undefined) {
+      ctx.addIssue({ code: "custom", message: "A header has either a value or a secret, not both" });
+    }
+    if (header.value === undefined && header.secret === undefined) {
+      ctx.addIssue({ code: "custom", message: "A header needs a value or a secret" });
+    }
+  });
+export type TWorkflowHttpHeader = z.infer<typeof ZWorkflowHttpHeader>;
+
+/** An HTTP request: the body is a JSON template whose strings may hold {{placeholders}}; a signing secret signs every request the way webhooks are signed (Standard Webhooks). */
+export const ZWorkflowHttpRequestActionConfig = z.object({
+  method: z.enum(WORKFLOW_HTTP_METHODS),
+  url: z.string().max(2048),
+  headers: z.array(ZWorkflowHttpHeader).max(MAX_WORKFLOW_HTTP_HEADERS).default([]),
+  body: z.string().max(100_000).default(""),
+  signingSecret: ZWorkflowSecretValue.nullable().default(null),
+});
+
+/** A Slack, Discord or Teams message: the channel's incoming-webhook URL, a credential and so a secret, and a text template. */
+export const ZWorkflowChatMessageActionConfig = z.object({
+  webhookUrl: ZWorkflowSecretValue,
+  message: z.string().max(4000),
+});
+
+export const ZWorkflowTagResponseActionConfig = z.object({ tagId: z.string().max(64) });
+
+export const ZWorkflowSetContactAttributeActionConfig = z.object({
+  attributeKey: z.string().max(256),
+  value: z.string().max(4000),
+});
+
+export const ZWorkflowHttpRequestActionNode = ZWorkflowNodeBase.extend({
+  type: z.literal("action"),
+  actionType: z.literal(WORKFLOW_ACTIONS.HTTP_REQUEST),
+  config: ZWorkflowHttpRequestActionConfig,
+});
+export type TWorkflowHttpRequestActionNode = z.infer<typeof ZWorkflowHttpRequestActionNode>;
+
+const chatActionNode = <TActionType extends TWorkflowChatActionType>(actionType: TActionType) =>
+  ZWorkflowNodeBase.extend({
+    type: z.literal("action"),
+    actionType: z.literal(actionType),
+    config: ZWorkflowChatMessageActionConfig,
+  });
+const ZWorkflowSlackMessageActionNode = chatActionNode(WORKFLOW_ACTIONS.SLACK_MESSAGE);
+const ZWorkflowDiscordMessageActionNode = chatActionNode(WORKFLOW_ACTIONS.DISCORD_MESSAGE);
+const ZWorkflowTeamsMessageActionNode = chatActionNode(WORKFLOW_ACTIONS.TEAMS_MESSAGE);
+export type TWorkflowChatMessageActionNode =
+  | z.infer<typeof ZWorkflowSlackMessageActionNode>
+  | z.infer<typeof ZWorkflowDiscordMessageActionNode>
+  | z.infer<typeof ZWorkflowTeamsMessageActionNode>;
+
+export const ZWorkflowTagResponseActionNode = ZWorkflowNodeBase.extend({
+  type: z.literal("action"),
+  actionType: z.literal(WORKFLOW_ACTIONS.TAG_RESPONSE),
+  config: ZWorkflowTagResponseActionConfig,
+});
+export type TWorkflowTagResponseActionNode = z.infer<typeof ZWorkflowTagResponseActionNode>;
+
+export const ZWorkflowSetContactAttributeActionNode = ZWorkflowNodeBase.extend({
+  type: z.literal("action"),
+  actionType: z.literal(WORKFLOW_ACTIONS.SET_CONTACT_ATTRIBUTE),
+  config: ZWorkflowSetContactAttributeActionConfig,
+});
+export type TWorkflowSetContactAttributeActionNode = z.infer<typeof ZWorkflowSetContactAttributeActionNode>;
+
+const ZWorkflowActionNode = z.discriminatedUnion("actionType", [
+  ZWorkflowSendEmailActionNode,
+  ZWorkflowHttpRequestActionNode,
+  ZWorkflowSlackMessageActionNode,
+  ZWorkflowDiscordMessageActionNode,
+  ZWorkflowTeamsMessageActionNode,
+  ZWorkflowTagResponseActionNode,
+  ZWorkflowSetContactAttributeActionNode,
+]);
+export type TWorkflowActionNode = z.infer<typeof ZWorkflowActionNode>;
+
+export const isWorkflowChatAction = (actionType: string): actionType is TWorkflowChatActionType =>
+  (WORKFLOW_CHAT_ACTIONS as readonly string[]).includes(actionType);
+
+// The characters a header name may have (RFC 9110's token).
+const HTTP_HEADER_TOKEN_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+
+/** The headers the server writes itself: the transport's, the JSON body's type and the Standard Webhooks headers. */
+export const RESERVED_WORKFLOW_HTTP_HEADERS = new Set([
+  "host",
+  "content-length",
+  "content-type",
+  "transfer-encoding",
+  "connection",
+  "keep-alive",
+  "upgrade",
+  "te",
+  "trailer",
+  "proxy-authorization",
+  "proxy-connection",
+  "webhook-id",
+  "webhook-timestamp",
+  "webhook-signature",
+]);
+
+// Whether a value has a control character, which would split a header.
+const hasControlCharacter = (value: string): boolean =>
+  Array.from(value).some((char) => {
+    const code = char.charCodeAt(0);
+    return code < 0x20 || code === 0x7f;
+  });
+
+const parseUrl = (value: string): URL | null => {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+};
+
+/** Whether a URL can be an HTTP request's target as written: absolute http or https with a host and no credentials, which belong in a header. Where it points is the server's SSRF guard's to decide. */
+export const isValidWorkflowRequestUrl = (value: string): boolean => {
+  const url = parseUrl(value);
+  return (
+    url !== null &&
+    (url.protocol === "http:" || url.protocol === "https:") &&
+    url.hostname !== "" &&
+    url.username === "" &&
+    url.password === ""
+  );
+};
+
+const CHAT_WEBHOOK_HOSTS: Record<
+  TWorkflowChatActionType,
+  { exact: string[]; suffixes: string[]; pathPrefix: string }
+> = {
+  slack_message: { exact: ["hooks.slack.com"], suffixes: [], pathPrefix: "/services/" },
+  discord_message: {
+    exact: ["discord.com", "discordapp.com", "ptb.discord.com", "canary.discord.com"],
+    suffixes: [],
+    pathPrefix: "/api/webhooks/",
+  },
+  teams_message: {
+    exact: [],
+    suffixes: [".webhook.office.com", ".logic.azure.com", ".api.powerplatform.com"],
+    pathPrefix: "/",
+  },
+};
+
+/** Whether a URL is an https incoming webhook of the chat, the server's ValidChatWebhookURL. */
+export const isValidChatWebhookUrl = (actionType: TWorkflowChatActionType, value: string): boolean => {
+  const url = parseUrl(value.trim());
+  const hosts = CHAT_WEBHOOK_HOSTS[actionType];
+  if (!url || url.protocol !== "https:" || url.username !== "" || url.password !== "") return false;
+  if (!url.pathname.startsWith(hosts.pathPrefix) || url.pathname.length <= hosts.pathPrefix.length)
+    return false;
+  const host = url.hostname.toLowerCase();
+  return (
+    hosts.exact.includes(host) ||
+    hosts.suffixes.some((suffix) => host.endsWith(suffix) && host.length > suffix.length)
+  );
+};
+
+const isValidJson = (value: string): boolean => {
+  try {
+    JSON.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const ZUuid = z.guid();
+
+/** A config field that keeps an action from running: blank, or set to something it cannot run with. field is dotted within the config ("headers.0.name"). */
+export type TWorkflowActionProblem = { field: string; invalid: boolean };
+
+/** forma2's getBlankSendEmailContentFields for every action, the server's ActionProblems: what an action still needs before it can run, in form order. A secret counts once it holds a value, sealed or about to be. */
+export const getWorkflowActionProblems = (node: TWorkflowActionNode): TWorkflowActionProblem[] => {
+  const problems: TWorkflowActionProblem[] = [];
+  const missing = (field: string) => problems.push({ field, invalid: false });
+  const invalid = (field: string) => problems.push({ field, invalid: true });
+  const isBlank = (value: string) => value.trim().length === 0;
+  switch (node.actionType) {
+    case "send_email":
+      getBlankSendEmailContentFields(node.config).forEach(missing);
+      break;
+    case "http_request": {
+      const { config } = node;
+      if (isBlank(config.url)) missing("url");
+      else if (!isValidWorkflowRequestUrl(config.url)) invalid("url");
+      config.headers.forEach((header, index) => {
+        const at = `headers.${index}.`;
+        if (isBlank(header.name)) missing(`${at}name`);
+        else if (
+          !HTTP_HEADER_TOKEN_PATTERN.test(header.name) ||
+          RESERVED_WORKFLOW_HTTP_HEADERS.has(header.name.toLowerCase())
+        )
+          invalid(`${at}name`);
+        if (header.secret !== undefined && !isWorkflowSecretFilled(header.secret)) missing(`${at}secret`);
+        else if (header.value !== undefined && hasControlCharacter(header.value)) invalid(`${at}value`);
+      });
+      if (!isBlank(config.body) && (config.method === "GET" || !isValidJson(config.body))) invalid("body");
+      if (config.signingSecret !== null && !isWorkflowSecretFilled(config.signingSecret))
+        missing("signingSecret");
+      break;
+    }
+    case "slack_message":
+    case "discord_message":
+    case "teams_message":
+      if (!isWorkflowSecretFilled(node.config.webhookUrl)) missing("webhookUrl");
+      if (isBlank(node.config.message)) missing("message");
+      break;
+    case "tag_response":
+      if (isBlank(node.config.tagId)) missing("tagId");
+      else if (!ZUuid.safeParse(node.config.tagId).success) invalid("tagId");
+      break;
+    case "set_contact_attribute":
+      if (isBlank(node.config.attributeKey)) missing("attributeKey");
+      if (isBlank(node.config.value)) missing("value");
+      break;
+  }
+  return problems;
+};
+
+const fieldPath = (field: string): (string | number)[] =>
+  field.split(".").map((part) => (/^\d+$/.test(part) ? Number(part) : part));
 
 const ZWorkflowConditionOperator = z.enum([
   "equals",
@@ -368,7 +639,7 @@ const validateExecutableGraph = (
   }
 };
 
-/** The subset the runner can execute, which enable publishes: a trigger with exactly one outgoing edge, an acyclic graph with every node reachable, no if_else nodes, and a to, subject and body in every send_email action. */
+/** The subset the runner can execute, which enable publishes: a trigger with exactly one outgoing edge, an acyclic graph with every node reachable, no if_else nodes, and every action configured enough to run (getWorkflowActionProblems). */
 export const ZWorkflowExecutableDefinition = ZWorkflowExecutableDefinitionBase.superRefine(
   (definition, ctx) => {
     validateWorkflowGraph(definition, ctx);
@@ -382,11 +653,11 @@ export const ZWorkflowExecutableDefinition = ZWorkflowExecutableDefinitionBase.s
         });
       }
       if (node.type === "action") {
-        for (const field of getBlankSendEmailContentFields(node.config)) {
+        for (const problem of getWorkflowActionProblems(node)) {
           ctx.addIssue({
             code: "custom",
-            message: `send_email node ${node.id} is missing ${field}`,
-            path: ["nodes", index, "config", field],
+            message: `${node.actionType} node ${node.id} ${problem.invalid ? "has an invalid" : "is missing"} ${problem.field}`,
+            path: ["nodes", index, "config", ...fieldPath(problem.field)],
           });
         }
       }

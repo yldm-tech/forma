@@ -20,6 +20,7 @@ import {
   type TWorkflowValidationProblemCode,
   requestWorkflowNodeFieldFocusAtom,
   workflowDefinitionAtom,
+  workflowProblemFields,
 } from "../state/editor";
 
 /** forma2's WorkflowValidationProblemsDialog: the live problems behind the canvas's count, each localized by its code. A problem that resolves to one config field is a button that closes the dialog, opens that step and focuses the field; problems fixed elsewhere (the name, a missing trigger, the flow's shape) are passive rows. */
@@ -48,6 +49,15 @@ export const WorkflowValidationProblemsDialog = ({
     definition_invalid: t("workspace.workflows.validation_problem_generic"),
   };
 
+  // The step_incomplete message names an email's fields; any other step gets the generic one.
+  const genericStepIncomplete = t("workspace.workflows.validation_problem_step_incomplete_generic");
+  const isOtherStepIncomplete = (problem: TWorkflowValidationProblem): boolean => {
+    if (problem.code !== "step_incomplete") return false;
+    const index = workflowProblemFields.parseNodeConfigIndex(problem.field);
+    const node = index === null ? undefined : definition?.nodes[index];
+    return node?.type === "action" && node.actionType !== "send_email";
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange} width="narrow">
       <DialogHeader>
@@ -59,7 +69,9 @@ export const WorkflowValidationProblemsDialog = ({
           {problems.map((problem) => {
             const location = getWorkflowValidationProblemLocation(problem, definition, t);
             const focusTarget = getWorkflowValidationProblemFocusTarget(problem, definition);
-            const message = problemMessages[problem.code];
+            const message = isOtherStepIncomplete(problem)
+              ? genericStepIncomplete
+              : problemMessages[problem.code];
             return (
               <li key={`${problem.code}-${problem.field}`}>
                 {focusTarget ? (

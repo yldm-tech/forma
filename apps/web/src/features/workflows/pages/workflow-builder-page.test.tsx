@@ -159,6 +159,7 @@ const renderPage = (initialNode: string | null) => {
           workspaceId={WORKSPACE_ID}
           workflowId={WORKFLOW_ID}
           isReadOnly={false}
+          canManage
           nodeParam={node}
           setNodeParam={setNode}
         />

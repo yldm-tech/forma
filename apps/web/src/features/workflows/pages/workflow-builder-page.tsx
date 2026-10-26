@@ -15,12 +15,14 @@ import { useWorkflowBuilder } from "../hooks/use-workflow-builder";
 import { useTrackWorkflowSurface } from "../hooks/use-track-workflow-surface";
 import { useWorkflowNodeUrlSync } from "../hooks/use-workflow-node-url-sync";
 import { type TWorkflowEmailAuthoringContext, resolveBoundTriggerSurvey } from "../lib/authoring-context";
-import { hasBoundTriggerSurveyAtom } from "../state/editor";
+import { canManageWorkspaceAtom, hasBoundTriggerSurveyAtom } from "../state/editor";
 
 interface WorkflowBuilderPageProps {
   workspaceId: string;
   workflowId: string;
   isReadOnly: boolean;
+  /** The member can manage the workspace, which adding or changing an HTTP request step needs. */
+  canManage: boolean;
   nodeParam: string | null;
   setNodeParam: (nodeId: string | null) => void;
 }
@@ -30,12 +32,17 @@ export const WorkflowBuilderPage = ({
   workspaceId,
   workflowId,
   isReadOnly,
+  canManage,
   nodeParam,
   setNodeParam,
 }: Readonly<WorkflowBuilderPageProps>) => {
   const { t } = useTranslation();
   const builder = useWorkflowBuilder({ workspaceId, workflowId, isReadOnly });
   const setHasBoundTriggerSurvey = useSetAtom(hasBoundTriggerSurveyAtom);
+  const setCanManageWorkspace = useSetAtom(canManageWorkspaceAtom);
+  useEffect(() => {
+    setCanManageWorkspace(canManage);
+  }, [canManage, setCanManageWorkspace]);
   const surveyOptionsQuery = useWorkflowSurveyOptions(workspaceId);
   const { data: me } = useSuspenseQuery(meQuery);
   const { data: authoring } = useQuery({

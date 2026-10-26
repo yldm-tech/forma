@@ -31,6 +31,7 @@ function WorkflowBuilderRoute() {
       workspaceId={workspaceId}
       workflowId={workflowId}
       isReadOnly={workspace.access.isReadOnly}
+      canManage={workspace.access.canManage}
       nodeParam={node ?? null}
       setNodeParam={setNodeParam}
     />

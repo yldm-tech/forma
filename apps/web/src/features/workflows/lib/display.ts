@@ -5,7 +5,7 @@ import {
   type TWorkflowRunStatus,
   type TWorkflowStatus,
   type TWorkflowTriggerType,
-  getBlankSendEmailContentFields,
+  getWorkflowActionProblems,
 } from "../definition";
 import {
   type TWorkflowNodeFieldFocusRequest,
@@ -101,7 +101,7 @@ const TRIGGER_CONFIG_FIELD_TARGETS: Record<string, string> = {
   [workflowProblemFields.triggerEndingCardIds]: "endingCardIds",
 };
 
-/** The config field a problem should send the user to, or null when it has no single field to fix (a missing trigger, a broken flow, an unnamed workflow). step_incomplete carries a step-level field, so the specific field is resolved here as the first still-blank one in form order. */
+/** The config field a problem should send the user to, or null when it has no single field to fix (a missing trigger, a broken flow, an unnamed workflow). step_incomplete carries a step-level field, so the specific field is resolved here as the step's first problem in form order ("to", "url", "headers.0.name"). */
 export const getWorkflowValidationProblemFocusTarget = (
   problem: TWorkflowValidationProblem,
   definition: TWorkflowDefinition | null
@@ -112,8 +112,8 @@ export const getWorkflowValidationProblemFocusTarget = (
   if (nodeIndex !== null) {
     const node = definition.nodes[nodeIndex];
     if (node?.type !== "action") return null;
-    const [firstBlankField] = getBlankSendEmailContentFields(node.config);
-    return firstBlankField ? { nodeId: node.id, field: firstBlankField } : null;
+    const [firstProblem] = getWorkflowActionProblems(node);
+    return firstProblem ? { nodeId: node.id, field: firstProblem.field } : null;
   }
 
   const triggerField = TRIGGER_CONFIG_FIELD_TARGETS[problem.field];
