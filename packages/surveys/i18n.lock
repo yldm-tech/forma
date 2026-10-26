@@ -19,7 +19,7 @@ checksums:
     common/option_number: 9144a491be19258a1ea077a0e12892e6
     common/page_x_of_y: c9c50ddf2a3d0e2d1f00fcb6f02c98ba
     common/people_responded: b685fb877090d8658db724ad07a0dbd8
-    common/please_retry_now_or_try_again_later: 949a3841e2eb01fa249790a42bf23aa5
+    common/please_retry_now_or_try_again_later: 16123b745572e8a193687a5713520b2b
     common/powered_by: 6b6f88e2fa5a1ecec6cebf813abaeebb
     common/privacy_policy: 7459744a63ef8af4e517a09024bd7c08
     common/protected_by_reCAPTCHA_and_the_Google: 32de026bff5d52e9edf5410d7d7b835f
@@ -53,11 +53,11 @@ checksums:
     common/takes_x_minutes: 001d12366d07b406f50669e761d63e69
     common/takes_x_plus_minutes: 145b8f287de140e98f492c8db2f9fa0b
     common/terms_of_service: 5add91f519e39025708e54a7eb7a9fc5
-    common/the_servers_cannot_be_reached_at_the_moment: f8adbeccac69f9230a55b5b3af52b081
+    common/the_servers_cannot_be_reached_at_the_moment: 566f4690b8268d00bc93cc47155cf1ba
     common/they_will_be_redirected_immediately: 936bc99cb575cba95ea8f04d82bb353b
     common/time_remaining_before_the_survey_closes: bf61ab37e14c42fa6897b6fb5f287aba
     common/welcome_video: 1f87e84c0a563c2522eef5cb71a1f95c
-    common/your_feedback_is_stuck: db2b6aba26723b01aee0fc918d3ca052
+    common/your_feedback_is_stuck: a512b516a96d9716f3f30c1e859981dc
     date_time/select_a_time: dcce08522fcb7efa16fee671b0c3d713
     date_time/time: b504a03d52e8001bfdc5cb6205364f42
     errors/accept_to_continue: 59edd831c16b6a87c28c997d3b70d53c
@@ -71,7 +71,6 @@ checksums:
     errors/file_input/file_size_exceeded: 072045b042a39fa1df76200f8fa36dd4
     errors/file_input/file_size_exceeded_alert: d8e482a2ff05e78bbacaed9e9db9b5eb
     errors/file_input/invalid_file_name: 9f9a632eaf77ef92552f755f43e7b25d
-    errors/file_input/no_valid_file_types_selected: 795acdedcffbcf06e57ea93fc16771ce
     errors/file_input/only_one_file_can_be_uploaded_at_a_time: 1eda42bd46887f9702049e23fa7cb127
     errors/file_input/placeholder_text: 15b61e390b6c5501d3e3b9da9f6c7930
     errors/file_input/upload_failed: 735fdfc1a37ab035121328237ddd6fd0
@@ -97,7 +96,6 @@ checksums:
     errors/minimum_options_ranked: 7c06caceff53b590159d0e0a9a8bd812
     errors/minimum_rows_answered: ca132ce930516cf5ce97c34c7a7ef3d3
     errors/please_enter_a_valid_email_address: 8de4bc8832b11b380bc4cbcedc16e48b
-    errors/please_enter_a_valid_phone_number: 1530eb9ab7d6d190bddb37667c711631
     errors/please_enter_a_valid_url: e3bcfb605be4ee32aa19d9ac32bb11a4
     errors/please_fill_out_this_field: 88d4fd502ae8d423277aef723afcd1a7
     errors/rank_at_least_one_option: 367112a2af9b538725e87270a241a4ac

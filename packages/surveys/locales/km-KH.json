@@ -18,7 +18,7 @@
     "option_number": "ជម្រើសទី {number}",
     "page_x_of_y": "ទំព័រទី {current} នៃ {total}",
     "people_responded": "{count, plural, one {មនុស្ស ១ នាក់បានឆ្លើយតប} other {មនុស្ស {count} នាក់បានឆ្លើយតប}}",
-    "please_retry_now_or_try_again_later": "សូមព្យាយាមម្តងទៀតឥឡូវនេះ ឬព្យាយាមម្តងទៀតនៅពេលក្រោយ។",
+    "please_retry_now_or_try_again_later": "ចុច ព្យាយាមម្តងទៀត ឬទុកទំព័រនេះឱ្យបើក ហើយយើងនឹងព្យាយាមម្តងទៀត។",
     "powered_by": "ដំណើរការដោយ",
     "privacy_policy": "គោលការណ៍​ភាព​ឯកជន",
     "protected_by_reCAPTCHA_and_the_Google": "ការពារដោយ reCAPTCHA និង Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {ចំណាយពេល 1 នាទី} other {ចំណាយពេល {count} នាទី}}",
     "takes_x_plus_minutes": "ចំណាយពេល {count}+ នាទី",
     "terms_of_service": "លក្ខខណ្ឌសេវាកម្ម",
-    "the_servers_cannot_be_reached_at_the_moment": "មិនអាចភ្ជាប់ទៅម៉ាស៊ីនមេបានក្នុងពេលនេះទេ។",
+    "the_servers_cannot_be_reached_at_the_moment": "មិនអាចភ្ជាប់ទៅម៉ាស៊ីនមេបានទេ។ ចម្លើយរបស់អ្នកនៅតែរក្សាទុកនៅលើទំព័រនេះ។",
     "they_will_be_redirected_immediately": "ពួកគេនឹងត្រូវបានបញ្ជូនបន្តភ្លាមៗ",
     "time_remaining_before_the_survey_closes": "ពេលវេលានៅសល់មុនពេលការស្ទង់មតិបិទ",
     "welcome_video": "វីដេអូកាតស្វាគមន៍",
-    "your_feedback_is_stuck": "មតិកែលម្អរបស់អ្នកជាប់គាំង :("
+    "your_feedback_is_stuck": "ចម្លើយរបស់អ្នកមិនទាន់ត្រូវបានផ្ញើនៅឡើយទេ"
   },
   "date_time": {
     "select_a_time": "សូមជ្រើសរើសម៉ោង",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "ឯកសារដូចខាងក្រោមមានទំហំលើសពីកំណត់ {maxSizeInMB} MB ហើយត្រូវបានលុបចេញ៖ {fileNames}",
       "file_size_exceeded_alert": "ឯកសារត្រូវតែមានទំហំតិចជាង {maxSizeInMB} MB",
       "invalid_file_name": "ឈ្មោះឯកសារមានតួអក្សរមិនត្រឹមត្រូវ។ សូមប្តូរឈ្មោះឯកសារ ហើយព្យាយាមម្តងទៀត។",
-      "no_valid_file_types_selected": "មិនបានជ្រើសរើសប្រភេទឯកសារត្រឹមត្រូវទេ។ សូមជ្រើសរើសប្រភេទឯកសារដែលត្រឹមត្រូវ។",
       "only_one_file_can_be_uploaded_at_a_time": "អាចផ្ទុកឡើងបានតែមួយឯកសារក្នុងពេលតែមួយប៉ុណ្ណោះ។",
       "placeholder_text": "ចុច ឬអូសដើម្បីផ្ទុកឡើងឯកសារ",
       "upload_failed": "ការផ្ទុកឡើងបានបរាជ័យ! សូមព្យាយាមម្តងទៀត។",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "សូមរៀបចំលំដាប់យ៉ាងហោចណាស់ {min} ជម្រើស",
     "minimum_rows_answered": "សូមឆ្លើយយ៉ាងហោចណាស់ {min} ជួរដេក",
     "please_enter_a_valid_email_address": "សូមបញ្ចូលអាសយដ្ឋានអ៊ីមែលត្រឹមត្រូវ",
-    "please_enter_a_valid_phone_number": "សូមបញ្ចូលលេខទូរសព្ទត្រឹមត្រូវ",
     "please_enter_a_valid_url": "សូមបញ្ចូល URL ត្រឹមត្រូវ",
     "please_fill_out_this_field": "សូមបំពេញប្រអប់នេះ",
     "rank_at_least_one_option": "សូមចាត់ថ្នាក់យ៉ាងហោចណាស់ជម្រើសមួយ",

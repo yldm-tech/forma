@@ -18,7 +18,7 @@
     "option_number": "Opsi {number}",
     "page_x_of_y": "Halaman {current} dari {total}",
     "people_responded": "{count, plural, other {{count} orang merespons}}",
-    "please_retry_now_or_try_again_later": "Silakan coba lagi sekarang atau nanti.",
+    "please_retry_now_or_try_again_later": "Tekan Coba Lagi, atau biarkan halaman ini terbuka dan kami akan mencoba lagi.",
     "powered_by": "Didukung oleh",
     "privacy_policy": "Kebijakan Privasi",
     "protected_by_reCAPTCHA_and_the_Google": "Dilindungi oleh reCAPTCHA dan Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, other {{count} menit}}",
     "takes_x_plus_minutes": "{count}+ menit",
     "terms_of_service": "Ketentuan Layanan",
-    "the_servers_cannot_be_reached_at_the_moment": "Server tidak dapat dijangkau saat ini.",
+    "the_servers_cannot_be_reached_at_the_moment": "Kami tidak dapat menjangkau server. Jawabanmu tetap tersimpan di halaman ini.",
     "they_will_be_redirected_immediately": "Mereka akan segera diarahkan",
     "time_remaining_before_the_survey_closes": "Waktu tersisa sebelum survei ditutup",
     "welcome_video": "Video Kartu Selamat Datang",
-    "your_feedback_is_stuck": "Umpan balikmu macet :("
+    "your_feedback_is_stuck": "Jawabanmu belum terkirim"
   },
   "date_time": {
     "select_a_time": "Silakan pilih waktu",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "File berikut melebihi ukuran maksimum {maxSizeInMB} MB dan telah dihapus: {fileNames}",
       "file_size_exceeded_alert": "Ukuran file harus kurang dari {maxSizeInMB} MB",
       "invalid_file_name": "Nama file mengandung karakter yang tidak valid. Harap ubah nama file dan coba lagi.",
-      "no_valid_file_types_selected": "Tidak ada jenis file valid yang dipilih. Harap pilih jenis file yang valid.",
       "only_one_file_can_be_uploaded_at_a_time": "Hanya satu file yang dapat diunggah dalam satu waktu.",
       "placeholder_text": "Klik atau seret untuk mengunggah file",
       "upload_failed": "Unggahan gagal! Harap coba lagi.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Silakan urutkan minimal {min} opsi",
     "minimum_rows_answered": "Silakan jawab minimal {min} baris",
     "please_enter_a_valid_email_address": "Silakan masukkan alamat email yang valid",
-    "please_enter_a_valid_phone_number": "Silakan masukkan nomor telepon yang valid",
     "please_enter_a_valid_url": "Silakan masukkan URL yang valid",
     "please_fill_out_this_field": "Silakan isi kolom ini",
     "rank_at_least_one_option": "Silakan urutkan setidaknya satu opsi",

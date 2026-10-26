@@ -179,3 +179,15 @@ test("zh and ja values differ from en-US unless the key is a brand or technical 
   );
   expect(untranslated).toEqual([]);
 });
+
+// The responses table renders these as status badges with their own icons; an emoji in the label renders differently on every platform (insights-19).
+test("response status labels are plain text in every catalogue", () => {
+  const catalogues = { "en-US": enUS, "ja-JP": jaJP, "zh-Hans-CN": zhHansCN, "zh-Hant-TW": zhHantTW };
+  const withEmoji = Object.entries(catalogues).flatMap(([locale, catalogue]) =>
+    ["workspace.surveys.responses.completed", "workspace.surveys.responses.not_completed"]
+      .map((key) => [key, lookup(catalogue, key)] as const)
+      .filter(([, value]) => typeof value !== "string" || /\p{Extended_Pictographic}/u.test(value))
+      .map(([key, value]) => `${locale}: ${key} = ${String(value)}`)
+  );
+  expect(withEmoji).toEqual([]);
+});

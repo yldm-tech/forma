@@ -131,7 +131,9 @@ describe("OrganizationGeneralPage", () => {
     const link = securityTipLink();
     expect(link?.textContent).toBe("Forma's security advisories on GitHub");
     expect(link?.target).toBe("_blank");
-    expect(link?.closest("p")?.textContent).toContain("Watch → Custom → Releases and Security alerts");
+    expect(link?.closest("p")?.textContent).toContain("Watch → Custom → Releases.");
+    // GitHub does not document that the "Security alerts" watch option covers published advisories, so the tip names Releases, where every security fix ships.
+    expect(link?.closest("p")?.textContent).not.toContain("Security alerts");
     expect(screen.getByText("0.2.42")).toBeTruthy();
     expect(screen.getByText(t("workspace.look.email_customization"))).toBeTruthy();
   });

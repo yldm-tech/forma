@@ -235,7 +235,6 @@
   "templates.customer_effort_score_description": "機能を使うのがどれだけ簡単か判断する。",
   "templates.date": "日付",
   "templates.date_description": "日付の選択を求める",
-  "templates.default_ending_card_button_label": "あなた自身のアンケートを作成する",
   "templates.default_ending_card_headline": "ありがとうございました！",
   "templates.default_ending_card_subheader": "ご意見ありがとうございます。",
   "templates.default_welcome_card_button_label": "次へ",
