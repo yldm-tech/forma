@@ -46,9 +46,9 @@ const (
 	webAppURL = "http://localhost:3999"
 	// browserUA is the desktop Chrome the recorder identified as.
 	browserUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
-	// testBetterAuthSecret signs PIN tokens; testNextAuthSecret signs email verification tokens.
-	testBetterAuthSecret = "better-auth-secret-for-client-api-tests"
-	testNextAuthSecret   = "next-auth-secret-for-client-api-tests"
+	// testPinTokenSecret signs PIN tokens; testTokenSecret signs email verification tokens.
+	testPinTokenSecret = "better-auth-secret-for-client-api-tests"
+	testTokenSecret    = "next-auth-secret-for-client-api-tests"
 )
 
 type syncBuffer struct {
@@ -115,7 +115,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	cfg := config.Config{
 		WebAppURL: u, TrustedProxyHopCount: 1,
 		EncryptionKey: bytes.Repeat([]byte{7}, 32), EncryptionKeyText: config.Secret(strings.Repeat("07", 32)), EncryptionKeyVersion: 1,
-		BetterAuthSecret: testBetterAuthSecret, NextAuthSecret: testNextAuthSecret,
+		LinkSurveyPinTokenSecret: testPinTokenSecret, LinkSurveyTokenSecret: testTokenSecret,
 		S3: config.S3Config{AccessKey: "contractfixtureaccess", SecretKey: "contractfixturesecret", Region: "us-east-1", EndpointURL: s3, ForcePathStyle: true, BucketName: "forma-uploads"},
 	}
 	for _, f := range configure {

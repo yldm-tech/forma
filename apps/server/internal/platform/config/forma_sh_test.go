@@ -39,6 +39,11 @@ func readEnvNames() map[string]bool {
 	for _, v := range []any{Config{}, migrateEnv{}, startupEnv{}, healthcheckEnv{}, authzEnv{}, bullMQEnv{}} {
 		walk(reflect.TypeOf(v))
 	}
+	for _, r := range renamedVariables {
+		for _, old := range r.old {
+			names[old] = true
+		}
+	}
 	return names
 }
 
@@ -222,6 +227,11 @@ func TestFormaShUpdateMigratesTheEnv(t *testing.T) {
 		"COMPOSE_PROFILES":      "storage",
 		// BULLMQ_WORKER_COUNT x BULLMQ_WORKER_CONCURRENCY.
 		"WORKER_CONCURRENCY": "6",
+		// Renamed from forma2's names; NEXTAUTH_URL, the same as WEBAPP_URL, is dropped.
+		"LINK_SURVEY_TOKEN_SECRET":     "5a1d0c1b2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f",
+		"LINK_SURVEY_PIN_TOKEN_SECRET": "b7c8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f5a1d0c1b2e3f405162738495a6",
+		"WORKER_ENABLED":               "0",
+		"SAML_ENABLED":                 "1",
 		// Without Prisma's ?schema=public.
 		"MIGRATE_DATABASE_URL": "postgresql://owner:secret@postgres:5432/forma?connect_timeout=10",
 		// Kept as they were.
@@ -243,7 +253,10 @@ func TestFormaShUpdateMigratesTheEnv(t *testing.T) {
 			t.Errorf(".env keeps %s, which neither the server nor the compose file reads", k)
 		}
 	}
-	for _, gone := range []string{"CRON_SECRET", "OIDC_SIGNING_ALGORITHM", "FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED", "BULLMQ_WORKER_CONCURRENCY", "BULLMQ_WORKER_COUNT", "FORMA_RUSTFS_ADMIN_USER"} {
+	if _, ok := values["AUTH_URL"]; ok {
+		t.Errorf(".env sets AUTH_URL = %q, though NEXTAUTH_URL was WEBAPP_URL", values["AUTH_URL"])
+	}
+	for _, gone := range []string{"CRON_SECRET", "OIDC_SIGNING_ALGORITHM", "FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED", "BULLMQ_WORKER_CONCURRENCY", "BULLMQ_WORKER_COUNT", "FORMA_RUSTFS_ADMIN_USER", "NEXTAUTH_URL", "NEXTAUTH_SECRET", "BETTER_AUTH_SECRET", "BULLMQ_WORKER_ENABLED", "SAML_DATABASE_URL"} {
 		if !regexp.MustCompile(`(?m)^# [^\n]*: ` + gone + `=`).MatchString(env) {
 			t.Errorf(".env does not keep %s as a comment", gone)
 		}
@@ -366,5 +379,42 @@ func TestFormaShStripsSchemaPublic(t *testing.T) {
 		if server, err := databaseURL("DATABASE_URL", in, true); err == nil && server != want {
 			t.Errorf("databaseURL(%q) = %q, forma.sh %q", in, server, want)
 		}
+	}
+}
+
+// forma.sh renames forma2's variables the way the server reads them: BETTER_AUTH_URL before NEXTAUTH_URL, a value equal to WEBAPP_URL dropped since the server falls back to it, and a current name already set kept.
+func TestFormaShRenamesForma2Variables(t *testing.T) {
+	requireBash(t)
+	script := formaSh(t)
+	cases := []struct {
+		name string
+		env  string
+		want map[string]string
+	}{
+		{"nextauth url is the web app", "WEBAPP_URL=https://a.example.com\nNEXTAUTH_URL=https://a.example.com/\n", map[string]string{"WEBAPP_URL": "https://a.example.com"}},
+		{"better auth url first", "WEBAPP_URL=https://a.example.com\nBETTER_AUTH_URL=https://auth.example.com\nNEXTAUTH_URL=https://a.example.com\n", map[string]string{"WEBAPP_URL": "https://a.example.com", "AUTH_URL": "https://auth.example.com"}},
+		{"better auth url is the web app", "WEBAPP_URL=https://a.example.com\nBETTER_AUTH_URL=https://a.example.com\nNEXTAUTH_URL=https://next.example.com\n", map[string]string{"WEBAPP_URL": "https://a.example.com"}},
+		{"auth url already set", "WEBAPP_URL=https://a.example.com\nAUTH_URL=https://auth.example.com\nNEXTAUTH_URL=https://next.example.com\n", map[string]string{"WEBAPP_URL": "https://a.example.com", "AUTH_URL": "https://auth.example.com"}},
+		{"secret already set", "LINK_SURVEY_TOKEN_SECRET=current\nNEXTAUTH_SECRET=old\n", map[string]string{"LINK_SURVEY_TOKEN_SECRET": "current"}},
+		{"secret with a dollar", "NEXTAUTH_SECRET=\"a$$b\"\n", map[string]string{"LINK_SURVEY_TOKEN_SECRET": "a$$b"}},
+		{"saml switched off", "SAML_ENABLED=0\nSAML_DATABASE_URL=postgresql://saml@db/saml\n", map[string]string{"SAML_ENABLED": "0"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			file := filepath.Join(t.TempDir(), ".env")
+			if err := os.WriteFile(file, []byte(tc.env), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if out, err := exec.Command("bash", "-c", `source "$1" && migrate_env "$2"`, "forma-sh-test", script, file).CombinedOutput(); err != nil {
+				t.Fatalf("migrate_env: %v\n%s", err, out)
+			}
+			b, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := dotenvValues(t, string(b)); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf(".env values %v, want %v\n%s", got, tc.want, b)
+			}
+		})
 	}
 }

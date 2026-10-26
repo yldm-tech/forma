@@ -44,9 +44,10 @@ if grep --quiet '^          args:' <<<"${server}"; then
 fi
 grep --quiet --fixed-strings 'args: ["worker"]' <<<"${worker}" || fail "The worker must run forma worker."
 [[ "$(count_env "${server}" SKIP_STARTUP_MIGRATION)" == "1" ]] || fail "The migration Job owns the schema, so the server must skip its startup migration."
-[[ "$(count_env "${server}" BULLMQ_WORKER_ENABLED)" == "1" ]] || fail "With the worker Deployment, the server must not run the jobs too."
-grep --quiet --fixed-strings --line-regexp '              value: "0"' <<<"${server}" || fail "BULLMQ_WORKER_ENABLED must be 0 on the server."
-[[ "$(count_env "${worker}" BULLMQ_WORKER_ENABLED)" == "0" ]] || fail "The worker process ignores BULLMQ_WORKER_ENABLED; it must not be set there."
+[[ "$(count_env "${server}" WORKER_ENABLED)" == "1" ]] || fail "With the worker Deployment, the server must not run the jobs too."
+grep --quiet --fixed-strings --line-regexp '              value: "0"' <<<"${server}" || fail "WORKER_ENABLED must be 0 on the server."
+[[ "$(count_env "${server}" BULLMQ_WORKER_ENABLED)" == "0" ]] || fail "The chart sets the switch under its current name, WORKER_ENABLED, not BULLMQ_WORKER_ENABLED."
+[[ "$(count_env "${worker}" WORKER_ENABLED)" == "0" ]] || fail "The worker process ignores WORKER_ENABLED; it must not be set there."
 
 # The worker is selected apart from the server, so the Service, HPA and PDB keep addressing server pods only.
 grep --quiet --fixed-strings 'app.kubernetes.io/component: worker' <<<"${worker}" || fail "Worker pods must carry the worker component label."
@@ -73,12 +74,16 @@ spelled_out="$(awk '
 # --- worker.enabled=false: the server runs the jobs in-process ------------------------
 inline_render="$(render --set worker.enabled=false)"
 [[ -z "$(manifest "${inline_render}" Deployment forma-worker)" ]] || fail "worker.enabled=false must not render the worker Deployment."
-[[ "$(count_env "$(manifest "${inline_render}" Deployment forma)" BULLMQ_WORKER_ENABLED)" == "0" ]] \
+[[ "$(count_env "$(manifest "${inline_render}" Deployment forma)" WORKER_ENABLED)" == "0" ]] \
   || fail "Without the worker Deployment the server must keep its in-process worker."
 
 # --- Operator overrides win, once -------------------------------------------------------------------------
-override_server="$(manifest "$(render --set-string deployment.env.BULLMQ_WORKER_ENABLED=1)" Deployment forma)"
-[[ "$(count_env "${override_server}" BULLMQ_WORKER_ENABLED)" == "1" ]] || fail "deployment.env.BULLMQ_WORKER_ENABLED must replace the chart default, not repeat it."
+override_server="$(manifest "$(render --set-string deployment.env.WORKER_ENABLED=1)" Deployment forma)"
+[[ "$(count_env "${override_server}" WORKER_ENABLED)" == "1" ]] || fail "deployment.env.WORKER_ENABLED must replace the chart default, not repeat it."
+# The switch's former name, which the server still reads behind WORKER_ENABLED: the chart default must not override it.
+legacy_override_server="$(manifest "$(render --set-string deployment.env.BULLMQ_WORKER_ENABLED=1)" Deployment forma)"
+[[ "$(count_env "${legacy_override_server}" WORKER_ENABLED)" == "0" ]] || fail "deployment.env.BULLMQ_WORKER_ENABLED must keep working: the chart must not add WORKER_ENABLED, which the server reads first."
+[[ "$(count_env "${legacy_override_server}" BULLMQ_WORKER_ENABLED)" == "1" ]] || fail "deployment.env.BULLMQ_WORKER_ENABLED must be rendered once."
 
 startup_migration_server="$(manifest "$(render --set migration.enabled=false)" Deployment forma)"
 [[ "$(count_env "${startup_migration_server}" SKIP_STARTUP_MIGRATION)" == "0" ]] || fail "Without the migration Job the server must migrate at start."

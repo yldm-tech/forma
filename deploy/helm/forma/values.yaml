@@ -15,7 +15,7 @@ partOfOverride: ""
 ##########################################################
 forma:
   # REQUIRED: Base URL of the site (e.g., https://forma.example.com)
-  # This is used for WEBAPP_URL and NEXTAUTH_URL
+  # This is used for WEBAPP_URL
   webappUrl: ""
 
   # Optional: Public URL for surveys (defaults to webappUrl if not set)
@@ -208,7 +208,7 @@ deployment:
   # Command override
   command: []
 
-  # Arguments override. Empty runs the image's default, `forma start`, which serves after the switches above (SKIP_STARTUP_MIGRATION, BULLMQ_WORKER_ENABLED) say what else to do.
+  # Arguments override. Empty runs the image's default, `forma start`, which serves after the switches above (SKIP_STARTUP_MIGRATION, WORKER_ENABLED) say what else to do.
   args: []
 
   # Container ports

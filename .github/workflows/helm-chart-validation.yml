@@ -50,6 +50,7 @@ jobs:
           bash deploy/helm/forma/tests/authzed-operations.sh
           bash deploy/helm/forma/tests/deployment-hardening.sh
           bash deploy/helm/forma/tests/worker.sh
+          bash deploy/helm/forma/tests/app-secret.sh
           bash deploy/helm/forma/tests/redis-memory-limits.sh
           bash deploy/helm/forma/tests/postgresql-major-upgrade.sh
 
