@@ -92,6 +92,7 @@ export const organizationKeys = {
   detail: (id: string) => ["organizations", id] as const,
   navigation: (id: string) => ["organizations", id, "navigation"] as const,
   members: (id: string) => ["organizations", id, "members"] as const,
+  retention: (id: string) => ["organizations", id, "retention"] as const,
 };
 
 export const homeQuery = queryOptions({
@@ -172,6 +173,56 @@ export const useUpdateOrganization = (id: string) => {
         queryClient.invalidateQueries({ queryKey: organizationKeys.all }),
         input.surveySchedulingTimeZone !== undefined ? forgetSurveySchedules(queryClient) : undefined,
       ]),
+  });
+};
+
+/** The organization's retention windows in days; null keeps that data forever. */
+export interface RetentionWindows {
+  /** Finished workflow runs (completed, failed, canceled) and their logs. */
+  workflowRunRetentionDays: number | null;
+  /** Survey impressions that never became a response. */
+  displayRetentionDays: number | null;
+}
+
+/** What one pass of a sweep did: matched is what a dry run counted, deleted what a real one removed, cappedUnits the parts it left for the next day. */
+export interface RetentionPass {
+  matched: number;
+  deleted: number;
+  cappedUnits: number;
+}
+
+/** The organization's last retention sweep, under the windows it records. */
+export interface RetentionSweep extends RetentionWindows {
+  sweptAt: string;
+  /** The sweep only counted (each pass's matched) and deleted nothing. */
+  dryRun: boolean;
+  workflowRuns: RetentionPass;
+  displays: RetentionPass;
+}
+
+/** The organization's Data retention card, which only owners read and change. */
+export interface Retention extends RetentionWindows {
+  /** The instance's RETENTION_SWEEP_DRY_RUN: its sweep only counts. Only the instance's operator changes it. */
+  dryRun: boolean;
+  /** The next daily sweep, at midnight UTC. */
+  nextSweepAt: string;
+  /** The last sweep with the windows the organization has now; null when none has run with them. */
+  lastSweep: RetentionSweep | null;
+}
+
+export const retentionQuery = (id: string) =>
+  queryOptions({
+    queryKey: organizationKeys.retention(id),
+    queryFn: ({ signal }) => api.get<Retention>(`/api/app/organizations/${id}/retention`, { signal }),
+  });
+
+/** Replaces both windows; the answer is the card as it now is. */
+export const useUpdateRetention = (id: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (windows: RetentionWindows) =>
+      api.put<Retention>(`/api/app/organizations/${id}/retention`, windows),
+    onSuccess: (retention) => queryClient.setQueryData(organizationKeys.retention(id), retention),
   });
 };
 

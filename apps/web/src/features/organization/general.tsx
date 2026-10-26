@@ -39,6 +39,7 @@ import { toast } from "../../lib/toast";
 import { aiKeys, organizationAIQuery } from "../ai/availability";
 import { getSurveySchedulingTimeLabel } from "../survey-editor/lib/scheduling-config";
 import { organizationNameError } from "../../lib/validation";
+import { RetentionCard } from "./retention";
 import { TwoFactorRequirementCard } from "./two-factor-requirement";
 import { EmailCustomizationCard } from "./whitelabel/email-customization-card";
 
@@ -67,7 +68,7 @@ const SecurityListTip = () => (
   </div>
 );
 
-/** forma2's organization general settings page: on top a warning without file storage and, self-hosted and for owners, the security list tip; at the foot the organization's id and the Forma version. A member or billing user, who can change nothing here, is told so once at the top rather than in every card. */
+/** forma2's organization general settings page: on top a warning without file storage and, self-hosted and for owners, the security list tip; for owners, the Data retention card; at the foot the organization's id and the Forma version. A member or billing user, who can change nothing here, is told so once at the top rather than in every card. */
 export const OrganizationGeneralPage = ({ organization }: { organization: OrganizationDetail }) => {
   const { t } = useTranslation();
   const role = organization.membership.role;
@@ -101,6 +102,7 @@ export const OrganizationGeneralPage = ({ organization }: { organization: Organi
         <AISettingsToggle organization={organization} />
       </SettingsCard>
       <TwoFactorRequirementCard organization={organization} />
+      {isOwner && <RetentionCard organizationId={organization.id} />}
       <EmailCustomizationCard key={organization.updatedAt} organization={organization} />
       <SettingsCard
         width="full"

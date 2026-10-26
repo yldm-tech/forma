@@ -677,6 +677,32 @@ checksums:
     organizations/members/suspended: 6435f2d5f2b7c08a467c4659bc24e6a1
     organizations/members/suspended_since: 4e92a4e4b3c58c3f1021cba09778fb49
     organizations/members/suspended_successfully: 4a2cab0cc02b3becba6cbb6041fa3a45
+    organizations/retention/capped: f53d90ee1416bdfc13c8f3a0df9d954a
+    organizations/retention/card_description: efc963e884779a9031bd4901d4a7d886
+    organizations/retention/card_title: 29b770f21d46ffce51b70c417a34a609
+    organizations/retention/confirm_button: 5a95afee3c32f79f403aaa9c7df3ae44
+    organizations/retention/confirm_description: 245e27e0c436f6a011ef3700720c0777
+    organizations/retention/confirm_title: 9eda096de8b203b1c70e43835e0c2ccf
+    organizations/retention/deleted_displays: a191f75f26bf2e9f9c415410b474bfb4
+    organizations/retention/deleted_runs: e144243640e0e02a0cf6ef4d2c0a9f93
+    organizations/retention/deleting_description: db49f55841aca1e9e0453b34633ffbb7
+    organizations/retention/deleting_title: d45048f4aeddae06c83321ac022fb85f
+    organizations/retention/displays_description: 14273716447ca51ea1e027672da364c4
+    organizations/retention/displays_label: e155702451bedaa308ab0b397266fa7a
+    organizations/retention/dry_run_description: f6ff5633d52030daae9bf74290a4f1f3
+    organizations/retention/dry_run_title: f9eb3d554c9218995cbef73fdf419382
+    organizations/retention/keep_forever: 6dcca422257ade8e93814c9161e3aca7
+    organizations/retention/last_sweep_title: 08ffbe789f37a7afb6f5ea3ba701ab19
+    organizations/retention/next_sweep: 80fffae01aa3f1bb929749c67015265c
+    organizations/retention/no_sweep_yet: 872bf1fa19f2fc0692d36c6178c84a9b
+    organizations/retention/not_affected: b5fa5f14670676e453ce1b6dfc0db24c
+    organizations/retention/nothing_deleted: df7dde622dfd0a92ae38c19570996471
+    organizations/retention/period_days: edc8db8cefc2bbceaf809a0284afe4f4
+    organizations/retention/saved: 38eda07c8b3a26b6999cc1e18b3ac8d0
+    organizations/retention/workflow_runs_description: 1c588186873cb279e28c1baf4a379054
+    organizations/retention/workflow_runs_label: 05f81ce9a771ab3ee1aa541211dca0ee
+    organizations/retention/would_delete_displays: f58dbf2fefaee81a4f0b0d7308100751
+    organizations/retention/would_delete_runs: 4b730394c45482381e4f02582225c420
     organizations/security_tip_github: 0c3949dce92da2ab10e070c6033f98b4
     organizations/suspended/page_continue: fbeb2410478168f98c569839958482b4
     organizations/suspended/page_description: be8296f53f1ba1d3385483f7c7679e1b
