@@ -3,11 +3,14 @@ import { createId } from "@paralleldrive/cuid2";
 import { PlusIcon } from "lucide-react";
 import { type JSX } from "react";
 import { useTranslation } from "react-i18next";
-import type { TSurveyElement, TSurveyPictureSelectionElement } from "@forma/types/surveys/elements";
+import { type TSurveyPictureSelectionElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { isScoredElement } from "@forma/types/surveys/scoring";
 import { TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
 import { cn } from "../../../lib/cn";
 import { createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
+import type { TUpdateElement } from "../types/editor";
+import { ChoiceScoreInput, ChoiceScoringToggle } from "./choice-scoring";
 import { ElementFormInput } from "./element-form-input/index";
 import { ValidationRulesEditor } from "./validation-rules-editor";
 import { Button } from "../../../components/ui/button";
@@ -19,9 +22,10 @@ interface PictureSelectionFormProps {
   localSurvey: TSurvey;
   element: TSurveyPictureSelectionElement;
   elementIdx: number;
-  updateElement: (elementIdx: number, updatedAttributes: Partial<TSurveyElement>) => void;
+  updateElement: TUpdateElement;
   isInvalid: boolean;
   locale: TUserLocale;
+  setLocalSurvey?: (survey: TSurvey) => void;
 }
 
 export const PictureSelectionForm = ({
@@ -31,6 +35,7 @@ export const PictureSelectionForm = ({
   updateElement,
   isInvalid,
   locale,
+  setLocalSurvey,
 }: PictureSelectionFormProps): JSX.Element => {
   const surveyLanguageCodes = extractLanguageCodes(localSurvey.languages);
   const { t } = useTranslation();
@@ -167,6 +172,36 @@ export const PictureSelectionForm = ({
           </div>
         </Label>
       </div>
+      <ChoiceScoringToggle
+        localSurvey={localSurvey}
+        element={element}
+        elementIdx={elementIdx}
+        updateElement={updateElement}
+        setLocalSurvey={setLocalSurvey}
+      />
+      {isScoredElement(element) && (
+        <ul
+          className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"
+          aria-label={t("workspace.surveys.edit.scoring_toggle")}>
+          {element.choices.map((choice, choiceIdx) => (
+            <li key={choice.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2">
+              <img src={choice.imageUrl} alt="" className="size-10 shrink-0 rounded-sm object-cover" />
+              <ChoiceScoreInput
+                className="w-full"
+                score={choice.score}
+                label={t("workspace.surveys.edit.scoring_image_score", { imageIndex: choiceIdx + 1 })}
+                onChange={(score) =>
+                  updateElement(elementIdx, (current) =>
+                    current.type === TSurveyElementTypeEnum.PictureSelection
+                      ? { choices: current.choices.map((c) => (c.id === choice.id ? { ...c, score } : c)) }
+                      : {}
+                  )
+                }
+              />
+            </li>
+          ))}
+        </ul>
+      )}
       {element.allowMulti && (
         <ValidationRulesEditor
           elementType={element.type}

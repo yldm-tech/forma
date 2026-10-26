@@ -3432,6 +3432,15 @@ checksums:
     workspace/surveys/edit/schedule_survey: aa9d0a74a96c325e3202bf1efbc4611a
     workspace/surveys/edit/scheduled_moment: 80246b6e22ea2a41e8d9a38a328f6fea
     workspace/surveys/edit/scheduled_moment_in_your_time_zone: 53c76a9d49b57d1e7e505c6fcc5cfd1c
+    workspace/surveys/edit/scoring_add_total_variable: b08ec359a9e191fde93609eeeef01441
+    workspace/surveys/edit/scoring_choice_score: cb82c17200f9ade36c5b053c80679a17
+    workspace/surveys/edit/scoring_image_score: dbf4773a08f23cfb43c936e81fc83aa6
+    workspace/surveys/edit/scoring_no_total_variable: 7534798df802448afdffcb18456f7383
+    workspace/surveys/edit/scoring_toggle: 3275b628f2d1e45697d575133a925064
+    workspace/surveys/edit/scoring_toggle_description: f418418ee5bca9b459c49423f35c6b14
+    workspace/surveys/edit/scoring_total_badge: 52bf3d9b021a715f5624d7c945d97eb6
+    workspace/surveys/edit/scoring_total_badge_description: db4a7c2ea4c22a5dd0cbe47176e2a8a7
+    workspace/surveys/edit/scoring_total_variable: 61fc5633fdf1971b872f2b9dae790557
     workspace/surveys/edit/search_for_images: 8b1bc3561d126cc49a1ee185c07e7aaf
     workspace/surveys/edit/select_field: 45665a44f7d5707506364f17f28db3bf
     workspace/surveys/edit/select_or_type_value: a99c307b2cc3f9f6f893babd546d7296
@@ -3944,6 +3953,10 @@ checksums:
     workspace/surveys/summary/reset_survey: 8c88ddb81f5f787d183d2e7cb43e7c64
     workspace/surveys/summary/reset_survey_warning: 6b44be171d7e2716f234387b100b173d
     workspace/surveys/summary/reset_survey_warning_count: 8a0c57c5673fb7dc818b9418236b6415
+    workspace/surveys/summary/score_description: 0c698a70381922399fd7f2b762ae21aa
+    workspace/surveys/summary/score_no_scored_responses: cf0d2f7436486a396b65df190cc4d038
+    workspace/surveys/summary/score_points: fce1385c086f50554ce1ce17a3ebcbac
+    workspace/surveys/summary/score_title: 52bf3d9b021a715f5624d7c945d97eb6
     workspace/surveys/summary/select_first_date: 1b10e5ee3f7fb106a02ee11f514cce51
     workspace/surveys/summary/select_last_date: 3da08777980fdaf037ef395727a0ccfd
     workspace/surveys/summary/selected_responses_csv: 9cef3faccd54d4f24647791e6359db90

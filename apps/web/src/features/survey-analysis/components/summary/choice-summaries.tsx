@@ -28,6 +28,17 @@ import {
 
 type ChoiceSummaryResult = TSurveyElementSummaryMultipleChoice["choices"][number];
 
+/** The points a choice of a scored element is worth, as its row in the summary states them; nothing for a choice without a score. */
+const ChoiceScoreBadge = ({ score }: { score: number | undefined }) => {
+  const { t } = useTranslation();
+  if (score === undefined) return null;
+  return (
+    <span className="self-center rounded-lg bg-slate-100 px-2 text-xs whitespace-nowrap text-slate-600">
+      {t("workspace.surveys.summary.score_points", { score })}
+    </span>
+  );
+};
+
 /** forma2's MultipleChoiceSummary: each choice's share, a click filtering by the choice, and the values typed into Other, grouped into bars or listed one by one. */
 export const MultipleChoiceSummary = ({
   elementSummary,
@@ -107,6 +118,9 @@ export const MultipleChoiceSummary = ({
                         {result.value}
                       </p>
                       {choiceId && <IdBadge id={choiceId} />}
+                      <ChoiceScoreBadge
+                        score={elementSummary.element.choices.find((choice) => choice.id === choiceId)?.score}
+                      />
                     </div>
                     <div className="flex w-full gap-x-2">
                       <p className="flex w-full pt-1 text-slate-600 sm:items-end sm:justify-end sm:pt-0">
@@ -246,7 +260,12 @@ export const PictureChoiceSummary = ({
               <div className="text flex flex-col justify-between px-2 pb-2 sm:flex-row">
                 <div className="mr-8 flex w-full justify-between gap-x-2 sm:justify-normal">
                   <img src={result.imageUrl} alt="" className="h-32 w-[220px] rounded-md object-cover" />
-                  <div className="self-end">{choiceId && <IdBadge id={choiceId} />}</div>
+                  <div className="flex items-center gap-x-2 self-end">
+                    {choiceId && <IdBadge id={choiceId} />}
+                    <ChoiceScoreBadge
+                      score={elementSummary.element.choices.find((choice) => choice.id === result.id)?.score}
+                    />
+                  </div>
                 </div>
                 <div className="flex w-full gap-x-2">
                   <p className="flex w-full pt-1 text-slate-600 sm:items-end sm:justify-end sm:pt-0">
