@@ -40,6 +40,8 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.DELETE("/:organizationId/members/:userId/suspension", h.restoreMember)
 	g.POST("/:organizationId/leave", h.leave)
 	g.GET("/:organizationId/pretty-urls", h.prettyURLs)
+	g.GET("/:organizationId/retention", h.retention)
+	g.PUT("/:organizationId/retention", h.setRetention)
 	g.PUT("/:organizationId/whitelabel/email-logo", h.setEmailLogo)
 	g.DELETE("/:organizationId/whitelabel/email-logo", h.removeEmailLogo)
 	g.PUT("/:organizationId/whitelabel/favicon", h.setFavicon)

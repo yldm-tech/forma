@@ -1,4 +1,4 @@
-// Package retention is forma2's retention sweep (apps/web/lib/jobs/retention): once a day, each organization's own retention windows are applied to its terminal workflow runs and to the survey impressions (displays) that never became a response. A window is configuration on the organization, null (keep forever) everywhere unless someone sets it, so an upgrade deletes nothing by itself.
+// Package retention is forma2's retention sweep (apps/web/lib/jobs/retention): once a day, each organization's own retention windows are applied to its terminal workflow runs and to the survey impressions (displays) that never became a response. A window is configuration on the organization, null (keep forever) until its owner sets one (the Data retention card), so an upgrade deletes nothing by itself. The instance's RETENTION_SWEEP_DRY_RUN, on by default, makes every sweep count instead of delete; each organization's last sweep is kept for its owner to read (organization_retention_sweeps).
 package retention
 
 import (
@@ -22,9 +22,10 @@ const (
 	maxDeleteBatches = 50
 	// surveyPageSize is how many survey ids are read per round trip while walking an organization's displays.
 	surveyPageSize = 200
-	// DryRun is forma2's RETENTION_SWEEP_DRY_RUN: this release only reports what each window would remove. Deleting product data is irreversible, so an operator gets to see the volume in the logs before any row goes; turning it off is a separate, deliberate change.
-	DryRun = true
 )
+
+// Schedule is when the sweep runs: every day at midnight UTC, as forma2's every-24-hours repeat aligned to the epoch did.
+var Schedule = jobs.DailyUTC{}
 
 // terminalRunStatuses are the statuses a run never leaves. A queued or running run is live work and is never swept, however old.
 var terminalRunStatuses = []string{"completed", "failed", "canceled"}
@@ -96,22 +97,81 @@ func (s *Sweeper) Sweep(ctx context.Context, now time.Time, dryRun bool) (Result
 	return result, nil
 }
 
+// sweepOrganization applies one organization's windows, adds what it counted or deleted to result, and records it as the organization's last sweep. A failed pass records nothing, so the organization keeps the report of its last complete sweep.
 func (s *Sweeper) sweepOrganization(ctx context.Context, org organizationWindows, now time.Time, dryRun bool, result *Result) error {
+	var runs, displays PassResult
 	if org.WorkflowRunRetentionDays != nil {
-		runs, err := s.sweepWorkflowRuns(ctx, org.ID, Cutoff(now, *org.WorkflowRunRetentionDays), dryRun)
-		if err != nil {
+		var err error
+		if runs, err = s.sweepWorkflowRuns(ctx, org.ID, Cutoff(now, *org.WorkflowRunRetentionDays), dryRun); err != nil {
 			return err
 		}
 		result.WorkflowRuns.add(runs)
 	}
 	if org.DisplayRetentionDays != nil {
-		displays, err := s.sweepDisplays(ctx, org.ID, Cutoff(now, *org.DisplayRetentionDays), dryRun)
-		if err != nil {
+		var err error
+		if displays, err = s.sweepDisplays(ctx, org.ID, Cutoff(now, *org.DisplayRetentionDays), dryRun); err != nil {
 			return err
 		}
 		result.Displays.add(displays)
 	}
+	return s.record(ctx, Report{SweptAt: now, DryRun: dryRun, WorkflowRunRetentionDays: org.WorkflowRunRetentionDays, DisplayRetentionDays: org.DisplayRetentionDays, WorkflowRuns: runs, Displays: displays}, org.ID)
+}
+
+// record replaces the organization's last sweep. An organization deleted while it was being swept has nothing to record, and its row is not inserted.
+func (s *Sweeper) record(ctx context.Context, r Report, organizationID uuid.UUID) error {
+	err := s.db.WithContext(ctx).Exec(`
+		INSERT INTO organization_retention_sweeps (organization_id, swept_at, dry_run, workflow_run_retention_days, display_retention_days,
+			workflow_runs_matched, workflow_runs_deleted, workflow_runs_capped_units, displays_matched, displays_deleted, displays_capped_units)
+		SELECT id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM organizations WHERE id = ?
+		ON CONFLICT (organization_id) DO UPDATE SET swept_at = excluded.swept_at, dry_run = excluded.dry_run,
+			workflow_run_retention_days = excluded.workflow_run_retention_days, display_retention_days = excluded.display_retention_days,
+			workflow_runs_matched = excluded.workflow_runs_matched, workflow_runs_deleted = excluded.workflow_runs_deleted, workflow_runs_capped_units = excluded.workflow_runs_capped_units,
+			displays_matched = excluded.displays_matched, displays_deleted = excluded.displays_deleted, displays_capped_units = excluded.displays_capped_units`,
+		r.SweptAt, r.DryRun, r.WorkflowRunRetentionDays, r.DisplayRetentionDays,
+		r.WorkflowRuns.Matched, r.WorkflowRuns.Deleted, r.WorkflowRuns.CappedUnits, r.Displays.Matched, r.Displays.Deleted, r.Displays.CappedUnits, organizationID).Error
+	if err != nil {
+		return fmt.Errorf("record the retention sweep: %w", err)
+	}
 	return nil
+}
+
+// Report is an organization's last retention sweep.
+type Report struct {
+	SweptAt time.Time `json:"sweptAt"`
+	// DryRun is whether the sweep only counted (the PassResults' Matched) or deleted (their Deleted).
+	DryRun bool `json:"dryRun"`
+	// The windows the sweep applied; nil is a pass it did not run.
+	WorkflowRunRetentionDays *int       `json:"workflowRunRetentionDays"`
+	DisplayRetentionDays     *int       `json:"displayRetentionDays"`
+	WorkflowRuns             PassResult `json:"workflowRuns"`
+	Displays                 PassResult `json:"displays"`
+}
+
+// LastReport reads the organization's last sweep, nil when no sweep has visited it. db is the caller's connection, a transaction included.
+func LastReport(ctx context.Context, db *gorm.DB, organizationID uuid.UUID) (*Report, error) {
+	var rows []struct {
+		SweptAt                  time.Time
+		DryRun                   bool
+		WorkflowRunRetentionDays *int
+		DisplayRetentionDays     *int
+		WorkflowRunsMatched      int64
+		WorkflowRunsDeleted      int64
+		WorkflowRunsCappedUnits  int64
+		DisplaysMatched          int64
+		DisplaysDeleted          int64
+		DisplaysCappedUnits      int64
+	}
+	if err := db.WithContext(ctx).Raw(`SELECT swept_at, dry_run, workflow_run_retention_days, display_retention_days, workflow_runs_matched, workflow_runs_deleted,
+		workflow_runs_capped_units, displays_matched, displays_deleted, displays_capped_units FROM organization_retention_sweeps WHERE organization_id = ?`, organizationID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("load the last retention sweep: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	r := rows[0]
+	return &Report{SweptAt: r.SweptAt, DryRun: r.DryRun, WorkflowRunRetentionDays: r.WorkflowRunRetentionDays, DisplayRetentionDays: r.DisplayRetentionDays,
+		WorkflowRuns: PassResult{Matched: r.WorkflowRunsMatched, Deleted: r.WorkflowRunsDeleted, CappedUnits: r.WorkflowRunsCappedUnits},
+		Displays:     PassResult{Matched: r.DisplaysMatched, Deleted: r.DisplaysDeleted, CappedUnits: r.DisplaysCappedUnits}}, nil
 }
 
 // sweepWorkflowRuns goes one workspace and one status at a time, so each statement is an equality on the status, and by created_at, because a run canceled before it was dispatched never finished.
@@ -227,7 +287,9 @@ func (SweepArgs) Kind() string { return "retention-sweep.process" }
 type sweepWorker struct {
 	river.WorkerDefaults[SweepArgs]
 	sweeper *Sweeper
-	log     *slog.Logger
+	// dryRun is the instance's RETENTION_SWEEP_DRY_RUN.
+	dryRun bool
+	log    *slog.Logger
 }
 
 // Timeout lifts River's one-minute limit: a first sweep over years of history is bounded by maxDeleteBatches per unit, not by the clock.
@@ -236,7 +298,7 @@ func (w *sweepWorker) Timeout(*river.Job[SweepArgs]) time.Duration { return -1 }
 func (w *sweepWorker) Work(ctx context.Context, job *river.Job[SweepArgs]) error {
 	logContext := []any{"attempt", job.Attempt, "jobId", job.ID, "jobName", job.Kind, "maxAttempts", job.MaxAttempts, "queueName", job.Queue}
 	w.log.InfoContext(ctx, "Retention sweep job started", logContext...)
-	result, err := w.sweeper.Sweep(ctx, time.Now(), DryRun)
+	result, err := w.sweeper.Sweep(ctx, time.Now(), w.dryRun)
 	if err != nil {
 		return err
 	}
@@ -249,8 +311,8 @@ func (w *sweepWorker) Work(ctx context.Context, job *river.Job[SweepArgs]) error
 	return nil
 }
 
-// RegisterJobs adds the daily sweep. forma2 ran it every 24 hours aligned to the epoch, which is midnight UTC.
-func RegisterJobs(reg *jobs.Registry, db *gorm.DB, log *slog.Logger) {
-	jobs.Add(reg, &sweepWorker{sweeper: NewSweeper(db, log), log: log})
-	reg.AddPeriodic(jobs.Daily("retention-sweep", jobs.DailyUTC{}, func(slot time.Time) river.JobArgs { return SweepArgs{Slot: slot} }))
+// RegisterJobs adds the daily sweep on Schedule; dryRun is the instance's RETENTION_SWEEP_DRY_RUN.
+func RegisterJobs(reg *jobs.Registry, dryRun bool, db *gorm.DB, log *slog.Logger) {
+	jobs.Add(reg, &sweepWorker{sweeper: NewSweeper(db, log), dryRun: dryRun, log: log})
+	reg.AddPeriodic(jobs.Daily("retention-sweep", Schedule, func(slot time.Time) river.JobArgs { return SweepArgs{Slot: slot} }))
 }

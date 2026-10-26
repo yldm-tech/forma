@@ -37,7 +37,7 @@ func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slo
 	workflow.RegisterJobs(reg, workflowRunner, workflowReconciler)
 	storage.RegisterJobs(reg, files, workspaces, log)
 	billing.RegisterJobs(reg, billingEngine)
-	retention.RegisterJobs(reg, db, log)
+	retention.RegisterJobs(reg, cfg.RetentionSweepDryRun, db, log)
 	usagereport.RegisterJobs(reg, usageReporter, log)
 	workflow.RegisterUsageSnapshot(reg, workflow.NewUsageSnapshot(cfg, db, log), log)
 	brevo.RegisterJobs(reg, brevoClient)

@@ -86,6 +86,9 @@ type Config struct {
 	AuditLogEnabled   bool `env:"AUDIT_LOG_ENABLED" envDefault:"1"`
 	AuditLogGetUserIP bool `env:"AUDIT_LOG_GET_USER_IP" envDefault:"0"`
 
+	// RetentionSweepDryRun keeps the daily retention sweep (internal/retention) counting what each organization's retention windows would delete without deleting it, forma2's RETENTION_SWEEP_DRY_RUN. Deleting product data is irreversible, so it is on by default: an operator reads the counts (the sweep's log line, each owner's Data retention card) before turning it off.
+	RetentionSweepDryRun bool `env:"RETENTION_SWEEP_DRY_RUN" envDefault:"1"`
+
 	// DangerouslyAllowWebhookInternalURLs lets webhooks target private, loopback, link-local and metadata addresses and follow redirects, for self-hosted instances whose receivers live on the internal network, forma2's DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS. A host name that does not resolve is still refused.
 	DangerouslyAllowWebhookInternalURLs bool `env:"DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS" envDefault:"0"`
 
