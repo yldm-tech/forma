@@ -79,5 +79,19 @@
   "verification_email_verify_email": "验证邮箱",
   "verification_new_email_subject": "邮箱更改验证",
   "verification_security_notice": "如果你没有申请更改邮箱，请忽略此邮件或立即联系客服。",
-  "verified_link_survey_email_subject": "您的问卷已准备好进行填写。"
+  "verified_link_survey_email_subject": "您的问卷已准备好进行填写。",
+  "weekly_summary_email_completion_rate": "完成率",
+  "weekly_summary_email_csat": "CSAT（满意）",
+  "weekly_summary_email_heading": "每周摘要",
+  "weekly_summary_email_more_surveys": "其他有回复的问卷：{count} 份。在 Forma 中查看全部。",
+  "weekly_summary_email_nps": "NPS",
+  "weekly_summary_email_period": "{organizationName}，{periodStart} 至 {periodEnd}（{timeZone}）",
+  "weekly_summary_email_previous_week": "（上周：{value}）",
+  "weekly_summary_email_responses": "回复数",
+  "weekly_summary_email_subject": "{organizationName} 的每周摘要",
+  "weekly_summary_email_top_tags": "热门标签",
+  "weekly_summary_email_total_responses": "新回复：{responseCount} 条",
+  "weekly_summary_email_turn_off": "关闭此组织的每周摘要",
+  "weekly_summary_email_view_summary": "查看这一周的摘要",
+  "weekly_summary_email_why": "每周一我们会为你发送 {organizationName} 中你可查看的问卷的摘要。"
 }

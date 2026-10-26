@@ -18,7 +18,7 @@
     "option_number": "Seçenek {number}",
     "page_x_of_y": "Sayfa {current} / {total}",
     "people_responded": "{count, plural, one {1 kişi yanıtladı} other {{count} kişi yanıtladı}}",
-    "please_retry_now_or_try_again_later": "Lütfen şimdi tekrar deneyin veya daha sonra tekrar deneyin.",
+    "please_retry_now_or_try_again_later": "Yeniden dene düğmesine basın veya bu sayfayı açık tutun, tekrar deneyeceğiz.",
     "powered_by": "Destekleyen",
     "privacy_policy": "Gizlilik Politikası",
     "protected_by_reCAPTCHA_and_the_Google": "reCAPTCHA ve Google tarafından korunmaktadır",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {1 dakika sürer} other {{count} dakika sürer}}",
     "takes_x_plus_minutes": "{count}+ dakika sürer",
     "terms_of_service": "Hizmet Şartları",
-    "the_servers_cannot_be_reached_at_the_moment": "Sunuculara şu anda ulaşılamıyor.",
+    "the_servers_cannot_be_reached_at_the_moment": "Sunucuya ulaşılamadı. Yanıtlarınız bu sayfada saklanıyor.",
     "they_will_be_redirected_immediately": "Hemen yönlendirilecekler",
     "time_remaining_before_the_survey_closes": "Anketin kapanmasına kalan süre",
     "welcome_video": "Karşılama Kartı videosu",
-    "your_feedback_is_stuck": "Geri bildiriminiz takıldı :("
+    "your_feedback_is_stuck": "Yanıtlarınız henüz gönderilmedi"
   },
   "date_time": {
     "select_a_time": "Lütfen bir saat seçin",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Şu dosya(lar) maksimum {maxSizeInMB} MB boyutunu aşıyor ve kaldırıldı: {fileNames}",
       "file_size_exceeded_alert": "Dosya {maxSizeInMB} MB'den küçük olmalıdır",
       "invalid_file_name": "Dosya adı geçersiz karakterler içeriyor. Lütfen dosyayı yeniden adlandırıp tekrar deneyin.",
-      "no_valid_file_types_selected": "Geçerli dosya türü seçilmedi. Lütfen geçerli bir dosya türü seçin.",
       "only_one_file_can_be_uploaded_at_a_time": "Aynı anda yalnızca bir dosya yüklenebilir.",
       "placeholder_text": "Dosyaları yüklemek için tıklayın veya sürükleyin",
       "upload_failed": "Yükleme başarısız oldu! Lütfen tekrar deneyin.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Lütfen en az {min} seçeneği sıralayın",
     "minimum_rows_answered": "Lütfen en az {min} satırı yanıtlayın",
     "please_enter_a_valid_email_address": "Lütfen geçerli bir e-posta adresi girin",
-    "please_enter_a_valid_phone_number": "Lütfen geçerli bir telefon numarası girin",
     "please_enter_a_valid_url": "Lütfen geçerli bir URL girin",
     "please_fill_out_this_field": "Lütfen bu alanı doldurun",
     "rank_at_least_one_option": "Lütfen en az bir seçeneği sıralayın",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "Bu yanıt zaten tamamlandı ve artık değiştirilemez. Bu pencereyi güvenle kapatabilirsin.",
       "title": "Bu yanıt zaten tamamlandı."
+    },
+    "response_email_already_used": {
+      "message": "Bu anket e-posta adresi başına bir yanıt kabul ediyor ve senin adresinle zaten bir yanıt gönderildi. Bu pencereyi kapatabilirsin.",
+      "title": "Bu e-posta adresiyle zaten yanıt verildi."
     },
     "response_sending_error_permanent": {
       "message": "Yanıtınız gönderilemedi ve yeniden denenemez. Bu sorun devam ederse lütfen anket sahibiyle iletişime geçin.",

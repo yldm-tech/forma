@@ -18,7 +18,7 @@
     "option_number": "Optie {number}",
     "page_x_of_y": "Pagina {current} van {total}",
     "people_responded": "{count, plural, one {1 persoon heeft gereageerd} other {{count} mensen hebben gereageerd}}",
-    "please_retry_now_or_try_again_later": "Probeer het nu opnieuw of probeer het later opnieuw.",
+    "please_retry_now_or_try_again_later": "Klik op Opnieuw proberen, of laat deze pagina open en we proberen het opnieuw.",
     "powered_by": "Aangedreven door",
     "privacy_policy": "Privacybeleid",
     "protected_by_reCAPTCHA_and_the_Google": "Beschermd door reCAPTCHA en Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {Duurt 1 minuut} other {Duurt {count} minuten}}",
     "takes_x_plus_minutes": "Duurt {count}+ minuten",
     "terms_of_service": "Servicevoorwaarden",
-    "the_servers_cannot_be_reached_at_the_moment": "De servers zijn momenteel niet bereikbaar.",
+    "the_servers_cannot_be_reached_at_the_moment": "We konden de server niet bereiken. Je antwoorden blijven op deze pagina bewaard.",
     "they_will_be_redirected_immediately": "Ze worden onmiddellijk doorgestuurd",
     "time_remaining_before_the_survey_closes": "Resterende tijd voordat de enquête sluit",
     "welcome_video": "Welkomstkaart video",
-    "your_feedback_is_stuck": "Je feedback blijft hangen :("
+    "your_feedback_is_stuck": "Je antwoorden zijn nog niet verzonden"
   },
   "date_time": {
     "select_a_time": "Kies een tijd",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "De volgende bestanden overschrijden de maximale grootte van {maxSizeInMB} MB en zijn verwijderd: {fileNames}",
       "file_size_exceeded_alert": "Het bestand moet kleiner zijn dan {maxSizeInMB} MB",
       "invalid_file_name": "De bestandsnaam bevat ongeldige tekens. Wijzig de bestandsnaam en probeer het opnieuw.",
-      "no_valid_file_types_selected": "Geen geldige bestandstypen geselecteerd. Selecteer een geldig bestandstype.",
       "only_one_file_can_be_uploaded_at_a_time": "Er kan slechts één bestand tegelijk worden geüpload.",
       "placeholder_text": "Klik of sleep bestanden om te uploaden",
       "upload_failed": "Uploaden mislukt! Probeer het opnieuw.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Rangschik minimaal {min} opties",
     "minimum_rows_answered": "Beantwoord minimaal {min} rijen",
     "please_enter_a_valid_email_address": "Voer een geldig e-mailadres in",
-    "please_enter_a_valid_phone_number": "Voer een geldig telefoonnummer in",
     "please_enter_a_valid_url": "Voer een geldige URL in",
     "please_fill_out_this_field": "Vul dit veld in",
     "rank_at_least_one_option": "Rangschik ten minste één optie",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "Deze reactie is al voltooid en kan niet meer worden gewijzigd. Je kunt dit venster veilig sluiten.",
       "title": "Deze reactie is al voltooid."
+    },
+    "response_email_already_used": {
+      "message": "Deze enquête accepteert één reactie per e-mailadres, en er is er al een verzonden met het jouwe. Je kunt dit venster sluiten.",
+      "title": "Met dit e-mailadres is al gereageerd."
     },
     "response_sending_error_permanent": {
       "message": "Je reactie kon niet worden verzonden en kan niet opnieuw worden geprobeerd. Neem contact op met de eigenaar van de enquête als dit blijft gebeuren.",

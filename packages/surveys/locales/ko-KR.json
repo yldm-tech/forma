@@ -18,7 +18,7 @@
     "option_number": "선택지 {number}",
     "page_x_of_y": "{total}페이지 중 {current}페이지",
     "people_responded": "{count, plural, other {{count}명이 응답했습니다}}",
-    "please_retry_now_or_try_again_later": "지금 다시 시도하거나 잠시 후 다시 시도해 주세요.",
+    "please_retry_now_or_try_again_later": "다시 시도를 누르거나 이 페이지를 열어 두세요. 자동으로 다시 전송합니다.",
     "powered_by": "제공:",
     "privacy_policy": "개인정보 처리방침",
     "protected_by_reCAPTCHA_and_the_Google": "reCAPTCHA 및 Google에 의해 보호됩니다",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {1분 소요} other {{count}분 소요}}",
     "takes_x_plus_minutes": "{count}분 이상 소요",
     "terms_of_service": "서비스 약관",
-    "the_servers_cannot_be_reached_at_the_moment": "현재 서버에 연결할 수 없습니다.",
+    "the_servers_cannot_be_reached_at_the_moment": "서버에 연결하지 못했습니다. 응답은 이 페이지에 보관되어 있습니다.",
     "they_will_be_redirected_immediately": "즉시 다른 페이지로 이동합니다",
     "time_remaining_before_the_survey_closes": "설문이 닫히기까지 남은 시간",
     "welcome_video": "환영 카드 동영상",
-    "your_feedback_is_stuck": "피드백을 전송하지 못했습니다 :("
+    "your_feedback_is_stuck": "응답이 아직 전송되지 않았습니다"
   },
   "date_time": {
     "select_a_time": "시간을 선택해 주세요",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "다음 파일이 최대 크기 {maxSizeInMB}MB를 초과하여 제거되었습니다: {fileNames}",
       "file_size_exceeded_alert": "파일 크기는 {maxSizeInMB}MB 미만이어야 합니다",
       "invalid_file_name": "파일 이름에 사용할 수 없는 문자가 포함되어 있습니다. 파일 이름을 변경한 후 다시 시도해 주세요.",
-      "no_valid_file_types_selected": "유효한 파일 형식이 선택되지 않았습니다. 유효한 파일 형식을 선택해 주세요.",
       "only_one_file_can_be_uploaded_at_a_time": "한 번에 하나의 파일만 업로드할 수 있습니다.",
       "placeholder_text": "클릭하거나 파일을 끌어다 놓아 업로드하세요",
       "upload_failed": "업로드에 실패했습니다. 다시 시도해 주세요.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "{min}개 이상의 항목에 순위를 매겨 주세요",
     "minimum_rows_answered": "{min}개 이상의 행에 응답해 주세요",
     "please_enter_a_valid_email_address": "올바른 이메일 주소를 입력해 주세요",
-    "please_enter_a_valid_phone_number": "올바른 전화번호를 입력해 주세요",
     "please_enter_a_valid_url": "올바른 URL을 입력해 주세요",
     "please_fill_out_this_field": "이 항목을 입력해 주세요",
     "rank_at_least_one_option": "한 개 이상의 항목에 순위를 매겨 주세요",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "이 응답은 이미 완료되어 더 이상 변경할 수 없습니다. 이 창을 닫으셔도 됩니다.",
       "title": "이 응답은 이미 완료되었습니다."
+    },
+    "response_email_already_used": {
+      "message": "이 설문은 이메일 주소당 하나의 응답만 받으며, 이 이메일 주소로 이미 응답이 제출되었습니다. 이 창을 닫으셔도 됩니다.",
+      "title": "이 이메일 주소로 이미 응답했습니다."
     },
     "response_sending_error_permanent": {
       "message": "응답을 제출할 수 없으며 다시 시도할 수 없습니다. 문제가 계속되면 설문 담당자에게 문의해 주세요.",

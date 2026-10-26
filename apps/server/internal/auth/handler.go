@@ -210,9 +210,9 @@ func (h *Handler) notifications(c *gin.Context) {
 	c.JSON(http.StatusOK, notificationsResponse{Organizations: orgs})
 }
 
-// notificationRequest switches one setting: type "alert" with a survey id, or "unsubscribedOrganizationIds" with an organization id, where enabled means the organization's new surveys alert the user.
+// notificationRequest switches one setting: type "alert" with a survey id, "unsubscribedOrganizationIds" with an organization id, where enabled means the organization's new surveys alert the user, or "unsubscribedWeeklySummaryOrganizationIds" with an organization id, where enabled means the user gets the organization's weekly summary email.
 type notificationRequest struct {
-	Type    string    `json:"type" binding:"required,oneof=alert unsubscribedOrganizationIds"`
+	Type    string    `json:"type" binding:"required,oneof=alert unsubscribedOrganizationIds unsubscribedWeeklySummaryOrganizationIds"`
 	ID      uuid.UUID `json:"id" binding:"required"`
 	Enabled *bool     `json:"enabled" binding:"required"`
 }

@@ -235,7 +235,6 @@
   "templates.customer_effort_score_description": "判斷使用功能有多容易。",
   "templates.date": "日期",
   "templates.date_description": "要求選擇日期",
-  "templates.default_ending_card_button_label": "建立您自己的問卷",
   "templates.default_ending_card_headline": "謝謝！",
   "templates.default_ending_card_subheader": "我們感謝您的回饋。",
   "templates.default_welcome_card_button_label": "下一步",

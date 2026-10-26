@@ -228,6 +228,19 @@ describe("SurveyPageApp", () => {
       cta: false,
       logo: false,
     },
+    {
+      inactive: {
+        status: "email responded",
+        isScheduled: false,
+        surveyClosedMessage: null,
+        workspace: { linkSurveyBranding: true },
+      },
+      heading: "The survey has already been answered.",
+      description:
+        "This survey accepts one response per email address, and one has already been submitted with this address.",
+      cta: false,
+      logo: true,
+    },
   ] as const)(
     "inactive: $inactive.status, scheduled $inactive.isScheduled",
     ({ inactive, heading, description, cta, logo }) => {
@@ -492,6 +505,95 @@ describe("the survey", () => {
     act(() => lastRender().onLanguageChange?.("ar"));
     await waitFor(() => expect(document.documentElement.getAttribute("dir")).toBe("rtl"));
     expect(document.documentElement.getAttribute("lang")).toBe("ar");
+  });
+});
+
+// D-FG03: a survey that takes one response per browser remembers, once the final answer is in, that this browser answered, and shows "already responded" on the next visit.
+describe("one response per browser", () => {
+  const MARK_KEY = "forma:responded:survey-1";
+  const COOKIE = "forma_responded_survey-1";
+  const browserLimit = { surveyId: "survey-1", workspace: { linkSurveyBranding: false } };
+  const limited = () => surveyProps({ survey: publicSurvey({ isSingleResponsePerBrowserEnabled: true }) });
+  const clearCookie = () => {
+    document.cookie = `${COOKIE}=; Max-Age=0; Path=/s/survey-1`;
+  };
+
+  beforeEach(() => {
+    globalThis.localStorage.clear();
+    clearCookie();
+  });
+  afterEach(() => {
+    clearCookie();
+  });
+
+  test("a browser that has not answered sees the survey, and is remembered once it answers", async () => {
+    renderPage({ view: "survey", locale: "en-US", survey: limited(), browserLimit });
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(globalThis.localStorage.getItem(MARK_KEY)).toBeNull();
+
+    act(() => lastRender().onFinished?.("response-1"));
+    expect(globalThis.localStorage.getItem(MARK_KEY)).toBe("1");
+    expect(document.cookie).toContain(`${COOKIE}=1`);
+
+    cleanup();
+    renderSurvey.mockReset();
+    renderPage({ view: "survey", locale: "en-US", survey: limited(), browserLimit });
+    expect(screen.getByRole("heading", { name: "The survey has already been answered." })).toBeTruthy();
+    expect(
+      screen.getByText(
+        "This survey accepts one response per browser, and one has already been submitted from this browser."
+      )
+    ).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Forma" })).toBeNull();
+    expect(renderSurvey).not.toHaveBeenCalled();
+  });
+
+  test("either mark alone is enough, and restores the other", () => {
+    globalThis.localStorage.setItem(MARK_KEY, "1");
+    renderPage({ view: "pin", locale: "en-US", survey: surveyProps({ survey: null }), browserLimit });
+    expect(screen.getByRole("heading", { name: "The survey has already been answered." })).toBeTruthy();
+    expect(document.cookie).toContain(`${COOKIE}=1`);
+
+    cleanup();
+    globalThis.localStorage.clear();
+    renderPage({
+      view: "verifyEmail",
+      locale: "en-US",
+      verifyEmail: {
+        fishy: false,
+        survey: publicSurvey({ isVerifyEmailEnabled: true }),
+        languageCode: "default",
+        styling: { allowStyleOverwrite: true },
+        locale: "en-US",
+        singleUseId: "",
+        singleUseToken: null,
+      },
+      browserLimit,
+    });
+    expect(screen.getByRole("heading", { name: "The survey has already been answered." })).toBeTruthy();
+    expect(globalThis.localStorage.getItem(MARK_KEY)).toBe("1");
+  });
+
+  test("a survey without the limit, and a preview, are neither stopped nor remembered", async () => {
+    globalThis.localStorage.setItem(MARK_KEY, "1");
+    // The server sends no browserLimit for these.
+    renderPage({ view: "survey", locale: "en-US", survey: surveyProps() });
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+
+    cleanup();
+    renderSurvey.mockReset();
+    globalThis.localStorage.clear();
+    renderPage({
+      view: "survey",
+      locale: "en-US",
+      survey: surveyProps({
+        isPreview: true,
+        survey: publicSurvey({ isSingleResponsePerBrowserEnabled: true }),
+      }),
+    });
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    act(() => lastRender().onFinished?.("response-1"));
+    expect(globalThis.localStorage.getItem(MARK_KEY)).toBeNull();
   });
 });
 

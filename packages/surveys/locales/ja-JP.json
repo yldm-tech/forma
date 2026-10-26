@@ -18,7 +18,7 @@
     "option_number": "オプション {number}",
     "page_x_of_y": "{total}ページ中{current}ページ目",
     "people_responded": "{count, plural, other {{count}人が回答しました}}",
-    "please_retry_now_or_try_again_later": "今すぐ再試行するか、後でもう一度お試しください。",
+    "please_retry_now_or_try_again_later": "再試行を押すか、このページを開いたままにしてください。自動で再送信します。",
     "powered_by": "提供：",
     "privacy_policy": "プライバシーポリシー",
     "protected_by_reCAPTCHA_and_the_Google": "reCAPTCHAとGoogleによって保護されています",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {1分} other {{count}分}}",
     "takes_x_plus_minutes": "{count}分以上",
     "terms_of_service": "利用規約",
-    "the_servers_cannot_be_reached_at_the_moment": "現在サーバーに接続できません。",
+    "the_servers_cannot_be_reached_at_the_moment": "サーバーに接続できませんでした。回答はこのページに保持されています。",
     "they_will_be_redirected_immediately": "すぐにリダイレクトされます",
     "time_remaining_before_the_survey_closes": "アンケートが閉じるまでの残り時間",
     "welcome_video": "ウェルカムカード動画",
-    "your_feedback_is_stuck": "フィードバックが送信できません :("
+    "your_feedback_is_stuck": "回答はまだ送信されていません"
   },
   "date_time": {
     "select_a_time": "時刻を選択してください",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "以下のファイルは最大サイズ{maxSizeInMB}MBを超えているため削除されました：{fileNames}",
       "file_size_exceeded_alert": "ファイルは{maxSizeInMB}MB未満である必要があります",
       "invalid_file_name": "ファイル名に無効な文字が含まれています。ファイル名を変更してもう一度お試しください。",
-      "no_valid_file_types_selected": "有効なファイルタイプが選択されていません。有効なファイルタイプを選択してください。",
       "only_one_file_can_be_uploaded_at_a_time": "一度にアップロードできるファイルは1つだけです。",
       "placeholder_text": "クリックまたはドラッグしてファイルをアップロード",
       "upload_failed": "アップロードに失敗しました！もう一度お試しください。",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "最低{min}個のオプションをランク付けしてください",
     "minimum_rows_answered": "最低{min}行に回答してください",
     "please_enter_a_valid_email_address": "有効なメールアドレスを入力してください",
-    "please_enter_a_valid_phone_number": "有効な電話番号を入力してください",
     "please_enter_a_valid_url": "有効なURLを入力してください",
     "please_fill_out_this_field": "このフィールドに入力してください",
     "rank_at_least_one_option": "1つ以上の項目を順位付けしてください",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "この回答は既に完了しており、変更できません。このウィンドウを閉じても問題ありません。",
       "title": "この回答は既に完了しています。"
+    },
+    "response_email_already_used": {
+      "message": "このフォームはメールアドレスごとに1件の回答を受け付けており、このメールアドレスからの回答はすでに送信されています。このウィンドウを閉じても問題ありません。",
+      "title": "このメールアドレスはすでに回答済みです。"
     },
     "response_sending_error_permanent": {
       "message": "回答を送信できませんでした。再試行することもできません。この問題が続く場合は、アンケート管理者にお問い合わせください。",

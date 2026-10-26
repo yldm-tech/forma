@@ -18,7 +18,7 @@
     "option_number": "Tùy chọn {number}",
     "page_x_of_y": "Trang {current} / {total}",
     "people_responded": "{count, plural, other {{count} người đã phản hồi}}",
-    "please_retry_now_or_try_again_later": "Vui lòng thử lại ngay hoặc thử lại sau.",
+    "please_retry_now_or_try_again_later": "Nhấn Thử lại, hoặc giữ trang này mở và chúng tôi sẽ thử lại.",
     "powered_by": "Được hỗ trợ bởi",
     "privacy_policy": "Chính sách Bảo mật",
     "protected_by_reCAPTCHA_and_the_Google": "Được bảo vệ bởi reCAPTCHA và Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, other {Mất {count} phút}}",
     "takes_x_plus_minutes": "Mất {count}+ phút",
     "terms_of_service": "Điều khoản dịch vụ",
-    "the_servers_cannot_be_reached_at_the_moment": "Hiện không thể kết nối đến máy chủ.",
+    "the_servers_cannot_be_reached_at_the_moment": "Không thể kết nối đến máy chủ. Câu trả lời của bạn vẫn được giữ trên trang này.",
     "they_will_be_redirected_immediately": "Họ sẽ được chuyển hướng ngay lập tức",
     "time_remaining_before_the_survey_closes": "Thời gian còn lại trước khi khảo sát đóng",
     "welcome_video": "Video thẻ chào mừng",
-    "your_feedback_is_stuck": "Phản hồi của bạn bị kẹt :("
+    "your_feedback_is_stuck": "Câu trả lời của bạn chưa được gửi"
   },
   "date_time": {
     "select_a_time": "Vui lòng chọn thời gian",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Các tệp sau vượt quá kích thước tối đa {maxSizeInMB} MB và đã bị xóa: {fileNames}",
       "file_size_exceeded_alert": "Tệp phải nhỏ hơn {maxSizeInMB} MB",
       "invalid_file_name": "Tên tệp chứa ký tự không hợp lệ. Vui lòng đổi tên tệp và thử lại.",
-      "no_valid_file_types_selected": "Không có loại tệp hợp lệ nào được chọn. Vui lòng chọn loại tệp hợp lệ.",
       "only_one_file_can_be_uploaded_at_a_time": "Chỉ có thể tải lên một tệp tại một thời điểm.",
       "placeholder_text": "Nhấp hoặc kéo thả để tải lên tệp",
       "upload_failed": "Tải lên thất bại! Vui lòng thử lại.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Vui lòng xếp hạng ít nhất {min} tùy chọn",
     "minimum_rows_answered": "Vui lòng trả lời ít nhất {min} hàng",
     "please_enter_a_valid_email_address": "Vui lòng nhập địa chỉ email hợp lệ",
-    "please_enter_a_valid_phone_number": "Vui lòng nhập số điện thoại hợp lệ",
     "please_enter_a_valid_url": "Vui lòng nhập URL hợp lệ",
     "please_fill_out_this_field": "Vui lòng điền vào trường này",
     "rank_at_least_one_option": "Vui lòng xếp hạng ít nhất một tùy chọn",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "Phản hồi này đã được hoàn tất và không thể thay đổi thêm. Bạn có thể đóng cửa sổ này một cách an toàn.",
       "title": "Phản hồi này đã được hoàn tất."
+    },
+    "response_email_already_used": {
+      "message": "Khảo sát này chỉ nhận một phản hồi cho mỗi địa chỉ email và đã có một phản hồi được gửi bằng địa chỉ của bạn. Bạn có thể đóng cửa sổ này.",
+      "title": "Địa chỉ email này đã phản hồi rồi."
     },
     "response_sending_error_permanent": {
       "message": "Phản hồi của bạn không thể được gửi đi và không thể thử lại. Vui lòng liên hệ với chủ sở hữu khảo sát nếu vấn đề này tiếp tục xảy ra.",

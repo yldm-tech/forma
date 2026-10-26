@@ -7,7 +7,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { i18n as I18n } from "i18next";
 import { Suspense } from "react";
 import { I18nextProvider } from "react-i18next";
@@ -40,6 +40,7 @@ const organizations: NotificationOrganization[] = [
     id: "o1",
     name: "Acme",
     autoSubscribe: true,
+    weeklySummary: true,
     surveys: [
       { id: "s1", name: "NPS Survey", workspaceId: "w2", workspaceName: "Website", alert: true },
       { id: "s2", name: "Onboarding", workspaceId: "w1", workspaceName: "Docs Portal", alert: false },
@@ -116,6 +117,36 @@ test("an unsubscribe link for an organization stops auto-subscribing to its surv
 
   await waitFor(() =>
     expect(patches).toEqual([{ type: "unsubscribedOrganizationIds", id: "o1", enabled: false }])
+  );
+});
+
+test("the weekly summary email's link turns the organization's summary off once", async () => {
+  const patches = stubServer();
+  renderPage({ type: "unsubscribedWeeklySummaryOrganizationIds", elementId: "o1" });
+
+  await waitFor(() =>
+    expect(patches).toEqual([{ type: "unsubscribedWeeklySummaryOrganizationIds", id: "o1", enabled: false }])
+  );
+  await waitFor(() =>
+    expect(toast.getSnapshot().map((shown) => shown.message)).toContain(
+      i18n.t(
+        "workspace.settings.notifications.you_will_not_receive_the_weekly_summary_for_this_organization_anymore"
+      )
+    )
+  );
+});
+
+test("each organization has a weekly summary switch", async () => {
+  const patches = stubServer();
+  renderPage({});
+
+  const summary = await screen.findByRole("switch", {
+    name: `${i18n.t("workspace.settings.notifications.weekly_summary")}: Acme`,
+  });
+  expect(summary.getAttribute("aria-checked")).toBe("true");
+  fireEvent.click(summary);
+  await waitFor(() =>
+    expect(patches).toEqual([{ type: "unsubscribedWeeklySummaryOrganizationIds", id: "o1", enabled: false }])
   );
 });
 

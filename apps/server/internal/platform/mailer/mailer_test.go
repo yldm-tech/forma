@@ -58,6 +58,26 @@ var everyTemplate = []mailer.Content{
 	followUp,
 	mailer.EmbedSurveyPreview{HTML: `<table><tr><td>How likely are you to recommend us?</td></tr></table>`, WorkspaceID: "ws1"},
 	mailer.EmailCustomizationPreview{UserName: "Ada"},
+	weeklySummary,
+}
+
+func ptr[T any](v T) *T { return &v }
+
+var weeklySummary = mailer.WeeklySummary{
+	OrganizationName: "Acme <Labs>", PeriodStart: "2026-10-19", PeriodEnd: "2026-10-25", TimeZone: "Asia/Tokyo",
+	Responses: 26, PreviousResponses: 18,
+	Surveys: []mailer.WeeklySummarySurvey{
+		{
+			Name: "Customer Feedback", WorkspaceName: "Production", SummaryURL: "https://app.example.com/app/workspaces/ws1/surveys/s1/summary?filter=x&utm_source=email_weekly_summary",
+			Responses: 24, PreviousResponses: 18, Completed: 21,
+			NPS:  &mailer.WeeklySummaryScore{Current: ptr(35.0), Previous: ptr(-12.5)},
+			CSAT: &mailer.WeeklySummaryScore{Current: ptr(80.0)},
+			Tags: []mailer.WeeklySummaryTag{{Name: "billing", Count: 3}, {Name: "ui", Count: 2}},
+		},
+		{Name: "Exit poll", WorkspaceName: "Staging", SummaryURL: "https://app.example.com/app/workspaces/ws2/surveys/s2/summary", Responses: 0, PreviousResponses: 2},
+	},
+	MoreSurveys: 3,
+	SettingsURL: "https://app.example.com/app/account/settings/notifications?elementId=o1&type=unsubscribedWeeklySummaryOrganizationIds",
 }
 
 var responseFinished = mailer.ResponseFinished{
@@ -475,6 +495,46 @@ func TestRenderResponseFinished(t *testing.T) {
 		t.Error("a first response must link to the summary")
 	}
 	if subject, _, _ := m.Render("ja-JP", responseFinished); !strings.Contains(subject, "Customer Feedback") || strings.Contains(subject, "{surveyName}") {
+		t.Errorf("ja-JP subject = %q", subject)
+	}
+}
+
+// The weekly summary lists each survey's numbers against the week before, a dash for a number there is nothing to compute from, and the switch that turns it off; the organization's name is escaped.
+func TestRenderWeeklySummary(t *testing.T) {
+	t.Parallel()
+	m := newMailer(t, baseConfig(), nil)
+	subject, html, err := m.Render("en-US", weeklySummary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if subject != "Weekly summary for Acme <Labs>" {
+		t.Errorf("subject = %q", subject)
+	}
+	for _, want := range []string{
+		"Your weekly summary", "Acme &lt;Labs&gt;, 2026-10-19 to 2026-10-25 (Asia/Tokyo)", "New responses: 26", "(previous week: 18)",
+		"Customer Feedback", "Production", "<strong>24</strong>", "Completion rate", "<strong>87.5%</strong>",
+		"NPS", "<strong>35</strong>", "(previous week: -12.5)", "CSAT (satisfied)", "<strong>80%</strong>", "(previous week: –)",
+		"Top tags", "billing (3), ui (2)",
+		`href="https://app.example.com/app/workspaces/ws1/surveys/s1/summary?filter=x&amp;utm_source=email_weekly_summary"`, "View the summary for this week",
+		"Exit poll", "<strong>0</strong>", "<strong>–</strong>",
+		"Other surveys with responses: 3. Open Forma to see them all.",
+		"You get this summary every Monday for the surveys you can see in Acme &lt;Labs&gt;.",
+		`href="https://app.example.com/app/account/settings/notifications?elementId=o1&amp;type=unsubscribedWeeklySummaryOrganizationIds"`, "Turn off the weekly summary for this organization",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	// The second survey has no NPS or CSAT element and no tags, so those rows are left out; the email is not signed.
+	if n := strings.Count(html, "CSAT (satisfied)"); n != 1 {
+		t.Errorf("CSAT rows = %d, want 1", n)
+	}
+	for _, absent := range []string{"Have a great day!", "Acme <Labs>"} {
+		if strings.Contains(html, absent) {
+			t.Errorf("unexpected %q", absent)
+		}
+	}
+	if subject, _, _ := m.Render("ja-JP", weeklySummary); subject != "Acme <Labs> の週間サマリー" {
 		t.Errorf("ja-JP subject = %q", subject)
 	}
 }

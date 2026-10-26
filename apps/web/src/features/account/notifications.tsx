@@ -13,6 +13,7 @@ import { organizationSettingsPath } from "../../lib/navigation";
 import { type UnsubscribeLink, alertRows, unsubscribeTarget } from "../../lib/notifications";
 import {
   type NotificationOrganization,
+  type NotificationType,
   authOptionsQuery,
   notificationsQuery,
   useSetNotification,
@@ -21,7 +22,7 @@ import { workspaceQuery } from "../../lib/queries/workspaces";
 import { WORKSPACE_ID_KEY, readStorage } from "../../lib/storage";
 import { toast } from "../../lib/toast";
 
-/** forma2's notifications page: per organization, whether new surveys alert the user, and a per-response alert switch for every survey they can see. Where the instance has no SMTP the switches still save, and the page says no alert will be mailed until it does. */
+/** forma2's notifications page: per organization, whether new surveys alert the user, and a per-response alert switch for every survey they can see; then, per organization, whether the user gets its weekly summary email. Where the instance has no SMTP the switches still save, and the page says no alert will be mailed until it does. */
 export const NotificationsPage = ({ link }: { link: UnsubscribeLink }) => {
   const { t } = useTranslation();
   const { data: organizations } = useSuspenseQuery(notificationsQuery);
@@ -29,7 +30,7 @@ export const NotificationsPage = ({ link }: { link: UnsubscribeLink }) => {
   const setNotification = useSetNotification();
   const handledLink = useRef(false);
 
-  const change = async (type: "alert" | "unsubscribedOrganizationIds", id: string, enabled: boolean) => {
+  const change = async (type: NotificationType, id: string, enabled: boolean) => {
     try {
       await setNotification.mutateAsync({ type, id, enabled });
       toast.success(t("workspace.settings.notifications.notification_settings_updated"), {
@@ -46,18 +47,19 @@ export const NotificationsPage = ({ link }: { link: UnsubscribeLink }) => {
     handledLink.current = true;
     const target = unsubscribeTarget(link, organizations);
     if (!target) return;
+    const done = {
+      alert: t(
+        "workspace.settings.notifications.you_will_not_receive_any_more_emails_for_responses_on_this_survey"
+      ),
+      unsubscribedOrganizationIds: t(
+        "workspace.settings.notifications.you_will_not_be_auto_subscribed_to_this_organizations_surveys_anymore"
+      ),
+      unsubscribedWeeklySummaryOrganizationIds: t(
+        "workspace.settings.notifications.you_will_not_receive_the_weekly_summary_for_this_organization_anymore"
+      ),
+    }[target.type];
     void setNotification.mutateAsync({ ...target, enabled: false }).then(
-      () =>
-        toast.success(
-          target.type === "alert"
-            ? t(
-                "workspace.settings.notifications.you_will_not_receive_any_more_emails_for_responses_on_this_survey"
-              )
-            : t(
-                "workspace.settings.notifications.you_will_not_be_auto_subscribed_to_this_organizations_surveys_anymore"
-              ),
-          { id: "notification-switch" }
-        ),
+      () => toast.success(done, { id: "notification-switch" }),
       (error: unknown) => toast.error(errorMessage(t, error), { id: "notification-switch" })
     );
   }, [link, organizations, setNotification, t]);
@@ -89,6 +91,31 @@ export const NotificationsPage = ({ link }: { link: UnsubscribeLink }) => {
           ))
         )}
       </SettingsCard>
+      {organizations.length > 0 && (
+        <SettingsCard
+          width="full"
+          title={t("workspace.settings.notifications.weekly_summary")}
+          description={t("workspace.settings.notifications.weekly_summary_description")}>
+          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+            {organizations.map((organization) => (
+              <li key={organization.id} className="flex items-center justify-between gap-x-3 px-4 py-3">
+                <div className="flex items-center gap-x-3">
+                  <UsersIcon className="h-6 w-7 text-slate-600" />
+                  <p className="text-sm font-medium text-slate-800">{organization.name}</p>
+                </div>
+                <Switch
+                  aria-label={`${t("workspace.settings.notifications.weekly_summary")}: ${organization.name}`}
+                  checked={organization.weeklySummary}
+                  disabled={setNotification.isPending}
+                  onCheckedChange={(enabled) =>
+                    void change("unsubscribedWeeklySummaryOrganizationIds", organization.id, enabled)
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        </SettingsCard>
+      )}
       <IntegrationsTip />
     </PageContentWrapper>
   );
@@ -123,7 +150,7 @@ const OrganizationAlerts = ({
 }: {
   organization: NotificationOrganization;
   disabled: boolean;
-  onChange: (type: "alert" | "unsubscribedOrganizationIds", id: string, enabled: boolean) => void;
+  onChange: (type: NotificationType, id: string, enabled: boolean) => void;
 }) => {
   const { t } = useTranslation();
   return (

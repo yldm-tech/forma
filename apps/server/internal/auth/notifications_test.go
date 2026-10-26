@@ -145,3 +145,55 @@ func TestNotificationsUpdate(t *testing.T) {
 	}
 	expectStatus(t, b.patch("/auth/me/notifications", map[string]any{"type": notificationAlert, "id": "not-an-id", "enabled": true}), http.StatusBadRequest, apperr.CodeBadRequest)
 }
+
+// The weekly summary is on for every organization until the user turns it off; the switch is stored as an opt-out list, and only for organizations the page shows.
+func TestNotificationsWeeklySummary(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	f := e.seedNotifications()
+	b := e.sessionFor(f.user)
+	set := func(id uuid.UUID, enabled bool) response {
+		return b.patch("/auth/me/notifications", map[string]any{"type": NotificationWeeklySummary, "id": id, "enabled": enabled})
+	}
+	stored := func() map[string]json.RawMessage {
+		t.Helper()
+		var raw []byte
+		if err := e.db.Raw(`SELECT notification_settings FROM users WHERE id = ?`, f.user).Row().Scan(&raw); err != nil {
+			t.Fatal(err)
+		}
+		doc := map[string]json.RawMessage{}
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatal(err)
+		}
+		return doc
+	}
+
+	orgs := b.notifications().Organizations
+	if !orgs[0].WeeklySummary || !orgs[1].WeeklySummary {
+		t.Fatalf("default %+v", orgs)
+	}
+	// Switching another setting does not write the weekly summary's key.
+	expectStatus(t, b.patch("/auth/me/notifications", map[string]any{"type": notificationAlert, "id": f.teamSurvey, "enabled": true}), http.StatusNoContent, "")
+	if _, ok := stored()[NotificationWeeklySummary]; ok {
+		t.Fatal("the weekly summary key was written by another switch")
+	}
+
+	expectStatus(t, set(f.teamOrg, false), http.StatusNoContent, "")
+	expectStatus(t, set(f.teamOrg, false), http.StatusNoContent, "")
+	orgs = b.notifications().Organizations
+	if !orgs[0].WeeklySummary || orgs[1].WeeklySummary {
+		t.Fatalf("after turning off %+v", orgs)
+	}
+	doc := stored()
+	if string(doc[NotificationWeeklySummary]) != `["`+f.teamOrg.String()+`"]` || doc["weeklySummary"] == nil || string(doc["unsubscribedOrganizationIds"]) != `["`+f.owned.String()+`"]` {
+		t.Fatalf("stored %v", doc)
+	}
+	expectStatus(t, set(f.teamOrg, true), http.StatusNoContent, "")
+	if string(stored()[NotificationWeeklySummary]) != `[]` || !b.notifications().Organizations[1].WeeklySummary {
+		t.Fatal("turning it back on")
+	}
+
+	for _, id := range []uuid.UUID{f.billingOrg, f.noAccessOrg, f.ownedSurvey} {
+		expectStatus(t, set(id, false), http.StatusNotFound, apperr.CodeNotFound)
+	}
+}

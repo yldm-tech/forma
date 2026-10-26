@@ -146,7 +146,12 @@ func (sv *surveyDoc) elementIDs() []string {
 
 // readableSurvey authorizes reading the survey's responses (forma2's workspace.read on the survey's workspace) and loads it. An unknown survey is the same 403 as a foreign one, so ids cannot be probed.
 func (s *Service) readableSurvey(ctx context.Context, userID, surveyID uuid.UUID, action authz.Action) (*surveyDoc, error) {
-	if err := s.authz.Require(ctx, authz.User(userID), action, authz.Survey(surveyID)); err != nil {
+	return s.readableSurveyAs(ctx, authz.User(userID), surveyID, action)
+}
+
+// readableSurveyAs is readableSurvey for any actor, a user or an API key.
+func (s *Service) readableSurveyAs(ctx context.Context, actor authz.Actor, surveyID uuid.UUID, action authz.Action) (*surveyDoc, error) {
+	if err := s.authz.Require(ctx, actor, action, authz.Survey(surveyID)); err != nil {
 		return nil, err
 	}
 	sv, err := loadSurveyDoc(ctx, s.db, surveyID)

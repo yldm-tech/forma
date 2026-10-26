@@ -63,6 +63,8 @@ const survey = (): TSurvey =>
     isCaptureIpEnabled: false,
     isAnonymizeResponsesEnabled: false,
     isProgressSavingEnabled: true,
+    isSingleResponsePerBrowserEnabled: false,
+    isSingleResponsePerEmailEnabled: false,
     pin: null,
     displayPercentage: null,
     languages: [

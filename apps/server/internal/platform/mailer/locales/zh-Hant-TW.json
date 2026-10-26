@@ -79,5 +79,19 @@
   "verification_email_verify_email": "驗證電子郵件",
   "verification_new_email_subject": "電子郵件更改驗證",
   "verification_security_notice": "如果您沒有要求更改此電子郵件，請忽略此電子郵件或立即聯絡支援。",
-  "verified_link_survey_email_subject": "您的 survey 已準備好填寫。"
+  "verified_link_survey_email_subject": "您的 survey 已準備好填寫。",
+  "weekly_summary_email_completion_rate": "完成率",
+  "weekly_summary_email_csat": "CSAT（滿意）",
+  "weekly_summary_email_heading": "每週摘要",
+  "weekly_summary_email_more_surveys": "其他有回應的問卷：{count} 份。在 Forma 中查看全部。",
+  "weekly_summary_email_nps": "NPS",
+  "weekly_summary_email_period": "{organizationName}，{periodStart} 至 {periodEnd}（{timeZone}）",
+  "weekly_summary_email_previous_week": "（上週：{value}）",
+  "weekly_summary_email_responses": "回應數",
+  "weekly_summary_email_subject": "{organizationName} 的每週摘要",
+  "weekly_summary_email_top_tags": "熱門標籤",
+  "weekly_summary_email_total_responses": "新回應：{responseCount} 則",
+  "weekly_summary_email_turn_off": "關閉此組織的每週摘要",
+  "weekly_summary_email_view_summary": "查看這一週的摘要",
+  "weekly_summary_email_why": "每週一我們會寄送 {organizationName} 中您可檢視的問卷摘要給您。"
 }

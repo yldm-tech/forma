@@ -295,6 +295,15 @@ func (s *Service) Summary(ctx context.Context, userID, surveyID uuid.UUID, filte
 	return s.summary(ctx, sv, filter)
 }
 
+// SummaryAs is Summary for any actor, a user or an API key, MCP's get_survey_summary: the same statistics, after the same authorization, for whoever the MCP caller is.
+func (s *Service) SummaryAs(ctx context.Context, actor authz.Actor, surveyID uuid.UUID, filter *response.Criteria) (*Summary, error) {
+	sv, err := s.readableSurveyAs(ctx, actor, surveyID, authz.SurveyResponseRead)
+	if err != nil {
+		return nil, err
+	}
+	return s.summary(ctx, sv, filter)
+}
+
 // summary is the survey's statistics over the responses matching the filter, for a caller that has authorized reading them.
 func (s *Service) summary(ctx context.Context, sv *surveyDoc, filter *response.Criteria) (*Summary, error) {
 	clause, err := response.Where(ctx, s.segments, sv.Survey, filter)

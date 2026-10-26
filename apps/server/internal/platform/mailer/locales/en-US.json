@@ -79,5 +79,19 @@
   "verification_email_verify_email": "Verify email",
   "verification_new_email_subject": "Email change verification",
   "verification_security_notice": "If you did not request this email change, please ignore this email or contact support immediately.",
-  "verified_link_survey_email_subject": "Your survey is ready to be filled out."
+  "verified_link_survey_email_subject": "Your survey is ready to be filled out.",
+  "weekly_summary_email_completion_rate": "Completion rate",
+  "weekly_summary_email_csat": "CSAT (satisfied)",
+  "weekly_summary_email_heading": "Your weekly summary",
+  "weekly_summary_email_more_surveys": "Other surveys with responses: {count}. Open Forma to see them all.",
+  "weekly_summary_email_nps": "NPS",
+  "weekly_summary_email_period": "{organizationName}, {periodStart} to {periodEnd} ({timeZone})",
+  "weekly_summary_email_previous_week": "(previous week: {value})",
+  "weekly_summary_email_responses": "Responses",
+  "weekly_summary_email_subject": "Weekly summary for {organizationName}",
+  "weekly_summary_email_top_tags": "Top tags",
+  "weekly_summary_email_total_responses": "New responses: {responseCount}",
+  "weekly_summary_email_turn_off": "Turn off the weekly summary for this organization",
+  "weekly_summary_email_view_summary": "View the summary for this week",
+  "weekly_summary_email_why": "You get this summary every Monday for the surveys you can see in {organizationName}."
 }

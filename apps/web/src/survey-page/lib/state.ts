@@ -15,7 +15,16 @@ export type TPublicSurvey = Omit<TSurvey, "segment"> & {
   segment: { id: string; hasFilters: boolean } | null;
 };
 
-export type TInactiveStatus = "paused" | "completed" | "link invalid" | "response submitted" | "link expired";
+export type TInactiveStatus =
+  | "paused"
+  | "completed"
+  | "link invalid"
+  | "response submitted"
+  | "link expired"
+  // One response per verified email: the verification link's address already finished a response (the server decides).
+  | "email responded"
+  // One response per browser: this browser already finished a response (the page decides, lib/browser-response.ts).
+  | "browser responded";
 
 /** The workspace's branding switch; null is no workspace, which shows Forma's branding. */
 export type TBranding = { linkSurveyBranding: boolean } | null;
@@ -74,12 +83,18 @@ export interface TSurveyProps {
   isFormaCloud: boolean;
 }
 
+/** A survey that takes one response per browser (isSingleResponsePerBrowserEnabled): the page shows "already responded", in the workspace's branding, instead of the screen the state names when this browser has finished a response to it. Never set for a preview or a personal link. */
+export interface TBrowserLimit {
+  surveyId: string;
+  workspace: TBranding;
+}
+
 export type TSurveyPageState =
   | { view: "notFound" | "error"; locale: string }
   | { view: "inactive"; locale: string; inactive: TInactiveState }
   | { view: "completed"; locale: string; completed: TCompletedState }
-  | { view: "verifyEmail"; locale: string; verifyEmail: TVerifyEmailState }
-  | { view: "pin" | "survey"; locale: string; survey: TSurveyProps };
+  | { view: "verifyEmail"; locale: string; verifyEmail: TVerifyEmailState; browserLimit?: TBrowserLimit }
+  | { view: "pin" | "survey"; locale: string; survey: TSurveyProps; browserLimit?: TBrowserLimit };
 
 /** The id of the script element that carries the state (stateElementID in apps/server/internal/linksurvey/shell.go). */
 export const SURVEY_PAGE_STATE_ID = "forma-survey-page";

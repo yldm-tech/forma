@@ -235,7 +235,6 @@
   "templates.customer_effort_score_description": "Determine how easy it is to use a feature.",
   "templates.date": "Date",
   "templates.date_description": "Ask for a date selection",
-  "templates.default_ending_card_button_label": "Create your own Survey",
   "templates.default_ending_card_headline": "Thank you!",
   "templates.default_ending_card_subheader": "We appreciate your feedback.",
   "templates.default_welcome_card_button_label": "Next",

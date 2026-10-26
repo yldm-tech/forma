@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"maps"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -103,6 +104,131 @@ func TestCreateResponseGates(t *testing.T) {
 	url := webAppURL + "/s/" + verified.String() + "?verify=" + e.emailToken(t, other2, "real@example.com")
 	e.post(t, respond(ws, "v1"), map[string]any{"surveyId": verified.String(), "finished": true, "data": map[string]any{}, "meta": map[string]any{"url": url}}).
 		expectError(t, 403, "forbidden", "Survey requires email verification")
+}
+
+// One response per verified email (D-FG03): with email verification on, only one response per address, in any letter case, finishes. Unfinished responses never lock the address out: a respondent on a second device, or back after the runtime dropped its saved progress, starts a new response and can finish it. Once one has finished, creating another or finishing another is refused with 409 and details.code response_email_already_used on both creates and the update; racing creates and racing finishing updates for one address finish one response; other addresses, other surveys and a survey without the setting are not limited.
+func TestCreateResponseOneResponsePerEmail(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true, is_single_response_per_email_enabled = true WHERE id = ?`, sv)
+	create := func(v, surveyID string, email string, finished bool) result {
+		url := webAppURL + "/s/" + surveyID + "?verify=" + e.emailToken(t, uuid.MustParse(surveyID), email)
+		return e.post(t, respond(ws, v), map[string]any{"surveyId": surveyID, "finished": finished, "data": map[string]any{}, "meta": map[string]any{"url": url}})
+	}
+	finish := func(id string) result {
+		return e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+id, map[string]any{"finished": true, "data": map[string]any{}})
+	}
+	refused := func(what string, r result) {
+		t.Helper()
+		if details := r.expectError(t, 409, "conflict", "A response was already submitted with this email address"); details["code"] != "response_email_already_used" {
+			t.Fatalf("%s: details %v", what, details)
+		}
+	}
+	first := create("v2", sv.String(), "Real@Example.com", false)
+	if first.Status != 200 {
+		t.Fatalf("first: %d %s", first.Status, first.Body)
+	}
+	firstID := first.data(t)["id"].(string)
+	// The respondent left it two days ago, past the runtime's 24-hour progress window, or opens the link on another device: a new response for the address is taken.
+	e.exec(`UPDATE responses SET created_at = now() - interval '2 days', updated_at = now() - interval '2 days' WHERE id = ?`, firstID)
+	second := create("v2", sv.String(), "real@example.COM", false)
+	if second.Status != 200 {
+		t.Fatalf("second device: %d %s", second.Status, second.Body)
+	}
+	if put := finish(second.data(t)["id"].(string)); put.Status != 200 {
+		t.Fatalf("finish the second: %d %s", put.Status, put.Body)
+	}
+	// One response of the address has finished: neither another create nor finishing the earlier response goes through.
+	for _, v := range []string{"v1", "v2"} {
+		refused(v+" create, finished", create(v, sv.String(), "REAL@example.com", true))
+	}
+	refused("create, unfinished", create("v2", sv.String(), "real@example.com", false))
+	refused("finish the first", finish(firstID))
+	var finished int64
+	if err := e.db.Raw(`SELECT count(*) FROM responses WHERE survey_id = ? AND finished`, sv).Scan(&finished).Error; err != nil {
+		t.Fatal(err)
+	}
+	if finished != 1 {
+		t.Fatalf("%d finished responses for one address", finished)
+	}
+	// An update that does not finish the earlier response still goes on, and so does another address.
+	if put := e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+firstID, map[string]any{"data": map[string]any{}}); put.Status != 200 {
+		t.Fatalf("update the unfinished one: %d %s", put.Status, put.Body)
+	}
+	if r := create("v2", sv.String(), "other@example.com", true); r.Status != 200 {
+		t.Fatalf("another address: %d %s", r.Status, r.Body)
+	}
+
+	// Without email verification there is no address to count, and without the setting an address answers again.
+	unverified := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_single_response_per_email_enabled = true WHERE id = ?`, unverified)
+	for range 2 {
+		if r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": unverified.String(), "finished": true, "data": map[string]any{}}); r.Status != 200 {
+			t.Fatalf("verification off: %d %s", r.Status, r.Body)
+		}
+	}
+	unlimited := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true WHERE id = ?`, unlimited)
+	for range 2 {
+		if r := create("v2", unlimited.String(), "real@example.com", true); r.Status != 200 {
+			t.Fatalf("setting off: %d %s", r.Status, r.Body)
+		}
+	}
+
+	// Creates racing for one address: exactly one gets through.
+	raced := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true, is_single_response_per_email_enabled = true WHERE id = ?`, raced)
+	url := webAppURL + "/s/" + raced.String() + "?verify=" + e.emailToken(t, raced, "race@example.com")
+	const racers = 8
+	statuses := make(chan int, racers)
+	var wg sync.WaitGroup
+	for range racers {
+		wg.Go(func() {
+			statuses <- e.do("POST", respond(ws, "v2"), map[string]any{"surveyId": raced.String(), "finished": true, "data": map[string]any{}, "meta": map[string]any{"url": url}}).Status
+		})
+	}
+	wg.Wait()
+	close(statuses)
+	counts := map[int]int{}
+	for s := range statuses {
+		counts[s]++
+	}
+	var stored int64
+	if err := e.db.Raw(`SELECT count(*) FROM responses WHERE survey_id = ?`, raced).Scan(&stored).Error; err != nil {
+		t.Fatal(err)
+	}
+	if counts[200] != 1 || counts[409] != racers-1 || stored != 1 {
+		t.Fatalf("racing creates: statuses %v, %d stored", counts, stored)
+	}
+
+	// Tabs racing to finish their responses for one address: exactly one finishes.
+	tabs := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true, is_single_response_per_email_enabled = true WHERE id = ?`, tabs)
+	ids := make([]string, racers)
+	for i := range ids {
+		r := create("v2", tabs.String(), "tabs@example.com", false)
+		if r.Status != 200 {
+			t.Fatalf("tab %d: %d %s", i, r.Status, r.Body)
+		}
+		ids[i] = r.data(t)["id"].(string)
+	}
+	finishes := make(chan int, racers)
+	for _, id := range ids {
+		wg.Go(func() { finishes <- finish(id).Status })
+	}
+	wg.Wait()
+	close(finishes)
+	counts = map[int]int{}
+	for s := range finishes {
+		counts[s]++
+	}
+	if err := e.db.Raw(`SELECT count(*) FROM responses WHERE survey_id = ? AND finished`, tabs).Scan(&finished).Error; err != nil {
+		t.Fatal(err)
+	}
+	if counts[200] != 1 || counts[409] != racers-1 || finished != 1 {
+		t.Fatalf("racing finishes: statuses %v, %d finished", counts, finished)
+	}
 }
 
 // The v1 create, the path the SDK takes for identified users, runs its own order of gates: the survey's status, the single-use link (whose 400s name the workspace environmentId, as v1 did) and the answers each refuse on their own.

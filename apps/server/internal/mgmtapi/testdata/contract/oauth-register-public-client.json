@@ -35,7 +35,7 @@
     "bodyFormat": "json",
     "body": {
       "client_id": "<oauth:client-id>",
-      "scope": "openid profile email offline_access surveys:read surveys:write workflows:read workflows:write",
+      "scope": "openid profile email offline_access surveys:read surveys:write workflows:read workflows:write responses:read",
       "client_id_issued_at": "<unix-time>",
       "client_name": "Contract MCP client",
       "contacts": [],

@@ -154,7 +154,7 @@ const developers = obj({
       resourcesTitle: text,
       resources: z.tuple([text, text, text, text, text]),
     }),
-    mcp: obj({ title: text, facts: z.tuple([fact, fact, fact]) }),
+    mcp: obj({ title: text, facts: z.tuple([fact, fact, fact, fact]) }),
   }),
 });
 

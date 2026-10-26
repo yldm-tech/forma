@@ -18,7 +18,7 @@
     "option_number": "选项 {number}",
     "page_x_of_y": "第 {current} 页，共 {total} 页",
     "people_responded": "{count, plural, one {1 人已回应} other {{count} 人已回应}}",
-    "please_retry_now_or_try_again_later": "请立即重试或稍后再试。",
+    "please_retry_now_or_try_again_later": "请点击重试，或保持此页面打开，我们会自动重新发送。",
     "powered_by": "技术支持",
     "privacy_policy": "隐私政策",
     "protected_by_reCAPTCHA_and_the_Google": "受 reCAPTCHA 和 Google 保护",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {1 分钟} other {{count} 分钟}}",
     "takes_x_plus_minutes": "{count}+ 分钟",
     "terms_of_service": "服务条款",
-    "the_servers_cannot_be_reached_at_the_moment": "目前无法连接到服务器。",
+    "the_servers_cannot_be_reached_at_the_moment": "无法连接到服务器。您的回答仍保留在此页面上。",
     "they_will_be_redirected_immediately": "他们将立即被重定向",
     "time_remaining_before_the_survey_closes": "调查关闭前的剩余时间",
     "welcome_video": "欢迎卡片视频",
-    "your_feedback_is_stuck": "您的反馈卡住了 :("
+    "your_feedback_is_stuck": "您的回答尚未发送"
   },
   "date_time": {
     "select_a_time": "请选择时间",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "以下文件超过了最大大小 {maxSizeInMB} MB，已被移除：{fileNames}",
       "file_size_exceeded_alert": "文件应小于 {maxSizeInMB} MB",
       "invalid_file_name": "文件名包含无效字符。请重命名文件后重试。",
-      "no_valid_file_types_selected": "未选择有效的文件类型。请选择有效的文件类型。",
       "only_one_file_can_be_uploaded_at_a_time": "一次只能上传一个文件。",
       "placeholder_text": "点击或拖拽上传文件",
       "upload_failed": "上传失败！请重试。",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "请至少排序{min}个选项",
     "minimum_rows_answered": "请至少回答{min}行",
     "please_enter_a_valid_email_address": "请输入有效的电子邮件地址",
-    "please_enter_a_valid_phone_number": "请输入有效的电话号码",
     "please_enter_a_valid_url": "请输入有效的URL",
     "please_fill_out_this_field": "请填写此字段",
     "rank_at_least_one_option": "请至少为一个选项排序",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "此回复已完成,无法再进行更改。你可以安全地关闭此窗口。",
       "title": "此回复已完成。"
+    },
+    "response_email_already_used": {
+      "message": "此问卷每个邮箱地址只接受一份回复，你的邮箱地址已提交过一份。你可以关闭此窗口。",
+      "title": "此邮箱地址已提交过回复。"
     },
     "response_sending_error_permanent": {
       "message": "你的回复无法提交且无法重试。如果此问题持续发生,请联系调查问卷的创建者。",

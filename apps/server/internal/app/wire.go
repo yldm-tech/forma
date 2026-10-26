@@ -19,6 +19,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/clientapi"
 	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/contact/contactsurvey"
+	"github.com/yldm-tech/forma/apps/server/internal/digest"
 	"github.com/yldm-tech/forma/apps/server/internal/followup"
 	"github.com/yldm-tech/forma/apps/server/internal/health"
 	"github.com/yldm-tech/forma/apps/server/internal/instance"
@@ -361,6 +362,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		billing.NewRepository,
 		billing.NewEngine,
 		brevo.NewClient,
+		digest.New,
 		NewJobRegistry,
 		jobs.NewWorker,
 	)

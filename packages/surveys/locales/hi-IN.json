@@ -18,7 +18,7 @@
     "option_number": "विकल्प {number}",
     "page_x_of_y": "पृष्ठ {current} में से {total}",
     "people_responded": "{count, plural, one {1 व्यक्ति ने जवाब दिया} other {{count} लोगों ने जवाब दिया}}",
-    "please_retry_now_or_try_again_later": "कृपया अभी पुनः प्रयास करें या बाद में फिर से प्रयास करें।",
+    "please_retry_now_or_try_again_later": "पुनः प्रयास करें दबाएं, या यह पेज खुला रखें, हम फिर से कोशिश करेंगे।",
     "powered_by": "द्वारा संचालित",
     "privacy_policy": "गोपनीयता नीति",
     "protected_by_reCAPTCHA_and_the_Google": "reCAPTCHA और Google द्वारा संरक्षित",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {1 मिनट लगता है} other {{count} मिनट लगते हैं}}",
     "takes_x_plus_minutes": "{count}+ मिनट लगते हैं",
     "terms_of_service": "सेवा की शर्तें",
-    "the_servers_cannot_be_reached_at_the_moment": "इस समय सर्वर तक पहुंचा नहीं जा सकता है।",
+    "the_servers_cannot_be_reached_at_the_moment": "सर्वर तक नहीं पहुंच सके। आपके उत्तर इस पेज पर सुरक्षित हैं।",
     "they_will_be_redirected_immediately": "उन्हें तुरंत रीडायरेक्ट किया जाएगा",
     "time_remaining_before_the_survey_closes": "सर्वे बंद होने से पहले बचा हुआ समय",
     "welcome_video": "स्वागत कार्ड वीडियो",
-    "your_feedback_is_stuck": "आपकी प्रतिक्रिया अटक गई है :("
+    "your_feedback_is_stuck": "आपके उत्तर अभी तक भेजे नहीं गए हैं"
   },
   "date_time": {
     "select_a_time": "कृपया समय चुनें",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "निम्नलिखित फ़ाइल(ें) अधिकतम आकार {maxSizeInMB} MB से अधिक हैं और हटा दी गई हैं: {fileNames}",
       "file_size_exceeded_alert": "फ़ाइल {maxSizeInMB} MB से कम होनी चाहिए",
       "invalid_file_name": "फ़ाइल नाम में अमान्य वर्ण हैं। कृपया फ़ाइल का नाम बदलें और फिर से प्रयास करें।",
-      "no_valid_file_types_selected": "कोई मान्य फ़ाइल प्रकार नहीं चुना गया है। कृपया एक मान्य फ़ाइल प्रकार चुनें।",
       "only_one_file_can_be_uploaded_at_a_time": "एक समय में केवल एक फ़ाइल अपलोड की जा सकती है।",
       "placeholder_text": "फ़ाइलें अपलोड करने के लिए क्लिक करें या ड्रैग करें",
       "upload_failed": "अपलोड विफल! कृपया पुनः प्रयास करें।",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "कृपया कम से कम {min} विकल्पों को रैंक करें",
     "minimum_rows_answered": "कृपया कम से कम {min} पंक्तियों का उत्तर दें",
     "please_enter_a_valid_email_address": "कृपया एक वैध ईमेल पता दर्ज करें",
-    "please_enter_a_valid_phone_number": "कृपया एक वैध फोन नंबर दर्ज करें",
     "please_enter_a_valid_url": "कृपया एक वैध URL दर्ज करें",
     "please_fill_out_this_field": "कृपया इस फील्ड को भरें",
     "rank_at_least_one_option": "कृपया कम से कम एक विकल्प को रैंक करें",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "यह प्रतिक्रिया पहले ही पूर्ण हो चुकी है और अब इसे बदला नहीं जा सकता। आप इस विंडो को सुरक्षित रूप से बंद कर सकते हैं।",
       "title": "यह प्रतिक्रिया पहले ही पूर्ण हो चुकी है।"
+    },
+    "response_email_already_used": {
+      "message": "यह सर्वे हर ईमेल पते से एक जवाब स्वीकार करता है, और आपके पते से एक जवाब पहले ही भेजा जा चुका है। आप यह विंडो बंद कर सकते हैं।",
+      "title": "इस ईमेल पते से पहले ही जवाब दिया जा चुका है।"
     },
     "response_sending_error_permanent": {
       "message": "आपकी प्रतिक्रिया सबमिट नहीं की जा सकी और इसे दोबारा प्रयास नहीं किया जा सकता। अगर यह समस्या बनी रहती है तो कृपया सर्वेक्षण के मालिक से संपर्क करें।",

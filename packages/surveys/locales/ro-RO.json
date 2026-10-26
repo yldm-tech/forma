@@ -18,7 +18,7 @@
     "option_number": "Opțiunea {number}",
     "page_x_of_y": "Pagina {current} din {total}",
     "people_responded": "{count, plural, one {1 persoană a răspuns} other {{count} persoane au răspuns}}",
-    "please_retry_now_or_try_again_later": "Te rugăm să încerci din nou acum sau mai târziu.",
+    "please_retry_now_or_try_again_later": "Apasă Reîncearcă sau lasă pagina deschisă și vom încerca din nou.",
     "powered_by": "Susținut de",
     "privacy_policy": "Politica de confidențialitate",
     "protected_by_reCAPTCHA_and_the_Google": "Protejat de reCAPTCHA și de Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {Durează 1 minut} few {Durează {count} minute} other {Durează {count} de minute}}",
     "takes_x_plus_minutes": "Durează peste {count} minute",
     "terms_of_service": "Termeni și condiții",
-    "the_servers_cannot_be_reached_at_the_moment": "Serverele nu pot fi accesate momentan.",
+    "the_servers_cannot_be_reached_at_the_moment": "Nu am putut contacta serverul. Răspunsurile tale sunt păstrate pe această pagină.",
     "they_will_be_redirected_immediately": "Vor fi redirecționați imediat",
     "time_remaining_before_the_survey_closes": "Timpul rămas până la închiderea sondajului",
     "welcome_video": "Videoclip Card de bun venit",
-    "your_feedback_is_stuck": "Feedback-ul tău este blocat :("
+    "your_feedback_is_stuck": "Răspunsurile tale nu au fost trimise încă"
   },
   "date_time": {
     "select_a_time": "Vă rugăm să selectați o oră",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Următoarele fișiere depășesc dimensiunea maximă de {maxSizeInMB} MB și au fost eliminate: {fileNames}",
       "file_size_exceeded_alert": "Fișierul trebuie să fie mai mic de {maxSizeInMB} MB",
       "invalid_file_name": "Numele fișierului conține caractere nevalide. Redenumește fișierul și încearcă din nou.",
-      "no_valid_file_types_selected": "Nu au fost selectate tipuri de fișiere valide. Te rugăm să selectezi un tip de fișier valid.",
       "only_one_file_can_be_uploaded_at_a_time": "Poți încărca doar un singur fișier odată.",
       "placeholder_text": "Apasă sau trage pentru a încărca fișiere",
       "upload_failed": "Încărcarea a eșuat! Te rugăm să încerci din nou.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Vă rugăm să ordonați cel puțin {min} opțiuni",
     "minimum_rows_answered": "Vă rugăm să răspundeți la cel puțin {min} rânduri",
     "please_enter_a_valid_email_address": "Vă rugăm să introduceți o adresă de email validă",
-    "please_enter_a_valid_phone_number": "Vă rugăm să introduceți un număr de telefon valid",
     "please_enter_a_valid_url": "Vă rugăm să introduceți un URL valid",
     "please_fill_out_this_field": "Vă rugăm să completați acest câmp",
     "rank_at_least_one_option": "Vă rugăm să clasați cel puțin o opțiune",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "Acest răspuns a fost deja completat și nu mai poate fi modificat. Poți închide în siguranță această fereastră.",
       "title": "Acest răspuns a fost deja completat."
+    },
+    "response_email_already_used": {
+      "message": "Acest sondaj acceptă un singur răspuns per adresă de e-mail, iar unul a fost deja trimis cu adresa ta. Poți închide această fereastră.",
+      "title": "Această adresă de e-mail a răspuns deja."
     },
     "response_sending_error_permanent": {
       "message": "Răspunsul tău nu a putut fi trimis și nu poate fi reîncercat. Te rugăm să contactezi proprietarul sondajului dacă problema persistă.",

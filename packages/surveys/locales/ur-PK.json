@@ -18,7 +18,7 @@
     "option_number": "آپشن {number}",
     "page_x_of_y": "صفحہ {current} از {total}",
     "people_responded": "{count, plural, one {1 شخص نے جواب دیا} other {{count} لوگوں نے جواب دیا}}",
-    "please_retry_now_or_try_again_later": "براہ کرم ابھی دوبارہ کوشش کریں یا بعد میں دوبارہ آزمائیں۔",
+    "please_retry_now_or_try_again_later": "دوبارہ کوشش کریں دبائیں، یا یہ صفحہ کھلا رکھیں، ہم دوبارہ کوشش کریں گے۔",
     "powered_by": "فراہم کردہ",
     "privacy_policy": "رازداری کی پالیسی",
     "protected_by_reCAPTCHA_and_the_Google": "reCAPTCHA اور Google کے ذریعے محفوظ",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {1 منٹ لگتا ہے} other {{count} منٹ لگتے ہیں}}",
     "takes_x_plus_minutes": "{count}+ منٹ لگتے ہیں",
     "terms_of_service": "استعمال کی شرائط",
-    "the_servers_cannot_be_reached_at_the_moment": "اس وقت سرورز تک رسائی نہیں ہو سکتی۔",
+    "the_servers_cannot_be_reached_at_the_moment": "سرور تک رسائی نہیں ہو سکی۔ آپ کے جوابات اسی صفحے پر محفوظ ہیں۔",
     "they_will_be_redirected_immediately": "انہیں فوری طور پر ری ڈائریکٹ کیا جائے گا",
     "time_remaining_before_the_survey_closes": "سروے بند ہونے سے پہلے باقی وقت",
     "welcome_video": "خوش آمدید کارڈ ویڈیو",
-    "your_feedback_is_stuck": "آپ کی رائے پھنس گئی ہے :("
+    "your_feedback_is_stuck": "آپ کے جوابات ابھی تک نہیں بھیجے گئے"
   },
   "date_time": {
     "select_a_time": "براہ کرم وقت منتخب کریں",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "درج ذیل فائل(یں) {maxSizeInMB} MB کی زیادہ سے زیادہ حد سے تجاوز کرتی ہیں اور ہٹا دی گئی ہیں: {fileNames}",
       "file_size_exceeded_alert": "فائل {maxSizeInMB} MB سے کم ہونی چاہیے",
       "invalid_file_name": "فائل کے نام میں غلط حروف ہیں۔ براہ کرم فائل کا نام تبدیل کریں اور دوبارہ کوشش کریں۔",
-      "no_valid_file_types_selected": "کوئی درست فائل کی قسم منتخب نہیں کی گئی۔ براہ کرم ایک درست فائل کی قسم منتخب کریں۔",
       "only_one_file_can_be_uploaded_at_a_time": "ایک وقت میں صرف ایک فائل اپ لوڈ کی جا سکتی ہے۔",
       "placeholder_text": "فائلیں اپ لوڈ کرنے کے لیے کلک کریں یا گھسیٹیں",
       "upload_failed": "اپ لوڈ ناکام ہو گیا! براہ کرم دوبارہ کوشش کریں۔",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "براہ کرم کم از کم {min} اختیارات کی درجہ بندی کریں",
     "minimum_rows_answered": "براہ کرم کم از کم {min} قطاروں کے جوابات دیں",
     "please_enter_a_valid_email_address": "براہ کرم درست ای میل ایڈریس درج کریں",
-    "please_enter_a_valid_phone_number": "براہ کرم درست فون نمبر درج کریں",
     "please_enter_a_valid_url": "براہ کرم درست URL درج کریں",
     "please_fill_out_this_field": "براہ کرم یہ خانہ پُر کریں",
     "rank_at_least_one_option": "براہ کرم کم از کم ایک اختیار کی درجہ بندی کریں",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "یہ جواب پہلے ہی مکمل ہو چکا ہے اور اب اسے تبدیل نہیں کیا جا سکتا۔ آپ اس ونڈو کو بند کر سکتے ہیں۔",
       "title": "یہ جواب پہلے ہی مکمل ہو چکا ہے۔"
+    },
+    "response_email_already_used": {
+      "message": "یہ سروے ہر ای میل پتے سے ایک جواب قبول کرتا ہے، اور آپ کے پتے سے ایک جواب پہلے ہی جمع ہو چکا ہے۔ آپ یہ ونڈو بند کر سکتے ہیں۔",
+      "title": "اس ای میل پتے سے پہلے ہی جواب دیا جا چکا ہے۔"
     },
     "response_sending_error_permanent": {
       "message": "آپ کا جواب جمع نہیں ہو سکا اور دوبارہ کوشش نہیں کی جا سکتی۔ اگر یہ مسئلہ جاری رہے تو براہ کرم سروے کے مالک سے رابطہ کریں۔",

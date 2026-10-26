@@ -9,16 +9,18 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 )
 
-// toolsJSON is the tools/list forma2 answered, in its order, recorded from its zod input schemas through the MCP SDK: names, titles, descriptions, annotations and input schemas. One change: the ids a tool takes (workspaceId, surveyId, workflowId, runId, responseId, and a workflow trigger's surveyId) accept UUIDs, the ids this server issues, as well as cuid2 ids, which name no row.
+// toolsJSON is the tools/list forma2 answered, in its order, recorded from its zod input schemas through the MCP SDK: names, titles, descriptions, annotations and input schemas. Two changes: the ids a tool takes (workspaceId, surveyId, workflowId, runId, responseId, and a workflow trigger's surveyId) accept UUIDs, the ids this server issues, as well as cuid2 ids, which name no row; and list_responses and get_survey_summary, which forma2 did not have, follow at the end, written in the same form.
 //
 //go:embed tools.json
 var toolsJSON []byte
@@ -115,11 +117,38 @@ func (d definition) arguments(raw json.RawMessage) (map[string]any, error) {
 	return out, nil
 }
 
-// toolSpec is what forma2's registerScopedTool held besides the advertised definition: the scopes the gate requires (all of them, or any one with anyOf) and the handler.
+// toolSpec is what forma2's registerScopedTool held besides the advertised definition: the scopes the gate requires (all of them, or any one with anyOf) and the handler. stepUp marks a tool whose scope was added after OAuth clients had connected: an OAuth token without it is refused at the transport with the insufficient_scope challenge (stepUpScopes), not with the tool result forma2's gate answers.
 type toolSpec struct {
 	scopes []string
 	anyOf  bool
+	stepUp bool
 	run    func(ctx context.Context, h *Handler, p *principal, args map[string]any) *sdk.CallToolResult
+}
+
+// stepUpScopes is the MCP authorization spec's scope challenge for a tools/call of a stepUp tool by an OAuth token that lacks its scope: the tool's scopes, and the scopes the client should ask for, the token's own and the tool's in the order the authorization server lists them; nil when the message is anything else. A token refreshed keeps the scopes first granted, so a client connected before responses:read existed would otherwise be refused by every response tool until its user removed and re-added it; the challenge makes a client that follows the spec authorize again, and the consent page asks for the new scope. Keeping the token's scopes in the request keeps the client from losing them.
+func stepUpScopes(p *principal, body []byte) (required, request []string) {
+	if p.method != methodOAuth {
+		return nil, nil
+	}
+	var msg struct {
+		Method string `json:"method"`
+		Params struct {
+			Name string `json:"name"`
+		} `json:"params"`
+	}
+	if json.Unmarshal(body, &msg) != nil || msg.Method != "tools/call" {
+		return nil, nil
+	}
+	spec, ok := toolSpecs[msg.Params.Name]
+	if !ok || !spec.stepUp || spec.allowed(p) {
+		return nil, nil
+	}
+	for _, s := range oauthserver.Scopes {
+		if slices.Contains(p.scopes, s) || slices.Contains(spec.scopes, s) {
+			request = append(request, s)
+		}
+	}
+	return spec.scopes, request
 }
 
 func (s toolSpec) allowed(p *principal) bool {
@@ -157,9 +186,10 @@ const (
 	scopeSurveysWrite   = "surveys:write"
 	scopeWorkflowsRead  = "workflows:read"
 	scopeWorkflowsWrite = "workflows:write"
+	scopeResponsesRead  = oauthserver.ScopeResponsesRead
 )
 
-// toolSpecs are forma2's tools by name.
+// toolSpecs are the tools by name: forma2's, and the two response tools.
 var toolSpecs = map[string]toolSpec{
 	"list_surveys": {scopes: []string{scopeSurveysRead}, run: func(ctx context.Context, h *Handler, p *principal, args map[string]any) *sdk.CallToolResult {
 		return h.run(ctx, p, operation{method: http.MethodGet, path: "/api/v3/surveys", query: listSurveysQuery(args)})
@@ -231,9 +261,16 @@ var toolSpecs = map[string]toolSpec{
 	"disable_workflow":   workflowLifecycle("disable"),
 	"archive_workflow":   workflowLifecycle("archive"),
 	"unarchive_workflow": workflowLifecycle("unarchive"),
-	// The workspaceId every other tool needs is found here, so either read scope admits it.
-	"list_workspaces": {scopes: []string{scopeSurveysRead, scopeWorkflowsRead}, anyOf: true, run: func(ctx context.Context, h *Handler, p *principal, _ map[string]any) *sdk.CallToolResult {
+	// The workspaceId every other tool needs is found here, so any read scope admits it.
+	"list_workspaces": {scopes: []string{scopeSurveysRead, scopeWorkflowsRead, scopeResponsesRead}, anyOf: true, run: func(ctx context.Context, h *Handler, p *principal, _ map[string]any) *sdk.CallToolResult {
 		return h.listWorkspaces(ctx, p)
+	}},
+	// What respondents answered is read with responses:read alone: surveys:read does not reach it (responses.go).
+	"list_responses": {scopes: []string{scopeResponsesRead}, stepUp: true, run: func(ctx context.Context, h *Handler, p *principal, args map[string]any) *sdk.CallToolResult {
+		return h.listResponses(ctx, p, args)
+	}},
+	"get_survey_summary": {scopes: []string{scopeResponsesRead}, stepUp: true, run: func(ctx context.Context, h *Handler, p *principal, args map[string]any) *sdk.CallToolResult {
+		return h.getSurveySummary(ctx, p, args)
 	}},
 }
 

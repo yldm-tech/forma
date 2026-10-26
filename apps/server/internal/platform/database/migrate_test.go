@@ -522,3 +522,54 @@ func TestMembershipSuspensionMigration(t *testing.T) {
 		t.Fatalf("after Down: suspended member active %v, active member active %v", isActive(deactivated), isActive(active))
 	}
 }
+
+// 00023 lets every client registered before responses:read existed request it, since the authorization server refuses a scope the client did not register; a client that already lists it is left alone. Its Down takes the scope back from every client.
+func TestOAuthClientsResponsesReadMigration(t *testing.T) {
+	const version = 23
+	dsn := startPostgres(t)
+	ctx := context.Background()
+	provider, cleanup, err := NewMigrator(dsn, migrations.FS)
+	if err != nil {
+		t.Fatalf("NewMigrator: %v", err)
+	}
+	defer cleanup()
+	if _, err := provider.UpTo(ctx, version-1); err != nil {
+		t.Fatalf("up to %d: %v", version-1, err)
+	}
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	client := func(clientID, scopes string) {
+		mustExec(t, db, `INSERT INTO oauth_clients (client_id, redirect_uris, application_type, token_endpoint_auth_method, grant_types, response_types, scopes, resources)
+			VALUES ($1, '{http://127.0.0.1/callback}', 'native', 'none', '{authorization_code}', '{code}', $2::text[], '{http://localhost/api/mcp}')`, clientID, scopes)
+	}
+	client("old", "{openid,profile,email,offline_access,surveys:read,surveys:write,workflows:read,workflows:write}")
+	client("already", "{surveys:read,responses:read}")
+	scopes := func(clientID string) string {
+		t.Helper()
+		var s string
+		if err := db.QueryRow(`SELECT scopes::text FROM oauth_clients WHERE client_id = $1`, clientID).Scan(&s); err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+
+	if _, err := provider.UpTo(ctx, version); err != nil {
+		t.Fatalf("up to %d: %v", version, err)
+	}
+	if got := scopes("old"); got != "{openid,profile,email,offline_access,surveys:read,surveys:write,workflows:read,workflows:write,responses:read}" {
+		t.Fatalf("old client: %s", got)
+	}
+	if got := scopes("already"); got != "{surveys:read,responses:read}" {
+		t.Fatalf("a client that had the scope: %s", got)
+	}
+	if _, err := provider.DownTo(ctx, version-1); err != nil {
+		t.Fatalf("down to %d: %v", version-1, err)
+	}
+	if got, other := scopes("old"), scopes("already"); got != "{openid,profile,email,offline_access,surveys:read,surveys:write,workflows:read,workflows:write}" || other != "{surveys:read}" {
+		t.Fatalf("after Down: %s, %s", got, other)
+	}
+}

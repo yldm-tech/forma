@@ -18,7 +18,7 @@
     "option_number": "Opción {number}",
     "page_x_of_y": "Página {current} de {total}",
     "people_responded": "{count, plural, one {1 persona respondió} other {{count} personas respondieron}}",
-    "please_retry_now_or_try_again_later": "Por favor, inténtalo ahora o prueba más tarde.",
+    "please_retry_now_or_try_again_later": "Pulsa Reintentar o mantén esta página abierta y lo volveremos a intentar.",
     "powered_by": "Desarrollado por",
     "privacy_policy": "Política de privacidad",
     "protected_by_reCAPTCHA_and_the_Google": "Protegido por reCAPTCHA y Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {Toma 1 minuto} other {Toma {count} minutos}}",
     "takes_x_plus_minutes": "Toma {count}+ minutos",
     "terms_of_service": "Términos de servicio",
-    "the_servers_cannot_be_reached_at_the_moment": "Los servidores no pueden ser alcanzados en este momento.",
+    "the_servers_cannot_be_reached_at_the_moment": "No pudimos conectar con el servidor. Tus respuestas se conservan en esta página.",
     "they_will_be_redirected_immediately": "Serán redirigidos inmediatamente",
     "time_remaining_before_the_survey_closes": "Tiempo restante antes de que se cierre la encuesta",
     "welcome_video": "Vídeo de la tarjeta de bienvenida",
-    "your_feedback_is_stuck": "Tu feedback está atascado :("
+    "your_feedback_is_stuck": "Tus respuestas aún no se han enviado"
   },
   "date_time": {
     "select_a_time": "Por favor, seleccione una hora",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Los siguientes archivos exceden el tamaño máximo de {maxSizeInMB} MB y fueron eliminados: {fileNames}",
       "file_size_exceeded_alert": "El archivo debe ser menor de {maxSizeInMB} MB",
       "invalid_file_name": "El nombre del archivo contiene caracteres no válidos. Cambia el nombre del archivo e inténtalo de nuevo.",
-      "no_valid_file_types_selected": "No se han seleccionado tipos de archivo válidos. Por favor, selecciona un tipo de archivo válido.",
       "only_one_file_can_be_uploaded_at_a_time": "Solo se puede subir un archivo a la vez.",
       "placeholder_text": "Haz clic o arrastra para subir archivos",
       "upload_failed": "¡Subida fallida! Por favor, inténtalo de nuevo.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Por favor, clasifica al menos {min} opciones",
     "minimum_rows_answered": "Por favor, responde al menos {min} filas",
     "please_enter_a_valid_email_address": "Por favor, introduce una dirección de correo electrónico válida",
-    "please_enter_a_valid_phone_number": "Por favor, introduzca un número de teléfono válido",
     "please_enter_a_valid_url": "Por favor, introduce una URL válida",
     "please_fill_out_this_field": "Por favor, complete este campo",
     "rank_at_least_one_option": "Por favor, clasifique al menos una opción",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "Esta respuesta ya se ha completado y ya no se puede modificar. Puedes cerrar esta ventana de forma segura.",
       "title": "Esta respuesta ya se ha completado."
+    },
+    "response_email_already_used": {
+      "message": "Esta encuesta acepta una respuesta por dirección de correo electrónico y ya se ha enviado una con la tuya. Puedes cerrar esta ventana.",
+      "title": "Ya se ha respondido con esta dirección de correo electrónico."
     },
     "response_sending_error_permanent": {
       "message": "Tu respuesta no pudo enviarse y no se puede reintentar. Por favor, contacta al creador de la encuesta si esto sigue ocurriendo.",

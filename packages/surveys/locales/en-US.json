@@ -18,7 +18,7 @@
     "option_number": "Option {number}",
     "page_x_of_y": "Page {current} of {total}",
     "people_responded": "{count, plural, one {1 person responded} other {{count} people responded}}",
-    "please_retry_now_or_try_again_later": "Please retry now or try again later.",
+    "please_retry_now_or_try_again_later": "Press Retry, or keep this page open and we'll try again.",
     "powered_by": "Powered by",
     "privacy_policy": "Privacy Policy",
     "protected_by_reCAPTCHA_and_the_Google": "Protected by reCAPTCHA and the Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {Takes 1 minute} other {Takes {count} minutes}}",
     "takes_x_plus_minutes": "Takes {count}+ minutes",
     "terms_of_service": "Terms of Service",
-    "the_servers_cannot_be_reached_at_the_moment": "The servers cannot be reached at the moment.",
+    "the_servers_cannot_be_reached_at_the_moment": "We couldn't reach the server. Your answers are kept on this page.",
     "they_will_be_redirected_immediately": "They will be redirected immediately",
     "time_remaining_before_the_survey_closes": "Time remaining before the survey closes",
     "welcome_video": "Welcome Card video",
-    "your_feedback_is_stuck": "Your feedback is stuck :("
+    "your_feedback_is_stuck": "Your answers haven't been sent yet"
   },
   "date_time": {
     "select_a_time": "Please select a time",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "The following file(s) exceed the maximum size of {maxSizeInMB} MB and were removed: {fileNames}",
       "file_size_exceeded_alert": "File should be less than {maxSizeInMB} MB",
       "invalid_file_name": "The file name contains invalid characters. Please rename the file and try again.",
-      "no_valid_file_types_selected": "No valid file types selected. Please select a valid file type.",
       "only_one_file_can_be_uploaded_at_a_time": "Only one file can be uploaded at a time.",
       "placeholder_text": "Click or drag to upload files",
       "upload_failed": "Upload failed! Please try again.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Please rank at least {min} options",
     "minimum_rows_answered": "Please answer at least {min} rows",
     "please_enter_a_valid_email_address": "Please enter a valid email address",
-    "please_enter_a_valid_phone_number": "Please enter a valid phone number",
     "please_enter_a_valid_url": "Please enter a valid URL",
     "please_fill_out_this_field": "Please fill out this field",
     "rank_at_least_one_option": "Please rank at least one option",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "This response has already been completed and can no longer be changed. You can safely close this window.",
       "title": "This response has already been completed."
+    },
+    "response_email_already_used": {
+      "message": "This survey accepts one response per email address, and one has already been submitted with yours. You can close this window.",
+      "title": "This email address has already responded."
     },
     "response_sending_error_permanent": {
       "message": "Your response could not be submitted and cannot be retried. Please contact the survey owner if this keeps happening.",

@@ -69,9 +69,9 @@ func (p *principal) hasAny(scopes []string) bool {
 	return slices.ContainsFunc(scopes, func(s string) bool { return slices.Contains(p.scopes, s) })
 }
 
-// apiKeyScopes is forma2's getMcpScopes: every key may read; a key with write or manage on any workspace may also write. The workspace checks of every operation still apply.
+// apiKeyScopes is forma2's getMcpScopes: every key may read; a key with write or manage on any workspace may also write. The workspace checks of every operation still apply. Reading includes responses:read: a key with read access to a workspace already lists its responses through /api/v1 and /api/v2/management/responses.
 func apiKeyScopes(p *apikey.Principal) []string {
-	scopes := []string{"surveys:read", "workflows:read"}
+	scopes := []string{"surveys:read", "workflows:read", scopeResponsesRead}
 	for _, g := range p.WorkspacePermissions {
 		if g.Permission == "write" || g.Permission == "manage" {
 			return append(scopes, "surveys:write", "workflows:write")

@@ -18,7 +18,7 @@
     "option_number": "{number}-variant",
     "page_x_of_y": "{current}-sahifa, jami {total}",
     "people_responded": "{count, plural, one {1 kishi javob berdi} other {{count} kishi javob berdi}}",
-    "please_retry_now_or_try_again_later": "Iltimos, hozir qayta urinib ko‘ring yoki keyinroq urinib ko‘ring.",
+    "please_retry_now_or_try_again_later": "Qayta urinib ko'ring tugmasini bosing yoki sahifani ochiq qoldiring, biz yana urinib ko‘ramiz.",
     "powered_by": "Quvvatlanadi",
     "privacy_policy": "Maxfiylik siyosati",
     "protected_by_reCAPTCHA_and_the_Google": "reCAPTCHA va Google tomonidan himoyalangan",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {1 daqiqa vaqt oladi} other {{count} daqiqa vaqt oladi}}",
     "takes_x_plus_minutes": "{count}+ daqiqa vaqt oladi",
     "terms_of_service": "Xizmat ko'rsatish shartlari",
-    "the_servers_cannot_be_reached_at_the_moment": "Hozirda serverlarga ulanish imkoni yo'q.",
+    "the_servers_cannot_be_reached_at_the_moment": "Serverga ulanib bo‘lmadi. Javoblaringiz shu sahifada saqlanib turibdi.",
     "they_will_be_redirected_immediately": "Ular darhol yo'naltiriladi",
     "time_remaining_before_the_survey_closes": "So'rovnoma yopilishiga qolgan vaqt",
     "welcome_video": "Xush kelibsiz kartasi videosi",
-    "your_feedback_is_stuck": "Sizning fikr-mulohazangiz qotib qoldi :("
+    "your_feedback_is_stuck": "Javoblaringiz hali yuborilmadi"
   },
   "date_time": {
     "select_a_time": "Iltimos, vaqtni tanlang",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Quyidagi fayl(lar) {maxSizeInMB} MB maksimal hajmdan oshib ketdi va olib tashlandi: {fileNames}",
       "file_size_exceeded_alert": "Fayl hajmi {maxSizeInMB} MB dan kam bo'lishi kerak",
       "invalid_file_name": "Fayl nomida yaroqsiz belgilar bor. Fayl nomini o‘zgartirib, qayta urinib ko‘ring.",
-      "no_valid_file_types_selected": "Hech qanday yaroqli fayl turi tanlanmadi. Iltimos, yaroqli fayl turini tanlang.",
       "only_one_file_can_be_uploaded_at_a_time": "Bir vaqtning o'zida faqat bitta fayl yuklanishi mumkin.",
       "placeholder_text": "Fayllarni yuklash uchun bosing yoki sudrab olib keling",
       "upload_failed": "Yuklash muvaffaqiyatsiz tugadi! Iltimos, qayta urinib ko'ring.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Iltimos, kamida {min} ta variantni tartiblang",
     "minimum_rows_answered": "Iltimos, kamida {min} ta qatorga javob bering",
     "please_enter_a_valid_email_address": "Iltimos, toʻgʻri elektron pochta manzilini kiriting",
-    "please_enter_a_valid_phone_number": "Iltimos, to'g'ri telefon raqamini kiriting",
     "please_enter_a_valid_url": "Iltimos, toʻgʻri URL manzilini kiriting",
     "please_fill_out_this_field": "Iltimos, ushbu maydonni to'ldiring",
     "rank_at_least_one_option": "Iltimos, kamida bitta variantni tartiblang",
@@ -115,6 +113,10 @@
     "response_already_completed": {
       "message": "Bu javob allaqachon yakunlangan va endi o'zgartirib bo'lmaydi. Ushbu oynani xavfsiz yopishingiz mumkin.",
       "title": "Bu javob allaqachon yakunlangan."
+    },
+    "response_email_already_used": {
+      "message": "Bu so'rovnoma har bir elektron pochta manzilidan bitta javob qabul qiladi va sizning manzilingiz bilan javob allaqachon yuborilgan. Ushbu oynani yopishingiz mumkin.",
+      "title": "Bu elektron pochta manzili bilan allaqachon javob berilgan."
     },
     "response_sending_error_permanent": {
       "message": "Javobingizni yuborib bo'lmadi va qayta urinib bo'lmaydi. Agar bu holat takrorlansa, so'rovnoma egasi bilan bog'laning.",

@@ -27,6 +27,7 @@ const SCOPE_LABELS: Record<string, string> = {
   "surveys:write": "auth.oauth.scopes.surveys_write",
   "workflows:read": "auth.oauth.scopes.workflows_read",
   "workflows:write": "auth.oauth.scopes.workflows_write",
+  "responses:read": "auth.oauth.scopes.responses_read",
 };
 
 /** A scope as the user reads it; an unknown scope is shown as it is. */
