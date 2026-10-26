@@ -109,7 +109,11 @@ export const EditorCardMenu = ({
       (type === TSurveyElementTypeEnum.Ranking && card.type === TSurveyElementTypeEnum.MultipleChoiceSingle)
     ) {
       updateCard(cardIdx, {
-        choices: card.choices,
+        // A ranking element is not scored and its editor has no score field, so the choices' scores are dropped rather than kept out of sight.
+        choices:
+          type === TSurveyElementTypeEnum.Ranking
+            ? card.choices.map(({ score: _score, ...choice }) => choice)
+            : card.choices,
         type,
         logic: undefined,
         validation: undefined,
