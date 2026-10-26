@@ -391,7 +391,7 @@ func buildTrends(elements []*element, counts []dayCounts, scores []dayScores, fi
 
 // trends computes the survey's trend over the responses matching the filter, in one read-only snapshot.
 func (s *Service) trends(ctx context.Context, sv *surveyDoc, filter *response.Criteria, interval string) (*Trends, error) {
-	clause, err := response.Where(sv.Survey, filter)
+	clause, err := response.Where(ctx, s.segments, sv.Survey, filter)
 	if err != nil {
 		return nil, err
 	}

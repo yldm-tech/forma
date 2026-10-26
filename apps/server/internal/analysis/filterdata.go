@@ -33,6 +33,14 @@ type FilterData struct {
 	Quotas          []survey.Quota      `json:"quotas"`
 	// AttributeTypes are the data types (string, number, date) of the attribute keys Attributes lists, by key, which decide the operators the filter offers; a key the workspace no longer has is missing.
 	AttributeTypes map[string]string `json:"attributeTypes"`
+	// Segments are the workspace's public segments, by title, which the filter offers as "in segment" and "not in segment". A survey's own private segment is its targeting, not something to filter by.
+	Segments []FilterSegment `json:"segments"`
+}
+
+// FilterSegment is a segment the response filter offers.
+type FilterSegment struct {
+	ID    uuid.UUID `json:"id"`
+	Title string    `json:"title"`
 }
 
 // valueSet collects distinct values per key in the order they are first seen, up to an optional bound per key.
@@ -81,16 +89,20 @@ func reservedFilterEntries(sv *surveyDoc) []embeddeddata.ReservedField {
 	return out
 }
 
-// FilterData is forma2's getSurveyFilterDataAction: the workspace's tags, the survey's quotas, and the values the newest responses hold for contact attributes, meta, hidden fields, reserved fields and computed variables.
+// FilterData is forma2's getSurveyFilterDataAction: the workspace's tags and public segments, the survey's quotas, and the values the newest responses hold for contact attributes, meta, hidden fields, reserved fields and computed variables.
 func (s *Service) FilterData(ctx context.Context, userID, surveyID uuid.UUID) (*FilterData, error) {
 	sv, err := s.readableSurvey(ctx, userID, surveyID, authz.SurveyResponseRead)
 	if err != nil {
 		return nil, err
 	}
-	out := &FilterData{EnvironmentTags: []tag.Tag{}, Quotas: []survey.Quota{}}
+	out := &FilterData{EnvironmentTags: []tag.Tag{}, Quotas: []survey.Quota{}, Segments: []FilterSegment{}}
 	if err := s.db.WithContext(ctx).Raw(`SELECT id, created_at, updated_at, name, workspace_id FROM tags WHERE workspace_id = ? ORDER BY created_at, id`, sv.WorkspaceID).
 		Scan(&out.EnvironmentTags).Error; err != nil {
 		return nil, fmt.Errorf("load tags: %w", err)
+	}
+	if err := s.db.WithContext(ctx).Raw(`SELECT id, title FROM segments WHERE workspace_id = ? AND NOT is_private ORDER BY title, id`, sv.WorkspaceID).
+		Scan(&out.Segments).Error; err != nil {
+		return nil, fmt.Errorf("load segments: %w", err)
 	}
 	var quotas []struct {
 		ID                      uuid.UUID

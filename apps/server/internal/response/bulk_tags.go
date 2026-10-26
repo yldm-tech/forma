@@ -84,7 +84,7 @@ func (s *Service) BulkTag(ctx context.Context, userID, surveyID, tagID uuid.UUID
 	if tagWorkspaces[0] != sv.WorkspaceID {
 		return nil, apperr.BadRequest("Response and tag are not in the same workspace")
 	}
-	w, err := where(sv, filter)
+	w, err := where(ctx, s.segments, sv, filter)
 	if err != nil {
 		return nil, err
 	}

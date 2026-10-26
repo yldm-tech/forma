@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { SCORE_VARIABLE_UNIQUE_MESSAGE } from "@forma/types/surveys/scoring";
 import { type TSurvey, ZSurvey, ZSurveyBase } from "@forma/types/surveys/types";
 import { ZEditorSurvey } from "./editor-schema";
 
@@ -125,6 +126,18 @@ describe("ZEditorSurvey", () => {
       expect(issues.map((issue) => issue.path)).toContainEqual(["name"]);
     }
   );
+
+  test("refuses a second total score variable", () => {
+    const twoScores = survey();
+    twoScores.variables = [
+      { id: "scorevariable00000000000", name: "score", type: "number", value: 0, isScore: true },
+      { id: "secondscore0000000000000", name: "score_2", type: "number", value: 0, isScore: true },
+    ];
+    const issues = ZEditorSurvey.safeParse(twoScores).error?.issues ?? [];
+    expect(issues.map((issue) => issue.message)).toContain(SCORE_VARIABLE_UNIQUE_MESSAGE);
+    twoScores.variables = twoScores.variables.slice(0, 1);
+    expect(ZEditorSurvey.safeParse(twoScores).error?.issues).toBeUndefined();
+  });
 
   test("still requires the ids the editor creates to be cuid2", () => {
     const badBlockId = survey();

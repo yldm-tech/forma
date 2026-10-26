@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
@@ -55,7 +56,7 @@ func (s *Service) List(ctx context.Context, userID, surveyID uuid.UUID, in ListI
 	if err != nil {
 		return nil, err
 	}
-	filter, err := Where(sv, in.Filter)
+	filter, err := Where(ctx, s.segments, sv, in.Filter)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +80,9 @@ type Clause struct {
 	Args []any
 }
 
-// Where is forma2's buildWhereClause for one survey as a SQL condition; a malformed condition is a validation error.
-func Where(sv *Survey, f *Criteria) (Clause, error) {
-	w, err := where(sv, f)
+// Where is forma2's buildWhereClause for one survey as a SQL condition; a malformed condition is a validation error. segments evaluates the segments the criteria name.
+func Where(ctx context.Context, segments *contact.Evaluator, sv *Survey, f *Criteria) (Clause, error) {
+	w, err := where(ctx, segments, sv, f)
 	if err != nil {
 		return Clause{}, err
 	}
@@ -108,7 +109,7 @@ func (s *Service) Count(ctx context.Context, userID, surveyID uuid.UUID, filter 
 	if err != nil {
 		return 0, err
 	}
-	w, err := where(sv, filter)
+	w, err := where(ctx, s.segments, sv, filter)
 	if err != nil {
 		return 0, err
 	}

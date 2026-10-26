@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as EmailChangeWithoutVerificationSuccessRouteImport } from './routes/email-change-without-verification-success'
 import { Route as InviteRouteImport } from './routes/invite'
+import { Route as ResultsRouteImport } from './routes/results'
 import { Route as VerifyEmailChangeRouteImport } from './routes/verify-email-change'
 import { Route as AuthenticatedBillingConfirmationRouteImport } from './routes/_authenticated/billing-confirmation'
 import { Route as AuthDeleteAccountRouteImport } from './routes/auth/delete-account'
@@ -114,6 +115,11 @@ const EmailChangeWithoutVerificationSuccessRoute =
 const InviteRoute = InviteRouteImport.update({
   id: '/invite',
   path: '/invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResultsRoute = ResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerifyEmailChangeRoute = VerifyEmailChangeRouteImport.update({
@@ -589,6 +595,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteRouteWithChildren
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
+  '/results': typeof ResultsRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
   '/billing-confirmation': typeof AuthenticatedBillingConfirmationRoute
   '/auth/delete-account': typeof AuthDeleteAccountRoute
@@ -671,6 +678,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteRouteWithChildren
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
+  '/results': typeof ResultsRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
   '/billing-confirmation': typeof AuthenticatedBillingConfirmationRoute
   '/auth/delete-account': typeof AuthDeleteAccountRoute
@@ -749,6 +757,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
+  '/results': typeof ResultsRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
   '/_authenticated/billing-confirmation': typeof AuthenticatedBillingConfirmationRoute
   '/auth/delete-account': typeof AuthDeleteAccountRoute
@@ -833,6 +842,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/email-change-without-verification-success'
     | '/invite'
+    | '/results'
     | '/verify-email-change'
     | '/billing-confirmation'
     | '/auth/delete-account'
@@ -915,6 +925,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/email-change-without-verification-success'
     | '/invite'
+    | '/results'
     | '/verify-email-change'
     | '/billing-confirmation'
     | '/auth/delete-account'
@@ -992,6 +1003,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/email-change-without-verification-success'
     | '/invite'
+    | '/results'
     | '/verify-email-change'
     | '/_authenticated/billing-confirmation'
     | '/auth/delete-account'
@@ -1076,6 +1088,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   EmailChangeWithoutVerificationSuccessRoute: typeof EmailChangeWithoutVerificationSuccessRoute
   InviteRoute: typeof InviteRoute
+  ResultsRoute: typeof ResultsRoute
   VerifyEmailChangeRoute: typeof VerifyEmailChangeRoute
   SetupIntroRoute: typeof SetupIntroRoute
   SetupSignupRoute: typeof SetupSignupRoute
@@ -1117,6 +1130,13 @@ declare module '@tanstack/react-router' {
       path: '/invite'
       fullPath: '/invite'
       preLoaderRoute: typeof InviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/results': {
+      id: '/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof ResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verify-email-change': {
@@ -1969,6 +1989,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailChangeWithoutVerificationSuccessRoute:
     EmailChangeWithoutVerificationSuccessRoute,
   InviteRoute: InviteRoute,
+  ResultsRoute: ResultsRoute,
   VerifyEmailChangeRoute: VerifyEmailChangeRoute,
   SetupIntroRoute: SetupIntroRoute,
   SetupSignupRoute: SetupSignupRoute,

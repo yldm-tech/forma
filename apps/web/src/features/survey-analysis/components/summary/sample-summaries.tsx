@@ -25,7 +25,13 @@ import { getContactIdentifier } from "../../lib/responses";
 import { defaultBreakdownView } from "../../lib/summary";
 import { ArrayResponse } from "../response-values/response-values";
 import { ResponseSampleModal } from "./response-sample-modal";
-import { BreakdownBars, ElementSummaryHeader, SampleTruncationNotice, ViewToggle } from "./summary-parts";
+import {
+  BreakdownBars,
+  ElementSummaryHeader,
+  SampleTruncationNotice,
+  ViewToggle,
+  useIsSharedSummary,
+} from "./summary-parts";
 
 const PAGE = 10;
 
@@ -95,12 +101,18 @@ const SampleGrid = <T extends Sample>({
   onOpen?: (sample: T) => void;
 }) => {
   const { t } = useTranslation();
+  // A results link names nobody, so it has no user column.
+  const isShared = useIsSharedSummary();
   const [visible, setVisible] = useState(PAGE);
   const shown = paged ? samples.slice(0, visible) : samples;
   return (
     <div>
-      <div className="grid h-10 grid-cols-4 items-center border-y border-slate-200 bg-slate-100 text-sm font-bold text-slate-600">
-        <div className="pl-4 md:pl-6">{t("common.user")}</div>
+      <div
+        className={cn(
+          "grid h-10 items-center border-y border-slate-200 bg-slate-100 text-sm font-bold text-slate-600",
+          isShared ? "grid-cols-3" : "grid-cols-4"
+        )}>
+        {!isShared && <div className="pl-4 md:pl-6">{t("common.user")}</div>}
         <div className="col-span-2 pl-4 md:pl-6">{t("common.response")}</div>
         <div className="px-4 md:px-6">{t("common.time")}</div>
       </div>
@@ -125,16 +137,19 @@ const SampleGrid = <T extends Sample>({
                   : undefined
               }
               className={cn(
-                "grid grid-cols-4 items-center border-b border-slate-100 py-2 text-sm text-slate-800 last:border-transparent md:text-base",
+                "grid items-center border-b border-slate-100 py-2 text-sm text-slate-800 last:border-transparent md:text-base",
+                isShared ? "grid-cols-3" : "grid-cols-4",
                 onOpen && "cursor-pointer hover:bg-slate-50"
               )}>
-              <div className="pl-4 md:pl-6">
-                <SampleUser
-                  workspaceId={workspaceId}
-                  contact={sample.contact}
-                  contactAttributes={sample.contactAttributes}
-                />
-              </div>
+              {!isShared && (
+                <div className="pl-4 md:pl-6">
+                  <SampleUser
+                    workspaceId={workspaceId}
+                    contact={sample.contact}
+                    contactAttributes={sample.contactAttributes}
+                  />
+                </div>
+              )}
               {renderValue(sample)}
               <div className="flex items-center justify-between gap-2 px-4 text-slate-500 md:px-6">
                 <span>{timeSince(sample.updatedAt.toISOString(), locale)}</span>
@@ -357,6 +372,8 @@ export const OpenTextSummary = ({
   isReadOnly: boolean;
 }) => {
   const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null);
+  // A results link has no responses to open.
+  const isShared = useIsSharedSummary();
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
@@ -373,15 +390,17 @@ export const OpenTextSummary = ({
             {renderHyperlinkedContent(sample.value)}
           </div>
         )}
-        onOpen={(sample) => setSelectedResponseId(sample.id)}
+        onOpen={isShared ? undefined : (sample) => setSelectedResponseId(sample.id)}
       />
-      <ResponseSampleModal
-        responseId={selectedResponseId}
-        onClose={() => setSelectedResponseId(null)}
-        survey={survey}
-        isReadOnly={isReadOnly}
-        locale={locale}
-      />
+      {!isShared && (
+        <ResponseSampleModal
+          responseId={selectedResponseId}
+          onClose={() => setSelectedResponseId(null)}
+          survey={survey}
+          isReadOnly={isReadOnly}
+          locale={locale}
+        />
+      )}
     </div>
   );
 };

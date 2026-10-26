@@ -38,6 +38,7 @@ import {
   SliderSummary,
 } from "./score-summaries";
 import type { SetSummaryFilter } from "./summary-parts";
+import { WithheldSummary } from "./withheld-summary";
 
 /** forma2's EmptyAppSurveys: an app survey of a workspace whose SDK has never connected. */
 const EmptyAppSurveys = ({ workspaceId }: { workspaceId: string }) => {
@@ -64,7 +65,7 @@ const EmptyAppSurveys = ({ workspaceId }: { workspaceId: string }) => {
   );
 };
 
-/** forma2's SummaryList: one card per element summary, in survey order, and the click-to-filter they share. */
+/** forma2's SummaryList: one card per element summary, in survey order, and the click-to-filter they share. A read-only results link passes the cards it withholds, by element or hidden field id, which show their counts without the answers. */
 export const SummaryList = ({
   summary,
   responseCount,
@@ -72,6 +73,7 @@ export const SummaryList = ({
   appSetupCompleted,
   locale,
   isReadOnly,
+  withheldIds,
 }: {
   summary: TSurveySummary["summary"];
   responseCount: number;
@@ -79,6 +81,7 @@ export const SummaryList = ({
   appSetupCompleted: boolean;
   locale: string;
   isReadOnly: boolean;
+  withheldIds?: ReadonlySet<string>;
 }) => {
   const { setSelectedFilter, selectedFilter, dateRange, resetState } = useResponseFilter();
   const { t } = useTranslation();
@@ -102,6 +105,10 @@ export const SummaryList = ({
   };
 
   const renderEntry = (entry: TSurveySummary["summary"][number]) => {
+    const entryId = entry.type === "hiddenField" ? entry.id : entry.element.id;
+    if (withheldIds?.has(entryId)) {
+      return <WithheldSummary key={entryId} entry={entry} survey={survey} />;
+    }
     if (entry.type === "hiddenField") {
       return (
         <HiddenFieldsSummary
