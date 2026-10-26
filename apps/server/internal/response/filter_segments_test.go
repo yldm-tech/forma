@@ -18,9 +18,9 @@ func (e *env) segment(ws uuid.UUID, title string, isPrivate bool, filters any) u
 	return e.insert(`INSERT INTO segments (workspace_id, title, is_private, filters) VALUES (?, ?, ?, ?::jsonb) RETURNING id`, ws, title, isPrivate, string(raw))
 }
 
-// segmentNode is one node of a segment's filter tree.
-func segmentNode(connector any, resource map[string]any) map[string]any {
-	return map[string]any{"id": uuid.NewString(), "connector": connector, "resource": resource}
+// segmentNode is the first node of a segment's filter tree, which has no connector.
+func segmentNode(resource map[string]any) map[string]any {
+	return map[string]any{"id": uuid.NewString(), "connector": nil, "resource": resource}
 }
 
 func attributeEquals(key, value string) map[string]any {
@@ -56,14 +56,14 @@ func TestSegmentFilterKeepsTheResponsesOfTheSegmentsContacts(t *testing.T) {
 	// The response keeps the attributes the contact had when answering; the filter reads the contact as it is now.
 	r["unfinished pro"] = e.insert(`INSERT INTO responses (survey_id, finished, data, contact_id, contact_attributes) VALUES (?, false, '{}'::jsonb, ?, '{"plan":"free"}'::jsonb) RETURNING id`, sv, pro)
 
-	proSegment := e.segment(ws, "Pro customers", false, []any{segmentNode(nil, attributeEquals("plan", "pro"))})
+	proSegment := e.segment(ws, "Pro customers", false, []any{segmentNode(attributeEquals("plan", "pro"))})
 	everyone := e.segment(ws, "Everyone", false, []any{})
-	phones := e.segment(ws, "Phones", false, []any{segmentNode(nil, phoneOnly())})
-	notPro := e.segment(ws, "Not pro", false, []any{segmentNode(nil, nestedSegment(proSegment, "userIsNotIn"))})
-	private := e.segment(ws, uuid.NewString(), true, []any{segmentNode(nil, attributeEquals("plan", "free"))})
-	broken := e.segment(ws, "Broken", false, []any{segmentNode(nil, nestedSegment(uuid.New(), "userIsIn"))})
+	phones := e.segment(ws, "Phones", false, []any{segmentNode(phoneOnly())})
+	notPro := e.segment(ws, "Not pro", false, []any{segmentNode(nestedSegment(proSegment, "userIsNotIn"))})
+	private := e.segment(ws, uuid.NewString(), true, []any{segmentNode(attributeEquals("plan", "free"))})
+	broken := e.segment(ws, "Broken", false, []any{segmentNode(nestedSegment(uuid.New(), "userIsIn"))})
 	otherWorkspace := e.workspace(org)
-	foreign := e.segment(otherWorkspace, "Pro elsewhere", false, []any{segmentNode(nil, attributeEquals("plan", "pro"))})
+	foreign := e.segment(otherWorkspace, "Pro elsewhere", false, []any{segmentNode(attributeEquals("plan", "pro"))})
 
 	all := []string{"pro", "free", "anonymous", "unfinished pro"}
 	expectFiltered(t, e, owner, sv, r, []struct {
