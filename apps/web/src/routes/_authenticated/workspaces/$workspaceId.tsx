@@ -98,6 +98,7 @@ function WorkspaceLayout() {
 
   return (
     <AppShell
+      isWorkspaceReadOnly={workspace.access.isReadOnly}
       banner={
         <>
           {/* forma2 left the limits banner out during a trial, whose own notice is in the sidebar. */}

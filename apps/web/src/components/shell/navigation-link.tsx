@@ -12,6 +12,7 @@ export const NavigationLink = ({
   icon,
   disabledReason,
   indent = false,
+  onClick,
 }: {
   href: string;
   isActive: boolean;
@@ -21,6 +22,8 @@ export const NavigationLink = ({
   disabledReason?: string;
   /** Settings entries sit deeper than main navigation entries. */
   indent?: boolean;
+  /** Called when the link is followed, as the phone's navigation drawer closes then. */
+  onClick?: () => void;
 }) => {
   const padding = isCollapsed ? "ml-1 justify-center" : indent ? "pl-8" : "pl-5";
   if (disabledReason) {
@@ -57,6 +60,7 @@ export const NavigationLink = ({
         title={isCollapsed ? label : undefined}
         aria-label={isCollapsed ? label : undefined}
         aria-current={isActive ? "page" : undefined}
+        onClick={onClick}
         className={cn("flex items-center", isCollapsed && "justify-center")}>
         {icon}
         {!isCollapsed && <span className="ml-2">{label}</span>}

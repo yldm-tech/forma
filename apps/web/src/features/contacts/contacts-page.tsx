@@ -43,8 +43,16 @@ import { saveExport } from "../survey-analysis/lib/download";
 import { ContactsPageLayout } from "./contacts-layout";
 import { UploadContactsButton } from "./upload-contacts";
 
-/** forma2's contacts page: the workspace's contacts, searchable, thirty at a time. */
-export const ContactsPage = ({ workspaceId, isReadOnly }: { workspaceId: string; isReadOnly: boolean }) => {
+/** forma2's contacts page: the workspace's contacts, searchable, thirty at a time. showSections false leaves out the attributes and segments tabs (on a phone, which does not open them). */
+export const ContactsPage = ({
+  workspaceId,
+  isReadOnly,
+  showSections = true,
+}: {
+  workspaceId: string;
+  isReadOnly: boolean;
+  showSections?: boolean;
+}) => {
   const { t } = useTranslation();
   const keys = useQuery(attributeKeysQuery(workspaceId));
   return (
@@ -53,6 +61,7 @@ export const ContactsPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
       activeId="contacts"
       workspaceId={workspaceId}
       isReadOnly={isReadOnly}
+      showSections={showSections}
       cta={keys.data && <UploadContactsButton workspaceId={workspaceId} attributeKeys={keys.data} />}>
       <ContactsTable workspaceId={workspaceId} isReadOnly={isReadOnly} />
     </ContactsPageLayout>
@@ -258,9 +267,9 @@ const ContactsTable = ({ workspaceId, isReadOnly }: { workspaceId: string; isRea
 
   return (
     <div className="w-full">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-64">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <div className="w-full sm:w-64">
             <Input
               type="search"
               aria-label={t("workspace.contacts.search_contact")}

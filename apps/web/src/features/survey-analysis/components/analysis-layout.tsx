@@ -11,18 +11,20 @@ import { surveyResponseCountQuery } from "../api";
 import { NewResponsesNotice } from "./new-responses-notice";
 import { SurveyAnalysisCTA } from "./survey-analysis-cta";
 
-/** The frame of a survey's summary and responses pages: the survey's name, its tools, the two tabs (forma2's PageHeader with SurveyAnalysisCTA and SurveyAnalysisNavigation), and the notice of responses that arrived since the page was loaded. */
+/** The frame of a survey's summary and responses pages: the survey's name, its tools, the two tabs (forma2's PageHeader with SurveyAnalysisCTA and SurveyAnalysisNavigation), and the notice of responses that arrived since the page was loaded. showTools false leaves the tools out, on a phone, where the pages are read-only: the tools change the survey or open dialogs made for a bigger screen. */
 export const SurveyAnalysisLayout = ({
   survey,
   workspace,
   user,
   activeId,
+  showTools = true,
   children,
 }: {
   survey: TSurvey;
   workspace: WorkspaceDetail;
   user: Me;
   activeId: "summary" | "responses";
+  showTools?: boolean;
   children: ReactNode;
 }) => {
   const { t } = useTranslation();
@@ -36,6 +38,7 @@ export const SurveyAnalysisLayout = ({
       <PageHeader
         pageTitle={survey.name}
         cta={
+          showTools &&
           publicDomain.data !== undefined && (
             <SurveyAnalysisCTA
               survey={survey}

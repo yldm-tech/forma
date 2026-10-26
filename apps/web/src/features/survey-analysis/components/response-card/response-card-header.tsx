@@ -30,9 +30,9 @@ export const ResponseCardHeader = ({
     : null;
 
   return (
-    <div className="space-y-2 border-b border-slate-200 px-6 pt-4 pb-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center justify-center gap-x-2">
+    <div className="space-y-2 border-b border-slate-200 px-4 pt-4 pb-4 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center justify-center gap-x-2">
           {response.contact?.id ? (
             <Link
               className="flex items-center gap-x-2"
@@ -53,7 +53,7 @@ export const ResponseCardHeader = ({
         </div>
 
         <div className="flex items-center gap-x-2 text-sm">
-          <time className="text-slate-500" dateTime={response.createdAt.toISOString()}>
+          <time className="whitespace-nowrap text-slate-500" dateTime={response.createdAt.toISOString()}>
             {timeSince(response.createdAt.toISOString(), locale)}
           </time>
           {!isReadOnly &&
