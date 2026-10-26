@@ -74,6 +74,23 @@ func (s *Service) retention(ctx context.Context, organizationID uuid.UUID, windo
 	return out, nil
 }
 
+// RetentionPreview counts, as of now, what the organization's sweep would delete under windows it may not have yet, owners only: the card shows it before an owner confirms windows that delete more on an instance whose sweep deletes.
+func (s *Service) RetentionPreview(ctx context.Context, userID, organizationID uuid.UUID, windows RetentionWindows) (*retention.Preview, error) {
+	if err := s.authz.Require(ctx, authz.User(userID), authz.OrganizationWrite, authz.Organization(organizationID)); err != nil {
+		return nil, err
+	}
+	if _, found, err := s.repo.retentionWindows(ctx, organizationID); err != nil {
+		return nil, err
+	} else if !found {
+		return nil, apperr.NotFound("Organization", organizationID.String())
+	}
+	preview, err := retention.PreviewWindows(ctx, s.repo.db, organizationID, time.Now(), windows.WorkflowRunRetentionDays, windows.DisplayRetentionDays)
+	if err != nil {
+		return nil, err
+	}
+	return &preview, nil
+}
+
 // SetRetention replaces the organization's retention windows, owners only. The next sweep applies them: on an instance where the sweep deletes, rows older than a window then go for good.
 func (s *Service) SetRetention(ctx context.Context, userID, organizationID uuid.UUID, windows RetentionWindows) (*Retention, error) {
 	old, err := s.setRetention(ctx, userID, organizationID, windows)
@@ -140,8 +157,10 @@ type nullableDays struct {
 	value *int
 }
 
+// UnmarshalJSON lets the last of duplicate keys win, as encoding/json does for other fields, so a later null clears an earlier number.
 func (n *nullableDays) UnmarshalJSON(b []byte) error {
 	n.set = true
+	n.value = nil
 	if string(b) == "null" {
 		return nil
 	}
@@ -186,6 +205,54 @@ func (h *Handler) retention(c *gin.Context) {
 		return
 	}
 	res, err := h.svc.Retention(c.Request.Context(), userID(c), id)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+// retentionPreviewWindows reads the windows to preview from the query: workflowRunRetentionDays and displayRetentionDays, each a number of days, absent or empty to keep that data forever.
+func retentionPreviewWindows(c *gin.Context) (RetentionWindows, error) {
+	var windows RetentionWindows
+	var fields []apperr.FieldError
+	for _, f := range []struct {
+		name string
+		days **int
+	}{{"workflowRunRetentionDays", &windows.WorkflowRunRetentionDays}, {"displayRetentionDays", &windows.DisplayRetentionDays}} {
+		raw := c.Query(f.name)
+		if raw == "" {
+			continue
+		}
+		days, err := strconv.Atoi(raw)
+		switch {
+		case err != nil:
+			fields = append(fields, apperr.FieldError{Field: f.name, Rule: "type"})
+		case days < 1:
+			fields = append(fields, apperr.FieldError{Field: f.name, Rule: "min", Param: "1"})
+		case days > MaxRetentionDays:
+			fields = append(fields, apperr.FieldError{Field: f.name, Rule: "max", Param: strconv.Itoa(MaxRetentionDays)})
+		default:
+			*f.days = &days
+		}
+	}
+	if len(fields) > 0 {
+		return RetentionWindows{}, apperr.Validation(fields)
+	}
+	return windows, nil
+}
+
+func (h *Handler) retentionPreview(c *gin.Context) {
+	id, ok := organizationID(c)
+	if !ok {
+		return
+	}
+	windows, err := retentionPreviewWindows(c)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	res, err := h.svc.RetentionPreview(c.Request.Context(), userID(c), id, windows)
 	if err != nil {
 		httpapi.Fail(c, err)
 		return

@@ -42,6 +42,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/:organizationId/pretty-urls", h.prettyURLs)
 	g.GET("/:organizationId/retention", h.retention)
 	g.PUT("/:organizationId/retention", h.setRetention)
+	g.GET("/:organizationId/retention/preview", h.retentionPreview)
 	g.PUT("/:organizationId/whitelabel/email-logo", h.setEmailLogo)
 	g.DELETE("/:organizationId/whitelabel/email-logo", h.removeEmailLogo)
 	g.PUT("/:organizationId/whitelabel/favicon", h.setFavicon)

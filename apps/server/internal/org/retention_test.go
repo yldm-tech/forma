@@ -1,6 +1,7 @@
 package org
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"testing"
@@ -52,6 +53,11 @@ func TestRetention(t *testing.T) {
 	if e.count(`SELECT count(*) FROM organizations WHERE id = ? AND (workflow_run_retention_days IS NOT NULL OR display_retention_days IS NOT NULL)`, c.ID) != 0 {
 		t.Fatal("a refused request set a window")
 	}
+	// The last of duplicate keys wins, as encoding/json has it for every other field: a later null clears an earlier number.
+	e.ok(e.do(owner, http.MethodPut, path, json.RawMessage(`{"workflowRunRetentionDays":30,"displayRetentionDays":null,"workflowRunRetentionDays":null}`)), http.StatusOK, &r)
+	if r.WorkflowRunRetentionDays != nil || r.DisplayRetentionDays != nil {
+		t.Fatalf("after a body whose last workflowRunRetentionDays is null: %+v, want every window off", r)
+	}
 
 	e.ok(e.do(owner, http.MethodPut, path, windows(30, 90)), http.StatusOK, &r)
 	if r.WorkflowRunRetentionDays == nil || *r.WorkflowRunRetentionDays != 30 || r.DisplayRetentionDays == nil || *r.DisplayRetentionDays != 90 || r.LastSweep != nil {
@@ -102,4 +108,43 @@ func TestRetentionReportsDeletingInstance(t *testing.T) {
 	if r.DryRun {
 		t.Fatal("dryRun = true on an instance with RETENTION_SWEEP_DRY_RUN=0")
 	}
+}
+
+// TestRetentionPreview: an owner sees, before saving, what windows the organization does not have yet would delete as of now; a window left out keeps forever and is not counted.
+func TestRetentionPreview(t *testing.T) {
+	e := newEnv(t)
+	owner, manager := e.user(), e.user()
+	c := e.organization(owner, "Acme")
+	e.member(c.ID, manager, RoleManager)
+	ws := e.insert(`INSERT INTO workspaces (organization_id, name) VALUES (?, 'Old') RETURNING id`, c.ID)
+	flow := e.insert(`INSERT INTO workflows (workspace_id, name, definition) VALUES (?, 'Flow', '{}') RETURNING id`, ws)
+	for _, age := range []string{"10 days", "40 days", "400 days"} {
+		e.exec(`INSERT INTO workflow_runs (workflow_id, workspace_id, status, trigger_type, trigger_payload, created_at) VALUES (?, ?, 'completed', 'response.completed', '{}', now() - ?::interval)`, flow, ws, age)
+	}
+	e.exec(`INSERT INTO workflow_runs (workflow_id, workspace_id, status, trigger_type, trigger_payload, created_at) VALUES (?, ?, 'running', 'response.completed', '{}', now() - interval '400 days')`, flow, ws)
+	survey := e.insert(`INSERT INTO surveys (workspace_id, name) VALUES (?, 'Survey') RETURNING id`, ws)
+	e.exec(`INSERT INTO displays (survey_id, created_at) VALUES (?, now() - interval '40 days')`, survey)
+	path := orgPath(c.ID, "/retention/preview")
+
+	var p retention.Preview
+	e.ok(e.do(owner, http.MethodGet, path+"?workflowRunRetentionDays=30&displayRetentionDays=30", nil), http.StatusOK, &p)
+	if p.WorkflowRuns == nil || *p.WorkflowRuns != 2 || p.Displays == nil || *p.Displays != 1 {
+		t.Fatalf("preview of 30 and 30 days = %+v, want the two finished runs and the impression older than 30 days", p)
+	}
+	e.ok(e.do(owner, http.MethodGet, path+"?workflowRunRetentionDays=365&displayRetentionDays=", nil), http.StatusOK, &p)
+	if p.WorkflowRuns == nil || *p.WorkflowRuns != 1 || p.Displays != nil {
+		t.Fatalf("preview of 365 days and keeping impressions = %+v, want one run and no impression count", p)
+	}
+	e.ok(e.do(owner, http.MethodGet, path, nil), http.StatusOK, &p)
+	if p.WorkflowRuns != nil || p.Displays != nil {
+		t.Fatalf("preview of keeping everything = %+v, want no counts", p)
+	}
+	if e.count(`SELECT count(*) FROM workflow_runs WHERE workspace_id = ?`, ws) != 4 || e.count(`SELECT count(*) FROM organization_retention_sweeps`) != 0 {
+		t.Fatal("a preview deleted or recorded something")
+	}
+
+	for _, query := range []string{"?workflowRunRetentionDays=0", "?displayRetentionDays=3651", "?workflowRunRetentionDays=thirty", "?displayRetentionDays=1.5"} {
+		e.fails(e.do(owner, http.MethodGet, path+query, nil), http.StatusBadRequest, apperr.CodeValidation, "")
+	}
+	e.fails(e.do(manager, http.MethodGet, path+"?workflowRunRetentionDays=30", nil), http.StatusForbidden, apperr.CodeForbidden, "")
 }
