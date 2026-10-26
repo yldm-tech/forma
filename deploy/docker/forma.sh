@@ -20,9 +20,9 @@ FORMA_RAW_URL="https://raw.githubusercontent.com/yldm-tech/forma/${FORMA_REF}/de
 # The files the stack is made of; docker-compose.yml mounts the two scripts.
 FORMA_STACK_FILES="docker-compose.yml authzed-postgres-bootstrap.sh rustfs-init.sh"
 
-# Variables an .env may still set that the server does not read; an update comments them out of .env. BULLMQ_WORKER_CONCURRENCY, BULLMQ_WORKER_COUNT and FORMA_RUSTFS_* are mapped to their replacements first (migrate_env).
+# Variables an .env may still set that the server does not read; an update comments them out of .env. BULLMQ_WORKER_CONCURRENCY, BULLMQ_WORKER_COUNT and FORMA_RUSTFS_* are mapped to their replacements first, and forma2's names the server still reads with a deprecation warning are renamed (migrate_env).
 FORMA_IGNORED_VARIABLES="CRON_SECRET AUTHZED_SYSTEM_KEY FORMA_AUTHZED_V6_MIGRATION_ACKNOWLEDGED BULLMQ_EXTERNAL_WORKER_ENABLED AUTH_SKIP_INVITE_FOR_SSO AUTH_SSO_DEFAULT_TEAM_ID OIDC_SIGNING_ALGORITHM ENTERPRISE_LICENSE_KEY DEBUG DEBUG_SHOW_RESET_LINK ASSET_PREFIX_URL SENTRY_AUTH_TOKEN OTEL_LOGS_ENABLED"
-FORMA_MAPPED_VARIABLES="BULLMQ_WORKER_CONCURRENCY BULLMQ_WORKER_COUNT FORMA_RUSTFS_ADMIN_USER FORMA_RUSTFS_ADMIN_PASSWORD FORMA_RUSTFS_SERVICE_USER FORMA_RUSTFS_SERVICE_PASSWORD FORMA_RUSTFS_BUCKET_NAME FORMA_RUSTFS_POLICY_NAME FORMA_RUSTFS_REGION"
+FORMA_MAPPED_VARIABLES="NEXTAUTH_SECRET BETTER_AUTH_SECRET BULLMQ_WORKER_ENABLED BETTER_AUTH_URL NEXTAUTH_URL SAML_DATABASE_URL BULLMQ_WORKER_CONCURRENCY BULLMQ_WORKER_COUNT FORMA_RUSTFS_ADMIN_USER FORMA_RUSTFS_ADMIN_PASSWORD FORMA_RUSTFS_SERVICE_USER FORMA_RUSTFS_SERVICE_PASSWORD FORMA_RUSTFS_BUCKET_NAME FORMA_RUSTFS_POLICY_NAME FORMA_RUSTFS_REGION"
 
 TRAEFIK_IMAGE="traefik:v3.6.4"
 
@@ -161,6 +161,22 @@ is_positive_integer() {
   esac
 }
 
+# rename_env gives new the value of old, unless new is already set, and comments old out. The value is written back as it was spelled (literal 0).
+rename_env() {
+  local old="$1" new="$2" file="$3" value
+  dotenv_has "$old" "$file" || return 0
+  value=$(dotenv_get "$old" "$file")
+  if [ -z "$value" ]; then
+    echo "  $old: dropped, it was empty"
+  elif [ -n "$(dotenv_get "$new" "$file")" ]; then
+    echo "  $old: dropped, $new is already set"
+  else
+    dotenv_set "$new" "$value" "$file" 0
+    echo "  $old renamed to $new"
+  fi
+  dotenv_comment_out "$old" "renamed to $new" "$file"
+}
+
 # migrate_env rewrites the retired variables of an .env into the ones the server reads. Every step is idempotent, so it runs on every update. A value read from .env is written back as it was spelled there (literal 0).
 migrate_env() {
   local file="$1" key value concurrency count cpus profiles
@@ -217,6 +233,34 @@ migrate_env() {
       FORMA_RUSTFS_*) dotenv_comment_out "$key" "mapped to RUSTFS_ADMIN_* and S3_* by forma.sh" "$file" ;;
     esac
   done
+
+  # forma2's names the server still reads, with a deprecation warning, until a later release drops them.
+  rename_env NEXTAUTH_SECRET LINK_SURVEY_TOKEN_SECRET "$file"
+  rename_env BETTER_AUTH_SECRET LINK_SURVEY_PIN_TOKEN_SECRET "$file"
+  rename_env BULLMQ_WORKER_ENABLED WORKER_ENABLED "$file"
+  # BETTER_AUTH_URL, else NEXTAUTH_URL, became AUTH_URL. forma2's installer set NEXTAUTH_URL to WEBAPP_URL, which the server falls back to on its own, so that value is not carried over.
+  value=$(dotenv_get BETTER_AUTH_URL "$file")
+  [ -n "$value" ] || value=$(dotenv_get NEXTAUTH_URL "$file")
+  if [ -n "$value" ] && [ -z "$(dotenv_get AUTH_URL "$file")" ]; then
+    if [ "${value%/}" = "$(dotenv_get WEBAPP_URL "$file" | sed 's:/*$::')" ]; then
+      echo "  BETTER_AUTH_URL/NEXTAUTH_URL: dropped, the same as WEBAPP_URL"
+    else
+      dotenv_set AUTH_URL "$value" "$file" 0
+      echo "  AUTH_URL replaces BETTER_AUTH_URL/NEXTAUTH_URL"
+    fi
+  fi
+  dotenv_comment_out BETTER_AUTH_URL "replaced by AUTH_URL" "$file"
+  dotenv_comment_out NEXTAUTH_URL "replaced by AUTH_URL" "$file"
+  # Any value of SAML_DATABASE_URL switched SAML on.
+  if [ -n "$(dotenv_get SAML_DATABASE_URL "$file")" ]; then
+    if [ -n "$(dotenv_get SAML_ENABLED "$file")" ]; then
+      echo "  SAML_DATABASE_URL: dropped, SAML_ENABLED is already set"
+    else
+      dotenv_set SAML_ENABLED 1 "$file"
+      echo "  SAML_ENABLED=1 replaces SAML_DATABASE_URL"
+    fi
+  fi
+  dotenv_comment_out SAML_DATABASE_URL "replaced by SAML_ENABLED" "$file"
 
   for key in $FORMA_IGNORED_VARIABLES; do
     if dotenv_has "$key" "$file"; then

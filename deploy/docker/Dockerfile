@@ -2,7 +2,7 @@
 
 # The Forma image: one static `forma` binary with the admin SPA, the public survey page and the SDK bundles (/js/*) embedded, on a distroless base with no shell or package manager. Build from the repository root: `docker build -f deploy/docker/Dockerfile -t forma .`.
 #
-# The container's default command is `forma start`: validate the configuration, apply the migrations unless SKIP_STARTUP_MIGRATION=true, then serve on :3000 with the job worker in the same process unless BULLMQ_WORKER_ENABLED=0. The same image runs every other process by naming its subcommand: `serve`, `worker`, `migrate`, `wait-for-database`, `authz ...` (deploy/docker/docker-compose.yml and deploy/helm/forma do).
+# The container's default command is `forma start`: validate the configuration, apply the migrations unless SKIP_STARTUP_MIGRATION=true, then serve on :3000 with the job worker in the same process unless WORKER_ENABLED=0. The same image runs every other process by naming its subcommand: `serve`, `worker`, `migrate`, `wait-for-database`, `authz ...` (deploy/docker/docker-compose.yml and deploy/helm/forma do).
 #
 # Both build stages run on the builder's own platform. The web build is platform independent, and Go cross-compiles, so a multi-platform build needs no emulation.
 
