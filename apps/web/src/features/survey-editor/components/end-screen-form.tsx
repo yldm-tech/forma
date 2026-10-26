@@ -1,9 +1,9 @@
 import { PlusIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TSurvey, TSurveyEndScreenCard, TSurveyRedirectUrlCard } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
-import { createI18nString, extractLanguageCodes, getLocalizedValue } from "../../../lib/survey/i18n";
+import { createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
 import { headlineToRecall, recallToHeadline } from "../../../lib/survey/recall";
 import { ElementFormInput } from "./element-form-input/index";
 import { RecallWrapper } from "./element-form-input/components/recall-wrapper";
@@ -43,10 +43,8 @@ export const EndScreenForm = ({
   const defaultLanguageCode = localSurvey.languages.find((lang) => lang.default)?.language.code ?? "default";
   const usedLanguageCode = selectedLanguageCode === defaultLanguageCode ? "default" : selectedLanguageCode;
 
-  const [showEndingCardCTA, setshowEndingCardCTA] = useState<boolean>(
-    endingCard.type === "endScreen" &&
-      (!!getLocalizedValue(endingCard.buttonLabel, selectedLanguageCode) || !!endingCard.buttonLink)
-  );
+  // The button exists once the toggle writes its fields, even while they are still empty, so the switch reads presence rather than text. Deriving it from the card keeps it right when the form remounts after the card is collapsed and reopened.
+  const showEndingCardCTA = endingCard.buttonLabel !== undefined || endingCard.buttonLink !== undefined;
 
   // The checkmark only renders when the card carries no media, so the toggle is meaningless once an
   // image or video is set.
@@ -138,7 +136,6 @@ export const EndScreenForm = ({
                   buttonLink: "",
                 });
               }
-              setshowEndingCardCTA(!showEndingCardCTA);
             }}
           />
           <Label htmlFor="showButton" className="cursor-pointer">
@@ -158,7 +155,7 @@ export const EndScreenForm = ({
               <ElementFormInput
                 id="buttonLabel"
                 label={t("workspace.surveys.edit.button_label")}
-                placeholder={t("workspace.surveys.edit.create_your_own_survey")}
+                placeholder={t("workspace.surveys.edit.button_label")}
                 className="rounded-md"
                 value={endingCard.buttonLabel}
                 localSurvey={localSurvey}
@@ -204,7 +201,7 @@ export const EndScreenForm = ({
                           id="buttonLink"
                           name="buttonLink"
                           className="relative text-black caret-black"
-                          placeholder="https://forma.yldm.ai"
+                          placeholder="https://example.com"
                           value={
                             recallToHeadline(
                               {

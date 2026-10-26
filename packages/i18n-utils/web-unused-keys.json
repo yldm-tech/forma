@@ -143,6 +143,7 @@
   "workspace.settings.profile.warning_cannot_delete_account",
   "workspace.surveys.ai_create.create_with_ai_description",
   "workspace.surveys.ai_create.status_starting",
+  "workspace.surveys.edit.create_your_own_survey",
   "workspace.surveys.edit.external_urls_paywall_tooltip",
   "workspace.surveys.edit.follow_ups_empty_description",
   "workspace.surveys.edit.follow_ups_empty_heading",

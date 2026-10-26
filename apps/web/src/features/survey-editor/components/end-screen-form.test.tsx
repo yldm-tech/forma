@@ -23,28 +23,70 @@ const ending: TSurveyEndScreenCard = {
   subheader: { default: "We appreciate your feedback." },
 };
 
-const renderForm = () => {
+// Renders the form the way the editor does: every update is merged into the card (edit-ending-card spreads it), and `remount` stands in for collapsing and reopening the card, which unmounts the form.
+const renderForm = (initial: TSurveyEndScreenCard = ending) => {
   const updates: Partial<TSurveyEndScreenCard>[] = [];
-  render(
+  let card = initial;
+  let key = 0;
+  const element = () => (
     <I18nextProvider i18n={i18n}>
       <EndScreenForm
-        localSurvey={{ languages: [], blocks: [], endings: [ending] } as unknown as TSurvey}
+        key={key}
+        localSurvey={{ languages: [], blocks: [], endings: [card] } as unknown as TSurvey}
         endingCardIndex={0}
         isInvalid={false}
         selectedLanguageCode="default"
-        updateSurvey={(input) => updates.push(input as Partial<TSurveyEndScreenCard>)}
-        endingCard={ending}
+        updateSurvey={(input) => {
+          updates.push(input as Partial<TSurveyEndScreenCard>);
+          card = { ...card, ...(input as Partial<TSurveyEndScreenCard>) };
+          view.rerender(element());
+        }}
+        endingCard={card}
         locale="en-US"
       />
     </I18nextProvider>
   );
-  return updates;
+  const view = render(element());
+  const remount = () => {
+    key += 1;
+    view.rerender(element());
+  };
+  return { updates, remount, getCard: () => card };
 };
+
+const buttonSwitch = () => screen.getByRole("switch", { name: /Show button/ });
 
 describe("EndScreenForm", () => {
   test("turning the button on leaves its label and link for the author to write, with no link to Forma", () => {
-    const updates = renderForm();
-    fireEvent.click(screen.getByRole("switch", { name: /Show button/ }));
+    const { updates } = renderForm();
+    fireEvent.click(buttonSwitch());
     expect(updates).toEqual([{ buttonLabel: { default: "" }, buttonLink: "" }]);
+  });
+
+  test("a button whose label and link are still empty stays on, with its fields shown, after the card is reopened", () => {
+    const { remount } = renderForm();
+    fireEvent.click(buttonSwitch());
+    remount();
+    expect(buttonSwitch().getAttribute("aria-checked")).toBe("true");
+    expect(document.getElementById("buttonLink")).not.toBeNull();
+    expect(screen.getByText("Button Label")).toBeTruthy();
+  });
+
+  test("turning the button off removes its label and link and hides the fields", () => {
+    const { remount, getCard } = renderForm({ ...ending, buttonLabel: { default: "" }, buttonLink: "" });
+    expect(buttonSwitch().getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(buttonSwitch());
+    remount();
+    expect(getCard().buttonLabel).toBeUndefined();
+    expect(getCard().buttonLink).toBeUndefined();
+    expect(buttonSwitch().getAttribute("aria-checked")).toBe("false");
+    expect(document.getElementById("buttonLink")).toBeNull();
+  });
+
+  test("the empty button fields suggest nothing about Forma", () => {
+    renderForm({ ...ending, buttonLabel: { default: "" }, buttonLink: "" });
+    expect(document.getElementById("buttonLink")?.getAttribute("placeholder")).toBe("https://example.com");
+    expect(document.body.innerHTML).not.toContain("forma.yldm.ai");
+    expect(document.body.textContent).not.toContain("Create your own survey");
   });
 });

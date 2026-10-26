@@ -61,7 +61,10 @@ export function EndingCard({
   // When the ending card has no button, nothing receives focus on arrival and
   // screen readers are left announcing the surrounding dialog. Focus the card
   // container instead so the thank-you message is read in place.
-  const hasButton = endingCard.type === "endScreen" && Boolean(endingCard.buttonLabel);
+  // The label is read in the respondent's language: an ending whose button label is still empty (the editor writes one when the author turns the button on) shows no button rather than a "Next" fallback.
+  const buttonLabel =
+    endingCard.type === "endScreen" ? getLocalizedValue(endingCard.buttonLabel, languageCode) : "";
+  const hasButton = buttonLabel.trim() !== "";
   useEffect(() => {
     if (isCurrent && autoFocusEnabled && isResponseSendingFinished && !hasButton) {
       containerRef.current?.focus();
@@ -188,11 +191,11 @@ export function EndingCard({
                       languageCode
                     )}
                   />
-                  {endingCard.buttonLabel ? (
+                  {hasButton ? (
                     <div className="mt-6 flex w-full flex-col items-center justify-center space-y-4">
                       <SubmitButton
                         buttonLabel={replaceRecallInfo(
-                          getLocalizedValue(endingCard.buttonLabel, languageCode),
+                          buttonLabel,
                           responseData,
                           variablesData,
                           languageCode
