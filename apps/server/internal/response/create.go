@@ -181,6 +181,12 @@ func (s *Service) Create(ctx context.Context, sv *Survey, in CreateInput) (*Resu
 			displayID = &id
 		}
 
+		if email := sv.oneResponseEmail(data); email != "" {
+			if err := claimVerifiedEmail(ctx, tx, sv.ID, email); err != nil {
+				return err
+			}
+		}
+
 		row, err := insertResponse(ctx, tx, sv.ID, owner, displayID, in, language, data, variables, ttc, meta, flags)
 		if err != nil {
 			return createError(err, in.DisplayID)
@@ -215,6 +221,30 @@ func (s *Service) Create(ctx context.Context, sv *Survey, in CreateInput) (*Resu
 		return nil, fmt.Errorf("create response: %w", err)
 	}
 	return result, nil
+}
+
+// oneResponseEmail is the verified address a new response of a survey that takes one response per verified email is counted under, or "" when the survey takes any number. The address is the one the verified-email gate stamped from its token (verifiedEmailKey), never one the client sent: the gate runs before Create and replaces it.
+func (sv *Survey) oneResponseEmail(data map[string]any) string {
+	if !sv.IsVerifyEmailEnabled || !sv.IsSingleResponsePerEmailEnabled {
+		return ""
+	}
+	email, _ := data[verifiedEmailKey].(string)
+	return email
+}
+
+// claimVerifiedEmail refuses a new response for an address that already has one in the survey, finished or not (409, details.code CodeEmailAlreadyResponded). Counting unfinished ones too is what makes the limit hold: a response is created with its first answers, so two tabs started from one verification link would otherwise both pass and both finish. A respondent who reloads goes on in the response they started (the page keeps its id), which is an update, not a create. A transaction-scoped advisory lock on the survey and address serializes racing creates, so the check and the insert are one step. Addresses compare case-insensitively, as PostgreSQL's lower() reads them, the same rule the link page uses to show "already responded" (linksurvey.Repository.verifiedEmailResponded).
+func claimVerifiedEmail(ctx context.Context, tx *jobs.Tx, surveyID uuid.UUID, email string) error {
+	if err := tx.WithContext(ctx).Exec(`SELECT pg_advisory_xact_lock(hashtextextended('response-email:' || ? || ':' || lower(?), 0))`, surveyID.String(), email).Error; err != nil {
+		return fmt.Errorf("lock verified email: %w", err)
+	}
+	var taken bool
+	if err := tx.WithContext(ctx).Raw(`SELECT EXISTS (SELECT 1 FROM responses WHERE survey_id = ? AND lower(data->>'verifiedEmail') = lower(?))`, surveyID, email).Scan(&taken).Error; err != nil {
+		return fmt.Errorf("find response by verified email: %w", err)
+	}
+	if taken {
+		return emailAlreadyResponded()
+	}
+	return nil
 }
 
 func insertResponse(ctx context.Context, tx *jobs.Tx, surveyID uuid.UUID, owner *contactRef, displayID *uuid.UUID, in CreateInput, language *string,

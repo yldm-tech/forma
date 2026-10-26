@@ -82,6 +82,8 @@ const (
 
 	// CodeResponseAlreadyFinished is forma2's RESPONSE_ALREADY_FINISHED_ERROR_CODE, the details.code the runtime keys off to stop retrying.
 	CodeResponseAlreadyFinished = "response_already_finished"
+	// CodeEmailAlreadyResponded is the details.code of the 409 a survey that takes one response per verified email answers to a second response from an address (RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE in packages/types/errors.ts), which the runtime keys off to tell the respondent why.
+	CodeEmailAlreadyResponded = "response_email_already_used"
 )
 
 func details(kv ...any) map[string]any {
@@ -119,6 +121,11 @@ func NotFound(resourceType string, id *string) *apperr.Error {
 
 func conflict(message string) *apperr.Error {
 	return &apperr.Error{Status: http.StatusConflict, Code: codeConflict, Message: message, Details: map[string]any{}}
+}
+
+// emailAlreadyResponded is claimVerifiedEmail's refusal.
+func emailAlreadyResponded() *apperr.Error {
+	return &apperr.Error{Status: http.StatusConflict, Code: codeConflict, Message: "A response was already submitted with this email address", Details: details("code", CodeEmailAlreadyResponded)}
 }
 
 // cuid2 is zod's cuid2 shape.

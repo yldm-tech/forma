@@ -166,6 +166,58 @@ func TestEditorSaveProgressSaving(t *testing.T) {
 	}
 }
 
+// The duplicate-submission limits (D-FG03) are off for a new survey; the editor turns each on and off, and a save that does not carry them keeps what is stored. The v1 management API neither shows nor changes them.
+func TestEditorSaveSingleResponseLimits(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	id := e.createLink(owner, ws)
+	keys := []string{"isSingleResponsePerBrowserEnabled", "isSingleResponsePerEmailEnabled"}
+
+	sv := e.editorSurvey(owner, id)
+	for _, k := range keys {
+		if sv[k] != false {
+			t.Fatalf("new survey %s %v", k, sv[k])
+		}
+	}
+	var saved map[string]any
+	for _, k := range keys {
+		sv[k] = true
+	}
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/draft"), sv), http.StatusOK, &saved)
+	for _, k := range keys {
+		if saved[k] != true {
+			t.Fatalf("turned on: %s %v", k, saved[k])
+		}
+		delete(saved, k)
+	}
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/draft"), saved), http.StatusOK, &saved)
+	for _, k := range keys {
+		if saved[k] != true {
+			t.Fatalf("a save without %s changed it: %v", k, saved[k])
+		}
+	}
+	saved["isSingleResponsePerEmailEnabled"] = false
+	e.ok(e.do(owner, http.MethodPut, appPath(id, "/draft"), saved), http.StatusOK, &saved)
+	if saved["isSingleResponsePerEmailEnabled"] != false || saved["isSingleResponsePerBrowserEnabled"] != true {
+		t.Fatalf("turned one off: %v %v", saved["isSingleResponsePerEmailEnabled"], saved["isSingleResponsePerBrowserEnabled"])
+	}
+
+	stored, err := e.repo.ByID(t.Context(), uuid.MustParse(id))
+	if err != nil || stored == nil {
+		t.Fatalf("load: %v", err)
+	}
+	obj, err := V1Object(stored)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range keys {
+		if _, ok := obj[k]; ok {
+			t.Fatalf("v1 shows %s", k)
+		}
+	}
+}
+
 // Every editor save needs a name, a full save (Publish, Save on a live survey) as much as a draft one, and a name of only spaces is no name. The stored survey keeps its name.
 func TestEditorSaveRequiresAName(t *testing.T) {
 	e := newEnv(t)

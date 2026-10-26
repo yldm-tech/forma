@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"maps"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -103,6 +104,78 @@ func TestCreateResponseGates(t *testing.T) {
 	url := webAppURL + "/s/" + verified.String() + "?verify=" + e.emailToken(t, other2, "real@example.com")
 	e.post(t, respond(ws, "v1"), map[string]any{"surveyId": verified.String(), "finished": true, "data": map[string]any{}, "meta": map[string]any{"url": url}}).
 		expectError(t, 403, "forbidden", "Survey requires email verification")
+}
+
+// One response per verified email (D-FG03): with email verification on, a second response for an address that has one, finished or not and in any letter case, is refused with 409 and details.code response_email_already_used on both creates; racing creates for one address make one response; other addresses, other surveys and a survey without the setting are not limited, and an update of the started response goes on.
+func TestCreateResponseOneResponsePerEmail(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true, is_single_response_per_email_enabled = true WHERE id = ?`, sv)
+	create := func(v, surveyID string, email string, finished bool) result {
+		url := webAppURL + "/s/" + surveyID + "?verify=" + e.emailToken(t, uuid.MustParse(surveyID), email)
+		return e.post(t, respond(ws, v), map[string]any{"surveyId": surveyID, "finished": finished, "data": map[string]any{}, "meta": map[string]any{"url": url}})
+	}
+	first := create("v2", sv.String(), "Real@Example.com", false)
+	if first.Status != 200 {
+		t.Fatalf("first: %d %s", first.Status, first.Body)
+	}
+	for _, v := range []string{"v1", "v2"} {
+		details := create(v, sv.String(), "real@example.COM", true).expectError(t, 409, "conflict", "A response was already submitted with this email address")
+		if details["code"] != "response_email_already_used" {
+			t.Fatalf("%s: details %v", v, details)
+		}
+	}
+	// The respondent goes on in the response they started.
+	put := e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+first.data(t)["id"].(string), map[string]any{"finished": true, "data": map[string]any{}})
+	if put.Status != 200 {
+		t.Fatalf("update: %d %s", put.Status, put.Body)
+	}
+	if r := create("v2", sv.String(), "other@example.com", true); r.Status != 200 {
+		t.Fatalf("another address: %d %s", r.Status, r.Body)
+	}
+
+	// Without email verification there is no address to count, and without the setting an address answers again.
+	unverified := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_single_response_per_email_enabled = true WHERE id = ?`, unverified)
+	for range 2 {
+		if r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": unverified.String(), "finished": true, "data": map[string]any{}}); r.Status != 200 {
+			t.Fatalf("verification off: %d %s", r.Status, r.Body)
+		}
+	}
+	unlimited := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true WHERE id = ?`, unlimited)
+	for range 2 {
+		if r := create("v2", unlimited.String(), "real@example.com", true); r.Status != 200 {
+			t.Fatalf("setting off: %d %s", r.Status, r.Body)
+		}
+	}
+
+	// Creates racing for one address: exactly one gets through.
+	raced := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true, is_single_response_per_email_enabled = true WHERE id = ?`, raced)
+	url := webAppURL + "/s/" + raced.String() + "?verify=" + e.emailToken(t, raced, "race@example.com")
+	const racers = 8
+	statuses := make(chan int, racers)
+	var wg sync.WaitGroup
+	for range racers {
+		wg.Go(func() {
+			statuses <- e.do("POST", respond(ws, "v2"), map[string]any{"surveyId": raced.String(), "finished": true, "data": map[string]any{}, "meta": map[string]any{"url": url}}).Status
+		})
+	}
+	wg.Wait()
+	close(statuses)
+	counts := map[int]int{}
+	for s := range statuses {
+		counts[s]++
+	}
+	var stored int64
+	if err := e.db.Raw(`SELECT count(*) FROM responses WHERE survey_id = ?`, raced).Scan(&stored).Error; err != nil {
+		t.Fatal(err)
+	}
+	if counts[200] != 1 || counts[409] != racers-1 || stored != 1 {
+		t.Fatalf("racing creates: statuses %v, %d stored", counts, stored)
+	}
 }
 
 // The v1 create, the path the SDK takes for identified users, runs its own order of gates: the survey's status, the single-use link (whose 400s name the workspace environmentId, as v1 did) and the answers each refuse on their own.

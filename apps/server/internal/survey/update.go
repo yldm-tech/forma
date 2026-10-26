@@ -76,6 +76,9 @@ type UpdateInput struct {
 	Pin                         *string `json:"pin"`
 	CustomHeadScripts           *string `json:"customHeadScripts"`
 	CustomHeadScriptsMode       *string `json:"customHeadScriptsMode"`
+	// The duplicate-submission limits (D-FG03), optional like isProgressSavingEnabled.
+	IsSingleResponsePerBrowserEnabled *bool `json:"isSingleResponsePerBrowserEnabled"`
+	IsSingleResponsePerEmailEnabled   *bool `json:"isSingleResponsePerEmailEnabled"`
 
 	Triggers []struct {
 		ActionClass struct {
@@ -357,6 +360,13 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		// Optional, unlike the switches above: a save that does not carry it (an editor loaded before it existed) keeps the stored value instead of turning progress saving off.
 		if in.IsProgressSavingEnabled != nil {
 			rec.IsProgressSavingEnabled = *in.IsProgressSavingEnabled
+		}
+		// The duplicate-submission limits are optional for the same reason: an editor loaded before they existed must not turn them off.
+		if in.IsSingleResponsePerBrowserEnabled != nil {
+			rec.IsSingleResponsePerBrowserEnabled = *in.IsSingleResponsePerBrowserEnabled
+		}
+		if in.IsSingleResponsePerEmailEnabled != nil {
+			rec.IsSingleResponsePerEmailEnabled = *in.IsSingleResponsePerEmailEnabled
 		}
 		rec.Pin, rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.Pin, in.CustomHeadScripts, in.CustomHeadScriptsMode
 		storedStatus := stored.Status

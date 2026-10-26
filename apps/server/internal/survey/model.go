@@ -138,6 +138,10 @@ type Survey struct {
 	InlineTriggers              json.RawMessage  `json:"inlineTriggers"`
 	// EmbeddedFields are the survey's variables and hidden fields as linked embedded-data rows, forma2's inlined TSurvey.embeddedFields, which the response table, card and filter read. Never nil, so it serializes as [].
 	EmbeddedFields []embeddeddata.LinkedField `json:"embeddedFields"`
+	// IsSingleResponsePerBrowserEnabled has the link page remember, in the respondent's browser, that it answered, and show "already responded" on the next visit (D-FG03; best effort).
+	IsSingleResponsePerBrowserEnabled bool `json:"isSingleResponsePerBrowserEnabled"`
+	// IsSingleResponsePerEmailEnabled takes one response per verified address while email verification is on, enforced by the server (D-FG03).
+	IsSingleResponsePerEmailEnabled bool `json:"isSingleResponsePerEmailEnabled"`
 }
 
 // DefaultLanguageCode is the code of the survey's default language, or "" when it has none.

@@ -53,6 +53,9 @@ func (s *Service) ListV1(ctx context.Context, workspaceIDs []uuid.UUID, limit, o
 	return out, nil
 }
 
+// v1Hidden are the survey's settings that came after v1 was frozen: its objects never show them and its updates never change them.
+var v1Hidden = []string{"isProgressSavingEnabled", "isSingleResponsePerBrowserEnabled", "isSingleResponsePerEmailEnabled"}
+
 // V1Object is forma2's v1 survey: the survey with `questions` derived from its blocks (withDerivedQuestions) and `projectOverwrites` mirroring `workspaceOverwrites`, without the fields v1 never described. environmentId is added by the API, which knows the workspace's legacy id.
 func V1Object(sv *Survey) (map[string]any, error) {
 	obj, err := toMap(sv)
@@ -62,8 +65,10 @@ func V1Object(sv *Survey) (map[string]any, error) {
 	delete(obj, "inlineTriggers")
 	// v1 never described the inlined embedded-data fields the admin app reads.
 	delete(obj, "embeddedFields")
-	// Nor the link survey's progress saving, which v1 neither reads nor writes.
-	delete(obj, "isProgressSavingEnabled")
+	// Nor the link survey's progress saving and duplicate-submission limits, which v1 neither reads nor writes.
+	for _, k := range v1Hidden {
+		delete(obj, k)
+	}
 	questions, err := blocksToQuestions(sv.Blocks, sv.Endings)
 	if err != nil {
 		return nil, err
@@ -82,7 +87,9 @@ func V1DeletedObject(sv *Survey) (map[string]any, error) {
 	delete(obj, "languages")
 	delete(obj, "followUps")
 	delete(obj, "embeddedFields")
-	delete(obj, "isProgressSavingEnabled")
+	for _, k := range v1Hidden {
+		delete(obj, k)
+	}
 	obj["questions"] = []any{}
 	var segmentID any
 	if sv.Segment != nil {
@@ -614,8 +621,10 @@ func (s *Service) UpdateV1(ctx context.Context, caller Caller, current *Survey, 
 	for k, v := range body {
 		merged[k] = v
 	}
-	// v1 does not describe progress saving, so a body cannot change it.
+	// v1 does not describe progress saving or the duplicate-submission limits, so a body cannot change them.
 	merged["isProgressSavingEnabled"] = current.IsProgressSavingEnabled
+	merged["isSingleResponsePerBrowserEnabled"] = current.IsSingleResponsePerBrowserEnabled
+	merged["isSingleResponsePerEmailEnabled"] = current.IsSingleResponsePerEmailEnabled
 	if questions, ok := body["questions"].([]any); ok && len(questions) > 0 {
 		v1Defaults(merged)
 		endings := merged["endings"]
