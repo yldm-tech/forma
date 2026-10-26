@@ -14,6 +14,7 @@ import { api, downloadFile } from "../../lib/api";
 import type { Tag } from "../../lib/queries/tags";
 import { type Stamped, stamped } from "../../lib/wire";
 import { type SurveyWire, parseSurvey } from "../survey-editor/api";
+import type { TFilterSegment } from "./lib/filter-types";
 
 // The analysis views' reads and writes against the Go server: the summary, filter options and displays (apps/server/internal/analysis/handler.go), the responses (apps/server/internal/response/handler.go), tags and the survey's share settings. Timestamps arrive as ISO strings and are revived into Dates here, once, since the views are ported from forma2's components, which read Dates.
 
@@ -34,6 +35,8 @@ export interface SurveyFilterData {
   reservedValues: TSurveyMetaFieldFilter;
   variableValues: TSurveyMetaFieldFilter;
   quotas: TSurveyQuota[];
+  /** The workspace's public segments, by title. */
+  segments: TFilterSegment[];
 }
 
 /** POST /api/app/surveys/{id}/reset. */
@@ -171,7 +174,7 @@ const parseDisplay = (raw: DisplayWire): TDisplayWithContact => ({
 });
 
 /** The summary as the server sends it, its samples' updatedAt revived. */
-const parseSummary = (raw: TSurveySummary): TSurveySummary => ({
+export const parseSummary = (raw: TSurveySummary): TSurveySummary => ({
   ...raw,
   summary: raw.summary.map((entry) => {
     if ("samples" in entry) {

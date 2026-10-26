@@ -599,7 +599,7 @@ func (s *Service) Export(ctx context.Context, userID, surveyID uuid.UUID, format
 	if err != nil {
 		return "", err
 	}
-	clause, err := response.Where(sv.Survey, filter)
+	clause, err := response.Where(ctx, s.segments, sv.Survey, filter)
 	if err != nil {
 		return "", err
 	}

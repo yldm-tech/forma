@@ -172,7 +172,7 @@ export const en: SiteContent = {
       },
       logic: {
         title: "Logic and data",
-        body: "Branch with conditional logic, carry context in hidden fields and variables, quote earlier answers with recall, and keep partial submissions.",
+        body: "Branch with conditional logic, carry context in hidden fields and variables, quote earlier answers with recall, and keep partial submissions. Give answer options points, and the survey keeps a total score you can branch on, show on the ending and read in the summary and the export.",
       },
       languages: {
         title: "One survey, many languages",

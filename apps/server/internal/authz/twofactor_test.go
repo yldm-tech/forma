@@ -43,10 +43,10 @@ func TestTwoFactorRequirementRefusesOnlyMembersWhoMustEnrol(t *testing.T) {
 	e.expect(User(linked), Workspace(ws), map[Action]bool{WorkspaceRead: false})
 	// Even reading the organization is refused, so its billing and AI settings stay closed; only the guide to enrolment and leaving set the requirement aside.
 	e.expect(User(member), Organization(org), map[Action]bool{OrganizationRead: false, OrganizationManage: false})
-	if ok, err := e.authorizer.CanReadOrganizationDespiteSecondFactor(e.ctx, User(member), org); err != nil || !ok {
+	if ok, err := e.authorizer.CanReadOrganizationDespiteRefusal(e.ctx, User(member), org); err != nil || !ok {
 		t.Fatalf("read despite the requirement = %v, %v", ok, err)
 	}
-	if ok, err := e.authorizer.CanReadOrganizationDespiteSecondFactor(e.ctx, User(keyless), org); err != nil || ok {
+	if ok, err := e.authorizer.CanReadOrganizationDespiteRefusal(e.ctx, User(keyless), org); err != nil || ok {
 		t.Fatalf("a non-member's read despite the requirement = %v, %v", ok, err)
 	}
 	e.expect(User(member), Workspace(otherWS), map[Action]bool{WorkspaceRead: true})
@@ -67,7 +67,7 @@ func TestTwoFactorRequirementRefusesOnlyMembersWhoMustEnrol(t *testing.T) {
 	if err := e.authorizer.Require(e.ctx, User(keyless), WorkspaceRead, Workspace(ws)); err == nil || err.Error() != "forbidden: Not authorized" {
 		t.Fatalf("a non-member's Require = %v", err)
 	}
-	if refusal, err := e.authorizer.SecondFactorRefusal(e.ctx, keyless, org); err != nil || refusal != nil {
+	if refusal, err := e.authorizer.Refusal(e.ctx, keyless, org); err != nil || refusal != nil {
 		t.Fatalf("a non-member's refusal = %v, %v", refusal, err)
 	}
 
@@ -86,7 +86,7 @@ func TestTwoFactorRequirementRefusesOnlyMembersWhoMustEnrol(t *testing.T) {
 
 	// An inactive member is refused for that, not for want of two-factor authentication.
 	e.exec(`UPDATE users SET is_active = false WHERE id = ?`, member)
-	if refusal, err := e.authorizer.SecondFactorRefusal(e.ctx, member, org); err != nil || refusal != nil {
+	if refusal, err := e.authorizer.Refusal(e.ctx, member, org); err != nil || refusal != nil {
 		t.Fatalf("an inactive member's refusal = %v, %v", refusal, err)
 	}
 }

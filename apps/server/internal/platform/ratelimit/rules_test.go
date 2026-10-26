@@ -37,6 +37,7 @@ func TestRules(t *testing.T) {
 		{ActionGenerateExampleResponses, "action:generate-example-responses", 60 * time.Second, 1},
 		{ActionIntegrationMutation, "action:integration-mutation", 60 * time.Second, 30},
 		{ActionStateMutation, "action:state-mutation", 60 * time.Second, 120},
+		{PublicResultShare, "public:result-share", 60 * time.Second, 60},
 		{BASignIn, "ba:sign-in-email", 60 * time.Second, 5},
 		{BAVerifyEmail, "ba:verify-email", 60 * time.Second, 30},
 		{BATwoFactor, "ba:two-factor", 60 * time.Second, 5},

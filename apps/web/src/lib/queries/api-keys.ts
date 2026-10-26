@@ -19,8 +19,8 @@ export interface ApiKey {
   workspacePermissions: { workspaceId: string; workspaceName: string; permission: ApiKeyPermission }[];
   /** The last request the key authenticated, recorded at most every 30 seconds; null when it was never used. */
   lastUsedAt: string | null;
-  /** Who created the key; null when their account is gone. formerMember: they no longer belong to the organization. */
-  createdBy: { id: string; name: string; formerMember: boolean } | null;
+  /** Who created the key; null when their account is gone. formerMember: they no longer belong to the organization. suspended: the organization suspended their access, and the key does not authenticate until it is restored. */
+  createdBy: { id: string; name: string; formerMember: boolean; suspended: boolean } | null;
   /** Set together once the key was disabled; a disabled key never authenticates again. */
   disabledAt: string | null;
   disabledReason: ApiKeyDisabledReason | null;

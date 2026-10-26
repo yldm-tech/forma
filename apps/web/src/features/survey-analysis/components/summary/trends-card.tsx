@@ -27,6 +27,7 @@ import {
   surveyTrendsQuery,
 } from "../../api";
 import { saveExport } from "../../lib/download";
+import { sharedTrendsQuery } from "../../result-shares";
 import {
   type TrendDatum,
   type TrendScale,
@@ -330,8 +331,16 @@ const TrendTable = ({
   );
 };
 
-/** The trend over time of the summary: responses, completion rate, or a score element's NPS, CSAT or average per day, week or month in the organization's time zone, under the current filter. */
-export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string }) => {
+/** The trend over time of the summary: responses, completion rate, or a score element's NPS, CSAT or average per day, week or month in the organization's time zone, under the current filter. In a read-only results link (sharedToken) it reads the trend through the link, under the filter the link froze, and offers no download. */
+export const TrendsCard = ({
+  survey,
+  locale,
+  sharedToken,
+}: {
+  survey: TSurvey;
+  locale: string;
+  sharedToken?: string;
+}) => {
   const { t } = useTranslation();
   const selectId = useId();
   const { filterCriteria } = useResponseFilter();
@@ -339,10 +348,19 @@ export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string
   const [chosenInterval, setChosenInterval] = useState<TrendInterval | undefined>(undefined);
   const [view, setView] = useState<TrendView>("responses");
   const [isDownloading, setIsDownloading] = useState(false);
-  const query = useQuery({
+  const isShared = sharedToken !== undefined;
+  // One of the two runs: the analysis page's under its filter, or the link's.
+  const analysisQuery = useQuery({
     ...surveyTrendsQuery(survey.id, filterCriteria, chosenInterval),
     placeholderData: keepPreviousData,
+    enabled: !isShared,
   });
+  const sharedQuery = useQuery({
+    ...sharedTrendsQuery(sharedToken ?? "", chosenInterval),
+    placeholderData: keepPreviousData,
+    enabled: isShared,
+  });
+  const query = isShared ? sharedQuery : analysisQuery;
   const trends: SurveyTrends | undefined = query.data;
   const shownInterval = trends?.interval ?? chosenInterval ?? "day";
   // The radios show the user's pick at once, while the chart keeps the interval of the data it draws until the new data arrives.
@@ -564,27 +582,29 @@ export const TrendsCard = ({ survey, locale }: { survey: TSurvey; locale: string
               </label>
             ))}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                loading={isDownloading}
-                disabled={!trends || trends.buckets.length === 0}
-                aria-label={t("workspace.analysis.trends.download")}
-                title={t("workspace.analysis.trends.download")}>
-                <DownloadIcon />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void download("csv")}>
-                {t("workspace.analysis.trends.download_csv")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void download("xlsx")}>
-                {t("workspace.analysis.trends.download_xlsx")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!isShared && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  loading={isDownloading}
+                  disabled={!trends || trends.buckets.length === 0}
+                  aria-label={t("workspace.analysis.trends.download")}
+                  title={t("workspace.analysis.trends.download")}>
+                  <DownloadIcon />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => void download("csv")}>
+                  {t("workspace.analysis.trends.download_csv")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void download("xlsx")}>
+                  {t("workspace.analysis.trends.download_xlsx")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
       {renderBody()}

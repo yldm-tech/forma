@@ -49,7 +49,7 @@ const organization: OrganizationDetail = {
     instanceTimeZone: "Europe/Berlin",
   },
   whitelabel: {},
-  membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner" },
+  membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner", suspendedAt: null },
   userManagementAllowed: true,
   twoFactorEnforcedAt: null,
   twoFactorStatus: "enabled",

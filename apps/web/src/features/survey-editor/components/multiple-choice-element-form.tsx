@@ -13,12 +13,14 @@ import {
   TSurveyElementTypeEnum,
   TSurveyMultipleChoiceElement,
 } from "@forma/types/surveys/elements";
+import { isScoredElement } from "@forma/types/surveys/scoring";
 import { TShuffleOption, TSurvey } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
 import { createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
 import type { TElementUpdate, TUpdateElement } from "../types/editor";
 import { ElementFormInput } from "./element-form-input/index";
 import { BulkEditOptionsModal } from "./bulk-edit-options-modal";
+import { ChoiceScoringToggle } from "./choice-scoring";
 import { ElementOptionChoice } from "./element-option-choice";
 import { ValidationRulesEditor } from "./validation-rules-editor";
 import { findOptionUsedInLogic } from "../lib/utils";
@@ -35,6 +37,7 @@ interface MultipleChoiceElementFormProps {
   selectedLanguageCode: string;
   isInvalid: boolean;
   locale: TUserLocale;
+  setLocalSurvey?: (survey: TSurvey) => void;
 }
 
 export const MultipleChoiceElementForm = ({
@@ -45,6 +48,7 @@ export const MultipleChoiceElementForm = ({
   localSurvey,
   selectedLanguageCode,
   locale,
+  setLocalSurvey,
 }: MultipleChoiceElementFormProps): JSX.Element => {
   const { t } = useTranslation();
   const lastChoiceRef = useRef<HTMLInputElement>(null);
@@ -108,6 +112,8 @@ export const MultipleChoiceElementForm = ({
       ),
     }));
   };
+
+  const isScored = isScoredElement(element);
 
   const regularChoices = useMemo(
     () => element.choices?.filter((c) => c.id !== "other" && c.id !== "none"),
@@ -368,6 +374,7 @@ export const MultipleChoiceElementForm = ({
                     updateElement={updateElement}
                     surveyLanguageCodes={surveyLanguageCodes}
                     locale={locale}
+                    showScore={isScored}
                   />
                 ))}
               </div>
@@ -423,6 +430,14 @@ export const MultipleChoiceElementForm = ({
           </div>
         </div>
       </div>
+
+      <ChoiceScoringToggle
+        localSurvey={localSurvey}
+        element={element}
+        elementIdx={elementIdx}
+        updateElement={updateElement}
+        setLocalSurvey={setLocalSurvey}
+      />
 
       <div className="mt-3">
         <Label>{t("workspace.surveys.edit.display_type")}</Label>

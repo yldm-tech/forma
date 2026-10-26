@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
@@ -188,6 +189,31 @@ func TestUserManagementMinimumRole(t *testing.T) {
 	disabled.drain()
 	expect(t, disabled.do(o.owner, http.MethodPost, invitePath(o), body("grace@example.com", "member")), http.StatusForbidden, "operation_not_allowed", notAllowed)
 	expect(t, disabled.do(o.member, http.MethodPost, invitePath(o), body("grace@example.com", "member", team)), http.StatusCreated, "")
+}
+
+// A suspended owner, manager or team admin is told the organization suspended them, not that their role may not invite, so the SPA sends them to the notice.
+func TestASuspendedInviterIsToldTheyAreSuspended(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	o := e.organization()
+	team := e.team(o.id, "Mine")
+	e.teamMember(team, o.member, "admin")
+	inviteID, _ := e.seedInvite(o.id, o.owner.id, "pending@example.com", "member", inviteLifetime)
+	e.drain()
+	e.exec(`UPDATE memberships SET suspended_at = now() WHERE organization_id = ? AND user_id IN (?, ?)`, o.id, o.manager.id, o.member.id)
+
+	payload := map[string]any{"email": "grace@example.com", "name": "Grace", "role": "member", "teamIds": []any{}, "invitees": []any{body("grace@example.com", "member")}}
+	for _, req := range []struct{ method, path string }{
+		{http.MethodPost, invitePath(o)},
+		{http.MethodPost, invitePath(o) + "/bulk"},
+		{http.MethodDelete, "/invites/" + inviteID.String()},
+		{http.MethodPatch, "/invites/" + inviteID.String()},
+	} {
+		expect(t, e.do(o.manager, req.method, req.path, payload), http.StatusForbidden, authz.CodeMembershipSuspended)
+	}
+	expect(t, e.do(o.member, http.MethodPost, invitePath(o), body("grace@example.com", "member", team)), http.StatusForbidden, authz.CodeMembershipSuspended)
+	// A member who is not suspended is still refused for their role.
+	expect(t, e.do(o.billing, http.MethodPost, invitePath(o)+"/bulk", payload), http.StatusForbidden, "operation_not_allowed", "User management is not allowed for your role")
 }
 
 // forma2's bulkInviteUsersAction: per-invitee outcomes with forma2's failure reasons, addresses lowercased, the whole batch validated first.

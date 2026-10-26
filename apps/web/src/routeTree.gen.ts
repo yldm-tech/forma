@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as EmailChangeWithoutVerificationSuccessRouteImport } from './routes/email-change-without-verification-success'
 import { Route as InviteRouteImport } from './routes/invite'
+import { Route as ResultsRouteImport } from './routes/results'
 import { Route as VerifyEmailChangeRouteImport } from './routes/verify-email-change'
 import { Route as AuthenticatedBillingConfirmationRouteImport } from './routes/_authenticated/billing-confirmation'
 import { Route as AuthDeleteAccountRouteImport } from './routes/auth/delete-account'
@@ -37,6 +38,7 @@ import { Route as AuthenticatedAccountSettingsProfileRouteImport } from './route
 import { Route as AuthenticatedOrganizationsOrganizationIdIndexRouteImport } from './routes/_authenticated/organizations/$organizationId/index'
 import { Route as AuthenticatedOrganizationsOrganizationIdLandingRouteImport } from './routes/_authenticated/organizations/$organizationId/landing'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings'
+import { Route as AuthenticatedOrganizationsOrganizationIdSuspendedRouteImport } from './routes/_authenticated/organizations/$organizationId/suspended'
 import { Route as AuthenticatedOrganizationsOrganizationIdTwoFactorRouteImport } from './routes/_authenticated/organizations/$organizationId/two-factor'
 import { Route as AuthenticatedSetupOrganizationCreateRouteImport } from './routes/_authenticated/setup/organization/create'
 import { Route as AuthenticatedWorkspacesWorkspaceIdIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/index'
@@ -113,6 +115,11 @@ const EmailChangeWithoutVerificationSuccessRoute =
 const InviteRoute = InviteRouteImport.update({
   id: '/invite',
   path: '/invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResultsRoute = ResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerifyEmailChangeRoute = VerifyEmailChangeRouteImport.update({
@@ -241,6 +248,12 @@ const AuthenticatedOrganizationsOrganizationIdSettingsRoute =
   AuthenticatedOrganizationsOrganizationIdSettingsRouteImport.update({
     id: '/organizations/$organizationId/settings',
     path: '/organizations/$organizationId/settings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdSuspendedRoute =
+  AuthenticatedOrganizationsOrganizationIdSuspendedRouteImport.update({
+    id: '/organizations/$organizationId/suspended',
+    path: '/organizations/$organizationId/suspended',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedOrganizationsOrganizationIdTwoFactorRoute =
@@ -582,6 +595,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteRouteWithChildren
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
+  '/results': typeof ResultsRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
   '/billing-confirmation': typeof AuthenticatedBillingConfirmationRoute
   '/auth/delete-account': typeof AuthDeleteAccountRoute
@@ -603,6 +617,7 @@ export interface FileRoutesByFullPath {
   '/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
   '/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
+  '/organizations/$organizationId/suspended': typeof AuthenticatedOrganizationsOrganizationIdSuspendedRoute
   '/organizations/$organizationId/two-factor': typeof AuthenticatedOrganizationsOrganizationIdTwoFactorRoute
   '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
   '/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
@@ -663,6 +678,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteRouteWithChildren
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
+  '/results': typeof ResultsRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
   '/billing-confirmation': typeof AuthenticatedBillingConfirmationRoute
   '/auth/delete-account': typeof AuthDeleteAccountRoute
@@ -681,6 +697,7 @@ export interface FileRoutesByTo {
   '/account/settings/notifications': typeof AuthenticatedAccountSettingsNotificationsRoute
   '/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
   '/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
+  '/organizations/$organizationId/suspended': typeof AuthenticatedOrganizationsOrganizationIdSuspendedRoute
   '/organizations/$organizationId/two-factor': typeof AuthenticatedOrganizationsOrganizationIdTwoFactorRoute
   '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
   '/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
@@ -740,6 +757,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/email-change-without-verification-success': typeof EmailChangeWithoutVerificationSuccessRoute
   '/invite': typeof InviteRoute
+  '/results': typeof ResultsRoute
   '/verify-email-change': typeof VerifyEmailChangeRoute
   '/_authenticated/billing-confirmation': typeof AuthenticatedBillingConfirmationRoute
   '/auth/delete-account': typeof AuthDeleteAccountRoute
@@ -761,6 +779,7 @@ export interface FileRoutesById {
   '/_authenticated/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
   '/_authenticated/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   '/_authenticated/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
+  '/_authenticated/organizations/$organizationId/suspended': typeof AuthenticatedOrganizationsOrganizationIdSuspendedRoute
   '/_authenticated/organizations/$organizationId/two-factor': typeof AuthenticatedOrganizationsOrganizationIdTwoFactorRoute
   '/_authenticated/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
   '/_authenticated/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
@@ -823,6 +842,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/email-change-without-verification-success'
     | '/invite'
+    | '/results'
     | '/verify-email-change'
     | '/billing-confirmation'
     | '/auth/delete-account'
@@ -844,6 +864,7 @@ export interface FileRouteTypes {
     | '/account/settings/profile'
     | '/organizations/$organizationId/landing'
     | '/organizations/$organizationId/settings'
+    | '/organizations/$organizationId/suspended'
     | '/organizations/$organizationId/two-factor'
     | '/setup/organization/create'
     | '/workspaces/$workspaceId/attributes'
@@ -904,6 +925,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/email-change-without-verification-success'
     | '/invite'
+    | '/results'
     | '/verify-email-change'
     | '/billing-confirmation'
     | '/auth/delete-account'
@@ -922,6 +944,7 @@ export interface FileRouteTypes {
     | '/account/settings/notifications'
     | '/account/settings/profile'
     | '/organizations/$organizationId/landing'
+    | '/organizations/$organizationId/suspended'
     | '/organizations/$organizationId/two-factor'
     | '/setup/organization/create'
     | '/workspaces/$workspaceId/attributes'
@@ -980,6 +1003,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/email-change-without-verification-success'
     | '/invite'
+    | '/results'
     | '/verify-email-change'
     | '/_authenticated/billing-confirmation'
     | '/auth/delete-account'
@@ -1001,6 +1025,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account/settings/profile'
     | '/_authenticated/organizations/$organizationId/landing'
     | '/_authenticated/organizations/$organizationId/settings'
+    | '/_authenticated/organizations/$organizationId/suspended'
     | '/_authenticated/organizations/$organizationId/two-factor'
     | '/_authenticated/setup/organization/create'
     | '/_authenticated/workspaces/$workspaceId/attributes'
@@ -1063,6 +1088,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   EmailChangeWithoutVerificationSuccessRoute: typeof EmailChangeWithoutVerificationSuccessRoute
   InviteRoute: typeof InviteRoute
+  ResultsRoute: typeof ResultsRoute
   VerifyEmailChangeRoute: typeof VerifyEmailChangeRoute
   SetupIntroRoute: typeof SetupIntroRoute
   SetupSignupRoute: typeof SetupSignupRoute
@@ -1104,6 +1130,13 @@ declare module '@tanstack/react-router' {
       path: '/invite'
       fullPath: '/invite'
       preLoaderRoute: typeof InviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/results': {
+      id: '/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof ResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verify-email-change': {
@@ -1265,6 +1298,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations/$organizationId/settings'
       fullPath: '/organizations/$organizationId/settings'
       preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/organizations/$organizationId/suspended': {
+      id: '/_authenticated/organizations/$organizationId/suspended'
+      path: '/organizations/$organizationId/suspended'
+      fullPath: '/organizations/$organizationId/suspended'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSuspendedRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/organizations/$organizationId/two-factor': {
@@ -1899,6 +1939,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedWorkspacesWorkspaceIdRoute: typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
   AuthenticatedOrganizationsOrganizationIdLandingRoute: typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   AuthenticatedOrganizationsOrganizationIdSettingsRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
+  AuthenticatedOrganizationsOrganizationIdSuspendedRoute: typeof AuthenticatedOrganizationsOrganizationIdSuspendedRoute
   AuthenticatedOrganizationsOrganizationIdTwoFactorRoute: typeof AuthenticatedOrganizationsOrganizationIdTwoFactorRoute
   AuthenticatedSetupOrganizationCreateRoute: typeof AuthenticatedSetupOrganizationCreateRoute
   AuthenticatedOrganizationsOrganizationIdIndexRoute: typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
@@ -1919,6 +1960,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedOrganizationsOrganizationIdLandingRoute,
   AuthenticatedOrganizationsOrganizationIdSettingsRoute:
     AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren,
+  AuthenticatedOrganizationsOrganizationIdSuspendedRoute:
+    AuthenticatedOrganizationsOrganizationIdSuspendedRoute,
   AuthenticatedOrganizationsOrganizationIdTwoFactorRoute:
     AuthenticatedOrganizationsOrganizationIdTwoFactorRoute,
   AuthenticatedSetupOrganizationCreateRoute:
@@ -1946,6 +1989,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailChangeWithoutVerificationSuccessRoute:
     EmailChangeWithoutVerificationSuccessRoute,
   InviteRoute: InviteRoute,
+  ResultsRoute: ResultsRoute,
   VerifyEmailChangeRoute: VerifyEmailChangeRoute,
   SetupIntroRoute: SetupIntroRoute,
   SetupSignupRoute: SetupSignupRoute,

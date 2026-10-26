@@ -38,6 +38,7 @@
   "common.upgrade_plan",
   "common.upload",
   "common.you_have_reached_your_limit_of_workspace_limit",
+  "organizations.members.inactive_tooltip",
   "setup.invite.failed_to_invite",
   "setup.organization.create.delete_account",
   "setup.organization.create.delete_account_description",

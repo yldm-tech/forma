@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next";
+
 /** The sign-in page (an in-app path) for a signed-out visit to path, the page's browser path with the app's base path, carrying where to return as forma2's proxy built it: an absolute URL on this origin. */
 export const loginHref = (path: string, origin: string = globalThis.location.origin): string =>
   `/auth/login?callbackUrl=${encodeURIComponent(origin + path)}`;
@@ -26,3 +28,12 @@ export const organizationSwitchPath = (selectedId: string, currentId: string): s
 /** Items of a switcher, sorted by name as forma2's useSwitcherData sorted them. */
 export const sortByName = <T extends { name: string }>(items: readonly T[]): T[] =>
   [...items].sort((a, b) => a.name.localeCompare(b.name));
+
+/** The caller's organizations as the switchers list them, sorted by name, with an organization that suspended the caller marked as such: opening it leads to the notice that says so. */
+export const switcherOrganizations = <T extends { name: string; suspendedAt: string | null }>(
+  t: TFunction,
+  organizations: readonly T[]
+): T[] =>
+  sortByName(organizations).map((o) =>
+    o.suspendedAt ? { ...o, name: t("organizations.suspended.switcher_label", { organization: o.name }) } : o
+  );

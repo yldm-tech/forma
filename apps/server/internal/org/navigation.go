@@ -21,6 +21,11 @@ func TwoFactorPath(organizationID uuid.UUID) string {
 	return "/organizations/" + organizationID.String() + "/two-factor"
 }
 
+// SuspendedPath is the SPA page that tells a member their access to the organization is suspended.
+func SuspendedPath(organizationID uuid.UUID) string {
+	return "/organizations/" + organizationID.String() + "/suspended"
+}
+
 // Home is where the root page sends the browser. With Path empty, the SPA opens the workspace it remembers when that is one of WorkspaceIDs, else the first of them, as forma2's ClientWorkspaceRedirect did.
 type Home struct {
 	Path         string      `json:"path,omitempty"`
@@ -29,7 +34,7 @@ type Home struct {
 	Pending bool `json:"pending"`
 }
 
-// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; a user whose first organization refuses them for want of two-factor authentication, and who can open no other workspace, is guided to turn it on; an owner or manager of their first organization whose onboarding workspace has no survey yet goes through the new-workspace flow; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
+// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; organizations that suspended the user are passed over, and a user whom every one of their organizations suspended is told so; a user whose first organization refuses them for want of two-factor authentication, and who can open no other workspace, is guided to turn it on; an owner or manager of their first organization whose onboarding workspace has no survey yet goes through the new-workspace flow; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
 func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	if userID == nil {
 		hasUser, err := s.repo.hasAnyUser(ctx)
@@ -60,8 +65,18 @@ func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	if err != nil {
 		return nil, err
 	}
-	// The workspaces of an organization whose two-factor requirement refuses the user are left out of ids. Its onboarding is out of reach too, and with nothing else to open, the user is guided to turn it on rather than to an empty landing page.
+	// An organization that suspended the user is passed over: its workspaces are left out of ids, and its onboarding and landing page are closed to them. When every organization of theirs suspended them, they are told so.
 	first := orgs[0]
+	for _, o := range orgs {
+		if o.SuspendedAt == nil {
+			first = o
+			break
+		}
+	}
+	if first.SuspendedAt != nil && len(ids) == 0 {
+		return &Home{Path: SuspendedPath(first.ID), WorkspaceIDs: ids, Pending: pending}, nil
+	}
+	// The workspaces of an organization whose two-factor requirement refuses the user are left out of ids too. Its onboarding is out of reach as well, and with nothing else to open, the user is guided to turn it on rather than to an empty landing page.
 	manages := first.Role == RoleOwner || first.Role == RoleManager
 	firstBlocked := false
 	if len(ids) == 0 || manages {
@@ -84,7 +99,7 @@ func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 		}
 	}
 	if len(ids) == 0 {
-		return &Home{Path: workspace.LandingPath(orgs[0].ID), WorkspaceIDs: ids, Pending: pending}, nil
+		return &Home{Path: workspace.LandingPath(first.ID), WorkspaceIDs: ids, Pending: pending}, nil
 	}
 	return &Home{WorkspaceIDs: ids, Pending: pending}, nil
 }
@@ -95,13 +110,17 @@ type Navigation struct {
 	CanCreateWorkspace bool   `json:"canCreateWorkspace"`
 }
 
-// Navigate is forma2's /organizations/{id} route and the landing layout behind it: members only (anyone else gets a not-found), a member the organization's two-factor requirement refuses goes to enrol, a billing member goes to the billing path, a member who can open no workspace lands on the organization's landing page, and anyone else opens their first workspace. forma2 checked for workspaces before the billing role, so billing members, who can open none, always reached the landing page; here they reach the billing path as intended.
+// Navigate is forma2's /organizations/{id} route and the landing layout behind it: members only (anyone else gets a not-found), a suspended member goes to the notice that says so, a member the organization's two-factor requirement refuses goes to enrol, a billing member goes to the billing path, a member who can open no workspace lands on the organization's landing page, and anyone else opens their first workspace. forma2 checked for workspaces before the billing role, so billing members, who can open none, always reached the landing page; here they reach the billing path as intended.
 func (s *Service) Navigate(ctx context.Context, userID, organizationID uuid.UUID) (*Navigation, error) {
-	m, err := s.memberDespiteSecondFactor(ctx, userID, organizationID)
+	m, err := s.memberDespiteRefusal(ctx, userID, organizationID)
 	if err != nil {
 		return nil, err
 	}
 	nav := &Navigation{CanCreateWorkspace: m.Role == RoleOwner || m.Role == RoleManager}
+	if m.SuspendedAt != nil {
+		nav.Path, nav.CanCreateWorkspace = SuspendedPath(organizationID), false
+		return nav, nil
+	}
 	_, blocked, err := s.repo.secondFactor(ctx, userID, organizationID)
 	if err != nil {
 		return nil, err

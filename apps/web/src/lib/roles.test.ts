@@ -5,10 +5,11 @@ import {
   type OrganizationRole,
   accessFlags,
   assignableRoles,
+  canChangeSuspension,
   canDeleteRow,
   canManageTeam,
   defaultTeamRole,
-  hasMoreThanOneActiveOwner,
+  hasAnotherActiveOwner,
   isRoleEditDisabled,
   roleLabel,
 } from "./roles";
@@ -37,12 +38,17 @@ test("assignableRoles: managers assign members only; owners every role, billing 
   expect(assignableRoles("owner", true)).toEqual(["billing", "owner", "manager", "member"]);
 });
 
-test("hasMoreThanOneActiveOwner counts active owner memberships only", () => {
-  const owner = { role: "owner" as const, isActive: true };
-  expect(hasMoreThanOneActiveOwner([owner])).toBe(false);
-  expect(hasMoreThanOneActiveOwner([owner, { role: "owner", isActive: false }])).toBe(false);
-  expect(hasMoreThanOneActiveOwner([owner, { role: "manager", isActive: true }])).toBe(false);
-  expect(hasMoreThanOneActiveOwner([owner, owner])).toBe(true);
+test("hasAnotherActiveOwner counts the active, unsuspended owners other than the target", () => {
+  const owner = (userId: string) => ({ userId, role: "owner" as const, isActive: true, suspendedAt: null });
+  const suspended = { ...owner("s"), suspendedAt: "2026-10-26T00:00:00Z" };
+  expect(hasAnotherActiveOwner([owner("a")], "a")).toBe(false);
+  expect(hasAnotherActiveOwner([owner("a"), { ...owner("b"), isActive: false }], "a")).toBe(false);
+  expect(hasAnotherActiveOwner([owner("a"), { ...owner("b"), role: "manager" }], "a")).toBe(false);
+  expect(hasAnotherActiveOwner([owner("a"), suspended], "a")).toBe(false);
+  expect(hasAnotherActiveOwner([owner("a"), owner("b")], "a")).toBe(true);
+  // A suspended owner may be acted on while one active owner remains.
+  expect(hasAnotherActiveOwner([owner("a"), suspended], "s")).toBe(true);
+  expect(hasAnotherActiveOwner([owner("a")], undefined)).toBe(true);
 });
 
 describe("isRoleEditDisabled (forma2's role-edit-rules)", () => {
@@ -52,14 +58,14 @@ describe("isRoleEditDisabled (forma2's role-edit-rules)", () => {
     currentUserId: ME,
     memberRole: "member" as OrganizationRole,
     memberUserId: "other",
-    doesOrgHaveMoreThanOneOwner: false,
+    hasAnotherActiveOwner: false,
   };
   test.each([
     ["an owner editing a member", {}, false],
     ["user management disabled", { isUserManagementDisabled: true }, true],
     ["your own role", { memberUserId: ME }, true],
     ["the last owner", { memberRole: "owner" }, true],
-    ["one of several owners", { memberRole: "owner", doesOrgHaveMoreThanOneOwner: true }, false],
+    ["one of several owners", { memberRole: "owner", hasAnotherActiveOwner: true }, false],
     [
       "a pending owner invite, which is not a membership",
       { memberRole: "owner", memberUserId: undefined },
@@ -67,7 +73,7 @@ describe("isRoleEditDisabled (forma2's role-edit-rules)", () => {
     ],
     [
       "a manager editing an owner",
-      { currentUserRole: "manager", memberRole: "owner", doesOrgHaveMoreThanOneOwner: true },
+      { currentUserRole: "manager", memberRole: "owner", hasAnotherActiveOwner: true },
       true,
     ],
     [
@@ -83,10 +89,10 @@ describe("isRoleEditDisabled (forma2's role-edit-rules)", () => {
 
 describe("canDeleteRow (forma2's showDeleteButton)", () => {
   const member = (role: OrganizationRole, userId = "other") => ({ kind: "member" as const, userId, role });
-  const ctx = (currentUserRole: OrganizationRole, doesOrgHaveMoreThanOneOwner = false) => ({
+  const ctx = (currentUserRole: OrganizationRole, hasAnotherActiveOwner = false) => ({
     currentUserRole,
     currentUserId: ME,
-    doesOrgHaveMoreThanOneOwner,
+    hasAnotherActiveOwner,
   });
   test.each([
     ["owner revokes an invite", { kind: "invite" } as const, ctx("owner"), true],
@@ -135,5 +141,33 @@ describe("roleLabel", () => {
     }
     await changeLocale(i18n, "zh-Hans-CN");
     expect(roleLabel(i18n.t, "owner")).not.toMatch(/[A-Za-z]/);
+  });
+});
+
+describe("canChangeSuspension (the server's suspension rules)", () => {
+  const member = (role: OrganizationRole, suspended = false, userId = "other") => ({
+    userId,
+    role,
+    suspended,
+  });
+  const ctx = (currentUserRole: OrganizationRole, hasAnotherActiveOwner = false, canManageUsers = true) => ({
+    currentUserRole,
+    currentUserId: ME,
+    hasAnotherActiveOwner,
+    canManageUsers,
+  });
+  test.each([
+    ["owner suspends a member", member("member"), ctx("owner"), true],
+    ["manager suspends a manager", member("manager"), ctx("manager"), true],
+    ["nobody suspends themselves", member("owner", false, ME), ctx("owner", true), false],
+    ["manager cannot suspend an owner", member("owner"), ctx("manager", true), false],
+    ["manager cannot restore an owner", member("owner", true), ctx("manager", true), false],
+    ["owner cannot suspend the last active owner", member("owner"), ctx("owner", false), false],
+    ["owner suspends another owner while one remains", member("owner"), ctx("owner", true), true],
+    ["owner restores a suspended owner", member("owner", true), ctx("owner", false), true],
+    ["no user management, no suspension", member("member"), ctx("manager", false, false), false],
+    ["a member suspends nobody", member("member"), ctx("member"), false],
+  ] as const)("%s", (_, row, context, expected) => {
+    expect(canChangeSuspension(row, context)).toBe(expected);
   });
 });

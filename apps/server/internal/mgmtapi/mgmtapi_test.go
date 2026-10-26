@@ -218,8 +218,8 @@ func TestV2WorkspaceTeamsFollowTheCreatorsRole(t *testing.T) {
 	expectStatus(t, "owner's key grants", e.do("POST", grants, manage, "x-api-key", s.bound["<api-key:manage>"]), 200)
 }
 
-// A user's name and isActive live on their account, which every organization they belong to shares: one organization's key changes them only for a user who belongs to it alone. Their role and teams in the organization stay its own to change.
-func TestV2UsersCannotChangeASharedAccount(t *testing.T) {
+// A user's name lives on their account, which every organization they belong to shares: one organization's key renames only a user who belongs to it alone. isActive is the membership's (D-AO01): an organization's key suspends and restores its own member's access there, and the user keeps their account and their other organizations. Their role and teams in the organization stay its own to change.
+func TestV2UsersSuspendOnlyTheirMembership(t *testing.T) {
 	e := newEnv(t)
 	s := e.seedRecording()
 	org, key := s.bound["<id:organization>"], s.bound["<api-key:manage>"]
@@ -230,37 +230,76 @@ func TestV2UsersCannotChangeASharedAccount(t *testing.T) {
 	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'member', true)`, shared, org)
 	e.deliver()
 
-	issue := "The user also belongs to another organization, so this organization cannot change it"
-	expectDetail(t, expectStatus(t, "deactivate", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "isActive": false}, "x-api-key", key), 422), "isActive", issue)
-	expectDetail(t, expectStatus(t, "rename", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Renamed by another org"}, "x-api-key", key), 422), "name", issue)
-	body := expectStatus(t, "both", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Renamed", "isActive": false, "role": "manager"}, "x-api-key", key), 422)
-	if details := body["error"].(map[string]any)["details"].([]any); len(details) != 2 || details[0].(map[string]any)["field"] != "name" || details[1].(map[string]any)["field"] != "isActive" {
-		t.Errorf("both = %v", body)
+	type state struct {
+		Name           string
+		IsActive       bool
+		Role           string
+		SuspendedHere  bool
+		SuspendedOther bool
 	}
-	var account struct {
-		Name     string
-		IsActive bool
-	}
-	var role string
-	if err := e.db.Raw(`SELECT name, is_active FROM users WHERE id = ?`, shared).Scan(&account).Error; err != nil {
-		t.Fatal(err)
-	}
-	if err := e.db.Raw(`SELECT role FROM memberships WHERE user_id = ? AND organization_id = ?`, shared, org).Scan(&role).Error; err != nil {
-		t.Fatal(err)
-	}
-	if account.Name != "Shared User" || !account.IsActive || role != "member" {
-		t.Fatalf("after the refused changes: %+v, role %s", account, role)
+	read := func() state {
+		t.Helper()
+		var st state
+		if err := e.db.Raw(`SELECT u.name, u.is_active, m.role, m.suspended_at IS NOT NULL AS suspended_here,
+			(SELECT o.suspended_at IS NOT NULL FROM memberships o WHERE o.user_id = u.id AND o.organization_id = ?) AS suspended_other
+			FROM users u JOIN memberships m ON m.user_id = u.id AND m.organization_id = ? WHERE u.id = ?`, other, org, shared).Scan(&st).Error; err != nil {
+			t.Fatal(err)
+		}
+		return st
 	}
 
-	data := expectStatus(t, "unchanged values and a role", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Shared User", "isActive": true, "role": "manager"}, "x-api-key", key), 200)["data"].(map[string]any)
+	issue := "The user also belongs to another organization, so this organization cannot change it"
+	expectDetail(t, expectStatus(t, "rename", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Renamed by another org"}, "x-api-key", key), 422), "name", issue)
+	expectDetail(t, expectStatus(t, "rename and suspend", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Renamed", "isActive": false, "role": "manager"}, "x-api-key", key), 422), "name", issue)
+	if st := read(); st != (state{Name: "Shared User", IsActive: true, Role: "member"}) {
+		t.Fatalf("after the refused changes: %+v", st)
+	}
+
+	data := expectStatus(t, "suspend", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "isActive": false}, "x-api-key", key), 200)["data"].(map[string]any)
+	if data["isActive"] != false {
+		t.Errorf("suspend = %v", data)
+	}
+	if st := read(); st != (state{Name: "Shared User", IsActive: true, Role: "member", SuspendedHere: true}) {
+		t.Fatalf("after suspending: %+v; only this organization's membership is suspended", st)
+	}
+	list := expectStatus(t, "list", e.do("GET", users+"?email=shared", nil, "x-api-key", key), 200)["data"].([]any)
+	if len(list) != 1 || list[0].(map[string]any)["isActive"] != false {
+		t.Errorf("list = %v", list)
+	}
+
+	data = expectStatus(t, "unchanged name, restored and promoted", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Shared User", "isActive": true, "role": "manager"}, "x-api-key", key), 200)["data"].(map[string]any)
 	if data["role"] != "manager" || data["name"] != "Shared User" || data["isActive"] != true {
-		t.Errorf("role change = %v", data)
+		t.Errorf("restore = %v", data)
+	}
+	if st := read(); st != (state{Name: "Shared User", IsActive: true, Role: "manager"}) {
+		t.Fatalf("after restoring: %+v", st)
 	}
 
 	e.exec(`DELETE FROM memberships WHERE user_id = ? AND organization_id = ?`, shared, other)
 	data = expectStatus(t, "only here", e.do("PATCH", users, map[string]any{"email": "shared@example.com", "name": "Renamed", "isActive": false}, "x-api-key", key), 200)["data"].(map[string]any)
 	if data["name"] != "Renamed" || data["isActive"] != false {
 		t.Errorf("change of a user of this organization only = %v", data)
+	}
+
+	// A member whose account the instance deactivated reads as inactive, yet false still suspends their membership, so turning the account back on does not give them this organization again; true only lifts the suspension.
+	off := e.user("Deactivated Account", "off@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'member', true)`, off, org)
+	e.exec(`UPDATE users SET is_active = false WHERE id = ?`, off)
+	suspendedAt := func() bool {
+		t.Helper()
+		var v bool
+		if err := e.db.Raw(`SELECT suspended_at IS NOT NULL FROM memberships WHERE user_id = ? AND organization_id = ?`, off, org).Scan(&v).Error; err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	data = expectStatus(t, "suspend a deactivated account", e.do("PATCH", users, map[string]any{"email": "off@example.com", "isActive": false}, "x-api-key", key), 200)["data"].(map[string]any)
+	if data["isActive"] != false || !suspendedAt() {
+		t.Fatalf("suspend a deactivated account = %v, suspended %v", data, suspendedAt())
+	}
+	data = expectStatus(t, "restore a deactivated account", e.do("PATCH", users, map[string]any{"email": "off@example.com", "isActive": true}, "x-api-key", key), 200)["data"].(map[string]any)
+	if data["isActive"] != false || suspendedAt() {
+		t.Fatalf("restore a deactivated account = %v, suspended %v; the membership is restored, the account stays off", data, suspendedAt())
 	}
 }
 
@@ -280,6 +319,10 @@ func TestV2UsersKeepAnActiveOwner(t *testing.T) {
 	var active bool
 	if err := e.db.Raw(`SELECT is_active FROM users WHERE email = 'admin@example.com'`).Scan(&active).Error; err != nil || !active {
 		t.Fatalf("the last active owner is_active = %v (%v)", active, err)
+	}
+	var suspended bool
+	if err := e.db.Raw(`SELECT u.is_active AND m.suspended_at IS NOT NULL FROM users u JOIN memberships m ON m.user_id = u.id WHERE u.email = 'owner2@example.com'`).Scan(&suspended).Error; err != nil || !suspended {
+		t.Fatalf("the deactivated owner's account active and membership suspended = %v (%v)", suspended, err)
 	}
 	expectStatus(t, "inactive owner demoted", e.do("PATCH", users, map[string]any{"email": "owner2@example.com", "role": "member"}, "x-api-key", key), 200)
 }

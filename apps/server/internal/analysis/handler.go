@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
 
@@ -18,10 +19,11 @@ import (
 type Handler struct {
 	svc      *Service
 	sessions httpapi.SessionAuth
+	limiter  *ratelimit.Limiter
 }
 
-func NewHandler(svc *Service, sessions httpapi.SessionAuth) *Handler {
-	return &Handler{svc: svc, sessions: sessions}
+func NewHandler(svc *Service, sessions httpapi.SessionAuth, limiter *ratelimit.Limiter) *Handler {
+	return &Handler{svc: svc, sessions: sessions, limiter: limiter}
 }
 
 // Register mounts the routes on the /api/app group, which applies the error envelope and the CSRF check.
@@ -34,6 +36,14 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/surveys/:surveyId/displays", h.displays)
 	g.POST("/surveys/:surveyId/responses/export", h.export)
 	g.POST("/surveys/:surveyId/reset", h.reset)
+	g.GET("/surveys/:surveyId/result-shares", h.resultShares)
+	g.POST("/surveys/:surveyId/result-shares", h.createResultShare)
+	g.PUT("/surveys/:surveyId/result-shares/:shareId", h.updateResultShare)
+	g.DELETE("/surveys/:surveyId/result-shares/:shareId", h.deleteResultShare)
+	// A read-only results link, read without a session by whoever holds its key, rate limited per client address. The key travels in the request body rather than the API path, so it stays out of the access log and the error reports, which record routes.
+	public := r.Group("/shared-results", ratelimit.Middleware(h.limiter, ratelimit.PublicResultShare, ratelimit.ByClientIP))
+	public.POST("/summary", h.sharedSummary)
+	public.POST("/trends", h.sharedTrends)
 }
 
 func userID(c *gin.Context) uuid.UUID {

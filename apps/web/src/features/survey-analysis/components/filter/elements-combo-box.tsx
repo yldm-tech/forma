@@ -32,6 +32,7 @@ import {
   SquareFunctionIcon,
   StarIcon,
   User,
+  UsersIcon,
 } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -68,6 +69,8 @@ const getOptionsTypeLabel = (type: OptionsType, t: TFunction): string => {
       return t("common.variables");
     case OptionsType.QUOTAS:
       return t("common.quotas");
+    case OptionsType.SEGMENTS:
+      return t("common.segments");
   }
 };
 
@@ -102,6 +105,7 @@ const ELEMENT_ICONS: Record<string, LucideIcon> = {
   Language: LanguagesIcon,
   [OptionsType.TAGS]: HashIcon,
   [OptionsType.QUOTAS]: PieChartIcon,
+  [OptionsType.SEGMENTS]: UsersIcon,
 };
 
 const renderIcon = (key: string) => {
@@ -114,6 +118,7 @@ const ICON_BACKGROUNDS: Record<string, string> = {
   [OptionsType.ELEMENTS]: "bg-slate-700",
   [OptionsType.TAGS]: "bg-indigo-500",
   [OptionsType.QUOTAS]: "bg-slate-500",
+  [OptionsType.SEGMENTS]: "bg-indigo-500",
 };
 
 const getLabelClassName = (type: string, label?: string): string => {
@@ -138,7 +143,8 @@ export const SelectedCommandItem = ({ label, elementType, type, id }: Partial<El
       type === OptionsType.HIDDEN_FIELDS ||
       type === OptionsType.VARIABLES ||
       type === OptionsType.TAGS ||
-      type === OptionsType.QUOTAS
+      type === OptionsType.QUOTAS ||
+      type === OptionsType.SEGMENTS
     ) {
       return renderIcon(type);
     }

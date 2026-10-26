@@ -25,6 +25,8 @@ export type TwoFactorStatus = "enabled" | "disabled" | "sso";
 /** An organization in the caller's list, with the caller's role in it. */
 export interface OrganizationSummary extends Organization {
   role: OrganizationRole;
+  /** When the organization suspended the caller's access; null while they have it. */
+  suspendedAt: string | null;
 }
 
 export interface Membership {
@@ -32,6 +34,8 @@ export interface Membership {
   userId: string;
   accepted: boolean;
   role: OrganizationRole;
+  /** When an owner or manager suspended the member's access to the organization; null while they have it. A suspended member keeps only the organization's name, their membership and leaving it. */
+  suspendedAt: string | null;
 }
 
 /** When scheduled surveys open and close: on the selected day at the instance's local time, in the organization's zone or, without one, the instance's (SURVEY_SCHEDULING_TIME_ZONE). */
@@ -61,7 +65,10 @@ export interface Member {
   email: string;
   accepted: boolean;
   role: OrganizationRole;
+  /** The account's own switch, which only the instance's operator turns off; it signs in nowhere while off. */
   isActive: boolean;
+  /** When the member's access to this organization was suspended; null while they have it. */
+  suspendedAt: string | null;
   /** Sent to owners and managers only. */
   twoFactor?: TwoFactorStatus;
 }
@@ -188,6 +195,18 @@ export const useRemoveMember = (organizationId: string) => {
   return useMutation({
     mutationFn: (userId: string) =>
       api.delete<undefined>(`/api/app/organizations/${organizationId}/members/${userId}`),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: organizationKeys.detail(organizationId) }),
+  });
+};
+
+/** Suspends a member's access to the organization, or restores it; the server answers with the membership as it now is. */
+export const useSetMemberSuspension = (organizationId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, suspended }: { userId: string; suspended: boolean }) => {
+      const path = `/api/app/organizations/${organizationId}/members/${userId}/suspension`;
+      return suspended ? api.post<Membership>(path) : api.delete<Membership>(path);
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: organizationKeys.detail(organizationId) }),
   });
 };

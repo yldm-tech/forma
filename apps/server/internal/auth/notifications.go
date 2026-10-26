@@ -188,7 +188,7 @@ type notificationRow struct {
 	SurveyName       *string
 }
 
-// notificationRows lists the user's non-billing organizations, the workspaces they can open in each (every workspace for an owner or manager, else those granted to one of their teams), and those workspaces' surveys, in organization, workspace and survey creation order.
+// notificationRows lists the user's non-billing organizations that have not suspended them, the workspaces they can open in each (every workspace for an owner or manager, else those granted to one of their teams), and those workspaces' surveys, in organization, workspace and survey creation order.
 func (r *Repository) notificationRows(ctx context.Context, userID uuid.UUID) ([]notificationRow, error) {
 	var rows []notificationRow
 	if err := r.db.WithContext(ctx).Raw(`
@@ -201,7 +201,7 @@ func (r *Repository) notificationRows(ctx context.Context, userID uuid.UUID) ([]
 		     OR EXISTS (SELECT 1 FROM workspace_teams wt JOIN team_members tm ON tm.team_id = wt.team_id
 		                WHERE wt.workspace_id = w.id AND tm.user_id = m.user_id))
 		LEFT JOIN surveys s ON s.workspace_id = w.id
-		WHERE m.user_id = ? AND m.role <> 'billing'
+		WHERE m.user_id = ? AND m.role <> 'billing' AND m.suspended_at IS NULL
 		ORDER BY o.created_at, o.id, w.created_at, w.id, s.created_at, s.id`, userID,
 	).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list notification surveys: %w", err)

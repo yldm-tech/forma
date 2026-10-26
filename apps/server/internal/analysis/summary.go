@@ -42,6 +42,8 @@ type Summary struct {
 	DropOff []DropOff       `json:"dropOff"`
 	Summary []any           `json:"summary"`
 	Quotas  []QuotaProgress `json:"quotas"`
+	// Score is nil (null) when the survey has no total score variable.
+	Score *ScoreSummary `json:"score"`
 }
 
 // Meta is the summary's headline numbers.
@@ -85,6 +87,7 @@ type summaryResponse struct {
 	UpdatedAt         time.Time
 	Data              map[string]any
 	TTC               map[string]any
+	Variables         map[string]any
 	Contact           *response.Contact
 	ContactAttributes json.RawMessage
 	Language          *string
@@ -289,7 +292,12 @@ func (s *Service) Summary(ctx context.Context, userID, surveyID uuid.UUID, filte
 	if err != nil {
 		return nil, err
 	}
-	clause, err := response.Where(sv.Survey, filter)
+	return s.summary(ctx, sv, filter)
+}
+
+// summary is the survey's statistics over the responses matching the filter, for a caller that has authorized reading them.
+func (s *Service) summary(ctx context.Context, sv *surveyDoc, filter *response.Criteria) (*Summary, error) {
+	clause, err := response.Where(ctx, s.segments, sv.Survey, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -297,13 +305,13 @@ func (s *Service) Summary(ctx context.Context, userID, surveyID uuid.UUID, filte
 	var displays int
 	var quotas []QuotaProgress
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := readSummaryResponses(ctx, tx, surveyID, clause, agg.add); err != nil {
+		if err := readSummaryResponses(ctx, tx, sv.ID, clause, agg.add); err != nil {
 			return err
 		}
-		if displays, err = displayCount(ctx, tx, surveyID, filter, clause); err != nil {
+		if displays, err = displayCount(ctx, tx, sv.ID, filter, clause); err != nil {
 			return err
 		}
-		quotas, err = quotaProgress(ctx, tx, surveyID)
+		quotas, err = quotaProgress(ctx, tx, sv.ID)
 		return err
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	if err != nil {
@@ -328,13 +336,14 @@ func readSummaryResponses(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, 
 			UpdatedAt         time.Time
 			Data              []byte
 			TTC               []byte
+			Variables         []byte
 			ContactID         *uuid.UUID
 			ContactUserID     *string
 			ContactAttributes []byte
 			Language          *string
 			Finished          bool
 		}
-		err := db.WithContext(ctx).Raw(`SELECT r.id, r.created_at, r.updated_at, r.data, r.ttc, r.contact_id,
+		err := db.WithContext(ctx).Raw(`SELECT r.id, r.created_at, r.updated_at, r.data, r.ttc, r.variables, r.contact_id,
 			(SELECT a.value_text FROM contact_attributes a JOIN contact_attribute_keys k ON k.id = a.attribute_key_id
 				WHERE a.contact_id = r.contact_id AND k.key = 'userId') AS contact_user_id,
 			r.contact_attributes, r.language, r.finished
@@ -349,6 +358,9 @@ func readSummaryResponses(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, 
 			}
 			if err := json.Unmarshal(row.TTC, &r.TTC); err != nil {
 				return fmt.Errorf("decode ttc of response %s: %w", row.ID, err)
+			}
+			if err := json.Unmarshal(row.Variables, &r.Variables); err != nil {
+				return fmt.Errorf("decode variables of response %s: %w", row.ID, err)
 			}
 			if row.ContactID != nil {
 				r.Contact = &response.Contact{ID: *row.ContactID, UserID: row.ContactUserID}
@@ -369,7 +381,7 @@ func readSummaryResponses(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, 
 // hasResponseFilter is forma2's hasFilter: the criteria name something other than the creation time, so only displays whose response matches count.
 func hasResponseFilter(f *response.Criteria) bool {
 	return f != nil && (f.Finished != nil || f.ResponseIDs != nil || f.ContactAttributes != nil || f.Data != nil || f.Variables != nil ||
-		f.Reserved != nil || f.Tags != nil || f.Others != nil || f.Meta != nil || f.Quotas != nil || (f.Search != nil && strings.TrimSpace(*f.Search) != ""))
+		f.Reserved != nil || f.Tags != nil || f.Others != nil || f.Meta != nil || f.Quotas != nil || f.Segments != nil || (f.Search != nil && strings.TrimSpace(*f.Search) != ""))
 }
 
 // displayCount is forma2's getDisplayCountBySurveyId as the summary calls it: the survey's displays in the filter's creation window, and under any other filter only those linked to a matching response.
@@ -436,6 +448,8 @@ type summarizer struct {
 
 	elements []elementAggregate
 	hidden   []*hiddenAggregate
+	// score is nil when the survey has no total score variable.
+	score *scoreAggregate
 }
 
 func newSummarizer(sv *surveyDoc) *summarizer {
@@ -446,6 +460,9 @@ func newSummarizer(sv *surveyDoc) *summarizer {
 	}
 	for _, f := range embeddeddata.OfSource(sv.Fields, embeddeddata.SourceIngested) {
 		a.hidden = append(a.hidden, &hiddenAggregate{key: f.StorageKey, samples: []Sample{}})
+	}
+	if v := sv.ScoreVariable; v != nil {
+		a.score = &scoreAggregate{variableID: v.ID, name: v.Name}
 	}
 	return a
 }
@@ -509,6 +526,9 @@ func (a *summarizer) add(r *summaryResponse) {
 	}
 	for _, h := range a.hidden {
 		h.add(r)
+	}
+	if a.score != nil {
+		a.score.add(r)
 	}
 }
 
@@ -577,7 +597,11 @@ func (a *summarizer) result(displays int, quotas []QuotaProgress) *Summary {
 	for _, h := range a.hidden {
 		entries = append(entries, h.result())
 	}
-	return &Summary{Meta: meta, DropOff: dropOff, Summary: entries, Quotas: quotas}
+	out := &Summary{Meta: meta, DropOff: dropOff, Summary: entries, Quotas: quotas}
+	if a.score != nil {
+		out.Score = a.score.result()
+	}
+	return out
 }
 
 // newElementAggregate is the aggregate for the element's type; nil for a type the summary has no entry for.

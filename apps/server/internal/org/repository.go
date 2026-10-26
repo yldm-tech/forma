@@ -57,6 +57,7 @@ type organizationRow struct {
 	UsageCycleAnchor         sql.NullTime
 	Stripe                   []byte
 	Role                     sql.NullString
+	SuspendedAt              sql.NullTime
 }
 
 // organization maps a row; a missing billing row reads as the defaults, as forma2's mapOrganizationBilling did.
@@ -109,10 +110,11 @@ func (r *Repository) lock(ctx context.Context, id uuid.UUID) (bool, error) {
 	return len(ids) == 1, nil
 }
 
-// Summary is an organization in the caller's list, with the caller's role in it.
+// Summary is an organization in the caller's list, with the caller's role in it and, when the organization suspended the caller's access, since when: the organization switcher marks it.
 type Summary struct {
 	*Organization
-	Role string `json:"role"`
+	Role        string     `json:"role"`
+	SuspendedAt *time.Time `json:"suspendedAt"`
 }
 
 // listed loads the organizations among ids with the user's role in each, oldest first with the id as tie-break (callers treat the first as "the" organization and paginate), 30 per page when a page is given.
@@ -120,7 +122,7 @@ func (r *Repository) listed(ctx context.Context, userID uuid.UUID, ids []uuid.UU
 	if len(ids) == 0 {
 		return []Summary{}, nil
 	}
-	query := `SELECT ` + organizationColumns + `, m.role FROM organizations o
+	query := `SELECT ` + organizationColumns + `, m.role, m.suspended_at FROM organizations o
 		LEFT JOIN organization_billing b ON b.organization_id = o.id
 		LEFT JOIN memberships m ON m.organization_id = o.id AND m.user_id = ?
 		WHERE o.id IN ? ORDER BY o.created_at, o.id`
@@ -134,6 +136,9 @@ func (r *Repository) listed(ctx context.Context, userID uuid.UUID, ids []uuid.UU
 	out := make([]Summary, len(rows))
 	for i, row := range rows {
 		out[i] = Summary{Organization: row.organization(isFormaCloud), Role: row.Role.String}
+		if row.SuspendedAt.Valid {
+			out[i].SuspendedAt = &row.SuspendedAt.Time
+		}
 	}
 	return out, nil
 }
@@ -227,7 +232,7 @@ func (r *Repository) hasAnyUser(ctx context.Context) (bool, error) {
 func (r *Repository) membership(ctx context.Context, userID, organizationID uuid.UUID) (*Membership, error) {
 	var rows []Membership
 	if err := r.db.WithContext(ctx).Raw(
-		`SELECT organization_id, user_id, accepted, role FROM memberships WHERE user_id = ? AND organization_id = ?`, userID, organizationID,
+		`SELECT organization_id, user_id, accepted, role, suspended_at FROM memberships WHERE user_id = ? AND organization_id = ?`, userID, organizationID,
 	).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load membership: %w", err)
 	}
@@ -239,7 +244,7 @@ func (r *Repository) membership(ctx context.Context, userID, organizationID uuid
 
 // members lists the organization's members with their users and two-factor status, in the order they joined, 30 per page when a page is given.
 func (r *Repository) members(ctx context.Context, organizationID uuid.UUID, page int) ([]Member, error) {
-	query := `SELECT m.user_id, u.name, u.email, m.accepted, m.role, u.is_active, ` + authz.SecondFactorStatusSQL("u.id") + ` AS two_factor
+	query := `SELECT m.user_id, u.name, u.email, m.accepted, m.role, u.is_active, m.suspended_at, ` + authz.SecondFactorStatusSQL("u.id") + ` AS two_factor
 		FROM memberships m JOIN users u ON u.id = m.user_id
 		WHERE m.organization_id = ? ORDER BY m.created_at, m.user_id`
 	if page > 0 {
@@ -269,15 +274,26 @@ func (r *Repository) secondFactor(ctx context.Context, userID, organizationID uu
 	return rows[0].Status, rows[0].Enforced && rows[0].Status == authz.SecondFactorDisabled, nil
 }
 
-// activeOwnerCount counts the organization's owners who can still sign in. A deactivated owner can never sign in again, so counting them would let a guard pass while leaving no owner who can act.
-func (r *Repository) activeOwnerCount(ctx context.Context, organizationID uuid.UUID) (int64, error) {
+// otherActiveOwners counts the organization's owners other than the user who can still act in it: their account is active and their access is not suspended. A deactivated or suspended owner cannot administer the organization, so counting them would let a guard pass while leaving no owner who can act; leaving the user out lets the guards act on an owner who is already suspended while another owner remains.
+func (r *Repository) otherActiveOwners(ctx context.Context, organizationID, userID uuid.UUID) (int64, error) {
 	var n int64
 	if err := r.db.WithContext(ctx).Raw(
-		`SELECT count(*) FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.is_active`, organizationID,
+		`SELECT count(*) FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.is_active AND m.suspended_at IS NULL AND m.user_id <> ?`, organizationID, userID,
 	).Scan(&n).Error; err != nil {
 		return 0, fmt.Errorf("count owners: %w", err)
 	}
 	return n, nil
+}
+
+// setSuspension suspends the member's access to the organization, keeping the time of a suspension already in place, or restores it, and reports whether the membership exists.
+func (r *Repository) setSuspension(ctx context.Context, userID, organizationID uuid.UUID, suspend bool) (bool, error) {
+	res := r.db.WithContext(ctx).Exec(
+		`UPDATE memberships SET suspended_at = CASE WHEN ? THEN COALESCE(suspended_at, now()) END, updated_at = now() WHERE user_id = ? AND organization_id = ?`, suspend, userID, organizationID,
+	)
+	if res.Error != nil {
+		return false, fmt.Errorf("update membership suspension: %w", res.Error)
+	}
+	return res.RowsAffected > 0, nil
 }
 
 // hasMembershipOutside reports whether the user belongs to an organization other than the given ones.
