@@ -97,7 +97,7 @@ func (h *AttachmentsHandler) export(c *gin.Context, e *audit.Event) error {
 			return v3api.BadRequest("The `filters` parameter is not a valid response filter.", v3api.InvalidParam{Name: "filters", Reason: err.Error()})
 		}
 	}
-	clause, err := response.Where(sv.Survey, criteria)
+	clause, err := response.Where(ctx, h.svc.segments, sv.Survey, criteria)
 	if err != nil {
 		reason := "Invalid"
 		if ae, ok := apperr.As(err); ok {
