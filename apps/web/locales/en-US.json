@@ -1763,6 +1763,11 @@
         "clear": "Clear search",
         "placeholder": "Search open-text answers"
       },
+      "segment_filter": {
+        "in_segment": "In segment",
+        "membership_hint": "Uses who is in the segment now, not when they responded. Responses without a contact are never in a segment.",
+        "not_in_segment": "Not in segment"
+      },
       "trends": {
         "answers": "Answers",
         "answers_count": "{count, plural, one {{count} answer} other {{count} answers}}",

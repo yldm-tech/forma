@@ -392,6 +392,9 @@ export const ZResponseFilterCriteria = z.object({
 
   /** A keyword one of the response's free-text answers (open text, address, contact info) contains, ignoring case. */
   search: z.string().optional(),
+
+  /** Responses whose contact is, or is not, in a segment of the survey's workspace, keyed by the segment's id. Membership is the segment's now, as its contact list shows it (device conditions left out), not when the response was given; a response without a contact is in no segment, and a segment that no longer exists holds nobody. */
+  segments: z.record(ZId, oneOrMany(z.object({ op: z.enum(["userIsIn", "userIsNotIn"]) }))).optional(),
 });
 
 export const ZResponseContact = z.object({
