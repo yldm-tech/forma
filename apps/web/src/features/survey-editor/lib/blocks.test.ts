@@ -88,6 +88,8 @@ const createMockSurvey = (blocks: TSurveyBlock[] = []): TSurvey => ({
   isCaptureIpEnabled: false,
   isAnonymizeResponsesEnabled: false,
   isProgressSavingEnabled: true,
+  isSingleResponsePerBrowserEnabled: false,
+  isSingleResponsePerEmailEnabled: false,
   slug: null,
 });
 

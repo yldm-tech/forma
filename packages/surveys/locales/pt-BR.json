@@ -116,6 +116,10 @@
       "message": "Esta resposta já foi concluída e não pode mais ser alterada. Podes fechar esta janela com segurança.",
       "title": "Esta resposta já foi concluída."
     },
+    "response_email_already_used": {
+      "message": "Esta pesquisa aceita uma resposta por endereço de e-mail, e já foi enviada uma com o seu. Você pode fechar esta janela.",
+      "title": "Este endereço de e-mail já respondeu."
+    },
     "response_sending_error_permanent": {
       "message": "A sua resposta não pôde ser enviada e não pode ser retentada. Por favor, contacte o responsável pelo questionário se isto continuar a acontecer.",
       "title": "A sua resposta não pôde ser enviada."

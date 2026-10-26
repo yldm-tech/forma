@@ -9,14 +9,17 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
-// Scopes is everything the authorization server grants, forma2's MCP_OAUTH_SCOPES. Every registered client may request all of them.
-var Scopes = []string{"openid", "profile", "email", "offline_access", "surveys:read", "surveys:write", "workflows:read", "workflows:write"}
+// ScopeResponsesRead lets a token read survey responses and the survey summary over MCP (owner decision D-AO11 of 2026-10-25); forma2 had no such scope. It is apart from surveys:read because the answers respondents gave are personal data a client should be granted on its own: the consent page lists it as a line of its own, and a token without it reaches every other read tool.
+const ScopeResponsesRead = "responses:read"
 
-// ResourceScopes are the scopes that reach MCP tools, forma2's MCP_RESOURCE_SCOPES. A token must hold at least one to use /api/mcp at all.
-var ResourceScopes = []string{"surveys:read", "surveys:write", "workflows:read", "workflows:write"}
+// Scopes is everything the authorization server grants, forma2's MCP_OAUTH_SCOPES plus responses:read. Every registered client may request all of them: registration records this list, and migration 00023 added responses:read to the clients registered before it.
+var Scopes = []string{"openid", "profile", "email", "offline_access", "surveys:read", "surveys:write", "workflows:read", "workflows:write", ScopeResponsesRead}
 
-// ProtectedResourceScopes are the scopes the protected resource metadata advertises and the 401 challenge names, forma2's MCP_PROTECTED_RESOURCE_SCOPES: the resource scopes and offline_access, which MCP clients must register to be issued refresh tokens.
-var ProtectedResourceScopes = []string{"surveys:read", "surveys:write", "workflows:read", "workflows:write", "offline_access"}
+// ResourceScopes are the scopes that reach MCP tools, forma2's MCP_RESOURCE_SCOPES plus responses:read. A token must hold at least one to use /api/mcp at all.
+var ResourceScopes = []string{"surveys:read", "surveys:write", "workflows:read", "workflows:write", ScopeResponsesRead}
+
+// ProtectedResourceScopes are the scopes the protected resource metadata advertises and the 401 challenge names, forma2's MCP_PROTECTED_RESOURCE_SCOPES plus responses:read: the resource scopes and offline_access, which MCP clients must register to be issued refresh tokens.
+var ProtectedResourceScopes = []string{"surveys:read", "surveys:write", "workflows:read", "workflows:write", ScopeResponsesRead, "offline_access"}
 
 // URLs are the public URLs of the authorization server and the MCP resource, forma2's oauth-urls.ts. They derive from WEBAPP_URL and BETTER_AUTH_URL (else NEXTAUTH_URL), never from PUBLIC_URL or the request's headers.
 type URLs struct {

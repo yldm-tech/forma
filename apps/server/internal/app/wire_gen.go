@@ -241,7 +241,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	appHandler := oauthserver.NewAppHandler(oauthserverHandler, sessions)
 	tokenVerifier := oauthserver.NewTokenVerifier(cfg, keys)
-	mcpHandler, err := mcp.NewHandler(cfg, db, authorizer, authenticator, tokenVerifier, limiter, surveyHandler, workflowHandler, log)
+	mcpHandler, err := mcp.NewHandler(cfg, db, authorizer, authenticator, tokenVerifier, limiter, surveyHandler, workflowHandler, analysisService, log)
 	if err != nil {
 		cleanup3()
 		cleanup2()

@@ -116,6 +116,10 @@
       "message": "Detta svar har redan slutförts och kan inte längre ändras. Du kan tryggt stänga det här fönstret.",
       "title": "Detta svar har redan slutförts."
     },
+    "response_email_already_used": {
+      "message": "Den här enkäten tar emot ett svar per e-postadress, och ett svar har redan skickats med din. Du kan stänga det här fönstret.",
+      "title": "Den här e-postadressen har redan svarat."
+    },
     "response_sending_error_permanent": {
       "message": "Ditt svar kunde inte skickas in och kan inte försökas igen. Vänligen kontakta undersökningens ägare om detta fortsätter att hända.",
       "title": "Ditt svar kunde inte skickas in."

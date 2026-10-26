@@ -97,6 +97,7 @@ checksums:
     auth/oauth/scopes/offline_access: 5086c8bd3685a21f691d81d50dc0a4e0
     auth/oauth/scopes/openid: 557e91a8b41497cf95b1434aefcb72ea
     auth/oauth/scopes/profile: ea073dc28851ee1a00365047be103d50
+    auth/oauth/scopes/responses_read: 6bc88649a4ad012e16e7b209a06e9bd3
     auth/oauth/scopes/surveys_read: 8280264457fe7c3b759c82422052aed2
     auth/oauth/scopes/surveys_write: fb128cebe62dfd5685d086d706c432c2
     auth/oauth/scopes/workflows_read: b3b216cd6e77b26500068bdf7afad004
@@ -741,6 +742,8 @@ checksums:
     organizations/workspaces/new/survey/title: 3994d5c8a6e7b1865e8c4b8aa7fea5e4
     organizations/workspaces/new/survey/use_template: 330f6d5207f925e316af65dcc719ce21
     organizations/workspaces/new/survey/use_template_description: 7c4c85fc602c1b1916901e85288fd019
+    s/already_responded_in_browser: 5b324273c335a9285b31901174cc56c8
+    s/already_responded_with_email: 8f0cd04dd1bb4483168afd172675c2c6
     s/check_inbox_or_spam: c48ac1f7b76052881bb3b6d10615152d
     s/completed: 98a9cd97b409933edf1991e7d022bea9
     s/completed_heading: dae5ac4a02a886dc9d9fc40927091919
@@ -3654,6 +3657,11 @@ checksums:
     workspace/surveys/edit/number: 2789f8391f63e7200a5521078aab017d
     workspace/surveys/edit/numbered_list: e3447a24726cb0b653b76fdcaba29808
     workspace/surveys/edit/once_set_the_default_language_for_this_survey_can_only_be_changed_by_disabling_the_multi_language_option_and_deleting_all_translations: 0b1cef6c1d6e9b3d1571126b2062853c
+    workspace/surveys/edit/one_response_per_browser: 79aea31db9c6cc2a4b8bf5a71c1694c5
+    workspace/surveys/edit/one_response_per_browser_description: c68e70ad616e697bdada32474cd2caff
+    workspace/surveys/edit/one_response_per_email: d5c37e757f4af5a442911e946d520697
+    workspace/surveys/edit/one_response_per_email_description: ad0e137f66cb08dcd20135360f47e102
+    workspace/surveys/edit/one_response_per_email_requires_verification: 034790f957f4ad6719e68f45894e299c
     workspace/surveys/edit/only_display_the_survey_to_a_subset_of_the_users: 63cfc873a0c5c24fdea6f78e781be0f2
     workspace/surveys/edit/only_people_who_match_your_targeting_can_be_surveyed: 13799e6a6d1f99d4b0fcdbc82d7a6f67
     workspace/surveys/edit/option_idx: 9eb69cb3d19797daf1300699b441ef9d

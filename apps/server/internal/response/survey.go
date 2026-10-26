@@ -37,6 +37,8 @@ type Survey struct {
 	DefaultLanguage string
 	// Fields are the survey's Embedded Data fields, in their stored order.
 	Fields []embeddeddata.Linked
+	// IsSingleResponsePerEmailEnabled takes one response per verified address; it applies only with IsVerifyEmailEnabled, which stamps the address (oneResponseEmail).
+	IsSingleResponsePerEmailEnabled bool
 
 	blocks []surveydoc.Block
 }
@@ -87,9 +89,11 @@ func LoadSurvey(ctx context.Context, db *gorm.DB, id uuid.UUID) (*Survey, error)
 		Blocks                      []byte
 		HiddenFields                []byte
 		DefaultLanguage             *string
+		// IsSingleResponsePerEmailEnabled is Survey's.
+		IsSingleResponsePerEmailEnabled bool
 	}
 	err := db.WithContext(ctx).Raw(`SELECT s.id, s.workspace_id, s.type, s.status, s.pin, s.single_use, s.recaptcha,
-		s.is_verify_email_enabled, s.is_capture_ip_enabled, s.is_anonymize_responses_enabled, s.blocks, s.hidden_fields,
+		s.is_verify_email_enabled, s.is_capture_ip_enabled, s.is_anonymize_responses_enabled, s.blocks, s.hidden_fields, s.is_single_response_per_email_enabled,
 		(SELECT l.code FROM survey_languages sl JOIN languages l ON l.id = sl.language_id WHERE sl.survey_id = s.id AND sl.is_default) AS default_language
 		FROM surveys s WHERE s.id = ?`, id).Scan(&rows).Error
 	if err != nil {
@@ -102,7 +106,8 @@ func LoadSurvey(ctx context.Context, db *gorm.DB, id uuid.UUID) (*Survey, error)
 	sv := &Survey{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, Type: r.Type, Status: r.Status, Pin: r.Pin, Recaptcha: r.Recaptcha,
 		IsVerifyEmailEnabled: r.IsVerifyEmailEnabled, IsCaptureIPEnabled: r.IsCaptureIPEnabled, IsAnonymizeResponsesEnabled: r.IsAnonymizeResponsesEnabled,
-		Blocks: r.Blocks,
+		IsSingleResponsePerEmailEnabled: r.IsSingleResponsePerEmailEnabled,
+		Blocks:                          r.Blocks,
 	}
 	if r.DefaultLanguage != nil {
 		sv.DefaultLanguage = *r.DefaultLanguage

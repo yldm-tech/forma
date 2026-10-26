@@ -116,6 +116,10 @@
       "message": "Diese Antwort wurde bereits abgeschlossen und kann nicht mehr geändert werden. Du kannst dieses Fenster jetzt schließen.",
       "title": "Diese Antwort wurde bereits abgeschlossen."
     },
+    "response_email_already_used": {
+      "message": "Diese Umfrage nimmt eine Antwort pro E-Mail-Adresse an, und mit deiner wurde bereits eine abgegeben. Du kannst dieses Fenster schließen.",
+      "title": "Mit dieser E-Mail-Adresse wurde bereits geantwortet."
+    },
     "response_sending_error_permanent": {
       "message": "Deine Antwort konnte nicht übermittelt werden und kann nicht erneut versucht werden. Bitte kontaktiere den Umfrage-Ersteller, falls das weiterhin passiert.",
       "title": "Deine Antwort konnte nicht übermittelt werden."

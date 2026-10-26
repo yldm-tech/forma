@@ -308,7 +308,7 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mcpHandler, err := mcp.NewHandler(cfg, nil, nil, nil, nil, nil, surveys, workflows, log)
+	mcpHandler, err := mcp.NewHandler(cfg, nil, nil, nil, nil, nil, surveys, workflows, nil, log)
 	if err != nil {
 		t.Fatal(err)
 	}

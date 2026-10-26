@@ -116,6 +116,10 @@
       "message": "Ez a válasz már befejeződött, és többé nem változtatható meg. Nyugodtan bezárhatja ezt az ablakot.",
       "title": "Ez a válasz már befejeződött."
     },
+    "response_email_already_used": {
+      "message": "Ez a kérdőív e-mail-címenként egy választ fogad el, és az Ön címével már beküldtek egyet. Bezárhatja ezt az ablakot.",
+      "title": "Erről az e-mail-címről már érkezett válasz."
+    },
     "response_sending_error_permanent": {
       "message": "A válaszát nem sikerült elküldeni, és nem lehet újra megpróbálni. Vegye fel a kapcsolatot a kérdőív tulajdonosával, ha folyamatosan ez történik.",
       "title": "A válaszát nem sikerült elküldeni."
