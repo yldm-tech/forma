@@ -62,6 +62,9 @@ func TestLoadDefaults(t *testing.T) {
 	if !cfg.AuditLogEnabled || cfg.AuditLogGetUserIP {
 		t.Errorf("audit flags = %v/%v, want enabled without the user IP", cfg.AuditLogEnabled, cfg.AuditLogGetUserIP)
 	}
+	if !cfg.RetentionSweepDryRun {
+		t.Error("RetentionSweepDryRun = false, want the retention sweep to only count by default")
+	}
 	if !cfg.SMTPAuthenticated || !cfg.SMTPRejectUnauthorizedTLS || cfg.SMTPSecureEnabled {
 		t.Errorf("SMTP flags = auth %v, reject-unauthorized %v, secure %v; want true, true, false", cfg.SMTPAuthenticated, cfg.SMTPRejectUnauthorizedTLS, cfg.SMTPSecureEnabled)
 	}

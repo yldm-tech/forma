@@ -65,6 +65,13 @@ const stubServer = () =>
       const answers: Record<string, unknown> = {
         [`GET ${API}/ai`]: { isInstanceConfigured: false },
         [`GET ${API}/workspaces`]: { workspaces: [] },
+        [`GET ${API}/retention`]: {
+          workflowRunRetentionDays: null,
+          displayRetentionDays: null,
+          dryRun: true,
+          nextSweepAt: "2026-01-02T00:00:00Z",
+          lastSweep: null,
+        },
         "GET /api/app/auth/me": { id: "u1", name: "Grace" },
         "GET /api/app/auth/options": { smtpConfigured: true },
       };
@@ -154,6 +161,16 @@ describe("OrganizationGeneralPage", () => {
       expect(securityTipLink()).toBeNull();
     }
   );
+
+  // The retention windows decide what is deleted for good, which only owners decide.
+  test("only owners see the Data retention card", async () => {
+    renderPage({ storageConfigured: true, isFormaCloud: false });
+    expect(await screen.findByText(t("organizations.retention.dry_run_title"))).toBeTruthy();
+    cleanup();
+    renderPage({ storageConfigured: true, isFormaCloud: false, role: "manager" });
+    expect(await screen.findByText("0.2.42")).toBeTruthy();
+    expect(screen.queryByText(t("organizations.retention.card_title"))).toBeNull();
+  });
 
   test.each(["member", "billing"] as const)(
     "a %s, who can change nothing, is told so once at the top instead of in every card",

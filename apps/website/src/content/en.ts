@@ -507,7 +507,11 @@ export const en: SiteContent = {
       },
       account: {
         title: "Account security",
-        body: "Two-factor authentication that owners can require of every member, organizations with teams and per-workspace roles, audit logging, and SSO on self-hosted instances.",
+        body: "Two-factor authentication that owners can require of every member, organizations with teams and per-workspace roles, and SSO on self-hosted instances.",
+      },
+      audit: {
+        title: "Audit events",
+        body: "Sign-ins, changes to members and settings, and changes to surveys and other records are written as audit events to the server's log stream, with who acted, what changed and when. Forma does not store them in its database or show them in the app: on a self-hosted instance, collect and keep them with your log pipeline, and set `AUDIT_LOG_GET_USER_IP=1` behind a trusted proxy to record client IP addresses. The events record what changed, with names, email addresses, secrets and other personal fields masked; for responses and contacts they record only which answers and attributes changed, never their values.",
       },
       policyLink: "Read the full policy on GitHub →",
     },

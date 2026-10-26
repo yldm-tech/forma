@@ -238,6 +238,20 @@ func TestSchemaConstraints(t *testing.T) {
 		}
 	})
 
+	t.Run("an organization's last retention sweep has positive windows and counts and goes with its organization", func(t *testing.T) {
+		sweptOrg := mustScanID(t, db, `INSERT INTO organizations (name) VALUES ('Swept') RETURNING id`)
+		insert := `INSERT INTO organization_retention_sweeps (organization_id, swept_at, dry_run, workflow_run_retention_days, workflow_runs_matched) VALUES ($1, now(), true, $2, $3)`
+		wantViolation(t, db, "23514", insert, sweptOrg, 0, 1)
+		wantViolation(t, db, "23514", insert, sweptOrg, 30, -1)
+		mustExec(t, db, insert, sweptOrg, 30, 1)
+		wantViolation(t, db, "23505", insert, sweptOrg, 30, 1)
+		mustExec(t, db, `DELETE FROM organizations WHERE id = $1`, sweptOrg)
+		var left int
+		if err := db.QueryRow(`SELECT count(*) FROM organization_retention_sweeps`).Scan(&left); err != nil || left != 0 {
+			t.Fatalf("retention sweeps left after their organization was deleted: %d, %v", left, err)
+		}
+	})
+
 	t.Run("an integration error has both a time and a message or neither", func(t *testing.T) {
 		wantViolation(t, db, "23514", `INSERT INTO integrations (workspace_id, type, last_error_at) VALUES ($1, 'slack', now())`, workspaceID)
 	})
