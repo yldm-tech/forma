@@ -43,6 +43,7 @@
   "setup.organization.create.delete_account_description",
   "setup.organization.create.no_membership_found",
   "setup.organization.create.no_membership_found_description",
+  "templates.default_ending_card_button_label",
   "workspace.api_keys.organization_access_cloud_note",
   "workspace.api_keys.secret",
   "workspace.api_keys.unable_to_copy_api_key",

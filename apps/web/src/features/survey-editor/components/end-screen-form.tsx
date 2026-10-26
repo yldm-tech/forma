@@ -132,10 +132,10 @@ export const EndScreenForm = ({
               if (showEndingCardCTA) {
                 updateSurvey({ buttonLabel: undefined, buttonLink: undefined });
               } else {
+                // The button is the author's own: it starts empty rather than as a link to Forma that would reach respondents if the author changed nothing.
                 updateSurvey({
-                  buttonLabel: { default: t("workspace.surveys.edit.create_your_own_survey") },
-                  buttonLink:
-                    "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta",
+                  buttonLabel: createI18nString("", surveyLanguageCodes),
+                  buttonLink: "",
                 });
               }
               setshowEndingCardCTA(!showEndingCardCTA);

@@ -18,7 +18,7 @@ The tags `v1.0.0` to `v3.1.0` belong to a different, earlier project that used t
 
 ## Features
 
-- Build surveys in a no-code editor with a range of question types, or start from a template after previewing it as respondents will see it. Owners and managers can save a survey as a template of their organization, which every workspace of it then offers in its template gallery.
+- Build surveys in a no-code editor with a range of question types, or start from a template after previewing it as respondents will see it: product and experience surveys, and forms such as contact forms, event registration, lead capture, job applications and course evaluations, in English, Japanese and Chinese. Owners and managers can save a survey as a template of their organization, which every workspace of it then offers in its template gallery.
 - Target surveys at specific user groups without shipping application code.
 - Share link surveys, or embed them in your website or app.
 - Invite your organization to collaborate, with teams and per-workspace roles.

@@ -484,7 +484,7 @@ func TestTemplates(t *testing.T) {
 		XMTemplateIDs []string   `json:"xmTemplateIds"`
 	}
 	e.ok(e.do(owner, http.MethodGet, "/api/app/workspaces/"+ws.String()+"/survey-templates", nil), http.StatusOK, &out)
-	if len(out.Templates) != 53 || out.Templates[0].ID != CustomTemplateID || len(out.XMTemplateIDs) != 6 || strings.Contains(string(out.Templates[1].Preset), "{{") {
+	if len(out.Templates) != 68 || out.Templates[0].ID != CustomTemplateID || len(out.XMTemplateIDs) != 6 || strings.Contains(string(out.Templates[1].Preset), "{{") {
 		t.Fatalf("templates %d %+v", len(out.Templates), out.Templates[0])
 	}
 	// Asked in a survey's default language, the catalog renders as the survey created from it will, whatever the dashboard's language: a dashboard locale in itself, anything else (a bare runtime code too) in en-US.

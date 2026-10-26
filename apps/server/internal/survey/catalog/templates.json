@@ -28,11 +28,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -105,11 +101,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -462,11 +454,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -813,11 +801,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -1064,11 +1048,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -1286,11 +1266,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -1746,11 +1722,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -2035,11 +2007,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -2377,11 +2345,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -2913,11 +2877,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -3107,11 +3067,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -3186,11 +3142,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -3648,11 +3600,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -3830,11 +3778,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -3955,11 +3899,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -4062,11 +4002,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -4209,11 +4145,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -4307,11 +4239,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -4436,11 +4364,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -4563,11 +4487,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -4817,11 +4737,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -4981,11 +4897,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -5087,11 +4999,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -5225,11 +5133,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -5355,11 +5259,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -5469,11 +5369,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -5580,11 +5476,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -5691,11 +5583,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -5805,11 +5693,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -5933,11 +5817,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -6267,11 +6147,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -6365,11 +6241,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -6531,11 +6403,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -6637,11 +6505,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -6782,11 +6646,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -6974,11 +6834,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -7164,11 +7020,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -7355,11 +7207,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -7740,11 +7588,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -8337,11 +8181,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -8446,11 +8286,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -8746,11 +8582,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -8991,11 +8823,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -9398,11 +9226,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -9886,11 +9710,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -10157,11 +9977,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -10324,11 +10140,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -10705,11 +10517,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -10872,11 +10680,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -11036,11 +10840,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -11203,11 +11003,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -11370,11 +11166,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -11643,11 +11435,7 @@
           },
           "subheader": {
             "default": "{{templates.default_ending_card_subheader}}"
-          },
-          "buttonLabel": {
-            "default": "{{templates.default_ending_card_button_label}}"
-          },
-          "buttonLink": "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta"
+          }
         }
       ],
       "hiddenFields": {
@@ -11894,6 +11682,3378 @@
           "backButtonLabel": {
             "default": "{{}}"
           }
+        }
+      ]
+    }
+  },
+  {
+    "id": "contact-form",
+    "name": "{{templates.contact_form_name}}",
+    "industries": [
+      "saas",
+      "eCommerce",
+      "other"
+    ],
+    "channels": [
+      "link",
+      "website"
+    ],
+    "role": "marketing",
+    "description": "{{templates.contact_form_description}}",
+    "preset": {
+      "name": "{{templates.contact_form_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001051",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.contact_form_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.contact_form_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001053",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001052",
+              "type": "contactInfo",
+              "headline": {
+                "default": "{{templates.form_contact_headline}}"
+              },
+              "required": true,
+              "firstName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_first_name}}"
+                }
+              },
+              "lastName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_last_name}}"
+                }
+              },
+              "email": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_email}}"
+                }
+              },
+              "phone": {
+                "show": true,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_phone}}"
+                }
+              },
+              "company": {
+                "show": true,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_company}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001059",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001054",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.contact_form_question_2_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001055",
+                  "label": {
+                    "default": "{{templates.contact_form_question_2_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001056",
+                  "label": {
+                    "default": "{{templates.contact_form_question_2_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001057",
+                  "label": {
+                    "default": "{{templates.contact_form_question_2_choice_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001058",
+                  "label": {
+                    "default": "{{templates.contact_form_question_2_choice_4}}"
+                  }
+                },
+                {
+                  "id": "other",
+                  "label": {
+                    "default": "{{templates.form_choice_other}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001061",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001060",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.contact_form_question_3_headline}}"
+              },
+              "required": true,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.contact_form_question_3_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "event-registration",
+    "name": "{{templates.event_registration_name}}",
+    "industries": [
+      "saas",
+      "eCommerce",
+      "other"
+    ],
+    "channels": [
+      "link"
+    ],
+    "role": "marketing",
+    "description": "{{templates.event_registration_description}}",
+    "preset": {
+      "name": "{{templates.event_registration_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001062",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.event_registration_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.event_registration_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001064",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001063",
+              "type": "contactInfo",
+              "headline": {
+                "default": "{{templates.event_registration_question_1_headline}}"
+              },
+              "required": true,
+              "firstName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_first_name}}"
+                }
+              },
+              "lastName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_last_name}}"
+                }
+              },
+              "email": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_email}}"
+                }
+              },
+              "phone": {
+                "show": false,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_phone}}"
+                }
+              },
+              "company": {
+                "show": true,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_company}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001068",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001065",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.event_registration_question_2_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001066",
+                  "label": {
+                    "default": "{{templates.event_registration_question_2_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001067",
+                  "label": {
+                    "default": "{{templates.event_registration_question_2_choice_2}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ],
+          "logic": [
+            {
+              "id": "tplid001080",
+              "conditions": {
+                "id": "tplid001081",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "tplid001082",
+                    "leftOperand": {
+                      "value": "tplid001065",
+                      "type": "element"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "tplid001067"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "tplid001083",
+                  "objective": "jumpToBlock",
+                  "target": "tplid001077"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tplid001075",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001069",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "{{templates.form_dietary_headline}}"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "tplid001070",
+                  "label": {
+                    "default": "{{templates.form_dietary_none}}"
+                  }
+                },
+                {
+                  "id": "tplid001071",
+                  "label": {
+                    "default": "{{templates.form_dietary_vegetarian}}"
+                  }
+                },
+                {
+                  "id": "tplid001072",
+                  "label": {
+                    "default": "{{templates.form_dietary_vegan}}"
+                  }
+                },
+                {
+                  "id": "tplid001073",
+                  "label": {
+                    "default": "{{templates.form_dietary_halal}}"
+                  }
+                },
+                {
+                  "id": "tplid001074",
+                  "label": {
+                    "default": "{{templates.form_dietary_gluten_free}}"
+                  }
+                },
+                {
+                  "id": "other",
+                  "label": {
+                    "default": "{{templates.form_choice_other}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001077",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001076",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.event_registration_question_4_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.event_registration_question_4_placeholder}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001079",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001078",
+              "type": "consent",
+              "headline": {
+                "default": "{{templates.event_registration_question_5_headline}}"
+              },
+              "required": false,
+              "label": {
+                "default": "{{templates.event_registration_question_5_label}}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "event-rsvp",
+    "name": "{{templates.event_rsvp_name}}",
+    "industries": [
+      "saas",
+      "eCommerce",
+      "other"
+    ],
+    "channels": [
+      "link"
+    ],
+    "role": "marketing",
+    "description": "{{templates.event_rsvp_description}}",
+    "preset": {
+      "name": "{{templates.event_rsvp_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001084",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.event_rsvp_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.event_rsvp_ending_subheader}}"
+          }
+        },
+        {
+          "id": "tplid001085",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.event_rsvp_declined_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.event_rsvp_declined_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001087",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001086",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.event_rsvp_question_1_headline}}"
+              },
+              "required": true,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001092",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001088",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.event_rsvp_question_2_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001089",
+                  "label": {
+                    "default": "{{templates.event_rsvp_question_2_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001090",
+                  "label": {
+                    "default": "{{templates.event_rsvp_question_2_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001091",
+                  "label": {
+                    "default": "{{templates.event_rsvp_question_2_choice_3}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ],
+          "logic": [
+            {
+              "id": "tplid001104",
+              "conditions": {
+                "id": "tplid001105",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "tplid001106",
+                    "leftOperand": {
+                      "value": "tplid001088",
+                      "type": "element"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "tplid001090"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "tplid001107",
+                  "objective": "jumpToBlock",
+                  "target": "tplid001085"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tplid001094",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001093",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.event_rsvp_question_3_headline}}"
+              },
+              "required": false,
+              "inputType": "number",
+              "placeholder": {
+                "default": "{{templates.event_rsvp_question_3_placeholder}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001101",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001095",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "{{templates.form_dietary_headline}}"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "tplid001096",
+                  "label": {
+                    "default": "{{templates.form_dietary_none}}"
+                  }
+                },
+                {
+                  "id": "tplid001097",
+                  "label": {
+                    "default": "{{templates.form_dietary_vegetarian}}"
+                  }
+                },
+                {
+                  "id": "tplid001098",
+                  "label": {
+                    "default": "{{templates.form_dietary_vegan}}"
+                  }
+                },
+                {
+                  "id": "tplid001099",
+                  "label": {
+                    "default": "{{templates.form_dietary_halal}}"
+                  }
+                },
+                {
+                  "id": "tplid001100",
+                  "label": {
+                    "default": "{{templates.form_dietary_gluten_free}}"
+                  }
+                },
+                {
+                  "id": "other",
+                  "label": {
+                    "default": "{{templates.form_choice_other}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001103",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001102",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.form_anything_else}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "event-feedback",
+    "name": "{{templates.event_feedback_name}}",
+    "industries": [
+      "saas",
+      "eCommerce",
+      "other"
+    ],
+    "channels": [
+      "link"
+    ],
+    "role": "marketing",
+    "description": "{{templates.event_feedback_description}}",
+    "preset": {
+      "name": "{{templates.event_feedback_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001108",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.default_ending_card_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.default_ending_card_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001110",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001109",
+              "type": "rating",
+              "headline": {
+                "default": "{{templates.event_feedback_question_1_headline}}"
+              },
+              "required": true,
+              "scale": "star",
+              "range": 5,
+              "isColorCodingEnabled": false,
+              "lowerLabel": {
+                "default": "{{templates.form_rating_poor}}"
+              },
+              "upperLabel": {
+                "default": "{{templates.form_rating_excellent}}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001117",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001111",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "{{templates.event_feedback_question_2_headline}}"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "tplid001112",
+                  "label": {
+                    "default": "{{templates.event_feedback_question_2_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001113",
+                  "label": {
+                    "default": "{{templates.event_feedback_question_2_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001114",
+                  "label": {
+                    "default": "{{templates.event_feedback_question_2_choice_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001115",
+                  "label": {
+                    "default": "{{templates.event_feedback_question_2_choice_4}}"
+                  }
+                },
+                {
+                  "id": "tplid001116",
+                  "label": {
+                    "default": "{{templates.event_feedback_question_2_choice_5}}"
+                  }
+                },
+                {
+                  "id": "other",
+                  "label": {
+                    "default": "{{templates.form_choice_other}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001119",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001118",
+              "type": "nps",
+              "headline": {
+                "default": "{{templates.event_feedback_question_3_headline}}"
+              },
+              "required": true,
+              "isColorCodingEnabled": true,
+              "lowerLabel": {
+                "default": "{{templates.nps_survey_question_1_lower_label}}"
+              },
+              "upperLabel": {
+                "default": "{{templates.nps_survey_question_1_upper_label}}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001121",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001120",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.event_feedback_question_4_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "lead-capture",
+    "name": "{{templates.lead_capture_name}}",
+    "industries": [
+      "saas",
+      "other"
+    ],
+    "channels": [
+      "link",
+      "website"
+    ],
+    "role": "sales",
+    "description": "{{templates.lead_capture_description}}",
+    "preset": {
+      "name": "{{templates.lead_capture_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001122",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.lead_capture_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.lead_capture_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001124",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001123",
+              "type": "contactInfo",
+              "headline": {
+                "default": "{{templates.lead_capture_question_1_headline}}"
+              },
+              "required": true,
+              "firstName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_first_name}}"
+                }
+              },
+              "lastName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_last_name}}"
+                }
+              },
+              "email": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_email}}"
+                }
+              },
+              "phone": {
+                "show": true,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_phone}}"
+                }
+              },
+              "company": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_company}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001131",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001125",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.lead_capture_question_2_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001126",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_2_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001127",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_2_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001128",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_2_choice_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001129",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_2_choice_4}}"
+                  }
+                },
+                {
+                  "id": "tplid001130",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_2_choice_5}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001137",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001132",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.lead_capture_question_3_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001133",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_3_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001134",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_3_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001135",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_3_choice_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001136",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_3_choice_4}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001143",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001138",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.lead_capture_question_4_headline}}"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "tplid001139",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_4_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001140",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_4_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001141",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_4_choice_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001142",
+                  "label": {
+                    "default": "{{templates.lead_capture_question_4_choice_4}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001145",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001144",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.form_anything_else}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001147",
+          "name": "{{templates.block_6}}",
+          "elements": [
+            {
+              "id": "tplid001146",
+              "type": "consent",
+              "headline": {
+                "default": "{{templates.lead_capture_question_6_headline}}"
+              },
+              "required": false,
+              "label": {
+                "default": "{{templates.lead_capture_question_6_label}}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "quote-request",
+    "name": "{{templates.quote_request_name}}",
+    "industries": [
+      "eCommerce",
+      "other"
+    ],
+    "channels": [
+      "link",
+      "website"
+    ],
+    "role": "sales",
+    "description": "{{templates.quote_request_description}}",
+    "preset": {
+      "name": "{{templates.quote_request_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001148",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.quote_request_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.quote_request_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001150",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001149",
+              "type": "contactInfo",
+              "headline": {
+                "default": "{{templates.form_contact_headline}}"
+              },
+              "required": true,
+              "firstName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_first_name}}"
+                }
+              },
+              "lastName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_last_name}}"
+                }
+              },
+              "email": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_email}}"
+                }
+              },
+              "phone": {
+                "show": true,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_phone}}"
+                }
+              },
+              "company": {
+                "show": true,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_company}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001152",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001151",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.quote_request_question_2_headline}}"
+              },
+              "required": true,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.quote_request_question_2_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001154",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001153",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.quote_request_question_3_headline}}"
+              },
+              "required": false,
+              "inputType": "number",
+              "placeholder": {
+                "default": "{{templates.quote_request_question_3_placeholder}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001156",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001155",
+              "type": "date",
+              "headline": {
+                "default": "{{templates.quote_request_question_4_headline}}"
+              },
+              "required": false,
+              "format": "M-d-y"
+            }
+          ]
+        },
+        {
+          "id": "tplid001158",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001157",
+              "type": "fileUpload",
+              "headline": {
+                "default": "{{templates.quote_request_question_5_headline}}"
+              },
+              "required": false,
+              "allowMultipleFiles": true,
+              "maxSizeInMB": 10,
+              "allowedFileExtensions": [
+                "pdf",
+                "doc",
+                "docx",
+                "xls",
+                "xlsx",
+                "png",
+                "jpg",
+                "jpeg"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tplid001160",
+          "name": "{{templates.block_6}}",
+          "elements": [
+            {
+              "id": "tplid001159",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.form_anything_else}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "order-form",
+    "name": "{{templates.order_form_name}}",
+    "industries": [
+      "eCommerce",
+      "other"
+    ],
+    "channels": [
+      "link"
+    ],
+    "role": "sales",
+    "description": "{{templates.order_form_description}}",
+    "preset": {
+      "name": "{{templates.order_form_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001161",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.order_form_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.order_form_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001163",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001162",
+              "type": "contactInfo",
+              "headline": {
+                "default": "{{templates.form_your_contact_details}}"
+              },
+              "required": true,
+              "firstName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_first_name}}"
+                }
+              },
+              "lastName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_last_name}}"
+                }
+              },
+              "email": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_email}}"
+                }
+              },
+              "phone": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_phone}}"
+                }
+              },
+              "company": {
+                "show": true,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_company}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001165",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001164",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.order_form_question_2_headline}}"
+              },
+              "required": true,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.order_form_question_2_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001170",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001166",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.order_form_question_3_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001167",
+                  "label": {
+                    "default": "{{templates.order_form_question_3_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001168",
+                  "label": {
+                    "default": "{{templates.order_form_question_3_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001169",
+                  "label": {
+                    "default": "{{templates.order_form_question_3_choice_3}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ],
+          "logic": [
+            {
+              "id": "tplid001177",
+              "conditions": {
+                "id": "tplid001178",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "tplid001179",
+                    "leftOperand": {
+                      "value": "tplid001166",
+                      "type": "element"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "tplid001169"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "tplid001180",
+                  "objective": "jumpToBlock",
+                  "target": "tplid001174"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tplid001172",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001171",
+              "type": "address",
+              "headline": {
+                "default": "{{templates.order_form_question_4_headline}}"
+              },
+              "required": true,
+              "addressLine1": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_address_line_1}}"
+                }
+              },
+              "addressLine2": {
+                "show": true,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_address_line_2}}"
+                }
+              },
+              "city": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_city}}"
+                }
+              },
+              "state": {
+                "show": true,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_state}}"
+                }
+              },
+              "zip": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_zip}}"
+                }
+              },
+              "country": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_country}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001174",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001173",
+              "type": "date",
+              "headline": {
+                "default": "{{templates.order_form_question_5_headline}}"
+              },
+              "required": false,
+              "format": "M-d-y"
+            }
+          ]
+        },
+        {
+          "id": "tplid001176",
+          "name": "{{templates.block_6}}",
+          "elements": [
+            {
+              "id": "tplid001175",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.order_form_question_6_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "job-application",
+    "name": "{{templates.job_application_name}}",
+    "industries": [
+      "saas",
+      "eCommerce",
+      "other"
+    ],
+    "channels": [
+      "link"
+    ],
+    "role": "peopleManager",
+    "description": "{{templates.job_application_description}}",
+    "preset": {
+      "name": "{{templates.job_application_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001181",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.job_application_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.job_application_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001183",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001182",
+              "type": "contactInfo",
+              "headline": {
+                "default": "{{templates.form_your_contact_details}}"
+              },
+              "required": true,
+              "firstName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_first_name}}"
+                }
+              },
+              "lastName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_last_name}}"
+                }
+              },
+              "email": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_email}}"
+                }
+              },
+              "phone": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_phone}}"
+                }
+              },
+              "company": {
+                "show": false,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_company}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001185",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001184",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.job_application_question_2_headline}}"
+              },
+              "required": true,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001187",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001186",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.job_application_question_3_headline}}"
+              },
+              "required": false,
+              "inputType": "url",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001189",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001188",
+              "type": "fileUpload",
+              "headline": {
+                "default": "{{templates.job_application_question_4_headline}}"
+              },
+              "subheader": {
+                "default": "{{templates.job_application_question_4_subheader}}"
+              },
+              "required": true,
+              "allowMultipleFiles": false,
+              "maxSizeInMB": 10,
+              "allowedFileExtensions": [
+                "pdf",
+                "doc",
+                "docx"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tplid001191",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001190",
+              "type": "date",
+              "headline": {
+                "default": "{{templates.job_application_question_5_headline}}"
+              },
+              "required": false,
+              "format": "M-d-y"
+            }
+          ]
+        },
+        {
+          "id": "tplid001197",
+          "name": "{{templates.block_6}}",
+          "elements": [
+            {
+              "id": "tplid001192",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.job_application_question_6_headline}}"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "tplid001193",
+                  "label": {
+                    "default": "{{templates.job_application_question_6_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001194",
+                  "label": {
+                    "default": "{{templates.job_application_question_6_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001195",
+                  "label": {
+                    "default": "{{templates.job_application_question_6_choice_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001196",
+                  "label": {
+                    "default": "{{templates.job_application_question_6_choice_4}}"
+                  }
+                },
+                {
+                  "id": "other",
+                  "label": {
+                    "default": "{{templates.form_choice_other}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001199",
+          "name": "{{templates.block_7}}",
+          "elements": [
+            {
+              "id": "tplid001198",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.job_application_question_7_headline}}"
+              },
+              "required": true,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001201",
+          "name": "{{templates.block_8}}",
+          "elements": [
+            {
+              "id": "tplid001200",
+              "type": "consent",
+              "headline": {
+                "default": "{{templates.job_application_question_8_headline}}"
+              },
+              "required": true,
+              "label": {
+                "default": "{{templates.job_application_question_8_label}}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "course-evaluation",
+    "name": "{{templates.course_evaluation_name}}",
+    "industries": [
+      "other"
+    ],
+    "channels": [
+      "link"
+    ],
+    "role": "customerSuccess",
+    "description": "{{templates.course_evaluation_description}}",
+    "preset": {
+      "name": "{{templates.course_evaluation_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001202",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.default_ending_card_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.default_ending_card_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001204",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001203",
+              "type": "rating",
+              "headline": {
+                "default": "{{templates.course_evaluation_question_1_headline}}"
+              },
+              "required": true,
+              "scale": "star",
+              "range": 5,
+              "isColorCodingEnabled": false,
+              "lowerLabel": {
+                "default": "{{templates.form_rating_poor}}"
+              },
+              "upperLabel": {
+                "default": "{{templates.form_rating_excellent}}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001216",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001205",
+              "type": "matrix",
+              "headline": {
+                "default": "{{templates.form_agree_headline}}"
+              },
+              "required": true,
+              "rows": [
+                {
+                  "id": "tplid001206",
+                  "label": {
+                    "default": "{{templates.course_evaluation_question_2_row_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001207",
+                  "label": {
+                    "default": "{{templates.course_evaluation_question_2_row_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001208",
+                  "label": {
+                    "default": "{{templates.course_evaluation_question_2_row_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001209",
+                  "label": {
+                    "default": "{{templates.course_evaluation_question_2_row_4}}"
+                  }
+                },
+                {
+                  "id": "tplid001210",
+                  "label": {
+                    "default": "{{templates.course_evaluation_question_2_row_5}}"
+                  }
+                }
+              ],
+              "columns": [
+                {
+                  "id": "tplid001211",
+                  "label": {
+                    "default": "{{templates.form_agree_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001212",
+                  "label": {
+                    "default": "{{templates.form_agree_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001213",
+                  "label": {
+                    "default": "{{templates.form_agree_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001214",
+                  "label": {
+                    "default": "{{templates.form_agree_4}}"
+                  }
+                },
+                {
+                  "id": "tplid001215",
+                  "label": {
+                    "default": "{{templates.form_agree_5}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001221",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001217",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.course_evaluation_question_3_headline}}"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "tplid001218",
+                  "label": {
+                    "default": "{{templates.course_evaluation_question_3_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001219",
+                  "label": {
+                    "default": "{{templates.course_evaluation_question_3_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001220",
+                  "label": {
+                    "default": "{{templates.course_evaluation_question_3_choice_3}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001223",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001222",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.course_evaluation_question_4_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001225",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001224",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.course_evaluation_question_5_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "training-feedback",
+    "name": "{{templates.training_feedback_name}}",
+    "industries": [
+      "saas",
+      "eCommerce",
+      "other"
+    ],
+    "channels": [
+      "link",
+      "app"
+    ],
+    "role": "peopleManager",
+    "description": "{{templates.training_feedback_description}}",
+    "preset": {
+      "name": "{{templates.training_feedback_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001226",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.default_ending_card_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.default_ending_card_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001228",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001227",
+              "type": "rating",
+              "headline": {
+                "default": "{{templates.training_feedback_question_1_headline}}"
+              },
+              "required": true,
+              "scale": "number",
+              "range": 5,
+              "isColorCodingEnabled": false,
+              "lowerLabel": {
+                "default": "{{templates.training_feedback_question_1_lower_label}}"
+              },
+              "upperLabel": {
+                "default": "{{templates.training_feedback_question_1_upper_label}}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001239",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001229",
+              "type": "matrix",
+              "headline": {
+                "default": "{{templates.form_agree_headline}}"
+              },
+              "required": true,
+              "rows": [
+                {
+                  "id": "tplid001230",
+                  "label": {
+                    "default": "{{templates.training_feedback_question_2_row_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001231",
+                  "label": {
+                    "default": "{{templates.training_feedback_question_2_row_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001232",
+                  "label": {
+                    "default": "{{templates.training_feedback_question_2_row_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001233",
+                  "label": {
+                    "default": "{{templates.training_feedback_question_2_row_4}}"
+                  }
+                }
+              ],
+              "columns": [
+                {
+                  "id": "tplid001234",
+                  "label": {
+                    "default": "{{templates.form_agree_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001235",
+                  "label": {
+                    "default": "{{templates.form_agree_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001236",
+                  "label": {
+                    "default": "{{templates.form_agree_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001237",
+                  "label": {
+                    "default": "{{templates.form_agree_4}}"
+                  }
+                },
+                {
+                  "id": "tplid001238",
+                  "label": {
+                    "default": "{{templates.form_agree_5}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001241",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001240",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.training_feedback_question_3_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001243",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001242",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.training_feedback_question_4_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "support-request",
+    "name": "{{templates.support_request_name}}",
+    "industries": [
+      "saas",
+      "eCommerce",
+      "other"
+    ],
+    "channels": [
+      "link",
+      "website",
+      "app"
+    ],
+    "role": "customerSuccess",
+    "description": "{{templates.support_request_description}}",
+    "preset": {
+      "name": "{{templates.support_request_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001244",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.support_request_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.support_request_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001246",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001245",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.support_request_question_1_headline}}"
+              },
+              "required": true,
+              "inputType": "email",
+              "placeholder": {
+                "default": "{{templates.form_email}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001252",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001247",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.support_request_question_2_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001248",
+                  "label": {
+                    "default": "{{templates.support_request_question_2_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001249",
+                  "label": {
+                    "default": "{{templates.support_request_question_2_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001250",
+                  "label": {
+                    "default": "{{templates.support_request_question_2_choice_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001251",
+                  "label": {
+                    "default": "{{templates.support_request_question_2_choice_4}}"
+                  }
+                },
+                {
+                  "id": "other",
+                  "label": {
+                    "default": "{{templates.form_choice_other}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001257",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001253",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.support_request_question_3_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001254",
+                  "label": {
+                    "default": "{{templates.support_request_question_3_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001255",
+                  "label": {
+                    "default": "{{templates.support_request_question_3_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001256",
+                  "label": {
+                    "default": "{{templates.support_request_question_3_choice_3}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001259",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001258",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.support_request_question_4_headline}}"
+              },
+              "required": true,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.support_request_question_4_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001261",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001260",
+              "type": "fileUpload",
+              "headline": {
+                "default": "{{templates.form_screenshot_headline}}"
+              },
+              "required": false,
+              "allowMultipleFiles": true,
+              "maxSizeInMB": 10,
+              "allowedFileExtensions": [
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "heic",
+                "pdf",
+                "txt"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "bug-report",
+    "name": "{{templates.bug_report_name}}",
+    "industries": [
+      "saas"
+    ],
+    "channels": [
+      "app",
+      "link",
+      "website"
+    ],
+    "role": "productManager",
+    "description": "{{templates.bug_report_description}}",
+    "preset": {
+      "name": "{{templates.bug_report_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001262",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.bug_report_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.bug_report_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001264",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001263",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.bug_report_question_1_headline}}"
+              },
+              "required": true,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001266",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001265",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.bug_report_question_2_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.bug_report_question_2_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001268",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001267",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.bug_report_question_3_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001273",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001269",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.bug_report_question_4_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001270",
+                  "label": {
+                    "default": "{{templates.bug_report_question_4_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001271",
+                  "label": {
+                    "default": "{{templates.bug_report_question_4_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001272",
+                  "label": {
+                    "default": "{{templates.bug_report_question_4_choice_3}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001275",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001274",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.bug_report_question_5_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.bug_report_question_5_placeholder}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001277",
+          "name": "{{templates.block_6}}",
+          "elements": [
+            {
+              "id": "tplid001276",
+              "type": "fileUpload",
+              "headline": {
+                "default": "{{templates.form_screenshot_headline}}"
+              },
+              "required": false,
+              "allowMultipleFiles": true,
+              "maxSizeInMB": 10,
+              "allowedFileExtensions": [
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "heic",
+                "mp4",
+                "mov",
+                "webm",
+                "txt"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tplid001279",
+          "name": "{{templates.block_7}}",
+          "elements": [
+            {
+              "id": "tplid001278",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.bug_report_question_7_headline}}"
+              },
+              "required": false,
+              "inputType": "email",
+              "placeholder": {
+                "default": "{{templates.form_email}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "guest-feedback",
+    "name": "{{templates.guest_feedback_name}}",
+    "industries": [
+      "other"
+    ],
+    "channels": [
+      "link"
+    ],
+    "role": "customerSuccess",
+    "description": "{{templates.guest_feedback_description}}",
+    "preset": {
+      "name": "{{templates.guest_feedback_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001280",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.guest_feedback_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.guest_feedback_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001282",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001281",
+              "type": "rating",
+              "headline": {
+                "default": "{{templates.guest_feedback_question_1_headline}}"
+              },
+              "required": true,
+              "scale": "star",
+              "range": 5,
+              "isColorCodingEnabled": false,
+              "lowerLabel": {
+                "default": "{{templates.form_rating_poor}}"
+              },
+              "upperLabel": {
+                "default": "{{templates.form_rating_excellent}}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001293",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001283",
+              "type": "matrix",
+              "headline": {
+                "default": "{{templates.guest_feedback_question_2_headline}}"
+              },
+              "required": false,
+              "rows": [
+                {
+                  "id": "tplid001284",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_2_row_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001285",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_2_row_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001286",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_2_row_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001287",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_2_row_4}}"
+                  }
+                },
+                {
+                  "id": "tplid001288",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_2_row_5}}"
+                  }
+                }
+              ],
+              "columns": [
+                {
+                  "id": "tplid001289",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_2_column_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001290",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_2_column_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001291",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_2_column_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001292",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_2_column_4}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001298",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001294",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.guest_feedback_question_3_headline}}"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "tplid001295",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_3_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001296",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_3_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001297",
+                  "label": {
+                    "default": "{{templates.guest_feedback_question_3_choice_3}}"
+                  }
+                },
+                {
+                  "id": "other",
+                  "label": {
+                    "default": "{{templates.form_choice_other}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001300",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001299",
+              "type": "nps",
+              "headline": {
+                "default": "{{templates.guest_feedback_question_4_headline}}"
+              },
+              "required": true,
+              "isColorCodingEnabled": true,
+              "lowerLabel": {
+                "default": "{{templates.nps_survey_question_1_lower_label}}"
+              },
+              "upperLabel": {
+                "default": "{{templates.nps_survey_question_1_upper_label}}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001302",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001301",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.guest_feedback_question_5_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "patient-feedback",
+    "name": "{{templates.patient_feedback_name}}",
+    "industries": [
+      "other"
+    ],
+    "channels": [
+      "link"
+    ],
+    "role": "customerSuccess",
+    "description": "{{templates.patient_feedback_description}}",
+    "preset": {
+      "name": "{{templates.patient_feedback_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001303",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.default_ending_card_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.default_ending_card_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001305",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001304",
+              "type": "date",
+              "headline": {
+                "default": "{{templates.patient_feedback_question_1_headline}}"
+              },
+              "required": false,
+              "format": "M-d-y"
+            }
+          ]
+        },
+        {
+          "id": "tplid001307",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001306",
+              "type": "rating",
+              "headline": {
+                "default": "{{templates.patient_feedback_question_2_headline}}"
+              },
+              "required": true,
+              "scale": "number",
+              "range": 5,
+              "isColorCodingEnabled": false,
+              "lowerLabel": {
+                "default": "{{templates.patient_feedback_question_2_lower_label}}"
+              },
+              "upperLabel": {
+                "default": "{{templates.patient_feedback_question_2_upper_label}}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001313",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001308",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.patient_feedback_question_3_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001309",
+                  "label": {
+                    "default": "{{templates.patient_feedback_question_3_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001310",
+                  "label": {
+                    "default": "{{templates.patient_feedback_question_3_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001311",
+                  "label": {
+                    "default": "{{templates.patient_feedback_question_3_choice_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001312",
+                  "label": {
+                    "default": "{{templates.patient_feedback_question_3_choice_4}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001324",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001314",
+              "type": "matrix",
+              "headline": {
+                "default": "{{templates.form_agree_headline}}"
+              },
+              "required": true,
+              "rows": [
+                {
+                  "id": "tplid001315",
+                  "label": {
+                    "default": "{{templates.patient_feedback_question_4_row_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001316",
+                  "label": {
+                    "default": "{{templates.patient_feedback_question_4_row_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001317",
+                  "label": {
+                    "default": "{{templates.patient_feedback_question_4_row_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001318",
+                  "label": {
+                    "default": "{{templates.patient_feedback_question_4_row_4}}"
+                  }
+                }
+              ],
+              "columns": [
+                {
+                  "id": "tplid001319",
+                  "label": {
+                    "default": "{{templates.form_agree_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001320",
+                  "label": {
+                    "default": "{{templates.form_agree_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001321",
+                  "label": {
+                    "default": "{{templates.form_agree_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001322",
+                  "label": {
+                    "default": "{{templates.form_agree_4}}"
+                  }
+                },
+                {
+                  "id": "tplid001323",
+                  "label": {
+                    "default": "{{templates.form_agree_5}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001326",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001325",
+              "type": "nps",
+              "headline": {
+                "default": "{{templates.patient_feedback_question_5_headline}}"
+              },
+              "required": true,
+              "isColorCodingEnabled": true,
+              "lowerLabel": {
+                "default": "{{templates.nps_survey_question_1_lower_label}}"
+              },
+              "upperLabel": {
+                "default": "{{templates.nps_survey_question_1_upper_label}}"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001328",
+          "name": "{{templates.block_6}}",
+          "elements": [
+            {
+              "id": "tplid001327",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.patient_feedback_question_6_headline}}"
+              },
+              "subheader": {
+                "default": "{{templates.patient_feedback_question_6_subheader}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "appointment-request",
+    "name": "{{templates.appointment_request_name}}",
+    "industries": [
+      "other"
+    ],
+    "channels": [
+      "link",
+      "website"
+    ],
+    "role": "customerSuccess",
+    "description": "{{templates.appointment_request_description}}",
+    "preset": {
+      "name": "{{templates.appointment_request_name}}",
+      "welcomeCard": {
+        "enabled": false,
+        "headline": {
+          "default": "{{templates.default_welcome_card_headline}}"
+        },
+        "subheader": {
+          "default": "{{templates.default_welcome_card_html}}"
+        },
+        "buttonLabel": {
+          "default": "{{templates.default_welcome_card_button_label}}"
+        },
+        "timeToFinish": false,
+        "showResponseCount": false
+      },
+      "endings": [
+        {
+          "id": "tplid001329",
+          "type": "endScreen",
+          "headline": {
+            "default": "{{templates.appointment_request_ending_headline}}"
+          },
+          "subheader": {
+            "default": "{{templates.appointment_request_ending_subheader}}"
+          }
+        }
+      ],
+      "hiddenFields": {
+        "enabled": true,
+        "fieldIds": []
+      },
+      "blocks": [
+        {
+          "id": "tplid001331",
+          "name": "{{templates.block_1}}",
+          "elements": [
+            {
+              "id": "tplid001330",
+              "type": "contactInfo",
+              "headline": {
+                "default": "{{templates.form_your_contact_details}}"
+              },
+              "required": true,
+              "firstName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_first_name}}"
+                }
+              },
+              "lastName": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_last_name}}"
+                }
+              },
+              "email": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_email}}"
+                }
+              },
+              "phone": {
+                "show": true,
+                "required": true,
+                "placeholder": {
+                  "default": "{{templates.form_phone}}"
+                }
+              },
+              "company": {
+                "show": false,
+                "required": false,
+                "placeholder": {
+                  "default": "{{templates.form_company}}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001333",
+          "name": "{{templates.block_2}}",
+          "elements": [
+            {
+              "id": "tplid001332",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.appointment_request_question_2_headline}}"
+              },
+              "required": true,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "tplid001337",
+          "name": "{{templates.block_3}}",
+          "elements": [
+            {
+              "id": "tplid001334",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "{{templates.appointment_request_question_3_headline}}"
+              },
+              "required": true,
+              "choices": [
+                {
+                  "id": "tplid001335",
+                  "label": {
+                    "default": "{{templates.appointment_request_question_3_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001336",
+                  "label": {
+                    "default": "{{templates.appointment_request_question_3_choice_2}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001339",
+          "name": "{{templates.block_4}}",
+          "elements": [
+            {
+              "id": "tplid001338",
+              "type": "date",
+              "headline": {
+                "default": "{{templates.appointment_request_question_4_headline}}"
+              },
+              "subheader": {
+                "default": "{{templates.appointment_request_question_4_subheader}}"
+              },
+              "required": true,
+              "format": "M-d-y",
+              "includeTime": true
+            }
+          ]
+        },
+        {
+          "id": "tplid001345",
+          "name": "{{templates.block_5}}",
+          "elements": [
+            {
+              "id": "tplid001340",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "{{templates.appointment_request_question_5_headline}}"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "tplid001341",
+                  "label": {
+                    "default": "{{templates.appointment_request_question_5_choice_1}}"
+                  }
+                },
+                {
+                  "id": "tplid001342",
+                  "label": {
+                    "default": "{{templates.appointment_request_question_5_choice_2}}"
+                  }
+                },
+                {
+                  "id": "tplid001343",
+                  "label": {
+                    "default": "{{templates.appointment_request_question_5_choice_3}}"
+                  }
+                },
+                {
+                  "id": "tplid001344",
+                  "label": {
+                    "default": "{{templates.appointment_request_question_5_choice_4}}"
+                  }
+                }
+              ],
+              "shuffleOption": "none"
+            }
+          ]
+        },
+        {
+          "id": "tplid001347",
+          "name": "{{templates.block_6}}",
+          "elements": [
+            {
+              "id": "tplid001346",
+              "type": "openText",
+              "headline": {
+                "default": "{{templates.appointment_request_question_6_headline}}"
+              },
+              "required": false,
+              "inputType": "text",
+              "placeholder": {
+                "default": "{{templates.form_answer_placeholder}}"
+              },
+              "longAnswer": true,
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
         }
       ]
     }
