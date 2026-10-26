@@ -12,7 +12,7 @@ import (
 // The contact details an AI summary removes from answers before they leave for the AI provider. The patterns are deliberately broad: a stray order number redacted as a phone costs nothing, a phone number sent to a third party cannot be taken back.
 var (
 	emailPattern = regexp.MustCompile(`[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}`)
-	// phoneCandidate is a run of digits of any script (full-width ones typed with a CJK input method included) with the separators phone numbers are written with, the dashes, dots, spaces and brackets of those input methods included; isPhone decides whether it is one. RE2's \d and \s are ASCII only, hence \p{Nd} and \p{Zs}.
+	// phoneCandidate is a run of digits of any script (full-width ones typed with a CJK input method included) with the separators phone numbers are written with, the dashes, dots, spaces and brackets of those input methods included; redactPhoneCandidate decides whether it is one. RE2's \d and \s are ASCII only, hence \p{Nd} and \p{Zs}.
 	phoneCandidate = regexp.MustCompile(`[+＋]?[(（]?\p{Nd}[\p{Nd}\s\p{Zs}().．\-‐‑‒–—―−ー－﹣ｰ（）]{5,}\p{Nd}`)
 	// isoDate and yearLastDate are the 8-digit dates phoneCandidate also matches (2026-10-26, 26.10.2026, 10-26-2026), after normalizePhone.
 	isoDate      = regexp.MustCompile(`^(\d{4})[.\-](\d{2})[.\-](\d{2})$`)
