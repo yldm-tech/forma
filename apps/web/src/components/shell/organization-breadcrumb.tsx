@@ -25,10 +25,12 @@ export const OrganizationBreadcrumb = ({
   organizationId,
   organizationName,
   isLastCrumb,
+  className,
 }: {
   organizationId: string;
   organizationName: string;
   isLastCrumb: boolean;
+  className?: string;
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -37,7 +39,7 @@ export const OrganizationBreadcrumb = ({
   const organizations = useQuery({ ...organizationsQuery, enabled: open });
 
   return (
-    <BreadcrumbItem isActive={open}>
+    <BreadcrumbItem isActive={open} className={className}>
       <DropdownMenu onOpenChange={setOpen}>
         <DropdownMenuTrigger className="focus-visible:ring-ring flex cursor-pointer items-center gap-1 rounded-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden">
           <Building2Icon className="size-3" strokeWidth={1.5} />

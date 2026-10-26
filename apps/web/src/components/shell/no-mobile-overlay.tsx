@@ -1,10 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { LinkIcon, LogOutIcon, Maximize2Icon, SmartphoneIcon } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { LinkIcon, ListIcon, LogOutIcon, Maximize2Icon, SmartphoneIcon } from "lucide-react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { errorMessage } from "../../lib/errors";
+import { workspaceHomePath } from "../../lib/navigation";
 import { signOut } from "../../lib/queries/auth";
+import { WORKSPACE_ID_KEY, readStorage } from "../../lib/storage";
 import { Button } from "../ui/button";
 
 /** Below Tailwind's sm breakpoint, where the overlay covers the app. */
@@ -25,9 +27,9 @@ export const useIsPhone = (): boolean =>
   );
 
 /**
- * forma2's NoMobileOverlay: below the sm breakpoint the signed-in app is covered by a note that it is made for bigger screens, while the surveys it builds work everywhere. It is a modal dialog over the app, which the layout makes inert meanwhile, and it leaves the user two ways on: copy the page's link to open it on a computer, or log out (of an account they may not have meant to use, which it names).
+ * forma2's NoMobileOverlay: below the sm breakpoint a page that builds or manages is covered by a note that it is made for bigger screens, while the surveys it builds work everywhere. It is a modal dialog over the app, which the layout makes inert meanwhile, and it leaves the user three ways on: back to the survey list, whose results open on a phone (offered when there is a workspace to go to: the one in the address, else the one this browser used last, which the root page reopens); copy the page's link to open it on a computer; or log out (of an account they may not have meant to use, which it names).
  */
-export const NoMobileOverlay = ({ email }: { email: string }) => {
+export const NoMobileOverlay = ({ email, workspaceId }: { email: string; workspaceId?: string }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -35,6 +37,11 @@ export const NoMobileOverlay = ({ email }: { email: string }) => {
   const dialog = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<string>();
   const [loggingOut, setLoggingOut] = useState(false);
+  const surveysHref = workspaceId
+    ? workspaceHomePath(workspaceId)
+    : readStorage(WORKSPACE_ID_KEY) !== null
+      ? "/"
+      : undefined;
 
   // The app behind is inert, so focus starts in the dialog.
   useEffect(() => dialog.current?.focus(), []);
@@ -84,15 +91,30 @@ export const NoMobileOverlay = ({ email }: { email: string }) => {
         </h1>
         <p className="mt-2 text-base text-zinc-600">{t("common.mobile_overlay_app_works_best_on_desktop")}</p>
         <p className="mt-2 text-base text-zinc-600">{t("common.mobile_overlay_surveys_look_good")}</p>
+        {surveysHref && (
+          <p className="mt-2 text-base text-zinc-600">{t("common.mobile_overlay_results_on_phone")}</p>
+        )}
         <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
           <p className="text-sm break-all text-zinc-600">
             {t("common.mobile_overlay_signed_in_as", { email })}
           </p>
+          {surveysHref && (
+            <Button asChild>
+              <Link to={surveysHref}>
+                <ListIcon className="mr-2 size-4" aria-hidden="true" />
+                {t("common.mobile_overlay_go_to_surveys")}
+              </Link>
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => void copyLink()}>
             <LinkIcon className="mr-2 size-4" aria-hidden="true" />
             {t("common.mobile_overlay_copy_link")}
           </Button>
-          <Button onClick={() => void logOut()} loading={loggingOut}>
+          {/* One primary action: the way back to the survey list when there is one, else logging out. */}
+          <Button
+            variant={surveysHref ? "outline" : "default"}
+            onClick={() => void logOut()}
+            loading={loggingOut}>
             <LogOutIcon className="mr-2 size-4" aria-hidden="true" />
             {t("common.logout")}
           </Button>

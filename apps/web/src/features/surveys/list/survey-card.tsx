@@ -10,12 +10,22 @@ import { SurveyStatusIndicator } from "./survey-status-indicator";
 
 /**
  * The columns of the survey table, shared by its header and its rows so they line up: name, status, completed responses, type, created at, updated at, created by and the actions menu. The name takes what the fixed columns leave. Below 87.5rem (1400px) the created at and created by columns are left out, and below lg the type and updated at columns as well, so the name keeps room to be read: with all eight columns a 1280px screen would leave the name about 12rem, with six it keeps about 27rem. The completed column fits its label on two lines (and the info icon) in every locale.
+ *
+ * Below sm, on a phone, the four columns left do not fit beside each other, so a row is a card of two lines instead (SURVEY_TABLE_PHONE_CELL): the name and the actions menu, then the status and the completed count, which says what it counts since the header row is left out there.
  */
 export const SURVEY_TABLE_GRID =
-  "grid grid-cols-[minmax(8rem,1fr)_8rem_6.5rem_2.5rem] items-center gap-x-3 lg:grid-cols-[minmax(10rem,1fr)_8rem_6.5rem_5rem_8rem_2.5rem] min-[87.5rem]:grid-cols-[minmax(14rem,1fr)_8rem_6.5rem_5rem_7.5rem_8rem_7rem_2.5rem]";
+  "grid grid-cols-[minmax(8rem,1fr)_8rem_6.5rem_2.5rem] max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:gap-y-2 items-center gap-x-3 lg:grid-cols-[minmax(10rem,1fr)_8rem_6.5rem_5rem_8rem_2.5rem] min-[87.5rem]:grid-cols-[minmax(14rem,1fr)_8rem_6.5rem_5rem_7.5rem_8rem_7rem_2.5rem]";
 
 /** The horizontal padding of a row, which the header repeats so its labels sit over the cells. */
 export const SURVEY_TABLE_ROW_PADDING = "border py-3 pr-3 pl-4";
+
+/** Where the cells that stay on a phone sit in its two-line row (see SURVEY_TABLE_GRID). */
+export const SURVEY_TABLE_PHONE_CELL = {
+  name: "max-sm:col-start-1 max-sm:row-start-1",
+  actions: "max-sm:col-start-2 max-sm:row-start-1",
+  status: "max-sm:col-start-1 max-sm:row-start-2 max-sm:justify-self-start",
+  completed: "max-sm:col-start-2 max-sm:row-start-2 max-sm:justify-self-end",
+};
 
 /** Which columns a narrower screen leaves out (see SURVEY_TABLE_GRID). */
 export const SURVEY_TABLE_COLUMN = {
@@ -85,7 +95,9 @@ export const SurveyCard = ({
         "relative rounded-xl border-slate-200 bg-white shadow-xs transition-colors ease-in-out",
         rules.isClickable && "focus-within:border-slate-400 hover:border-slate-400"
       )}>
-      <div role="cell" className="min-w-0 text-sm font-medium text-slate-900">
+      <div
+        role="cell"
+        className={cn("min-w-0 text-sm font-medium text-slate-900", SURVEY_TABLE_PHONE_CELL.name)}>
         {rules.isClickable ? (
           <Link
             to={rules.href}
@@ -105,7 +117,7 @@ export const SurveyCard = ({
           </span>
         )}
       </div>
-      <div role="cell" className="flex min-w-0 justify-self-center">
+      <div role="cell" className={cn("flex min-w-0 justify-self-center", SURVEY_TABLE_PHONE_CELL.status)}>
         <span
           className={cn(
             "flex w-fit items-center gap-2 rounded-full py-1 pr-2 pl-1 text-sm whitespace-nowrap text-slate-800",
@@ -130,8 +142,11 @@ export const SurveyCard = ({
           )}
         </span>
       </div>
-      <div role="cell" className={cn(cell, "tabular-nums")}>
-        {survey.completedResponseCount}
+      <div role="cell" className={cn(cell, "tabular-nums", SURVEY_TABLE_PHONE_CELL.completed)}>
+        <span className="max-sm:hidden">{survey.completedResponseCount}</span>
+        <span className="sm:hidden">
+          {t("common.mobile_completed_responses_count", { count: survey.completedResponseCount })}
+        </span>
       </div>
       <div role="cell" className={cn(cell, SURVEY_TABLE_COLUMN.lgOnly)}>
         <SurveyTypeIndicator type={survey.type} />
@@ -157,7 +172,7 @@ export const SurveyCard = ({
           {survey.creator?.name ?? "-"}
         </span>
       </div>
-      <div role="cell" className="relative z-10 flex justify-self-end">
+      <div role="cell" className={cn("relative z-10 flex justify-self-end", SURVEY_TABLE_PHONE_CELL.actions)}>
         <SurveyDropdownMenu
           survey={survey}
           rules={rules}

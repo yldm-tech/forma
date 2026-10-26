@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../../../components/ui/dropdown-menu";
+import { useIsPhone } from "../../../../components/shell/no-mobile-overlay";
 import { Select } from "../../../../components/ui/select";
 import { ApiError } from "../../../../lib/api";
 import { cn } from "../../../../lib/cn";
@@ -74,7 +75,9 @@ const TrendChart = ({
   const { t } = useTranslation();
   const [active, setActive] = useState<number | null>(null);
   const n = data.length;
-  const labelled = labelledBuckets(n, MAX_X_LABELS);
+  // A phone-sized plot has room for half the labels.
+  const isPhone = useIsPhone();
+  const labelled = labelledBuckets(n, isPhone ? MAX_X_LABELS / 2 : MAX_X_LABELS);
   const bars = kind === "count";
   // The line runs through the buckets' centres, broken where a bucket has no value, and muted on a step to or from a partial period; a lone value shows as its dot.
   const segments: { key: number; points: string; muted: boolean }[] = [];
@@ -296,38 +299,41 @@ const TrendTable = ({
 }) => {
   const { t } = useTranslation();
   const bars = kind === "count";
+  // The table is hidden inside a clipped box rather than on itself: a table is never narrower than its content, so on its own it would stick out of a phone-sized page and widen it.
   return (
-    <table className="sr-only">
-      <caption>{caption}</caption>
-      <thead>
-        <tr>
-          <th scope="col">{t("workspace.analysis.trends.period")}</th>
-          <th scope="col">{valueHeader}</th>
-          <th scope="col">
-            {bars ? t("workspace.analysis.trends.completed") : t("workspace.analysis.trends.answers")}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((datum) => (
-          <tr key={datum.bucket.start}>
-            <th scope="row">
-              {datum.bucket.partial
-                ? t("workspace.analysis.trends.partial_row", {
-                    period: bucketRangeLabel(datum.bucket, locale),
-                  })
-                : bucketRangeLabel(datum.bucket, locale)}
+    <div className="sr-only">
+      <table>
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t("workspace.analysis.trends.period")}</th>
+            <th scope="col">{valueHeader}</th>
+            <th scope="col">
+              {bars ? t("workspace.analysis.trends.completed") : t("workspace.analysis.trends.answers")}
             </th>
-            <td>
-              {datum.value === null
-                ? t("workspace.analysis.trends.no_data")
-                : formatTrendValue(datum.value, kind, locale)}
-            </td>
-            <td>{bars ? (datum.completed ?? 0) : (datum.answered ?? datum.bucket.responses)}</td>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {data.map((datum) => (
+            <tr key={datum.bucket.start}>
+              <th scope="row">
+                {datum.bucket.partial
+                  ? t("workspace.analysis.trends.partial_row", {
+                      period: bucketRangeLabel(datum.bucket, locale),
+                    })
+                  : bucketRangeLabel(datum.bucket, locale)}
+              </th>
+              <td>
+                {datum.value === null
+                  ? t("workspace.analysis.trends.no_data")
+                  : formatTrendValue(datum.value, kind, locale)}
+              </td>
+              <td>{bars ? (datum.completed ?? 0) : (datum.answered ?? datum.bucket.responses)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 

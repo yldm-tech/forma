@@ -62,7 +62,7 @@ export const ActivityTimeline = ({
   }, [activity, isReversed]);
 
   return (
-    <div className="col-span-3">
+    <div className="sm:col-span-3">
       <div className="flex items-center justify-between pb-6">
         <h2 className="text-lg font-bold text-slate-700">{t("common.activity")}</h2>
         <button

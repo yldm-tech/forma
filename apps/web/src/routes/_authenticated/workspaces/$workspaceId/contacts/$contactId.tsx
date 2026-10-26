@@ -1,13 +1,16 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useIsPhone } from "../../../../../components/shell/no-mobile-overlay";
 import { RoutePending } from "../../../../../components/shell/route-states";
 import { ContactPage } from "../../../../../features/contacts/contact-page";
+import { PHONE_READY } from "../../../../../lib/phone";
 import { contactActivityQuery, contactQuery } from "../../../../../lib/queries/contacts";
 import { guardPageError } from "../../../../../lib/route-guards";
 import { workspaceQuery } from "../../../../../lib/queries/workspaces";
 
-// A contact outside the workspace in the address, or no contact at all, is not found (forma2's getContactAuth).
+// A contact outside the workspace in the address, or no contact at all, is not found (forma2's getContactAuth). On a phone the contact opens read-only.
 export const Route = createFileRoute("/_authenticated/workspaces/$workspaceId/contacts/$contactId")({
+  staticData: PHONE_READY,
   loader: ({ context: { queryClient }, params }) =>
     Promise.all([
       queryClient.ensureQueryData(contactQuery(params.workspaceId, params.contactId)),
@@ -20,7 +23,12 @@ export const Route = createFileRoute("/_authenticated/workspaces/$workspaceId/co
 function Contact() {
   const { workspaceId, contactId } = Route.useParams();
   const { data: workspace } = useSuspenseQuery(workspaceQuery(workspaceId));
+  const isPhone = useIsPhone();
   return (
-    <ContactPage workspaceId={workspaceId} contactId={contactId} isReadOnly={workspace.access.isReadOnly} />
+    <ContactPage
+      workspaceId={workspaceId}
+      contactId={contactId}
+      isReadOnly={workspace.access.isReadOnly || isPhone}
+    />
   );
 }

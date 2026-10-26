@@ -149,7 +149,8 @@ const SurveyTableHeader = () => {
         className={cn(
           SURVEY_TABLE_GRID,
           SURVEY_TABLE_ROW_PADDING,
-          "border-transparent text-sm text-slate-800"
+          // On a phone the rows are two-line cards whose cells say what they show, so there is no header row.
+          "border-transparent text-sm text-slate-800 max-sm:hidden"
         )}>
         <div role="columnheader" className="min-w-0">
           {t("common.name")}
@@ -239,10 +240,13 @@ export const SurveysList = ({
   channel,
   surveyType,
   defaultLanguage,
+  readOnlyEmptyText,
 }: {
   workspaceId: string;
   organizationId: string;
   isReadOnly: boolean;
+  /** What a read-only list says in a workspace without any survey; by default that a read-only member cannot create one. */
+  readOnlyEmptyText?: string;
   /** The caller is an owner or a manager of the organization, whose rows offer "Save as template". */
   canSaveAsTemplate: boolean;
   channel: WorkspaceChannel;
@@ -350,7 +354,8 @@ export const SurveysList = ({
           <div className="w-full space-y-3">
             <div className="h-16 w-full rounded-lg bg-slate-50" />
             <div className="flex h-16 w-full flex-col items-center justify-center rounded-lg bg-slate-50 text-sm text-slate-500">
-              {t("workspace.surveys.read_only_user_not_allowed_to_create_survey_warning")}
+              {readOnlyEmptyText ??
+                t("workspace.surveys.read_only_user_not_allowed_to_create_survey_warning")}
             </div>
             <div className="h-16 w-full rounded-lg bg-slate-50" />
           </div>
