@@ -62,8 +62,11 @@ const TEXT_FAMILY_OPERATORS = new Set([
 // Operators that take no value at all; the value box is disabled while one is selected.
 const NO_VALUE_OPERATORS = new Set(["Is set", "Is not set"]);
 
-const getFreeTextInputType = (fieldDataType?: TEmbeddedDataType): "number" | "date" | "text" => {
-  if (fieldDataType === "number") return "number";
+const getFreeTextInputType = (
+  fieldDataType?: TEmbeddedDataType,
+  type?: TSurveyElementTypeEnum | Omit<OptionsType, OptionsType.ELEMENTS>
+): "number" | "date" | "text" => {
+  if (fieldDataType === "number" || type === TSurveyElementTypeEnum.Slider) return "number";
   if (fieldDataType === "date") return "date";
   return "text";
 };
@@ -83,6 +86,8 @@ const checkIsFreeTextValueInput = (params: {
 }): boolean => {
   if (params.isNoValueOperator) return false;
   if (params.type === OptionsType.META && params.fieldId === "url") return true;
+  // A slider's scale can have a thousand positions: its value is typed.
+  if (params.type === TSurveyElementTypeEnum.Slider) return true;
   if (TEXT_FAMILY_OPERATORS.has(params.filterValue ?? "")) return true;
   if (params.fieldDataType === undefined) return false;
   if (params.fieldDataType !== "boolean" && params.fieldDataType !== "string") return true;
@@ -152,7 +157,7 @@ export const ElementFilterComboBox = ({
     isNoValueOperator,
   });
 
-  const textInputType = getFreeTextInputType(fieldDataType);
+  const textInputType = getFreeTextInputType(fieldDataType, type);
 
   // Filter options based on search query
   const filteredOptions = useMemo(

@@ -65,7 +65,7 @@ func TestSanitizeBodyEscapesRecalledAnswers(t *testing.T) {
 func TestParseRecall(t *testing.T) {
 	t.Parallel()
 	values := map[string]any{
-		"name": "Jane", "plan": "from data", "when": "2026-01-05", "legacy": "5-1-2026", "notADate": "2026-02-30",
+		"name": "Jane", "plan": "from data", "when": "2026-01-05", "whenAt": "2026-01-05T14:30", "legacy": "5-1-2026", "notADate": "2026-02-30",
 		"multi": []any{"a", "", "b", nil}, "empty": "", "address": map[string]any{"city": "Berlin", "street": ""}, "n": 7.0,
 		"loop": "#recall:loop/fallback:x#",
 	}
@@ -77,6 +77,7 @@ func TestParseRecall(t *testing.T) {
 		"#recall:empty/fallback:fb#":                       "fb",
 		"#recall:when/fallback:x#":                         "Monday, January 5, 2026",
 		"#recall:legacy/fallback:x#":                       "Monday, January 5, 2026",
+		"#recall:whenAt/fallback:x#":                       "Monday, January 5, 2026 at 2:30 PM",
 		"#recall:notADate/fallback:x#":                     "2026-02-30",
 		"#recall:multi/fallback:x#":                        "a, b",
 		"#recall:address/fallback:x#":                      "Berlin",
@@ -94,6 +95,11 @@ func TestParseRecall(t *testing.T) {
 	for locale, want := range map[string]string{"ja-JP": "2026年1月5日月曜日", "zh-Hans-CN": "2026年1月5日星期一", "zh-Hant-TW": "2026年1月5日 星期一", "de-DE": "Monday, January 5, 2026"} {
 		if got := ParseRecall("#recall:when/fallback:x#", values, nil, locale, false); got != want {
 			t.Errorf("%s date = %q, want %q", locale, got, want)
+		}
+	}
+	for locale, want := range map[string]string{"ja-JP": "2026年1月5日月曜日 14:30", "zh-Hans-CN": "2026年1月5日星期一 14:30", "zh-Hant-TW": "2026年1月5日 星期一 下午2:30"} {
+		if got := ParseRecall("#recall:whenAt/fallback:x#", values, nil, locale, false); got != want {
+			t.Errorf("%s date and time = %q, want %q", locale, got, want)
 		}
 	}
 	if got := ParseRecall(`#recall:x/fallback:a"b#`, map[string]any{"x": `<b>&'`}, nil, "en-US", true); got != "&lt;b&gt;&amp;&#39;" {

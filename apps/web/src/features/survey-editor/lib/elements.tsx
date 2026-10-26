@@ -16,6 +16,7 @@ import {
   PhoneIcon,
   PresentationIcon,
   Rows3Icon,
+  SlidersHorizontalIcon,
   SmilePlusIcon,
   StarIcon,
 } from "lucide-react";
@@ -179,6 +180,21 @@ export const getElementTypes = (t: TFunction): TElement[] => [
       range: 5,
       lowerLabel: createI18nString(t("templates.ces_lower_label"), []),
       upperLabel: createI18nString(t("templates.ces_upper_label"), []),
+    },
+  },
+  {
+    id: TSurveyElementTypeEnum.Slider,
+    label: t("templates.slider"),
+    description: t("templates.slider_description"),
+    icon: SlidersHorizontalIcon,
+    category: TElementCategory.Scoring,
+    preset: {
+      headline: createI18nString("", []),
+      min: 0,
+      max: 100,
+      step: 1,
+      lowerLabel: createI18nString("", []),
+      upperLabel: createI18nString("", []),
     },
   },
   {
@@ -364,6 +380,7 @@ export const getCXElementTypes = (t: TFunction) =>
       TSurveyElementTypeEnum.NPS,
       TSurveyElementTypeEnum.CSAT,
       TSurveyElementTypeEnum.CES,
+      TSurveyElementTypeEnum.Slider,
       TSurveyElementTypeEnum.Consent,
       TSurveyElementTypeEnum.CTA,
     ].includes(elementType.id as TSurveyElementTypeEnum);

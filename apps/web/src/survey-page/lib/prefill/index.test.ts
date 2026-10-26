@@ -114,6 +114,15 @@ describe("prefill integration tests", () => {
             ],
             allowMulti: true,
           },
+          {
+            id: "q12",
+            type: TSurveyElementTypeEnum.Slider,
+            headline: { default: "Slider Question" },
+            required: false,
+            min: 0,
+            max: 1,
+            step: 0.25,
+          },
         ],
       },
     ],
@@ -251,6 +260,20 @@ describe("prefill integration tests", () => {
     searchParams.set("q9", "6");
     const result = getPrefillValue(mockSurvey, searchParams, "default");
     expect(result).toBeUndefined();
+  });
+
+  test("takes a slider value on its scale", () => {
+    const searchParams = new URLSearchParams();
+    searchParams.set("q12", "0.75");
+    expect(getPrefillValue(mockSurvey, searchParams, "default")).toEqual({ q12: 0.75 });
+  });
+
+  test("refuses a slider value off its scale or between its steps", () => {
+    for (const value of ["1.5", "0.3", "abc"]) {
+      const searchParams = new URLSearchParams();
+      searchParams.set("q12", value);
+      expect(getPrefillValue(mockSurvey, searchParams, "default")).toBeUndefined();
+    }
   });
 
   test("handles single PictureSelection", () => {

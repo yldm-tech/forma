@@ -8,7 +8,15 @@ import (
 	"time"
 )
 
-// Date answers and bounds are YYYY-MM-DD strings compared as text. Relative bounds are resolved against the server's calendar day, which, like forma2's Node.js server, is UTC.
+// Date answers and bounds are YYYY-MM-DD strings compared as text; an answer with a time of day is compared by its day. Relative bounds are resolved against the server's calendar day, which, like forma2's Node.js server, is UTC.
+
+// answerDay is the runtime's getAnswerDay: the YYYY-MM-DD day of a date answer, whose element may add a time of day (YYYY-MM-DDTHH:mm).
+func answerDay(answer string) string {
+	if len(answer) > 10 && answer[10] == 'T' {
+		return answer[:10]
+	}
+	return answer
+}
 
 // maxRelativeDateAmount is forma2's MAX_RELATIVE_DATE_AMOUNT.
 const maxRelativeDateAmount = 3650

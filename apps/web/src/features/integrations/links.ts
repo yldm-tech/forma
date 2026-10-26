@@ -145,6 +145,7 @@ export const NOTION_TYPE_MAPPING: Record<string, string[]> = {
   [TSurveyElementTypeEnum.NPS]: ["number"],
   [TSurveyElementTypeEnum.Consent]: ["checkbox"],
   [TSurveyElementTypeEnum.Rating]: ["number"],
+  [TSurveyElementTypeEnum.Slider]: ["number"],
   [TSurveyElementTypeEnum.PictureSelection]: ["url"],
   [TSurveyElementTypeEnum.FileUpload]: ["url"],
   [TSurveyElementTypeEnum.Date]: ["date"],

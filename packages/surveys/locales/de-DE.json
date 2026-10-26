@@ -58,6 +58,10 @@
     "welcome_video": "Willkommenskarten-Video",
     "your_feedback_is_stuck": "Ihr Feedback steckt fest :("
   },
+  "date_time": {
+    "select_a_time": "Bitte wählen Sie eine Uhrzeit aus",
+    "time": "Uhrzeit"
+  },
   "errors": {
     "accept_to_continue": "Bitte stimmen Sie zu, um fortzufahren",
     "all_options_must_be_ranked": "Bitte ordnen Sie alle Optionen ein",
@@ -130,5 +134,9 @@
     "invalid_type": "Dieser Dateityp ist nicht erlaubt. Erlaubte Formate: {formats}",
     "max_size_hint": "Bis zu {maxSizeInMB} MB",
     "tap_to_upload": "Tippen, um Dateien hochzuladen"
+  },
+  "slider": {
+    "choose_a_value": "Bitte bewegen Sie den Schieberegler, um einen Wert auszuwählen",
+    "not_answered": "Bewegen Sie den Schieberegler, um zu antworten"
   }
 }

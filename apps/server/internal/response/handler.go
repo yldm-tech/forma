@@ -9,7 +9,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
-// Handler serves the response views' routes under /api/app: listing, counting and reading a survey's responses, deleting one, and tagging. The client API's routes belong to the client API module, which drives Service's collection steps.
+// Handler serves the response views' routes under /api/app: listing, counting and reading a survey's responses, deleting one, and tagging one response or many at once. The client API's routes belong to the client API module, which drives Service's collection steps.
 type Handler struct {
 	svc      *Service
 	sessions httpapi.SessionAuth
@@ -28,6 +28,8 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.DELETE("/responses/:responseId", h.delete)
 	g.POST("/responses/:responseId/tags", h.addTag)
 	g.DELETE("/responses/:responseId/tags/:tagId", h.removeTag)
+	g.POST("/surveys/:surveyId/responses/tags/add", h.bulkAddTag)
+	g.POST("/surveys/:surveyId/responses/tags/remove", h.bulkRemoveTag)
 }
 
 func userID(c *gin.Context) uuid.UUID {
@@ -168,4 +170,31 @@ func (h *Handler) removeTag(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, change)
+}
+
+// bulkTagRequest names the tag and the responses: filterCriteria is required, so "every response" is an explicit {} rather than a forgotten field. An explicit selection is its responseIds.
+type bulkTagRequest struct {
+	TagID          uuid.UUID `json:"tagId" binding:"required"`
+	FilterCriteria *Criteria `json:"filterCriteria" binding:"required"`
+}
+
+func (h *Handler) bulkAddTag(c *gin.Context)    { h.bulkTag(c, false) }
+func (h *Handler) bulkRemoveTag(c *gin.Context) { h.bulkTag(c, true) }
+
+func (h *Handler) bulkTag(c *gin.Context, remove bool) {
+	surveyID, ok := param(c, "surveyId")
+	if !ok {
+		return
+	}
+	var in bulkTagRequest
+	if err := httpapi.BindJSON(c, &in); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	result, err := h.svc.BulkTag(c.Request.Context(), userID(c), surveyID, in.TagID, in.FilterCriteria, remove)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }

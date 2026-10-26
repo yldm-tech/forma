@@ -227,5 +227,26 @@
     "zod": false,
     "jsonSchema": false,
     "document": { "accessControl": { "read": "true", "write": false } }
+  },
+  {
+    "name": "a slider and a date with the time of day",
+    "schema": "survey.blocks",
+    "zod": true,
+    "jsonSchema": true,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "Block 1", "elements": [{ "id": "hours", "type": "slider", "headline": { "default": "How many hours?" }, "required": true, "min": 0, "max": 10, "step": 0.5 }, { "id": "when", "type": "date", "headline": { "default": "When?" }, "required": false, "format": "y-M-d", "includeTime": true }] }]
+  },
+  {
+    "name": "a slider without a step",
+    "schema": "survey.blocks",
+    "zod": false,
+    "jsonSchema": false,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "Block 1", "elements": [{ "id": "hours", "type": "slider", "headline": { "default": "How many hours?" }, "required": true, "min": 0, "max": 10 }] }]
+  },
+  {
+    "name": "a slider whose step does not divide its range (a refinement the export loses, ported to surveydoc)",
+    "schema": "survey.blocks",
+    "zod": false,
+    "jsonSchema": true,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "Block 1", "elements": [{ "id": "hours", "type": "slider", "headline": { "default": "How many hours?" }, "required": true, "min": 0, "max": 10, "step": 3 }] }]
   }
 ]

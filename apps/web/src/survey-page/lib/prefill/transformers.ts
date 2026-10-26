@@ -89,6 +89,8 @@ export const transformElement = (
         return transformRating(answer);
       case TSurveyElementTypeEnum.NPS:
         return transformNPS(answer);
+      case TSurveyElementTypeEnum.Slider:
+        return transformRating(answer);
       case TSurveyElementTypeEnum.PictureSelection:
         return transformPictureSelection(validationResult);
       case TSurveyElementTypeEnum.MultipleChoiceMulti:

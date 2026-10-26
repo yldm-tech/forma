@@ -58,6 +58,10 @@
     "welcome_video": "Velkomstkortvideo",
     "your_feedback_is_stuck": "Din feedback sidder fast :("
   },
+  "date_time": {
+    "select_a_time": "Vælg et tidspunkt",
+    "time": "Tidspunkt"
+  },
   "errors": {
     "accept_to_continue": "Accepter for at fortsætte",
     "all_options_must_be_ranked": "Vurder venligst alle muligheder",
@@ -130,5 +134,9 @@
     "invalid_type": "Denne filtype er ikke tilladt. Tilladte formater: {formats}",
     "max_size_hint": "Op til {maxSizeInMB} MB",
     "tap_to_upload": "Tryk for at uploade filer"
+  },
+  "slider": {
+    "choose_a_value": "Flyt skyderen for at vælge en værdi",
+    "not_answered": "Flyt skyderen for at svare"
   }
 }

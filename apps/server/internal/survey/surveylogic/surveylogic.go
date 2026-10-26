@@ -164,6 +164,22 @@ func dateTime(v string) float64 {
 	return float64(t.UnixMilli())
 }
 
+// sameDateAnswer is whether two date answers name the same instant, a day compared with a date and time by the day alone (surveydoc.ComparableDateAnswers).
+func sameDateAnswer(left, right string) bool {
+	l, r := surveydoc.ComparableDateAnswers(left, right)
+	return dateTime(l) == dateTime(r)
+}
+
+// dateOperands are the texts isBefore and isAfter read: when the left operand is a date element and both sides are text, a day is compared with a date and time by the day alone; otherwise each side as String() has it.
+func dateOperands(leftType string, left, right any, ls, rs string) (string, string) {
+	l, lok := left.(string)
+	r, rok := right.(string)
+	if leftType == surveydoc.ElementDate && lok && rok {
+		return surveydoc.ComparableDateAnswers(l, r)
+	}
+	return ls, rs
+}
+
 func evaluateSingle(s Survey, in Input, c surveydoc.Condition) bool {
 	if c.LeftOperand == nil {
 		// forma2 read leftOperand.type off undefined and its try/catch made the condition false.
@@ -209,7 +225,7 @@ func evaluateSingle(s Survey, in Input, c surveydoc.Condition) bool {
 	switch c.Operator {
 	case "equals":
 		if c.LeftOperand.Type == "element" && leftType == surveydoc.ElementDate && bothStrings {
-			return dateTime(leftString) == dateTime(rightString)
+			return sameDateAnswer(leftString, rightString)
 		}
 		if c.RightOperand != nil && c.RightOperand.Type == "element" {
 			if rightType == surveydoc.ElementMultipleChoiceMulti {
@@ -219,7 +235,7 @@ func evaluateSingle(s Survey, in Input, c surveydoc.Condition) bool {
 				return false
 			}
 			if rightType == surveydoc.ElementDate && bothStrings {
-				return dateTime(leftString) == dateTime(rightString)
+				return sameDateAnswer(leftString, rightString)
 			}
 		}
 		if list, ok := left.([]any); ok && len(list) == 1 && rightIsString && includes(left, right) {
@@ -233,7 +249,7 @@ func evaluateSingle(s Survey, in Input, c surveydoc.Condition) bool {
 			}
 		}
 		if c.LeftOperand.Type == "element" && leftType == surveydoc.ElementDate && bothStrings {
-			return dateTime(leftString) != dateTime(rightString)
+			return !sameDateAnswer(leftString, rightString)
 		}
 		if c.RightOperand != nil && c.RightOperand.Type == "element" {
 			if rightType == surveydoc.ElementMultipleChoiceMulti {
@@ -243,7 +259,7 @@ func evaluateSingle(s Survey, in Input, c surveydoc.Condition) bool {
 				return false
 			}
 			if rightType == surveydoc.ElementDate && bothStrings {
-				return dateTime(leftString) != dateTime(rightString)
+				return !sameDateAnswer(leftString, rightString)
 			}
 		}
 		if list, ok := left.([]any); ok && len(list) == 1 && rightIsString {
@@ -343,9 +359,11 @@ func evaluateSingle(s Survey, in Input, c surveydoc.Condition) bool {
 	case "isNotClicked":
 		return left != "clicked"
 	case "isAfter":
-		return dateTime(ls) > dateTime(rs)
+		l, r := dateOperands(leftType, left, right, ls, rs)
+		return dateTime(l) > dateTime(r)
 	case "isBefore":
-		return dateTime(ls) < dateTime(rs)
+		l, r := dateOperands(leftType, left, right, ls, rs)
+		return dateTime(l) < dateTime(r)
 	case "isBooked":
 		return left == "booked" || truthy(left)
 	case "isPartiallySubmitted":

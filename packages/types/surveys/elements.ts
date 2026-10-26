@@ -3,6 +3,7 @@ import { ZStorageUrl, isSafeLinkUrl } from "../common";
 import { ZI18nString } from "../i18n";
 import { ZAllowedFileExtension } from "../storage";
 import { TSurveyElementTypeEnum } from "./constants";
+import { getSliderScaleIssue } from "./slider";
 import { FORBIDDEN_IDS } from "./validation";
 import { ZValidationRules } from "./validation-rules";
 
@@ -264,6 +265,8 @@ export const ZSurveyDateElement = ZSurveyElementBase.extend({
   type: z.literal(TSurveyElementTypeEnum.Date),
   html: ZI18nString.optional(),
   format: z.enum(["M-d-y", "d-M-y", "y-M-d"]),
+  /** Whether the respondent also picks a time of day. The answer is then `YYYY-MM-DDTHH:mm` instead of `YYYY-MM-DD`: the local time the respondent picked, with no time zone. */
+  includeTime: z.boolean().optional(),
   validation: ZValidation.optional(),
 });
 
@@ -386,6 +389,23 @@ export const ZSurveyCesElement = ZSurveyElementBase.extend({
 
 export type TSurveyCesElement = z.infer<typeof ZSurveyCesElement>;
 
+// Slider Element: a number picked on a continuous scale from min to max in steps of step.
+export const ZSurveySliderElement = ZSurveyElementBase.extend({
+  type: z.literal(TSurveyElementTypeEnum.Slider),
+  min: z.number(),
+  max: z.number(),
+  step: z.number().positive(),
+  lowerLabel: ZI18nString.optional(),
+  upperLabel: ZI18nString.optional(),
+}).superRefine((data, ctx) => {
+  const issue = getSliderScaleIssue(data);
+  if (issue) {
+    ctx.addIssue({ code: "custom", message: issue.message, path: [issue.field] });
+  }
+});
+
+export type TSurveySliderElement = z.infer<typeof ZSurveySliderElement>;
+
 // Union of all element types
 export const ZSurveyElement = z.union([
   ZSurveyOpenTextElement,
@@ -405,6 +425,7 @@ export const ZSurveyElement = z.union([
   ZSurveyContactInfoElement,
   ZSurveyCsatElement,
   ZSurveyCesElement,
+  ZSurveySliderElement,
 ]);
 
 export type TSurveyElement = z.infer<typeof ZSurveyElement>;

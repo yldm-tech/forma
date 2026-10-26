@@ -58,6 +58,10 @@
     "welcome_video": "환영 카드 동영상",
     "your_feedback_is_stuck": "피드백을 전송하지 못했습니다 :("
   },
+  "date_time": {
+    "select_a_time": "시간을 선택해 주세요",
+    "time": "시간"
+  },
   "errors": {
     "accept_to_continue": "계속하려면 동의해 주세요",
     "all_options_must_be_ranked": "모든 항목의 순위를 매겨 주세요",
@@ -130,5 +134,9 @@
     "invalid_type": "허용되지 않는 파일 형식입니다. 허용 형식: {formats}",
     "max_size_hint": "최대 {maxSizeInMB}MB",
     "tap_to_upload": "탭하여 파일 업로드"
+  },
+  "slider": {
+    "choose_a_value": "슬라이더를 움직여 값을 선택해 주세요",
+    "not_answered": "슬라이더를 움직여 답해 주세요"
   }
 }

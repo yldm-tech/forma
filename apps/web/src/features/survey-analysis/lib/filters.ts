@@ -35,6 +35,8 @@ const conditionOptions = {
   rating: ["Is equal to", "Is less than", "Is more than", "Submitted", "Skipped"],
   csat: ["Is equal to", "Is less than", "Is more than", "Submitted", "Skipped"],
   ces: ["Is equal to", "Is less than", "Is more than", "Submitted", "Skipped"],
+  // A slider's value is typed (ElementFilterComboBox), not picked: its scale can have a thousand positions.
+  slider: ["Is equal to", "Is less than", "Is more than", "Submitted", "Skipped"],
   cta: ["is"],
   tags: ["is"],
   languages: ["Equals", "Not equals"],
@@ -273,6 +275,7 @@ const SCORE_ELEMENT_TYPES = new Set<string>([
   TSurveyElementTypeEnum.Rating,
   TSurveyElementTypeEnum.CSAT,
   TSurveyElementTypeEnum.CES,
+  TSurveyElementTypeEnum.Slider,
 ]);
 
 /** Whether a filter row with this type and operator is complete without a value: "Is set" / "Is not set" on any field, "Submitted" / "Skipped" on a score element. The value box is disabled for these, and the popover's empty-value cleanup must keep them. */
@@ -718,6 +721,28 @@ const processNPSRatingFilter = (
   }
 };
 
+// A slider's value is any number of its scale, decimals included, so it is read whole rather than as an integer.
+const processSliderFilter = (filterType: FilterValue["filterType"], elementId: string, data: TDataGroup) => {
+  const value = Number(filterType.filterComboBoxValue);
+  const hasValue =
+    typeof filterType.filterComboBoxValue === "string" && filterType.filterComboBoxValue.trim() !== "";
+  if (filterType.filterValue === "Submitted") {
+    addCondition(data, elementId, { op: "submitted" });
+  } else if (filterType.filterValue === "Skipped") {
+    addCondition(data, elementId, { op: "skipped" });
+  } else if (hasValue && Number.isFinite(value)) {
+    const op =
+      filterType.filterValue === "Is equal to"
+        ? "equals"
+        : filterType.filterValue === "Is less than"
+          ? "lessThan"
+          : filterType.filterValue === "Is more than"
+            ? "greaterThan"
+            : undefined;
+    if (op) addCondition(data, elementId, { op, value });
+  }
+};
+
 // Helper function to process CTA filters
 const processCTAFilter = (filterType: FilterValue["filterType"], elementId: string, data: TDataGroup) => {
   if (filterType.filterComboBoxValue === "Clicked") {
@@ -813,6 +838,9 @@ const processElementFilters = (
       case TSurveyElementTypeEnum.CSAT:
       case TSurveyElementTypeEnum.CES:
         processNPSRatingFilter(filterType, elementId, data);
+        break;
+      case TSurveyElementTypeEnum.Slider:
+        processSliderFilter(filterType, elementId, data);
         break;
       case TSurveyElementTypeEnum.CTA:
         processCTAFilter(filterType, elementId, data);

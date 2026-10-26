@@ -8,6 +8,7 @@ import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { type TResponseData, type TResponseVariables } from "@forma/types/responses";
 import { type TActionCalculate, type TSurveyBlockLogicAction } from "@forma/types/surveys/blocks";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
+import { getComparableDateAnswers } from "@forma/types/surveys/date-answer";
 import type { TSurveyElement } from "@forma/types/surveys/elements";
 import { type TConditionGroup, type TSingleCondition } from "@forma/types/surveys/logic";
 import { evaluateConditionGroup } from "@forma/types/surveys/logic-evaluation";
@@ -15,6 +16,30 @@ import { getLocalizedValue } from "@/lib/i18n";
 import { getElementsFromSurveyBlocks } from "./utils";
 
 type TCondition = TSingleCondition | TConditionGroup;
+
+/** Whether two date answers name the same instant, a day being compared with a date and time by the day alone (getComparableDateAnswers). */
+const isSameDateAnswer = (left: string, right: string): boolean => {
+  const [l, r] = getComparableDateAnswers(left, right);
+  return new Date(l).getTime() === new Date(r).getTime();
+};
+
+/** The instants isBefore and isAfter compare. When the left operand is a date element and both sides are text, a day is compared with a date and time by the day alone; otherwise each side is read as it is. */
+const getDateOperandInstants = (
+  leftField: unknown,
+  leftValue: unknown,
+  rightValue: unknown
+): [number, number] => {
+  let left = String(leftValue);
+  let right = String(rightValue);
+  if (
+    (leftField as TSurveyElement | undefined)?.type === TSurveyElementTypeEnum.Date &&
+    typeof leftValue === "string" &&
+    typeof rightValue === "string"
+  ) {
+    [left, right] = getComparableDateAnswers(leftValue, rightValue);
+  }
+  return [new Date(left).getTime(), new Date(right).getTime()];
+};
 
 export const isConditionGroup = (condition: TCondition): condition is TConditionGroup => {
   return (condition as TConditionGroup).connector !== undefined;
@@ -275,7 +300,7 @@ const evaluateSingleCondition = (
             typeof rightValue === "string"
           ) {
             // when left value is of date question and right value is string
-            return new Date(leftValue).getTime() === new Date(rightValue).getTime();
+            return isSameDateAnswer(leftValue, rightValue);
           }
         }
 
@@ -290,7 +315,7 @@ const evaluateSingleCondition = (
             typeof leftValue === "string" &&
             typeof rightValue === "string"
           ) {
-            return new Date(leftValue).getTime() === new Date(rightValue).getTime();
+            return isSameDateAnswer(leftValue, rightValue);
           }
         }
 
@@ -320,7 +345,7 @@ const evaluateSingleCondition = (
           typeof leftValue === "string" &&
           typeof rightValue === "string"
         ) {
-          return new Date(leftValue).getTime() !== new Date(rightValue).getTime();
+          return !isSameDateAnswer(leftValue, rightValue);
         }
 
         // when left value is of openText, hiddenField, variable and right value is of multichoice
@@ -334,7 +359,7 @@ const evaluateSingleCondition = (
             typeof leftValue === "string" &&
             typeof rightValue === "string"
           ) {
-            return new Date(leftValue).getTime() !== new Date(rightValue).getTime();
+            return !isSameDateAnswer(leftValue, rightValue);
           }
         }
 
@@ -425,10 +450,14 @@ const evaluateSingleCondition = (
         return leftValue === "clicked";
       case "isNotClicked":
         return leftValue !== "clicked";
-      case "isAfter":
-        return new Date(String(leftValue)) > new Date(String(rightValue));
-      case "isBefore":
-        return new Date(String(leftValue)) < new Date(String(rightValue));
+      case "isAfter": {
+        const [left, right] = getDateOperandInstants(leftField, leftValue, rightValue);
+        return left > right;
+      }
+      case "isBefore": {
+        const [left, right] = getDateOperandInstants(leftField, leftValue, rightValue);
+        return left < right;
+      }
       case "isBooked":
         return leftValue === "booked" || !!(leftValue && leftValue !== "");
       case "isPartiallySubmitted":

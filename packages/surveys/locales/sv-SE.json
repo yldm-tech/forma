@@ -58,6 +58,10 @@
     "welcome_video": "Välkomstkortvideo",
     "your_feedback_is_stuck": "Din feedback fastnade :("
   },
+  "date_time": {
+    "select_a_time": "Vänligen välj en tid",
+    "time": "Tid"
+  },
   "errors": {
     "accept_to_continue": "Vänligen godkänn för att fortsätta",
     "all_options_must_be_ranked": "Vänligen rangordna alla alternativ",
@@ -130,5 +134,9 @@
     "invalid_type": "Den här filtypen är inte tillåten. Tillåtna format: {formats}",
     "max_size_hint": "Upp till {maxSizeInMB} MB",
     "tap_to_upload": "Tryck för att ladda upp filer"
+  },
+  "slider": {
+    "choose_a_value": "Vänligen dra i reglaget för att välja ett värde",
+    "not_answered": "Dra i reglaget för att svara"
   }
 }

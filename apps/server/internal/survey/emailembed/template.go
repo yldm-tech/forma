@@ -828,6 +828,10 @@ func (r *renderer) render(first *element, surveyURL, locale string) *node {
 		return r.card(r.container("", nil, append(r.elementHeader(headline, subheader, ""),
 			r.section("mt-4 text-center", nil, r.button(preview, r.primaryButtonStyle(), r.t("emails.schedule_your_meeting"))))...))
 
+	case surveydoc.ElementSlider:
+		// A slider has no clickable answers an email can carry; the button opens the survey on it.
+		return r.questionCard(headline, subheader, r.section("mt-4 text-right", nil, r.button(preview, r.primaryButtonStyle(), r.t("common.continue"))))
+
 	case surveydoc.ElementDate:
 		return r.questionCard(headline, subheader, r.section("w-full", nil,
 			r.inputLink(inputLink{href: preview, iconName: "calendar-days", iconShapes: calendarDaysShapes, label: r.t("emails.select_a_date")})))
