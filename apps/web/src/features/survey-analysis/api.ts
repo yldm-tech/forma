@@ -13,6 +13,7 @@ import type { TTag } from "@forma/types/tags";
 import { api, downloadFile } from "../../lib/api";
 import type { Tag } from "../../lib/queries/tags";
 import { type Stamped, stamped } from "../../lib/wire";
+import type { AIUnavailableReason } from "../ai/availability";
 import { type SurveyWire, parseSurvey } from "../survey-editor/api";
 import type { TFilterSegment } from "./lib/filter-types";
 
@@ -49,6 +50,48 @@ export interface SurveyResetResult {
 /** POST /api/app/surveys/{id}/ai/example-responses. */
 export interface ExampleResponsesResult {
   createdCount: number;
+}
+
+/** What an AI text summary reads: an open-text question's answers, or the values typed into a choice question's Other option. */
+export type TextSummaryTarget = "answers" | "other";
+
+export type TextSentimentLabel = "positive" | "neutral" | "negative" | "mixed";
+
+/** One theme of an AI text summary: how many of the sampled answers it covers, their share in percent, and answers that represent it with the response each came from. */
+export interface TextSummaryTheme {
+  title: string;
+  description: string;
+  count: number;
+  percentage: number;
+  quotes: { responseId: string; text: string }[];
+}
+
+/** The AI summary of a question's free-text answers under one filter (apps/server/internal/analysis/text_summary.go). Themes are counted over sampledCount of answerCount answers; readLimit is how many of the newest responses were read when more matched, 0 when all were. */
+export interface TextSummary {
+  elementId: string;
+  target: TextSummaryTarget;
+  language: string;
+  generatedAt: string;
+  answerCount: number;
+  sampledCount: number;
+  readLimit: number;
+  sentiment: { overall: TextSentimentLabel; positive: number; neutral: number; negative: number };
+  themes: TextSummaryTheme[];
+}
+
+/** Whether the reader may generate a summary, why not when they may not (AI unavailable to the organization, or read_only for a member without edit access, who still gets the current summary), and the current summary, null when there is none. */
+export interface TextSummaryState {
+  available: boolean;
+  reason?: AIUnavailableReason;
+  summary: TextSummary | null;
+}
+
+export interface TextSummaryRequest {
+  elementId: string;
+  target: TextSummaryTarget;
+  /** The language the themes are written in, the reader's UI language. */
+  language: string;
+  filterCriteria: TResponseFilterCriteria;
 }
 
 /** A tag added to or removed from a response. */
@@ -209,6 +252,8 @@ export const analysisKeys = {
   responseCount: (surveyId: string, criteria: TResponseFilterCriteria) =>
     [...analysisKeys.all(surveyId), "response-count", criteria] as const,
   liveResponseCount: (surveyId: string) => [...analysisKeys.all(surveyId), "live-response-count"] as const,
+  textSummary: (surveyId: string, request: TextSummaryRequest) =>
+    [...analysisKeys.all(surveyId), "text-summary", request] as const,
 };
 
 /** The survey the analysis views show. A cache of its own rather than the editor's, which is the editor's save baseline and must only move when the editor saves. */
@@ -303,6 +348,14 @@ export const surveyResponseCountQuery = (surveyId: string, criteria: TResponseFi
         .then((res) => res.count),
   });
 
+/** The cached AI summary of a question's free-text answers, with whether AI is available; reading it never calls the AI provider. */
+export const textSummaryQuery = (surveyId: string, request: TextSummaryRequest) =>
+  queryOptions({
+    queryKey: analysisKeys.textSummary(surveyId, request),
+    queryFn: ({ signal }) =>
+      api.post<TextSummaryState>(`${surveyPath(surveyId)}/text-summaries/lookup`, request, { signal }),
+  });
+
 /** How often the analysis of a survey in progress asks whether responses arrived, while its tab is visible. */
 export const NEW_RESPONSES_POLL_MS = 20_000;
 
@@ -354,6 +407,9 @@ export const analysisApi = {
   /** forma2's generateExampleResponsesAction: AI-written example responses for a survey without any. */
   generateExampleResponses: (surveyId: string) =>
     api.post<ExampleResponsesResult>(`${surveyPath(surveyId)}/ai/example-responses`),
+  /** Summarizes the answers with the organization's AI; the cached summary when it is current, unless refresh asks for a new one. */
+  generateTextSummary: (surveyId: string, request: TextSummaryRequest, refresh: boolean) =>
+    api.post<TextSummaryState>(`${surveyPath(surveyId)}/text-summaries`, { ...request, refresh }),
   /** The export file itself, named by the server's Content-Disposition. */
   exportResponses: (surveyId: string, format: ExportFormat, criteria: TResponseFilterCriteria) =>
     downloadFile(`${surveyPath(surveyId)}/responses/export`, { format, filterCriteria: criteria }),

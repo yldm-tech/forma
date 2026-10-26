@@ -35,6 +35,8 @@ func TestRules(t *testing.T) {
 		{ActionUnsplash, "action:unsplash", 60 * time.Second, 30},
 		{ActionInviteMember, "action:invite-member", 86400 * time.Second, 50},
 		{ActionGenerateExampleResponses, "action:generate-example-responses", 60 * time.Second, 1},
+		{ActionAITextSummary, "action:ai-text-summary", 3600 * time.Second, 60},
+		{ActionAITextSummaryMember, "action:ai-text-summary:user", 3600 * time.Second, 20},
 		{ActionIntegrationMutation, "action:integration-mutation", 60 * time.Second, 30},
 		{ActionStateMutation, "action:state-mutation", 60 * time.Second, 120},
 		{PublicResultShare, "public:result-share", 60 * time.Second, 60},

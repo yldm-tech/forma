@@ -42,6 +42,16 @@ func (s *Service) OrganizationAvailability(ctx context.Context, userID, organiza
 	return &OrganizationAvailability{OrganizationConfig: *cfg, Availability: availability(cfg)}, nil
 }
 
+// Availability is what the SPA's AI surfaces are told about an organization, for a caller that has already authorized the surface it serves (the analysis page's text summaries authorize reading the survey's responses).
+func (s *Service) Availability(ctx context.Context, organizationID uuid.UUID) (*Availability, error) {
+	cfg, err := s.OrganizationConfig(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	a := availability(cfg)
+	return &a, nil
+}
+
 // WorkspaceAvailability is forma2's getSurveyAIAvailability for a workspace's survey list: a caller who can read the workspace but not write to it is told read_only before anything else.
 func (s *Service) WorkspaceAvailability(ctx context.Context, userID, workspaceID uuid.UUID) (*Availability, error) {
 	organizationID, err := s.repo.workspaceOrganization(ctx, workspaceID)

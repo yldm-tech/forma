@@ -361,7 +361,7 @@ func TestResultShareReadsAreLimitedPerClientAddress(t *testing.T) {
 	limiter := ratelimit.New(cfg, valkeytest.Client(t), log).WithClock(func() time.Time { return frozen })
 	engine := httpserver.NewEngine(cfg, log)
 	engine.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
-	NewHandler(e.svc, headerSessions{}, limiter).Register(engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo()))
+	NewHandler(e.svc, nil, headerSessions{}, limiter).Register(engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo()))
 	read := func(ip, path string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"token":"`+strings.Repeat("a", 43)+`"}`))
 		req.RemoteAddr = ip + ":40000"
