@@ -112,6 +112,7 @@
         "offline_access": "透過重新整理權杖維持存取",
         "openid": "透過 OpenID Connect 識別您的身分",
         "profile": "檢視您的個人資料",
+        "responses_read": "讀取問卷回應及摘要",
         "surveys_read": "讀取問卷",
         "surveys_write": "建立、更新及刪除問卷",
         "workflows_read": "讀取工作流程",

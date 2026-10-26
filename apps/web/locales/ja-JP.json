@@ -112,6 +112,7 @@
         "offline_access": "リフレッシュトークンによるアクセスの維持",
         "openid": "OpenID Connect による本人確認",
         "profile": "プロフィールの表示",
+        "responses_read": "フォームの回答と概要の読み取り",
         "surveys_read": "フォームの読み取り",
         "surveys_write": "フォームの作成・更新・削除",
         "workflows_read": "ワークフローの読み取り",

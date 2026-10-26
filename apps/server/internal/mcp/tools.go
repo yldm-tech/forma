@@ -15,10 +15,11 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 )
 
-// toolsJSON is the tools/list forma2 answered, in its order, recorded from its zod input schemas through the MCP SDK: names, titles, descriptions, annotations and input schemas. One change: the ids a tool takes (workspaceId, surveyId, workflowId, runId, responseId, and a workflow trigger's surveyId) accept UUIDs, the ids this server issues, as well as cuid2 ids, which name no row.
+// toolsJSON is the tools/list forma2 answered, in its order, recorded from its zod input schemas through the MCP SDK: names, titles, descriptions, annotations and input schemas. Two changes: the ids a tool takes (workspaceId, surveyId, workflowId, runId, responseId, and a workflow trigger's surveyId) accept UUIDs, the ids this server issues, as well as cuid2 ids, which name no row; and list_responses and get_survey_summary, which forma2 did not have, follow at the end, written in the same form.
 //
 //go:embed tools.json
 var toolsJSON []byte
@@ -157,9 +158,10 @@ const (
 	scopeSurveysWrite   = "surveys:write"
 	scopeWorkflowsRead  = "workflows:read"
 	scopeWorkflowsWrite = "workflows:write"
+	scopeResponsesRead  = oauthserver.ScopeResponsesRead
 )
 
-// toolSpecs are forma2's tools by name.
+// toolSpecs are the tools by name: forma2's, and the two response tools.
 var toolSpecs = map[string]toolSpec{
 	"list_surveys": {scopes: []string{scopeSurveysRead}, run: func(ctx context.Context, h *Handler, p *principal, args map[string]any) *sdk.CallToolResult {
 		return h.run(ctx, p, operation{method: http.MethodGet, path: "/api/v3/surveys", query: listSurveysQuery(args)})
@@ -231,9 +233,16 @@ var toolSpecs = map[string]toolSpec{
 	"disable_workflow":   workflowLifecycle("disable"),
 	"archive_workflow":   workflowLifecycle("archive"),
 	"unarchive_workflow": workflowLifecycle("unarchive"),
-	// The workspaceId every other tool needs is found here, so either read scope admits it.
-	"list_workspaces": {scopes: []string{scopeSurveysRead, scopeWorkflowsRead}, anyOf: true, run: func(ctx context.Context, h *Handler, p *principal, _ map[string]any) *sdk.CallToolResult {
+	// The workspaceId every other tool needs is found here, so any read scope admits it.
+	"list_workspaces": {scopes: []string{scopeSurveysRead, scopeWorkflowsRead, scopeResponsesRead}, anyOf: true, run: func(ctx context.Context, h *Handler, p *principal, _ map[string]any) *sdk.CallToolResult {
 		return h.listWorkspaces(ctx, p)
+	}},
+	// What respondents answered is read with responses:read alone: surveys:read does not reach it (responses.go).
+	"list_responses": {scopes: []string{scopeResponsesRead}, run: func(ctx context.Context, h *Handler, p *principal, args map[string]any) *sdk.CallToolResult {
+		return h.listResponses(ctx, p, args)
+	}},
+	"get_survey_summary": {scopes: []string{scopeResponsesRead}, run: func(ctx context.Context, h *Handler, p *principal, args map[string]any) *sdk.CallToolResult {
+		return h.getSurveySummary(ctx, p, args)
 	}},
 }
 

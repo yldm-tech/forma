@@ -28,7 +28,8 @@
         "surveys:read",
         "surveys:write",
         "workflows:read",
-        "workflows:write"
+        "workflows:write",
+        "responses:read"
       ],
       "issuer": "<webapp-url>/api/auth",
       "authorization_endpoint": "<webapp-url>/api/auth/oauth2/authorize",

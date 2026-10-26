@@ -286,7 +286,7 @@ export const en: SiteContent = {
       },
       mcp: {
         title: "MCP server",
-        body: "Point an MCP client at `https://forma.yldm.ai/api/mcp`. You sign in with your own Forma account over OAuth, approve the scopes, and the agent can list, create and edit surveys and workflows.",
+        body: "Point an MCP client at `https://forma.yldm.ai/api/mcp`. You sign in with your own Forma account over OAuth, approve the scopes, and the agent can list, create and edit surveys and workflows and, with the responses scope, read responses and survey summaries.",
         link: "Connect a client →",
       },
       webhooks: {
@@ -340,6 +340,10 @@ export const en: SiteContent = {
             {
               term: "API key",
               body: "A client without OAuth sends an API key in a header, as with the REST API. A read key can list and read; a write or manage key can also create and edit.",
+            },
+            {
+              term: "Responses",
+              body: "`list_responses` reads a survey's responses page by page, each answer with its question, and `get_survey_summary` its statistics: completion, drop-off, choice counts, ratings, NPS and the latest open-text answers. Both need the `responses:read` scope, which the consent page lists on its own line, and read access to the survey's workspace; every API key may use them, as it may list responses over the REST API. Respondents are not identified unless a call asks for their contact details.",
             },
           ],
         },
