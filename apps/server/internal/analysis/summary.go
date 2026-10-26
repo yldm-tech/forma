@@ -698,6 +698,8 @@ type choiceAggregate struct {
 	otherValues valueCounter
 	selections  int
 	responses   int
+	// onOther, when set, receives each value counted under the Other option with the response that gave it: the AI summary of Other answers reads them through the same rules as the counts.
+	onOther func(r *summaryResponse, value any)
 }
 
 func newChoiceAggregate(sv *surveyDoc, el *element) *choiceAggregate {
@@ -740,6 +742,9 @@ func (g *choiceAggregate) count(r *summaryResponse, value any) {
 		g.otherValues.add(jsvalue.String(value))
 		if len(g.others) < valuesLimit {
 			g.others = append(g.others, Other{Value: value, Contact: r.Contact, ContactAttributes: r.ContactAttributes})
+		}
+		if g.onOther != nil {
+			g.onOther(r, value)
 		}
 	}
 }

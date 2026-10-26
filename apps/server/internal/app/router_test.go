@@ -333,7 +333,7 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		actionclass.NewHandler(nil, sessions, v3),
 		tag.NewHandler(nil, sessions, v3, nil),
 		response.NewHandler(nil, sessions),
-		analysis.NewHandler(nil, sessions, nil),
+		analysis.NewHandler(nil, nil, sessions, nil),
 		ai.NewHandler(nil, nil, sessions),
 		storage.NewHandler(cfg, nil, nil, sessions, nil, nil, nil, nil, log),
 		linksurvey.NewHandler(cfg, nil, nil, web, log),

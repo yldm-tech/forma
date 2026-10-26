@@ -110,6 +110,8 @@ const (
 	FeatureChartQuery       Feature = "ai_chart_query"
 	FeatureTranslation      Feature = "ai_translation"
 	FeatureExampleResponses Feature = "ai_example_responses"
+	// FeatureTextSummary is the summary of a question's free-text answers on the analysis page; it runs on AI_MODEL.
+	FeatureTextSummary Feature = "ai_text_summary"
 )
 
 // endpoints overrides where providers send their requests; production leaves it empty and tests point it at servers that speak each provider's protocol.

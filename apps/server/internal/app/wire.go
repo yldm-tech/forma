@@ -167,13 +167,14 @@ var surveyConfigSet = wire.NewSet(
 	tag.NewHandler,
 )
 
-// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export and reset of the analysis views, the job enqueuer their writes share their transaction with, and the quota screening the AI example responses are written through.
+// responseSet is response collection and analysis: the steps the client API drives, the response views' routes under /api/app, the summary, filter options, export, attachment export, reset and AI summaries of free-text answers of the analysis views, the job enqueuer their writes share their transaction with, and the quota screening the AI example responses are written through.
 var responseSet = wire.NewSet(
 	jobs.NewEnqueuer,
 	response.NewService,
 	wire.Bind(new(ai.QuotaScreener), new(*response.Service)),
 	response.NewHandler,
 	analysis.NewService,
+	analysis.NewTextSummaries,
 	analysis.NewHandler,
 	analysis.NewAttachmentExporter,
 	analysis.NewAttachmentsHandler,

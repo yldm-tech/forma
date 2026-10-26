@@ -18,12 +18,13 @@ import (
 // Handler serves the analysis views' routes under /api/app.
 type Handler struct {
 	svc      *Service
+	texts    *TextSummaries
 	sessions httpapi.SessionAuth
 	limiter  *ratelimit.Limiter
 }
 
-func NewHandler(svc *Service, sessions httpapi.SessionAuth, limiter *ratelimit.Limiter) *Handler {
-	return &Handler{svc: svc, sessions: sessions, limiter: limiter}
+func NewHandler(svc *Service, texts *TextSummaries, sessions httpapi.SessionAuth, limiter *ratelimit.Limiter) *Handler {
+	return &Handler{svc: svc, texts: texts, sessions: sessions, limiter: limiter}
 }
 
 // Register mounts the routes on the /api/app group, which applies the error envelope and the CSRF check.
@@ -36,6 +37,9 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/surveys/:surveyId/displays", h.displays)
 	g.POST("/surveys/:surveyId/responses/export", h.export)
 	g.POST("/surveys/:surveyId/reset", h.reset)
+	// The AI summary of a question's free-text answers: the cached one (lookup, which never calls the AI provider) and a new one.
+	g.POST("/surveys/:surveyId/text-summaries/lookup", h.lookupTextSummary)
+	g.POST("/surveys/:surveyId/text-summaries", h.generateTextSummary)
 	g.GET("/surveys/:surveyId/result-shares", h.resultShares)
 	g.POST("/surveys/:surveyId/result-shares", h.createResultShare)
 	g.PUT("/surveys/:surveyId/result-shares/:shareId", h.updateResultShare)
@@ -230,6 +234,42 @@ func (h *Handler) reset(c *gin.Context) {
 		return
 	}
 	out, err := h.svc.Reset(c.Request.Context(), userID(c), surveyID)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func (h *Handler) lookupTextSummary(c *gin.Context) {
+	surveyID, ok := surveyParam(c)
+	if !ok {
+		return
+	}
+	var in TextSummaryInput
+	if err := httpapi.BindJSON(c, &in); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	out, err := h.texts.Lookup(c.Request.Context(), userID(c), surveyID, in)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func (h *Handler) generateTextSummary(c *gin.Context) {
+	surveyID, ok := surveyParam(c)
+	if !ok {
+		return
+	}
+	var in TextSummaryInput
+	if err := httpapi.BindJSON(c, &in); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	out, err := h.texts.Generate(c.Request.Context(), userID(c), surveyID, in)
 	if err != nil {
 		httpapi.Fail(c, err)
 		return
