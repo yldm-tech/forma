@@ -344,6 +344,13 @@ export const SecurityPage = () => {
             <h2 className="text-h3">{page.account.title}</h2>
             <p className="text-ink-700">{page.account.body}</p>
           </div>
+          <div className="card flex flex-col gap-4 p-6 md:col-span-2 lg:p-8">
+            <IconTile icon="terminal" />
+            <h2 className="text-h3">{page.audit.title}</h2>
+            <p className="text-ink-700">
+              <Rich text={page.audit.body} />
+            </p>
+          </div>
         </div>
         <div className="container-site mt-8">
           <a href={SECURITY_POLICY_URL} className="link">

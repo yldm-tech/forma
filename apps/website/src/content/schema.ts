@@ -193,6 +193,7 @@ const security = obj({
   title: text,
   report: section,
   account: section,
+  audit: section,
   policyLink: text,
 });
 
