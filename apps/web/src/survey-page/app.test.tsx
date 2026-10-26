@@ -338,6 +338,27 @@ describe("the survey", () => {
     expect(lastRender().cardMaxHeight).toBeUndefined();
   });
 
+  // F9: in the embed script's frames the frame follows the survey, so the survey takes its content's height and never scrolls inside a card; a cap on the frame's own viewport would shrink the frame step by step.
+  test("takes its content's height in a frame that follows it", async () => {
+    globalThis.history.replaceState({}, "", "/s/survey-1?embed=true&autoHeight=true");
+    const { container } = renderPage({
+      view: "survey",
+      locale: "en-US",
+      survey: surveyProps({ isEmbed: true }),
+    });
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(lastRender()).toMatchObject({ fullSizeCards: false, cardMaxHeight: "none" });
+    expect(container.querySelector("main")?.classList.contains("h-full")).toBe(false);
+    cleanup();
+    renderSurvey.mockReset();
+
+    // autoHeight means nothing without embed: the survey's own page keeps its layout.
+    globalThis.history.replaceState({}, "", "/s/survey-1?autoHeight=true");
+    renderPage({ view: "survey", locale: "en-US", survey: surveyProps({ isEmbed: false }) });
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(lastRender()).toMatchObject({ fullSizeCards: false, cardMaxHeight: "max(60dvh, 100dvh - 12rem)" });
+  });
+
   test("reads prefill, hidden fields, the start position and the user id from the URL", async () => {
     globalThis.history.replaceState(
       {},

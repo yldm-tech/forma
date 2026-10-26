@@ -30,7 +30,7 @@ import { LinkTabsType, ShareSettingsType, ShareViaType } from "./share-types";
 import { type ShareTab, ShareView } from "./share-view";
 import { SuccessView } from "./success-view";
 import { TabContainer } from "./tab-container";
-import { WebsiteEmbedTab } from "./website-embed-tab";
+import { type EmbedLayout, WebsiteEmbedTab } from "./website-embed-tab";
 
 type ModalView = "start" | "share";
 
@@ -61,6 +61,7 @@ export const ShareSurveyModal = ({
   const [showView, setShowView] = useState<ModalView>(modalView);
   const defaultActiveId = survey.type === "link" ? ShareViaType.ANON_LINKS : ShareViaType.APP;
   const [activeId, setActiveId] = useState<ShareTab["id"]>(defaultActiveId);
+  const [embedLayout, setEmbedLayout] = useState<EmbedLayout>("standard");
   const isSingleUse = Boolean(survey.singleUse?.enabled);
 
   // Each opening starts on the view it was opened for.
@@ -106,7 +107,14 @@ export const ShareSurveyModal = ({
       icon: Code2Icon,
       title: t("workspace.surveys.share.embed_on_website.nav_title"),
       description: t("workspace.surveys.share.embed_on_website.description"),
-      content: <WebsiteEmbedTab surveyUrl={surveyUrl} />,
+      content: (
+        <WebsiteEmbedTab
+          surveyUrl={surveyUrl}
+          publicDomain={publicDomain}
+          layout={embedLayout}
+          onLayoutChange={setEmbedLayout}
+        />
+      ),
       disabled: isSingleUse,
     },
     {
@@ -146,7 +154,20 @@ export const ShareSurveyModal = ({
       icon: SquareStack,
       title: t("workspace.surveys.share.dynamic_popup.nav_title"),
       description: t("workspace.surveys.share.dynamic_popup.description"),
-      content: <DynamicPopupTab surveyId={survey.id} workspaceId={workspace.id} />,
+      content: (
+        <DynamicPopupTab
+          surveyId={survey.id}
+          workspaceId={workspace.id}
+          onUsePopupEmbed={
+            survey.type === "link" && !isSingleUse
+              ? () => {
+                  setEmbedLayout("popup");
+                  setActiveId(ShareViaType.WEBSITE_EMBED);
+                }
+              : undefined
+          }
+        />
+      ),
     },
     {
       id: ShareSettingsType.LINK_SETTINGS,
@@ -192,6 +213,7 @@ export const ShareSurveyModal = ({
     if (!next) {
       setShowView("start");
       setActiveId(defaultActiveId);
+      setEmbedLayout("standard");
     }
   };
 
