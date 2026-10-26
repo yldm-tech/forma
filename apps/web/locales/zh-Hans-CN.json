@@ -3736,6 +3736,17 @@
         "an_error_occurred_deleting_the_tag": "删除标签时发生错误",
         "attachments_download_started": "下载已开始：{fileCount, plural, other {{fileCount} 个文件}}。大型导出可能需要几分钟。",
         "browser": "浏览器",
+        "bulk": {
+          "add_tag": "添加标签",
+          "all_matching_selected": "已选择全部 {count, number} 条匹配的回复",
+          "create_tag": "创建标签“{name}”",
+          "no_tags_to_remove": "所选回复没有标签",
+          "remove_tag": "移除标签",
+          "select_all_matching": "选择全部 {count, number} 条匹配的回复",
+          "tag_added": "已为 {count, number} 条回复添加“{tag}”",
+          "tag_removed": "已从 {count, number} 条回复移除“{tag}”",
+          "type_to_create_tag": "输入名称即可创建标签"
+        },
         "bulk_delete_response_quotas": "这些回复是此问卷配额的一部分。你希望如何处理这些配额？",
         "city": "城市",
         "column_options": "列选项",

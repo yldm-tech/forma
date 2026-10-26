@@ -11,7 +11,11 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-import type { TResponseTableData, TResponseWithQuotas } from "@forma/types/responses";
+import type {
+  TResponseFilterCriteria,
+  TResponseTableData,
+  TResponseWithQuotas,
+} from "@forma/types/responses";
 import type { TSurvey } from "@forma/types/surveys/types";
 import type { TTag } from "@forma/types/tags";
 import {
@@ -45,6 +49,7 @@ import {
 import { ResponseCardModal } from "./response-card-modal";
 import { generateResponseTableColumns, getDefaultHiddenColumnIds } from "./response-table-columns";
 import { SelectedRowSettings } from "./selected-row-settings";
+import { useResponseSelection } from "./use-response-selection";
 
 /** Keeps a dragged column on its row, as dnd-kit's restrictToHorizontalAxis did in forma2. */
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
@@ -126,7 +131,7 @@ const ResponseTableCell = memo(
 ResponseTableCell.displayName = "ResponseTableCell";
 
 /**
- * forma2's ResponseTable: the responses as a TanStack table whose columns can be reordered, hidden and resized, with the order, the visibility and the row expansion kept per survey in localStorage; rows can be selected for bulk download and delete, and a row opens its response card.
+ * forma2's ResponseTable: the responses as a TanStack table whose columns can be reordered, hidden and resized, with the order, the visibility and the row expansion kept per survey in localStorage; rows can be selected for bulk tagging, download and delete, the selection can widen to every response matching the filter, and a row opens its response card.
  */
 export const ResponseTable = ({
   survey,
@@ -141,8 +146,10 @@ export const ResponseTable = ({
   emptyState,
   showQuotasColumn,
   locale,
+  filterCriteria,
   onResponseChanged,
   onResponsesDeleted,
+  onTagsChanged,
 }: {
   survey: TSurvey;
   responses: TResponseWithQuotas[];
@@ -160,8 +167,12 @@ export const ResponseTable = ({
   emptyState: ReactNode;
   showQuotasColumn: boolean;
   locale: string;
+  /** The view's filter, which "select all N matching" hands to the bulk actions. */
+  filterCriteria: TResponseFilterCriteria;
   onResponseChanged: (responseId: string) => void;
   onResponsesDeleted: (responseIds: string[]) => void;
+  /** Called after a bulk tag change, to read the responses and the tags again. */
+  onTagsChanged: () => void;
 }) => {
   const { t } = useTranslation();
   const orderKey = `${survey.id}-columnOrder`;
@@ -170,7 +181,6 @@ export const ResponseTable = ({
   const [savedVisibility, setSavedVisibility] = useState<VisibilityState>(
     () => readJson<VisibilityState>(visibilityKey) ?? {}
   );
-  const [rowSelection, setRowSelection] = useState({});
   const [isTableSettingsModalOpen, setIsTableSettingsModalOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(() => readJson<boolean>(expandKey) ?? false);
   const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null);
@@ -234,6 +244,8 @@ export const ResponseTable = ({
     [columns, isFetchingFirstPage]
   );
 
+  const selection = useResponseSelection(JSON.stringify(filterCriteria), data);
+
   // The SPA is not built with the React Compiler, so nothing memoizes the table's functions.
   // oxlint-disable-next-line react/incompatible-library -- see above
   const table = useReactTable({
@@ -245,7 +257,7 @@ export const ResponseTable = ({
       const next = typeof updater === "function" ? updater(columnVisibility) : updater;
       setSavedVisibility((saved) => recordVisibilityChange(saved, columnVisibility, next));
     },
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: selection.onRowSelectionChange,
     onColumnOrderChange: (updater) =>
       setSavedOrder((current) =>
         typeof updater === "function"
@@ -256,7 +268,12 @@ export const ResponseTable = ({
     columnResizeDirection: "ltr",
     manualPagination: true,
     defaultColumn: { size: 300 },
-    state: { columnOrder, columnVisibility, rowSelection, columnPinning: { left: PINNED_COLUMN_IDS } },
+    state: {
+      columnOrder,
+      columnVisibility,
+      rowSelection: selection.rowSelection,
+      columnPinning: { left: PINNED_COLUMN_IDS },
+    },
   });
 
   const sensors = useSensors(
@@ -273,16 +290,16 @@ export const ResponseTable = ({
     setSavedOrder(arrayMove(columnOrder, oldIndex, newIndex));
   };
 
-  const downloadSelectedRows = async (responseIds: string[], format: ExportFormat) => {
+  const downloadSelectedRows = async (criteria: TResponseFilterCriteria, format: ExportFormat) => {
     try {
-      saveExport(await analysisApi.exportResponses(survey.id, format, { responseIds }), format);
+      saveExport(await analysisApi.exportResponses(survey.id, format, criteria), format);
     } catch {
       toast.error(t("workspace.surveys.responses.error_downloading_responses"));
     }
   };
 
   const handleDeleted = (responseIds: string[]) => {
-    setRowSelection({});
+    selection.clear();
     onResponsesDeleted(responseIds);
   };
 
@@ -302,11 +319,21 @@ export const ResponseTable = ({
             table.getFilteredSelectedRowModel().rows.length > 0 ? (
               <SelectedRowSettings
                 table={table}
+                matchingCount={totalCount}
+                allMatching={selection.allMatching}
+                filterCriteria={filterCriteria}
+                onSelectAllMatching={selection.selectAllMatching}
+                environmentTags={environmentTags}
                 onDeleted={handleDeleted}
                 deleteResponse={(responseId, decrementQuotas) =>
                   analysisApi.deleteResponse(responseId, decrementQuotas)
                 }
                 downloadResponses={downloadSelectedRows}
+                changeTag={(operation, tagId, criteria) =>
+                  analysisApi.bulkTag(survey.id, operation, tagId, criteria)
+                }
+                createTag={(name) => analysisApi.createTag(survey.workspaceId, name)}
+                onTagsChanged={onTagsChanged}
               />
             ) : (
               countSummary
