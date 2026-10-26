@@ -115,10 +115,10 @@ func TestScopeSets(t *testing.T) {
 	}
 }
 
-// The URLs follow forma2's oauth-urls.ts: a WEBAPP_URL subpath is kept, BETTER_AUTH_URL decides the issuer, and /api/auth is not appended twice. The consent page is an SPA page, under the app's base path.
+// The URLs follow forma2's oauth-urls.ts: a WEBAPP_URL subpath is kept, AUTH_URL decides the issuer, and /api/auth is not appended twice. The consent page is an SPA page, under the app's base path.
 func TestURLs(t *testing.T) {
 	cases := []struct {
-		webApp, betterAuth           string
+		webApp, authURL              string
 		resource, issuer, prm, webUI string
 	}{
 		{"https://app.example.com/", "", "https://app.example.com/api/mcp", "https://app.example.com/api/auth", "https://app.example.com/.well-known/oauth-protected-resource/api/mcp", "https://app.example.com/app"},
@@ -127,10 +127,10 @@ func TestURLs(t *testing.T) {
 		{"https://APP.example.com:443/api/mcp", "", "https://app.example.com/api/mcp", "https://app.example.com/api/mcp/api/auth", "https://app.example.com/api/mcp/.well-known/oauth-protected-resource/api/mcp", "https://app.example.com/api/mcp/app"},
 	}
 	for _, tc := range cases {
-		cfg := configFor(t, tc.webApp, tc.betterAuth)
+		cfg := configFor(t, tc.webApp, tc.authURL)
 		u := NewURLs(cfg)
 		if u.Resource != tc.resource || u.Issuer != tc.issuer || u.ProtectedResourceMetadata != tc.prm || u.WebApp != tc.webUI || u.UserInfo != tc.issuer+"/oauth2/userinfo" || u.JWKS != tc.issuer+"/jwks" {
-			t.Errorf("%s %s: %+v", tc.webApp, tc.betterAuth, u)
+			t.Errorf("%s %s: %+v", tc.webApp, tc.authURL, u)
 		}
 	}
 }

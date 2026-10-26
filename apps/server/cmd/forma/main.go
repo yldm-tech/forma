@@ -24,7 +24,7 @@ import (
 const usage = `usage: forma <command>
 
 commands:
-  start              the container's default: validate the configuration, migrate unless SKIP_STARTUP_MIGRATION=true, then serve, with the job worker in the same process unless BULLMQ_WORKER_ENABLED=0
+  start              the container's default: validate the configuration, migrate unless SKIP_STARTUP_MIGRATION=true, then serve, with the job worker in the same process unless WORKER_ENABLED=0
   serve              run the HTTP server (API, public survey pages and the admin UI)
   worker             run background jobs and periodic tasks
   migrate            apply pending database migrations (schema, then the job queue), then exit

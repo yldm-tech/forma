@@ -122,15 +122,15 @@ func TestLinkSurveyTokenSecrets(t *testing.T) {
 		t.Fatalf("derived secrets %q / %q", derived, cfg.LinkSurveyPinSecret())
 	}
 
-	// forma2: email tokens use NEXTAUTH_SECRET; PIN tokens prefer BETTER_AUTH_SECRET and fall back to NEXTAUTH_SECRET.
-	t.Setenv("NEXTAUTH_SECRET", "next-secret-0123456789abcdefghijklmnop")
+	// Email tokens use LINK_SURVEY_TOKEN_SECRET; PIN tokens prefer LINK_SURVEY_PIN_TOKEN_SECRET and fall back to LINK_SURVEY_TOKEN_SECRET, as forma2's did with NEXTAUTH_SECRET and BETTER_AUTH_SECRET.
+	t.Setenv("LINK_SURVEY_TOKEN_SECRET", "next-secret-0123456789abcdefghijklmnop")
 	if cfg, err = Load(); err != nil {
 		t.Fatal(err)
 	}
 	if cfg.LinkSurveyEmailSecret() != "next-secret-0123456789abcdefghijklmnop" || cfg.LinkSurveyPinSecret() != "next-secret-0123456789abcdefghijklmnop" {
-		t.Fatalf("with NEXTAUTH_SECRET: %q / %q", cfg.LinkSurveyEmailSecret(), cfg.LinkSurveyPinSecret())
+		t.Fatalf("with LINK_SURVEY_TOKEN_SECRET: %q / %q", cfg.LinkSurveyEmailSecret(), cfg.LinkSurveyPinSecret())
 	}
-	t.Setenv("BETTER_AUTH_SECRET", "better-secret-0123456789abcdefghijklmnop")
+	t.Setenv("LINK_SURVEY_PIN_TOKEN_SECRET", "better-secret-0123456789abcdefghijklmnop")
 	if cfg, err = Load(); err != nil {
 		t.Fatal(err)
 	}

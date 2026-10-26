@@ -22,7 +22,7 @@ import (
 // startupMigrationTimeout bounds the migrations `forma start` runs before serving, the timeout forma2's entrypoint gave them.
 const startupMigrationTimeout = 300 * time.Second
 
-// start is forma2's container entrypoint (scripts/docker/next-start.sh) for the single binary: the whole configuration is validated before anything touches the database, the migrations run unless a separate job owns them, and then the process serves. forma2 ran its job worker inside the web process, so start does too unless BULLMQ_WORKER_ENABLED=0; Helm and docker compose run `serve` and `worker` as separate processes instead.
+// start is forma2's container entrypoint (scripts/docker/next-start.sh) for the single binary: the whole configuration is validated before anything touches the database, the migrations run unless a separate job owns them, and then the process serves. forma2 ran its job worker inside the web process, so start does too unless WORKER_ENABLED=0 (forma2's BULLMQ_WORKER_ENABLED=0); Helm and docker compose run `serve` and `worker` as separate processes instead.
 func start(ctx context.Context) error {
 	cfg, err := config.Load()
 	if err != nil {
@@ -59,7 +59,7 @@ func start(ctx context.Context) error {
 	}
 
 	if !startup.WorkerEnabled {
-		log.InfoContext(ctx, "starting the server without the job worker (BULLMQ_WORKER_ENABLED=0)")
+		log.InfoContext(ctx, "starting the server without the job worker (WORKER_ENABLED=0)")
 		return runServer(ctx, cfg, log)
 	}
 	log.InfoContext(ctx, "starting the server and the job worker")

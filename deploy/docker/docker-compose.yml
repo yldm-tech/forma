@@ -44,11 +44,12 @@ x-forma-app: &forma-app
     # Everything else comes from .env. The groups:
     #
     # Required: WEBAPP_URL (the public URL of the admin, e.g. https://forma.example.com) and ENCRYPTION_KEY (openssl rand -hex 32; an existing instance keeps its value).
-    # Optional URLs: PUBLIC_URL (a separate origin for surveys and the client API), BETTER_AUTH_URL / NEXTAUTH_URL (only when single sign-on redirect URIs were registered under another origin).
-    # Link survey token secrets, kept so links already sent keep working: NEXTAUTH_SECRET, BETTER_AUTH_SECRET.
+    # Optional URLs: PUBLIC_URL (a separate origin for surveys and the client API), AUTH_URL (only when single sign-on redirect URIs were registered under another origin).
+    # Link survey token secrets, kept so links already sent keep working: LINK_SURVEY_TOKEN_SECRET, LINK_SURVEY_PIN_TOKEN_SECRET.
+    # Renamed: NEXTAUTH_SECRET is now LINK_SURVEY_TOKEN_SECRET, BETTER_AUTH_SECRET LINK_SURVEY_PIN_TOKEN_SECRET, BETTER_AUTH_URL and NEXTAUTH_URL AUTH_URL, SAML_DATABASE_URL SAML_ENABLED=1 and BULLMQ_WORKER_ENABLED WORKER_ENABLED. The old names are still read, with a deprecation warning in the log, until a later release; forma.sh update renames them in .env.
     # Email: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_AUTHENTICATED, SMTP_SECURE_ENABLED, SMTP_REJECT_UNAUTHORIZED_TLS, MAIL_FROM, MAIL_FROM_NAME.
     # Sign-up and sign-in: EMAIL_VERIFICATION_DISABLED, PASSWORD_RESET_DISABLED, EMAIL_AUTH_DISABLED, INVITE_DISABLED, INVITE_RATE_LIMIT_PER_24_HOURS, SESSION_MAX_AGE, TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY, USER_MANAGEMENT_MINIMUM_ROLE.
-    # Single sign-on: GITHUB_ID, GITHUB_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AZUREAD_CLIENT_ID, AZUREAD_CLIENT_SECRET, AZUREAD_TENANT_ID, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_ISSUER, OIDC_DISPLAY_NAME, AUTH_SSO_DEFAULT_ORGANIZATION_ID, AUTH_SSO_DEFAULT_ORGANIZATION_ROLE.
+    # Single sign-on: GITHUB_ID, GITHUB_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AZUREAD_CLIENT_ID, AZUREAD_CLIENT_SECRET, AZUREAD_TENANT_ID, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_ISSUER, OIDC_DISPLAY_NAME, AUTH_SSO_DEFAULT_ORGANIZATION_ID, AUTH_SSO_DEFAULT_ORGANIZATION_ROLE, SAML_ENABLED.
     # Storage: S3_ACCESS_KEY, S3_SECRET_KEY, S3_REGION, S3_BUCKET_NAME, S3_ENDPOINT_URL, S3_FORCE_PATH_STYLE. Browsers upload straight to the bucket, so S3_ENDPOINT_URL must be reachable from both the browser and this container (see the `storage` profile below).
     # Spam protection: RECAPTCHA_SITE_KEY, RECAPTCHA_SECRET_KEY.
     # Integrations: NOTION_OAUTH_CLIENT_ID, NOTION_OAUTH_CLIENT_SECRET, GOOGLE_SHEETS_CLIENT_ID, GOOGLE_SHEETS_CLIENT_SECRET, GOOGLE_SHEETS_REDIRECT_URL, AIRTABLE_CLIENT_ID, SLACK_CLIENT_ID, SLACK_CLIENT_SECRET.
@@ -183,7 +184,7 @@ services:
     command: ["serve"]
     ports:
       - 3000:3000
-    # SAML SSO (SAML_DATABASE_URL set): put the identity provider's metadata XML in deploy/docker/saml-connection/.
+    # SAML SSO (SAML_ENABLED=1): put the identity provider's metadata XML in deploy/docker/saml-connection/.
     volumes:
       - ./saml-connection:/home/nextjs/apps/web/saml-connection
 

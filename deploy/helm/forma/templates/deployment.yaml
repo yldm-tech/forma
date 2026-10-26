@@ -117,8 +117,9 @@ spec:
             - name: SKIP_STARTUP_MIGRATION
               value: "true"
             {{- end }}
-            {{- if and .Values.worker.enabled (not (hasKey .Values.deployment.env "BULLMQ_WORKER_ENABLED")) }}
-            - name: BULLMQ_WORKER_ENABLED
+            {{- /* BULLMQ_WORKER_ENABLED is the switch's former name, which the server still reads behind WORKER_ENABLED: an operator who set it in deployment.env keeps it in force. */}}
+            {{- if and .Values.worker.enabled (not (hasKey .Values.deployment.env "WORKER_ENABLED")) (not (hasKey .Values.deployment.env "BULLMQ_WORKER_ENABLED")) }}
+            - name: WORKER_ENABLED
               value: "0"
             {{- end }}
             {{- include "forma.appEnv" . | nindent 12 }}

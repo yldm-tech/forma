@@ -153,7 +153,7 @@ func TestContentSecurityPolicy(t *testing.T) {
 			name: "development",
 			cfg: config.Config{
 				WebAppURL: &url.URL{Scheme: "https", Host: "LOCALHOST:8443"},
-				SSO:       config.SSOConfig{NextAuthURL: &url.URL{Scheme: "https", Host: "127.0.0.1:443"}},
+				SSO:       config.SSOConfig{AuthURL: &url.URL{Scheme: "https", Host: "127.0.0.1:443"}},
 				S3:        config.S3Config{BucketName: "forma", EndpointURL: &url.URL{Scheme: "http", Host: "minio.internal:9000"}},
 				Telemetry: config.TelemetryConfig{NodeEnv: "development"},
 			},

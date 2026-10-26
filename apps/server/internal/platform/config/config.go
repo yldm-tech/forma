@@ -53,9 +53,9 @@ type Config struct {
 	EncryptionPreviousKeys EncryptionKeyring `env:"ENCRYPTION_PREVIOUS_KEYS"`
 	// EncryptionKeyText is ENCRYPTION_KEY exactly as configured. forma2 keyed its HMAC signatures and JWTs with the variable's text rather than the decoded key, so the links it issued (signed single-use links, personal contact links) verify only against the same text.
 	EncryptionKeyText Secret `env:"ENCRYPTION_KEY"`
-	// NextAuthSecret and BetterAuthSecret are NEXTAUTH_SECRET and BETTER_AUTH_SECRET. They sign the link survey tokens (email verification links, PIN tokens); changing one invalidates the links already sent. Without them the tokens are signed with a secret derived from ENCRYPTION_KEY.
-	NextAuthSecret   Secret `env:"NEXTAUTH_SECRET"`
-	BetterAuthSecret Secret `env:"BETTER_AUTH_SECRET"`
+	// LinkSurveyTokenSecret signs the link survey email verification tokens, and the PIN tokens unless LinkSurveyPinTokenSecret is set; changing one invalidates the links already sent. Without them the tokens are signed with a secret derived from ENCRYPTION_KEY. They were forma2's NEXTAUTH_SECRET and BETTER_AUTH_SECRET, still read under those names (renamedVariables).
+	LinkSurveyTokenSecret    Secret `env:"LINK_SURVEY_TOKEN_SECRET"`
+	LinkSurveyPinTokenSecret Secret `env:"LINK_SURVEY_PIN_TOKEN_SECRET"`
 
 	// RateLimitingDisabled turns every rate limit into a no-op that allows the request.
 	RateLimitingDisabled bool `env:"RATE_LIMITING_DISABLED" envDefault:"0"`
@@ -137,7 +137,7 @@ type Config struct {
 	// SSO is single sign-on through Google, GitHub, Azure AD, a generic OpenID Connect provider and SAML.
 	SSO SSOConfig
 
-	// MCPOAuthJWKSURL is where /api/mcp fetches the keys OAuth access tokens are signed with, forma2's MCP_OAUTH_JWKS_URL, for deployments that verify against another instance's authorization server. It changes no public URL: the issuer, the redirects and the token audience stay derived from WEBAPP_URL and BETTER_AUTH_URL. Unset, the keys are read from the database the authorization server writes them to.
+	// MCPOAuthJWKSURL is where /api/mcp fetches the keys OAuth access tokens are signed with, forma2's MCP_OAUTH_JWKS_URL, for deployments that verify against another instance's authorization server. It changes no public URL: the issuer, the redirects and the token audience stay derived from WEBAPP_URL and AUTH_URL. Unset, the keys are read from the database the authorization server writes them to.
 	MCPOAuthJWKSURL *url.URL `env:"MCP_OAUTH_JWKS_URL"`
 
 	// S3 is the object store uploaded files live in.
@@ -169,6 +169,16 @@ type Config struct {
 
 	// Warnings are deprecated settings found while loading, still honoured. They are written once the logger exists (logger.New), since configuration is read before it.
 	Warnings []string
+	// readFrom names the old variable a renamed one was read from (renamedVariables), so an error names what the operator set.
+	readFrom map[string]string
+}
+
+// variable is the name a setting was read from: name, or the deprecated name it was given under.
+func (c Config) variable(name string) string {
+	if old, ok := c.readFrom[name]; ok {
+		return old
+	}
+	return name
 }
 
 // LevelFatal and LevelAudit are forma2's two levels above error. Nothing is logged at fatal: LOG_LEVEL=fatal keeps only audit events, as it did in forma2. LevelAudit sits above every other level, so no LOG_LEVEL but audit's own filters audit events out.
@@ -258,11 +268,10 @@ type SSOConfig struct {
 	// DefaultOrganizationID names the organization every new SSO user joins, created on the first such sign-up; DefaultOrganizationRole is the role later sign-ups get in it (manager when unset).
 	DefaultOrganizationID   string `env:"AUTH_SSO_DEFAULT_ORGANIZATION_ID"`
 	DefaultOrganizationRole string `env:"AUTH_SSO_DEFAULT_ORGANIZATION_ROLE"`
-	// BetterAuthURL and NextAuthURL are the auth base URLs. The first one set, else WEBAPP_URL, is where identity providers send the browser back, so it must be the origin the redirect URIs were registered under.
-	BetterAuthURL *url.URL `env:"BETTER_AUTH_URL"`
-	NextAuthURL   *url.URL `env:"NEXTAUTH_URL"`
-	// SAMLDatabaseURL is forma2's switch for SAML SSO: set, the SAML button is offered and the connection is read from saml-connection/*.xml at start-up. forma2 kept its SAML state in that separate database; here the connection lives in the main one, so only whether it is set matters.
-	SAMLDatabaseURL Secret `env:"SAML_DATABASE_URL"`
+	// AuthURL is the auth base URL, forma2's BETTER_AUTH_URL (else NEXTAUTH_URL), still read under those names (renamedVariables). It, else WEBAPP_URL, is where identity providers send the browser back and where the OAuth authorization server's issuer lives, so it must be the origin the redirect URIs were registered under. Leave it unset unless that origin is not WEBAPP_URL's.
+	AuthURL *url.URL `env:"AUTH_URL"`
+	// SAML offers SAML SSO, with the connection read from saml-connection/*.xml at start-up. forma2 switched it on by setting SAML_DATABASE_URL, the separate database it kept its SAML state in; that variable is still read as SAML_ENABLED=1 (renamedVariables), since here the connection lives in the main database.
+	SAML bool `env:"SAML_ENABLED" envDefault:"0"`
 }
 
 // StripeConfig is forma2's STRIPE_* variables, all optional.
@@ -318,14 +327,15 @@ func (s SSOConfig) OIDCEnabled() bool {
 }
 
 // SAMLEnabled is forma2's SAML_OAUTH_ENABLED. Its licence check always granted SAML, so the variable is the only gate.
-func (s SSOConfig) SAMLEnabled() bool { return s.SAMLDatabaseURL != "" }
+func (s SSOConfig) SAMLEnabled() bool { return s.SAML }
 
 // DefaultOrganization is the organization AUTH_SSO_DEFAULT_ORGANIZATION_ID names, if set.
 func (s SSOConfig) DefaultOrganization() (uuid.UUID, bool) {
 	return rowid.Parse(s.DefaultOrganizationID)
 }
 
-func (s SSOConfig) validate() error {
+// validate checks the SSO settings; authURLName is the variable AuthURL was read from.
+func (s SSOConfig) validate(authURLName string) error {
 	if id := s.DefaultOrganizationID; id != "" {
 		if _, ok := rowid.Parse(id); !ok {
 			return fmt.Errorf("AUTH_SSO_DEFAULT_ORGANIZATION_ID must be an organization id (a UUID), got %q", id)
@@ -341,13 +351,8 @@ func (s SSOConfig) validate() error {
 			return fmt.Errorf("OIDC_ISSUER must be an absolute http(s) URL, got %q", s.OIDCIssuer)
 		}
 	}
-	for _, base := range []struct {
-		name  string
-		value *url.URL
-	}{{"BETTER_AUTH_URL", s.BetterAuthURL}, {"NEXTAUTH_URL", s.NextAuthURL}} {
-		if base.value != nil && ((base.value.Scheme != "http" && base.value.Scheme != "https") || base.value.Host == "") {
-			return fmt.Errorf("%s must be an absolute http(s) URL, got %q", base.name, base.value.String())
-		}
+	if u := s.AuthURL; u != nil && ((u.Scheme != "http" && u.Scheme != "https") || u.Host == "") {
+		return fmt.Errorf("%s must be an absolute http(s) URL, got %q", authURLName, u.String())
 	}
 	return nil
 }
@@ -398,18 +403,18 @@ func (c Config) RecaptchaConfigured() bool {
 	return c.RecaptchaSiteKey != "" && c.RecaptchaSecretKey != ""
 }
 
-// LinkSurveyEmailSecret signs the link survey email verification tokens, forma2's NEXTAUTH_SECRET.
+// LinkSurveyEmailSecret signs the link survey email verification tokens: LINK_SURVEY_TOKEN_SECRET, else the derived secret.
 func (c Config) LinkSurveyEmailSecret() string {
-	if c.NextAuthSecret != "" {
-		return string(c.NextAuthSecret)
+	if c.LinkSurveyTokenSecret != "" {
+		return string(c.LinkSurveyTokenSecret)
 	}
 	return c.derivedTokenSecret()
 }
 
-// LinkSurveyPinSecret signs the link survey PIN tokens, forma2's BETTER_AUTH_SECRET falling back to NEXTAUTH_SECRET.
+// LinkSurveyPinSecret signs the link survey PIN tokens: LINK_SURVEY_PIN_TOKEN_SECRET, else what signs the email tokens.
 func (c Config) LinkSurveyPinSecret() string {
-	if c.BetterAuthSecret != "" {
-		return string(c.BetterAuthSecret)
+	if c.LinkSurveyPinTokenSecret != "" {
+		return string(c.LinkSurveyPinTokenSecret)
 	}
 	return c.LinkSurveyEmailSecret()
 }
@@ -451,12 +456,61 @@ func (c Config) SecureCookies() bool {
 	return c.WebAppURL != nil && c.WebAppURL.Scheme == "https"
 }
 
+// renamedVariables are the variables that had kept forma2's names, under their current names, each with the old names still read in its place, in order of precedence. An old name is honoured only while the current one is unset, and either way earns a deprecation warning at start-up (Config.Warnings); the old names will stop being read in a later release. value turns an old name's value into the current one's (nil keeps it as it is).
+var renamedVariables = []struct {
+	name  string
+	old   []string
+	value func(string) string
+}{
+	{name: "AUTH_URL", old: []string{"BETTER_AUTH_URL", "NEXTAUTH_URL"}},
+	{name: "LINK_SURVEY_TOKEN_SECRET", old: []string{"NEXTAUTH_SECRET"}},
+	{name: "LINK_SURVEY_PIN_TOKEN_SECRET", old: []string{"BETTER_AUTH_SECRET"}},
+	{name: "WORKER_ENABLED", old: []string{"BULLMQ_WORKER_ENABLED"}},
+	// Any value of forma2's SAML_DATABASE_URL switched SAML on.
+	{name: "SAML_ENABLED", old: []string{"SAML_DATABASE_URL"}, value: func(string) string { return "1" }},
+}
+
+// environment is the process environment with every renamed variable resolved: an old name's value is given to the current name when that is unset or empty. It also returns which variable each current name was read from (only those read from an old name) and the deprecation warnings, one per old name set.
+func environment() (vars, readFrom map[string]string, warnings []string) {
+	vars = env.ToMap(os.Environ())
+	readFrom = map[string]string{}
+	for _, r := range renamedVariables {
+		source := r.name
+		for _, old := range r.old {
+			value := vars[old]
+			if value == "" {
+				continue
+			}
+			if vars[r.name] != "" {
+				warnings = append(warnings, fmt.Sprintf("%s is deprecated and ignored because %s is set; remove it", old, source))
+				continue
+			}
+			if r.value != nil {
+				value = r.value(value)
+			}
+			vars[r.name], readFrom[r.name], source = value, old, old
+			warnings = append(warnings, fmt.Sprintf("%s is deprecated; rename it to %s", old, r.name))
+		}
+	}
+	return vars, readFrom, warnings
+}
+
+// optionsFor is parseOptions reading vars instead of the process environment.
+func optionsFor(vars map[string]string) env.Options {
+	opts := parseOptions
+	opts.Environment = vars
+	return opts
+}
+
 // Load reads the environment. It fails on the first missing or malformed variable so a misconfigured pod never starts.
 func Load() (Config, error) {
-	cfg, err := env.ParseAsWithOptions[Config](parseOptions)
+	vars, readFrom, warnings := environment()
+	cfg, err := env.ParseAsWithOptions[Config](optionsFor(vars))
 	if err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
+	cfg.Warnings = warnings
+	cfg.readFrom = readFrom
 	if cfg.DatabaseURL, err = databaseURL("DATABASE_URL", cfg.DatabaseURL, true); err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
@@ -597,7 +651,7 @@ func (c Config) validate() error {
 	if err := c.Authz.validate(); err != nil {
 		return err
 	}
-	if err := c.SSO.validate(); err != nil {
+	if err := c.SSO.validate(c.variable("AUTH_URL")); err != nil {
 		return err
 	}
 	if u := c.MCPOAuthJWKSURL; u != nil && ((u.Scheme != "http" && u.Scheme != "https") || u.Host == "") {
@@ -624,7 +678,7 @@ func (c Config) validate() error {
 	for _, s := range []struct {
 		name  string
 		value Secret
-	}{{"NEXTAUTH_SECRET", c.NextAuthSecret}, {"BETTER_AUTH_SECRET", c.BetterAuthSecret}} {
+	}{{c.variable("LINK_SURVEY_TOKEN_SECRET"), c.LinkSurveyTokenSecret}, {c.variable("LINK_SURVEY_PIN_TOKEN_SECRET"), c.LinkSurveyPinTokenSecret}} {
 		// HS256 needs a key at least as long as its hash; the JOSE library refuses a shorter one, so a short secret would silently invalidate every link survey token.
 		if s.value != "" && len(s.value) < 32 {
 			return fmt.Errorf("%s must be at least 32 characters (openssl rand -hex 32)", s.name)
@@ -739,18 +793,19 @@ func LoadForMigrate() (Config, error) {
 type Startup struct {
 	// SkipMigration leaves the schema to a separate migration job (Helm, docker compose) instead of migrating before serving, forma2's SKIP_STARTUP_MIGRATION.
 	SkipMigration bool
-	// WorkerEnabled runs the background job worker in the same process as the HTTP server, as forma2's web container did unless BULLMQ_WORKER_ENABLED was 0. Deployments that run `forma worker` separately turn it off.
+	// WorkerEnabled runs the background job worker in the same process as the HTTP server, as forma2's web container did unless BULLMQ_WORKER_ENABLED was 0. Deployments that run `forma worker` separately turn it off with WORKER_ENABLED=0.
 	WorkerEnabled bool
 }
 
 type startupEnv struct {
 	SkipStartupMigration string `env:"SKIP_STARTUP_MIGRATION"`
-	WorkerEnabled        bool   `env:"BULLMQ_WORKER_ENABLED" envDefault:"1"`
+	WorkerEnabled        bool   `env:"WORKER_ENABLED" envDefault:"1"`
 }
 
-// LoadStartup reads the switches of `forma start`. SKIP_STARTUP_MIGRATION keeps forma2's spelling, "true", which its chart and compose file set; 1 and 0 are accepted too, and anything else fails the start.
+// LoadStartup reads the switches of `forma start`. SKIP_STARTUP_MIGRATION keeps forma2's spelling, "true", which its chart and compose file set; 1 and 0 are accepted too, and anything else fails the start. WORKER_ENABLED is also read as BULLMQ_WORKER_ENABLED; the deprecation warning is Load's, which `forma start` runs first.
 func LoadStartup() (Startup, error) {
-	e, err := env.ParseAsWithOptions[startupEnv](parseOptions)
+	vars, _, _ := environment()
+	e, err := env.ParseAsWithOptions[startupEnv](optionsFor(vars))
 	if err != nil {
 		return Startup{}, fmt.Errorf("load config: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -197,6 +198,8 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"mail from not email":      {"MAIL_FROM", "noreply"},
 		"relative privacy url":     {"PRIVACY_URL", "/privacy"},
 		"relative terms url":       {"TERMS_URL", "terms"},
+		"short token secret":       {"LINK_SURVEY_TOKEN_SECRET", "too-short"},
+		"short pin token secret":   {"LINK_SURVEY_PIN_TOKEN_SECRET", "too-short"},
 		"short nextauth secret":    {"NEXTAUTH_SECRET", "too-short"},
 		"short better auth secret": {"BETTER_AUTH_SECRET", "too-short"},
 		"negative concurrency":     {"WORKER_CONCURRENCY", "-1"},
@@ -207,8 +210,10 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"default org uppercase":    {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "CLXYZ123ABC"},
 		"default org braced uuid":  {"AUTH_SSO_DEFAULT_ORGANIZATION_ID", "{0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10}"},
 		"default org role":         {"AUTH_SSO_DEFAULT_ORGANIZATION_ROLE", "admin"},
-		"relative auth url":        {"BETTER_AUTH_URL", "/api/auth"},
+		"relative auth url":        {"AUTH_URL", "/api/auth"},
+		"better auth url relative": {"BETTER_AUTH_URL", "/api/auth"},
 		"nextauth url scheme":      {"NEXTAUTH_URL", "ftp://auth.example.com"},
+		"saml flag spelled":        {"SAML_ENABLED", "true"},
 		"zero invite limit":        {"INVITE_RATE_LIMIT_PER_24_HOURS", "0"},
 		"invite limit text":        {"INVITE_RATE_LIMIT_PER_24_HOURS", "many"},
 		"invite flag spelled":      {"INVITE_DISABLED", "yes"},
@@ -293,14 +298,15 @@ func TestLoadStartup(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.skip+"/"+tc.worker, func(t *testing.T) {
 			t.Setenv("SKIP_STARTUP_MIGRATION", tc.skip)
-			t.Setenv("BULLMQ_WORKER_ENABLED", tc.worker)
+			unsetEnv(t, "BULLMQ_WORKER_ENABLED")
+			t.Setenv("WORKER_ENABLED", tc.worker)
 			if tc.worker == "" {
-				unsetEnv(t, "BULLMQ_WORKER_ENABLED")
+				unsetEnv(t, "WORKER_ENABLED")
 			}
 			s, err := LoadStartup()
 			if tc.wantErr {
 				if err == nil {
-					t.Fatalf("LoadStartup accepted SKIP_STARTUP_MIGRATION=%q BULLMQ_WORKER_ENABLED=%q", tc.skip, tc.worker)
+					t.Fatalf("LoadStartup accepted SKIP_STARTUP_MIGRATION=%q WORKER_ENABLED=%q", tc.skip, tc.worker)
 				}
 				return
 			}
@@ -440,7 +446,7 @@ func TestLoadSSO(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.SSO.GoogleEnabled() || cfg.SSO.GitHubEnabled() || cfg.SSO.AzureADEnabled() || cfg.SSO.OIDCEnabled() || cfg.SSO.SAMLEnabled() || cfg.SSO.BetterAuthURL != nil {
+	if cfg.SSO.GoogleEnabled() || cfg.SSO.GitHubEnabled() || cfg.SSO.AzureADEnabled() || cfg.SSO.OIDCEnabled() || cfg.SSO.SAMLEnabled() || cfg.SSO.AuthURL != nil {
 		t.Fatalf("SSO = %+v, want every provider off", cfg.SSO)
 	}
 
@@ -449,7 +455,7 @@ func TestLoadSSO(t *testing.T) {
 		"AZUREAD_CLIENT_ID": "a", "AZUREAD_CLIENT_SECRET": "as", "AZUREAD_TENANT_ID": "common",
 		"OIDC_CLIENT_ID": "o", "OIDC_CLIENT_SECRET": "os", "OIDC_ISSUER": "https://idp.example.com/realms/forma", "OIDC_DISPLAY_NAME": "Okta",
 		"AUTH_SSO_DEFAULT_ORGANIZATION_ID": "0199e0a1-7b1c-7a8e-9d1e-0f5c3a7b2d10", "AUTH_SSO_DEFAULT_ORGANIZATION_ROLE": "member",
-		"BETTER_AUTH_URL": "https://auth.example.com/api/auth", "SAML_DATABASE_URL": "postgres://forma:secret@db:5432/forma-saml",
+		"AUTH_URL": "https://auth.example.com/api/auth", "SAML_ENABLED": "1",
 	} {
 		t.Setenv(k, v)
 	}
@@ -459,7 +465,7 @@ func TestLoadSSO(t *testing.T) {
 	}
 	s := cfg.SSO
 	if !s.GoogleEnabled() || !s.GitHubEnabled() || !s.AzureADEnabled() || !s.OIDCEnabled() || !s.SAMLEnabled() || s.AzureADTenantID != "common" || s.OIDCDisplayName != "Okta" ||
-		s.DefaultOrganizationRole != "member" || s.BetterAuthURL.Host != "auth.example.com" {
+		s.DefaultOrganizationRole != "member" || s.AuthURL.Host != "auth.example.com" {
 		t.Fatalf("SSO = %+v", s)
 	}
 
@@ -598,6 +604,115 @@ func TestLoadLogLevels(t *testing.T) {
 			t.Errorf("%s accepted LOG_LEVEL=verbose", name)
 		}
 	}
+}
+
+// The variables renamed from forma2's names are still read under the old ones, behind the current name, with one deprecation warning per old name set; an error names the variable the operator actually set.
+func TestLoadRenamedVariables(t *testing.T) {
+	const tokenSecret, pinSecret = "token-secret-0123456789abcdefghijklmnop", "pin-secret-0123456789abcdefghijklmnopqrs"
+	renamed := []string{"AUTH_URL", "BETTER_AUTH_URL", "NEXTAUTH_URL", "LINK_SURVEY_TOKEN_SECRET", "NEXTAUTH_SECRET", "LINK_SURVEY_PIN_TOKEN_SECRET", "BETTER_AUTH_SECRET", "SAML_ENABLED", "SAML_DATABASE_URL", "WORKER_ENABLED", "BULLMQ_WORKER_ENABLED"}
+	cases := []struct {
+		name     string
+		env      map[string]string
+		check    func(Config) bool
+		warnings []string
+	}{
+		{"current names", map[string]string{"AUTH_URL": "https://auth.example.com", "LINK_SURVEY_TOKEN_SECRET": tokenSecret, "LINK_SURVEY_PIN_TOKEN_SECRET": pinSecret, "SAML_ENABLED": "1"},
+			func(c Config) bool {
+				return c.SSO.AuthURL.Host == "auth.example.com" && c.LinkSurveyEmailSecret() == tokenSecret && c.LinkSurveyPinSecret() == pinSecret && c.SSO.SAMLEnabled()
+			}, nil},
+		{"better auth url", map[string]string{"BETTER_AUTH_URL": "https://better.example.com"},
+			func(c Config) bool { return c.SSO.AuthURL.Host == "better.example.com" },
+			[]string{"BETTER_AUTH_URL is deprecated; rename it to AUTH_URL"}},
+		{"nextauth url", map[string]string{"NEXTAUTH_URL": "https://next.example.com"},
+			func(c Config) bool { return c.SSO.AuthURL.Host == "next.example.com" },
+			[]string{"NEXTAUTH_URL is deprecated; rename it to AUTH_URL"}},
+		{"better auth url before nextauth url", map[string]string{"BETTER_AUTH_URL": "https://better.example.com", "NEXTAUTH_URL": "https://next.example.com"},
+			func(c Config) bool { return c.SSO.AuthURL.Host == "better.example.com" },
+			[]string{"BETTER_AUTH_URL is deprecated; rename it to AUTH_URL", "NEXTAUTH_URL is deprecated and ignored because BETTER_AUTH_URL is set; remove it"}},
+		{"auth url wins", map[string]string{"AUTH_URL": "https://auth.example.com", "NEXTAUTH_URL": "not a url"},
+			func(c Config) bool { return c.SSO.AuthURL.Host == "auth.example.com" },
+			[]string{"NEXTAUTH_URL is deprecated and ignored because AUTH_URL is set; remove it"}},
+		{"forma2 secrets", map[string]string{"NEXTAUTH_SECRET": tokenSecret, "BETTER_AUTH_SECRET": pinSecret},
+			func(c Config) bool {
+				return c.LinkSurveyEmailSecret() == tokenSecret && c.LinkSurveyPinSecret() == pinSecret
+			},
+			[]string{"NEXTAUTH_SECRET is deprecated; rename it to LINK_SURVEY_TOKEN_SECRET", "BETTER_AUTH_SECRET is deprecated; rename it to LINK_SURVEY_PIN_TOKEN_SECRET"}},
+		// Each old name stands for its own current name: forma2's PIN secret stays the PIN secret next to a renamed email secret.
+		{"mixed secrets", map[string]string{"LINK_SURVEY_TOKEN_SECRET": tokenSecret, "BETTER_AUTH_SECRET": pinSecret},
+			func(c Config) bool {
+				return c.LinkSurveyEmailSecret() == tokenSecret && c.LinkSurveyPinSecret() == pinSecret
+			},
+			[]string{"BETTER_AUTH_SECRET is deprecated; rename it to LINK_SURVEY_PIN_TOKEN_SECRET"}},
+		{"nextauth secret behind the current one", map[string]string{"LINK_SURVEY_TOKEN_SECRET": tokenSecret, "NEXTAUTH_SECRET": pinSecret},
+			func(c Config) bool {
+				return c.LinkSurveyEmailSecret() == tokenSecret && c.LinkSurveyPinSecret() == tokenSecret
+			},
+			[]string{"NEXTAUTH_SECRET is deprecated and ignored because LINK_SURVEY_TOKEN_SECRET is set; remove it"}},
+		{"saml database url", map[string]string{"SAML_DATABASE_URL": "postgres://forma:secret@db:5432/forma-saml"},
+			func(c Config) bool { return c.SSO.SAMLEnabled() },
+			[]string{"SAML_DATABASE_URL is deprecated; rename it to SAML_ENABLED"}},
+		{"saml switched off", map[string]string{"SAML_ENABLED": "0", "SAML_DATABASE_URL": "postgres://forma:secret@db:5432/forma-saml"},
+			func(c Config) bool { return !c.SSO.SAMLEnabled() },
+			[]string{"SAML_DATABASE_URL is deprecated and ignored because SAML_ENABLED is set; remove it"}},
+		// `forma serve` and `forma worker` do not read the switch, but the process that does (`forma start`) learns of the deprecation through Load.
+		{"bullmq worker enabled", map[string]string{"BULLMQ_WORKER_ENABLED": "0"},
+			func(Config) bool { return true },
+			[]string{"BULLMQ_WORKER_ENABLED is deprecated; rename it to WORKER_ENABLED"}},
+		{"empty old names are unset", map[string]string{"NEXTAUTH_SECRET": "", "NEXTAUTH_URL": ""},
+			func(c Config) bool { return c.SSO.AuthURL == nil && c.LinkSurveyTokenSecret == "" }, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			setRequired(t)
+			for _, k := range renamed {
+				unsetEnv(t, k)
+			}
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if !tc.check(cfg) {
+				t.Errorf("config does not hold the values of %v", tc.env)
+			}
+			if !slices.Equal(cfg.Warnings, tc.warnings) {
+				t.Errorf("warnings %q, want %q", cfg.Warnings, tc.warnings)
+			}
+		})
+	}
+
+	t.Run("errors name the variable set", func(t *testing.T) {
+		for name, value := range map[string]string{"NEXTAUTH_URL": "/api/auth", "BETTER_AUTH_SECRET": "too-short", "NEXTAUTH_SECRET": "too-short"} {
+			setRequired(t)
+			for _, k := range renamed {
+				unsetEnv(t, k)
+			}
+			t.Setenv(name, value)
+			if _, err := Load(); err == nil || !strings.Contains(err.Error(), name+" must") {
+				t.Errorf("%s=%q: %v", name, value, err)
+			}
+		}
+	})
+
+	t.Run("startup switch", func(t *testing.T) {
+		for _, tc := range []struct {
+			current, old string
+			want         bool
+		}{{"", "0", false}, {"", "1", true}, {"1", "0", true}, {"0", "1", false}} {
+			unsetEnv(t, "WORKER_ENABLED")
+			unsetEnv(t, "BULLMQ_WORKER_ENABLED")
+			if tc.current != "" {
+				t.Setenv("WORKER_ENABLED", tc.current)
+			}
+			t.Setenv("BULLMQ_WORKER_ENABLED", tc.old)
+			s, err := LoadStartup()
+			if err != nil || s.WorkerEnabled != tc.want {
+				t.Errorf("WORKER_ENABLED=%q BULLMQ_WORKER_ENABLED=%q: worker %v, %v; want %v", tc.current, tc.old, s.WorkerEnabled, err, tc.want)
+			}
+		}
+	})
 }
 
 // forma2 ran BULLMQ_WORKER_COUNT workers of BULLMQ_WORKER_CONCURRENCY jobs each; an instance that still sets them gets the same parallelism and a deprecation warning, unless WORKER_CONCURRENCY says otherwise.

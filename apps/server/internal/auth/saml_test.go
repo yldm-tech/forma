@@ -123,7 +123,7 @@ func samlEnv(t *testing.T) *env {
 }
 
 func withSAML(cfg *config.Config) {
-	cfg.SSO.SAMLDatabaseURL = "postgres://forma:secret@db:5432/forma-saml"
+	cfg.SSO.SAML = true
 }
 
 // samlFlow is one sign-in started in a browser: the AuthnRequest's ID and the RelayState the identity provider returns.
@@ -386,7 +386,7 @@ func TestSAMLStart(t *testing.T) {
 		}
 	})
 
-	t.Run("without SAML_DATABASE_URL SAML is not a provider", func(t *testing.T) {
+	t.Run("without SAML_ENABLED SAML is not a provider", func(t *testing.T) {
 		e := newEnv(t)
 		expectStatus(t, e.browser().post("/auth/sso/sign-in", map[string]string{"provider": "saml"}), http.StatusNotFound, "oauth_provider_not_found")
 	})
