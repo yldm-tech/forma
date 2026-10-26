@@ -6,6 +6,7 @@ import { type TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/survey
 import { TSurvey, TSurveyLanguage } from "@forma/types/surveys/types";
 import { TTag } from "@forma/types/tags";
 import { TLanguage } from "@forma/types/workspace";
+import enUS from "../../../../locales/en-US.json";
 import { type DateRange, OptionsType, type SelectedFilterValue } from "./filter-types";
 import {
   SUMMARY_FILTER_OPERATOR,
@@ -1583,7 +1584,7 @@ describe("surveys", () => {
         "common.dismissed"
       );
       expect(getFilterValueLabel(OptionsType.SEGMENTS, "Not in segment", labelT)).toBe(
-        "workspace.analysis.segment_filter.not_in_segment"
+        "workspace.analysis.segment_filter.not_in_this_segment"
       );
       // A choice that happens to be called "Skipped" stays the choice.
       expect(getFilterValueLabel(TSurveyElementTypeEnum.MultipleChoiceSingle, "Skipped", labelT)).toBe(
@@ -1634,6 +1635,25 @@ describe("surveys", () => {
           labelT
         )
       ).toBe("workspace.analysis.filter_op.is workspace.analysis.filter_op.applied");
+    });
+
+    test("a segment chip reads as one English phrase after its segment's title", () => {
+      // Resolves a key against the shipped en-US catalogue, so the test reads the words the chip shows.
+      const enT = ((key: string) =>
+        key
+          .split(".")
+          .reduce<unknown>((node, part) => (node as Record<string, unknown>)[part], enUS)) as TFunction;
+      const segmentRow = (value: string) => ({
+        elementType: {
+          id: "01a17170-3025-7c6a-a738-b4abd9af54a7",
+          label: "Pro customers",
+          type: OptionsType.SEGMENTS,
+        },
+        filterType: { filterValue: "is", filterComboBoxValue: value },
+      });
+
+      expect(describeFilterCondition(segmentRow("In segment"), enT)).toBe("is in this segment");
+      expect(describeFilterCondition(segmentRow("Not in segment"), enT)).toBe("is not in this segment");
     });
   });
 });

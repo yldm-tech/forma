@@ -1764,9 +1764,9 @@
         "placeholder": "自由記述の回答を検索"
       },
       "segment_filter": {
-        "in_segment": "セグメントに含まれる",
+        "in_this_segment": "回答者を含む",
         "membership_hint": "回答した時点ではなく、現在セグメントに含まれる連絡先で判定します。連絡先のない回答はどのセグメントにも含まれません。",
-        "not_in_segment": "セグメントに含まれない"
+        "not_in_this_segment": "回答者を含まない"
       },
       "trends": {
         "answers": "回答件数",

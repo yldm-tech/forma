@@ -1764,9 +1764,9 @@
         "placeholder": "搜尋開放式回應"
       },
       "segment_filter": {
-        "in_segment": "屬於該區隔",
+        "in_this_segment": "受訪者所屬區隔",
         "membership_hint": "依聯絡人現在是否屬於該區隔來判斷，而不是回答當時。沒有聯絡人的回答不屬於任何區隔。",
-        "not_in_segment": "不屬於該區隔"
+        "not_in_this_segment": "非受訪者所屬區隔"
       },
       "trends": {
         "answers": "回答數",

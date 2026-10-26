@@ -1764,9 +1764,9 @@
         "placeholder": "搜索开放式回复"
       },
       "segment_filter": {
-        "in_segment": "属于该细分",
+        "in_this_segment": "受访者所属细分",
         "membership_hint": "按联系人现在是否属于该细分来判断，而不是回答时。没有联系人的回答不属于任何细分。",
-        "not_in_segment": "不属于该细分"
+        "not_in_this_segment": "非受访者所属细分"
       },
       "trends": {
         "answers": "回答数",

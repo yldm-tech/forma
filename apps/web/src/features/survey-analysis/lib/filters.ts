@@ -129,8 +129,8 @@ const FILTER_VALUE_LABELS: Record<string, TFilterLabel> = {
   "Screened in": (t) => t("workspace.analysis.filter_op.screened_in"),
   "Screened out (overquota)": (t) => t("workspace.analysis.filter_op.screened_out_overquota"),
   "Not in quota": (t) => t("workspace.analysis.filter_op.not_in_quota"),
-  "In segment": (t) => t("workspace.analysis.segment_filter.in_segment"),
-  "Not in segment": (t) => t("workspace.analysis.segment_filter.not_in_segment"),
+  "In segment": (t) => t("workspace.analysis.segment_filter.in_this_segment"),
+  "Not in segment": (t) => t("workspace.analysis.segment_filter.not_in_this_segment"),
 };
 
 // Rows whose values are the fixed vocabulary above. Every other row's values are the respondents' or the creator's own text (choice labels, observed field values, language codes), shown as they are even when one happens to read "Skipped".
