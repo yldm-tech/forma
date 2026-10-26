@@ -137,14 +137,10 @@ const SAME_IN_EVERY_LOCALE = new Set([
   "templates.new_integration_survey_question_1_choice_3",
   "templates.new_integration_survey_question_1_choice_4",
   "workspace.actions.url",
-  "workspace.app-connection.install_method_android",
-  "workspace.app-connection.install_method_flutter",
   "workspace.app-connection.install_method_gtm",
   "workspace.app-connection.install_method_html",
   "workspace.app-connection.install_method_nextjs",
   "workspace.app-connection.install_method_react",
-  "workspace.app-connection.install_method_react_native",
-  "workspace.app-connection.install_method_swift",
   "workspace.app-connection.install_method_vue",
   "workspace.app-connection.install_method_wordpress",
   "workspace.settings.billing.plan_hobby",
@@ -165,6 +161,12 @@ const SAME_IN_EVERY_LOCALE = new Set([
   "workspace.xm-templates.enps",
   "workspace.xm-templates.nps",
 ]);
+
+// An allowlist entry for a key that no longer exists is dead weight and would silently exempt a future key re-added under the same name.
+test("every key allowed to stay the same in every locale exists in en-US", () => {
+  const english = new Set(flatten(enUS).map(([key]) => key));
+  expect([...SAME_IN_EVERY_LOCALE].filter((key) => !english.has(key))).toEqual([]);
+});
 
 // A value left in English in a zh or ja catalogue shows English on that screen (the editor's block categories and the whole OAuth consent page did).
 test("zh and ja values differ from en-US unless the key is a brand or technical term", () => {
