@@ -51,19 +51,24 @@ vi.mock("@/lib/recall", () => ({
 }));
 
 vi.mock("@/components/general/block-conditional", () => ({
-  BlockConditional: ({ block, onSubmit }: any) => (
-    <button
-      data-testid={`submit-${block.id}`}
-      onClick={() =>
-        onSubmit(
-          { [block.elements[0].id]: `${block.id}-answer` },
-          {
-            [block.elements[0].id]: 123,
-          }
-        )
-      }>
-      Submit {block.id}
-    </button>
+  BlockConditional: ({ block, onSubmit, onBack }: any) => (
+    <>
+      <button
+        data-testid={`submit-${block.id}`}
+        onClick={() =>
+          onSubmit(
+            { [block.elements[0].id]: `${block.id}-answer` },
+            {
+              [block.elements[0].id]: 123,
+            }
+          )
+        }>
+        Submit {block.id}
+      </button>
+      <button data-testid={`back-${block.id}`} onClick={() => onBack()}>
+        Back from {block.id}
+      </button>
+    </>
   ),
 }));
 
@@ -968,5 +973,64 @@ describe("Survey scoring", () => {
         })
       )
     );
+  });
+
+  test("going back after a reload takes the block's points off again, so answering it again does not count them twice", async () => {
+    // An IndexedDB that keeps the progress each submit saves, read back by the next page.
+    let saved: unknown;
+    offlineStorageMocks.saveSurveyProgress.mockImplementation(async (progress: unknown) => {
+      saved = progress;
+    });
+    offlineStorageMocks.getSurveyProgress.mockImplementation(async () => saved);
+    offlineStorageMocks.countPendingResponses.mockResolvedValue(0);
+    offlineStorageMocks.clearSurveyProgress.mockResolvedValue(undefined);
+    offlineStorageMocks.patchSurveyProgressSnapshot.mockResolvedValue(undefined);
+    apiClientMocks.getResponseIdByDisplayId.mockResolvedValue({ ok: true, data: { responseId: null } });
+    const renderPage = () =>
+      render(
+        <Survey
+          appUrl="http://localhost:3000"
+          workspaceId="ws1234567890123456789012"
+          survey={scoredSurvey}
+          styling={{} as any}
+          isBrandingEnabled={false}
+          languageCode="en"
+          isSpamProtectionEnabled={false}
+          persistProgress
+          getSetIsResponseSendingFinished={() => {}}
+        />
+      );
+
+    renderPage();
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(offlineStorageMocks.saveSurveyProgress).toHaveBeenCalledWith(
+        expect.objectContaining({
+          blockId: "block-2",
+          currentVariables: expect.objectContaining({ scorevariable00000000000: 2 }),
+        })
+      )
+    );
+
+    // Reload, go back to the first block and answer it again.
+    cleanup();
+    renderPage();
+    fireEvent.click(await screen.findByTestId("back-block-2"));
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+
+    await waitFor(() =>
+      expect(offlineStorageMocks.saveSurveyProgress).toHaveBeenLastCalledWith(
+        expect.objectContaining({ blockId: "ending-2" })
+      )
+    );
+    const sent = () => [
+      ...apiClientMocks.createResponse.mock.calls,
+      ...apiClientMocks.updateResponse.mock.calls,
+    ];
+    await waitFor(() => expect(sent().some(([update]) => update.finished === true)).toBe(true));
+    const finalUpdate = sent().find(([update]) => update.finished === true)![0];
+    expect(finalUpdate.variables).toEqual({ scorevariable00000000000: 5, othervariable00000000000: 1 });
+    expect(sent().map(([update]) => update.variables?.scorevariable00000000000)).not.toContain(7);
   });
 });

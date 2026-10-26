@@ -50,6 +50,7 @@ import { INGEST_DROP_MESSAGES, logIngestResult } from "@/lib/ingest-logging";
 import { evaluateLogic, performActions } from "@/lib/logic";
 import {
   type SerializedSurveyState,
+  type VariableStackEntry,
   clearSurveyProgress,
   getSurveyProgress,
   patchSurveyProgressSnapshot,
@@ -95,11 +96,6 @@ const isProgressOfThisRespondent = (
   snapshot: SerializedSurveyState | undefined,
   surveyState: SurveyState | null
 ): boolean => !snapshot || !surveyState || isSameRespondent(snapshot, surveyState);
-
-interface VariableStackEntry {
-  questionId: string;
-  variables: TResponseVariables;
-}
 
 export function Survey({
   appUrl,
@@ -423,7 +419,7 @@ export function Survey({
     );
   });
   const [responseData, setResponseData] = useState<TResponseData>(ingestedFieldsRecord);
-  const [_variableStack, setVariableStack] = useState<VariableStackEntry[]>([]);
+  const [variableStack, setVariableStack] = useState<VariableStackEntry[]>([]);
 
   const [ttc, setTtc] = useState<TResponseTtc>({});
   const isOnline = useOnlineStatus();
@@ -706,6 +702,7 @@ export function Survey({
         setTtc(progress.ttc);
         setCurrentVariables(progress.currentVariables);
         setHistory(progress.history);
+        setVariableStack(progress.variableStack ?? []);
         setSelectedLanguage(progress.selectedLanguage);
 
         // Restore survey state from snapshot
@@ -885,11 +882,14 @@ export function Survey({
     }
   };
 
-  const pushVariableState = (currentQuestionId: string) => {
-    setVariableStack((prevStack) => [
-      ...prevStack,
+  // Built from this render's stack, as the new history is from this render's history, so the progress saved with a submit holds the stack that matches its history.
+  const pushVariableState = (currentQuestionId: string): VariableStackEntry[] => {
+    const newStack = [
+      ...variableStack,
       { questionId: currentQuestionId, variables: { ...currentVariables } },
-    ]);
+    ];
+    setVariableStack(newStack);
+    return newStack;
   };
 
   const popVariableState = () => {
@@ -931,7 +931,7 @@ export function Survey({
     }
 
     const localResponseData = { ...responseData, ...data };
-    // The block's answers add their points to the total score before its logic runs, so a condition on the score already counts them. Going back restores the variables from before the block, so a changed answer is not counted twice.
+    // The block's answers add their points to the total score before its logic runs, so a condition on the score already counts them. Going back restores the variables from before the block, after a reload too (the stack is saved with the progress), so a changed answer is not counted twice.
     let calculationResults = applyBlockScore(
       localSurvey.variables,
       currentBlock.elements,
@@ -1254,7 +1254,7 @@ export function Survey({
       }
     }
 
-    pushVariableState(firstRespondedElementId);
+    const newVariableStack = pushVariableState(firstRespondedElementId);
 
     const { nextBlockId: rawNextBlockId, calculatedVariables } = evaluateLogicAndGetNextBlockId(
       surveyResponseData,
@@ -1316,6 +1316,7 @@ export function Survey({
         ttc: { ...ttc, ...responsettc },
         currentVariables: calculatedVariables,
         history: newHistory,
+        variableStack: newVariableStack,
         selectedLanguage,
         webSurveyMeta: getWebSurveyMeta(),
         surveyStateSnapshot: {
