@@ -6,12 +6,13 @@ const organizations = [
     id: "o1",
     name: "Acme",
     autoSubscribe: true,
+    weeklySummary: true,
     surveys: [
       { id: "s1", name: "NPS", workspaceId: "w1", workspaceName: "Main", alert: true },
       { id: "s2", name: "CSAT", workspaceId: "w1", workspaceName: "Main", alert: false },
     ],
   },
-  { id: "o2", name: "Other", autoSubscribe: false, surveys: [] },
+  { id: "o2", name: "Other", autoSubscribe: false, weeklySummary: false, surveys: [] },
 ];
 
 test("an unsubscribe link switches off only what is on and on this page", () => {
@@ -27,6 +28,12 @@ test("an unsubscribe link switches off only what is on and on this page", () => 
   });
   expect(
     unsubscribeTarget({ type: "unsubscribedOrganizationIds", elementId: "o2" }, organizations)
+  ).toBeNull();
+  expect(
+    unsubscribeTarget({ type: "unsubscribedWeeklySummaryOrganizationIds", elementId: "o1" }, organizations)
+  ).toEqual({ type: "unsubscribedWeeklySummaryOrganizationIds", id: "o1" });
+  expect(
+    unsubscribeTarget({ type: "unsubscribedWeeklySummaryOrganizationIds", elementId: "o2" }, organizations)
   ).toBeNull();
   expect(unsubscribeTarget({ type: "weekly", elementId: "o1" }, organizations)).toBeNull();
   expect(unsubscribeTarget({}, organizations)).toBeNull();

@@ -1,0 +1,35 @@
+{{define "content"}}
+{{template "heading" (.T "emails.weekly_summary_email_heading")}}
+<p style="font-size:14px;line-height:24px;margin:0 0 16px;color:#64748b">{{.T "emails.weekly_summary_email_period" "organizationName" .Content.OrganizationName "periodStart" .Content.PeriodStart "periodEnd" .Content.PeriodEnd "timeZone" .Content.TimeZone}}</p>
+<p style="font-size:14px;line-height:24px;margin:0;font-weight:700">{{.T "emails.weekly_summary_email_total_responses" "responseCount" .Content.Responses}}</p>
+<p style="font-size:14px;line-height:24px;margin:0;color:#64748b">{{.T "emails.weekly_summary_email_previous_week" "value" .Content.PreviousResponses}}</p>
+{{- $v := .}}
+{{- range .Content.Surveys}}
+<hr style="border:none;border-top:1px solid #eaeaea;margin:24px 0;width:100%">
+<p dir="auto" style="font-size:16px;line-height:24px;margin:0;font-weight:700">{{.Name}}</p>
+<p dir="auto" style="font-size:12px;line-height:20px;margin:0 0 8px;color:#64748b">{{.WorkspaceName}}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size:14px;line-height:22px;color:#1e293b">
+<tr><td style="padding:4px 8px 4px 0;color:#64748b;width:40%">{{$v.T "emails.weekly_summary_email_responses"}}</td><td style="padding:4px 0"><strong>{{.Responses}}</strong> <span style="color:#64748b">{{$v.T "emails.weekly_summary_email_previous_week" "value" .PreviousResponses}}</span></td></tr>
+<tr><td style="padding:4px 8px 4px 0;color:#64748b">{{$v.T "emails.weekly_summary_email_completion_rate"}}</td><td style="padding:4px 0"><strong>{{.CompletionRate}}</strong></td></tr>
+{{- with .NPS}}
+<tr><td style="padding:4px 8px 4px 0;color:#64748b">{{$v.T "emails.weekly_summary_email_nps"}}</td><td style="padding:4px 0"><strong>{{.NPSText}}</strong> <span style="color:#64748b">{{$v.T "emails.weekly_summary_email_previous_week" "value" .PreviousNPSText}}</span></td></tr>
+{{- end}}
+{{- with .CSAT}}
+<tr><td style="padding:4px 8px 4px 0;color:#64748b">{{$v.T "emails.weekly_summary_email_csat"}}</td><td style="padding:4px 0"><strong>{{.CSATText}}</strong> <span style="color:#64748b">{{$v.T "emails.weekly_summary_email_previous_week" "value" .PreviousCSATText}}</span></td></tr>
+{{- end}}
+{{- if .Tags}}
+<tr><td style="padding:4px 8px 4px 0;color:#64748b">{{$v.T "emails.weekly_summary_email_top_tags"}}</td><td dir="auto" style="padding:4px 0">{{.TagList}}</td></tr>
+{{- end}}
+</table>
+<p style="margin:12px 0 0"><a href="{{.SummaryURL}}" target="_blank" style="font-size:14px;color:#000000;text-decoration:underline">{{$v.T "emails.weekly_summary_email_view_summary"}}</a></p>
+{{- end}}
+{{- if .Content.MoreSurveys}}
+<hr style="border:none;border-top:1px solid #eaeaea;margin:24px 0;width:100%">
+<p style="font-size:14px;line-height:24px;margin:0;color:#64748b">{{.T "emails.weekly_summary_email_more_surveys" "count" .Content.MoreSurveys}}</p>
+{{- end}}
+<hr style="border:none;border-top:1px solid #eaeaea;margin:26px 0;width:100%">
+<div style="margin-top:16px;text-align:center;font-size:14px">
+<p style="font-size:14px;line-height:24px;margin:16px 0 0">{{.T "emails.weekly_summary_email_why" "organizationName" .Content.OrganizationName}}</p>
+<p style="font-size:14px;line-height:24px;margin:0 0 16px"><a href="{{.Content.SettingsURL}}" style="font-size:14px;color:#000000;text-decoration:underline">{{.T "emails.weekly_summary_email_turn_off"}}</a></p>
+</div>
+{{end}}

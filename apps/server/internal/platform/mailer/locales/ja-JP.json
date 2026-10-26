@@ -79,5 +79,19 @@
   "verification_email_verify_email": "メールアドレスを認証",
   "verification_new_email_subject": "メールアドレス変更の認証",
   "verification_security_notice": "このメールアドレスの変更をリクエストしていない場合は、このメールを無視するか、すぐにサポートに連絡してください。",
-  "verified_link_survey_email_subject": "フォームへの回答準備ができました。"
+  "verified_link_survey_email_subject": "フォームへの回答準備ができました。",
+  "weekly_summary_email_completion_rate": "完了率",
+  "weekly_summary_email_csat": "CSAT（満足）",
+  "weekly_summary_email_heading": "週間サマリー",
+  "weekly_summary_email_more_surveys": "ほかに回答があったフォーム: {count} 件。すべて Forma で確認できます。",
+  "weekly_summary_email_nps": "NPS",
+  "weekly_summary_email_period": "{organizationName}・{periodStart}〜{periodEnd}（{timeZone}）",
+  "weekly_summary_email_previous_week": "（前週: {value}）",
+  "weekly_summary_email_responses": "回答数",
+  "weekly_summary_email_subject": "{organizationName} の週間サマリー",
+  "weekly_summary_email_top_tags": "上位のタグ",
+  "weekly_summary_email_total_responses": "新しい回答: {responseCount} 件",
+  "weekly_summary_email_turn_off": "この組織の週間サマリーをオフにする",
+  "weekly_summary_email_view_summary": "この週のサマリーを見る",
+  "weekly_summary_email_why": "{organizationName} で閲覧できるフォームについて、毎週月曜日にこのサマリーをお送りしています。"
 }

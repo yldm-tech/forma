@@ -697,7 +697,21 @@
     "verification_email_verify_email": "メールアドレスを認証",
     "verification_new_email_subject": "メールアドレス変更の認証",
     "verification_security_notice": "このメールアドレスの変更をリクエストしていない場合は、このメールを無視するか、すぐにサポートに連絡してください。",
-    "verified_link_survey_email_subject": "フォームへの回答準備ができました。"
+    "verified_link_survey_email_subject": "フォームへの回答準備ができました。",
+    "weekly_summary_email_completion_rate": "完了率",
+    "weekly_summary_email_csat": "CSAT（満足）",
+    "weekly_summary_email_heading": "週間サマリー",
+    "weekly_summary_email_more_surveys": "ほかに回答があったフォーム: {count} 件。すべて Forma で確認できます。",
+    "weekly_summary_email_nps": "NPS",
+    "weekly_summary_email_period": "{organizationName}・{periodStart}〜{periodEnd}（{timeZone}）",
+    "weekly_summary_email_previous_week": "（前週: {value}）",
+    "weekly_summary_email_responses": "回答数",
+    "weekly_summary_email_subject": "{organizationName} の週間サマリー",
+    "weekly_summary_email_top_tags": "上位のタグ",
+    "weekly_summary_email_total_responses": "新しい回答: {responseCount} 件",
+    "weekly_summary_email_turn_off": "この組織の週間サマリーをオフにする",
+    "weekly_summary_email_view_summary": "この週のサマリーを見る",
+    "weekly_summary_email_why": "{organizationName} で閲覧できるフォームについて、毎週月曜日にこのサマリーをお送りしています。"
   },
   "onboarding": {
     "product_name_description": "ワークスペース名として使われ、アンケートテンプレートの質問文にも入ります。後からワークスペース設定で変更できます。",
@@ -3216,8 +3230,11 @@
         "set_up_an_alert_to_get_an_email_on_new_responses": "新しい回答が届いたときにメールを受け取るようにアラートを設定します",
         "use_the_integration": "連携を使用する",
         "want_to_loop_in_organization_mates": "組織のメンバーを含めますか？",
+        "weekly_summary": "週間サマリー",
+        "weekly_summary_description": "毎週月曜日 9:00（組織のタイムゾーン）に、閲覧できるフォームの新しい回答、完了率、NPS と CSAT の前週比、上位のタグをメールでお届けします。",
         "you_will_not_be_auto_subscribed_to_this_organizations_surveys_anymore": "この組織のフォームには、自動で購読されなくなります！",
-        "you_will_not_receive_any_more_emails_for_responses_on_this_survey": "このフォームの回答に関するメールは、今後一切受け取れなくなります！"
+        "you_will_not_receive_any_more_emails_for_responses_on_this_survey": "このフォームの回答に関するメールは、今後一切受け取れなくなります！",
+        "you_will_not_receive_the_weekly_summary_for_this_organization_anymore": "この組織の週間サマリーは今後届きません。"
       },
       "profile": {
         "account_deletion_consequences_warning": "アカウント削除の結果",

@@ -20,6 +20,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/clientapi"
 	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/contact/contactsurvey"
+	"github.com/yldm-tech/forma/apps/server/internal/digest"
 	"github.com/yldm-tech/forma/apps/server/internal/followup"
 	"github.com/yldm-tech/forma/apps/server/internal/health"
 	"github.com/yldm-tech/forma/apps/server/internal/instance"
@@ -362,7 +363,8 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	billingRepository := billing.NewRepository(db)
 	engine := billing.NewEngine(cfg, stripe, billingRepository, redisClient, log)
 	brevoClient := brevo.NewClient(cfg)
-	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, deliverer, runner, reconciler, engine, reporter, brevoClient)
+	digestDigest := digest.New(cfg, db, mailerMailer, log)
+	registry := NewJobRegistry(cfg, pool, db, log, delivery, authzAudit, emitter, service, repository, worker, deliverer, runner, reconciler, engine, reporter, brevoClient, digestDigest, enqueuer)
 	jobsWorker, err := jobs.NewWorker(cfg, pool, registry, log)
 	if err != nil {
 		cleanup4()

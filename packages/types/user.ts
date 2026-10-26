@@ -23,6 +23,8 @@ export type TUserLocale = z.infer<typeof ZUserLocale>;
 export const ZUserNotificationSettings = z.object({
   alert: z.record(z.string(), z.boolean()),
   unsubscribedOrganizationIds: z.array(z.string()).optional(),
+  // The organizations whose weekly summary email the user turned off; it is on for every other one.
+  unsubscribedWeeklySummaryOrganizationIds: z.array(z.string()).optional(),
 });
 
 // Characters allowed in a user's display name: letters, combining marks, space, and common name
