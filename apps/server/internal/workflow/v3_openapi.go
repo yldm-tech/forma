@@ -12,7 +12,7 @@ func V3OpenAPI() openapi.Spec {
 	workflow := openapi.Infer[Resource]()
 	workflow.Properties["definition"] = openapi.Ref("WorkflowDefinition")
 	definition := openapi.InferWith[Definition](map[reflect.Type]*openapi.Schema{reflect.TypeFor[Node](): openapi.Infer[nodeJSON]()})
-	definition.Description = "The workflow graph: one response.completed trigger, the nodes after it (send_email actions and if_else branches) and the edges between them."
+	definition.Description = "The workflow graph: one response.completed trigger, the nodes after it (send_email, http_request, slack_message, discord_message, teams_message, tag_response and set_contact_attribute actions, and if_else branches) and the edges between them. Secrets (an http_request header's secret and signingSecret, a chat message's webhookUrl) are written as {\"value\": \"...\"} and read back sealed, as {\"sealed\": \"...\", \"hint\": \"...\"}; send the sealed form back unchanged to keep a secret. Adding or changing an http_request needs manage access to the workspace."
 
 	workflowID := openapi.PathID("workflowId", "The workflow.")
 	limit := openapi.Query("limit", "Page size.", openapi.Integer("", 1, 100, 20))

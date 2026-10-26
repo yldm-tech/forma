@@ -12,6 +12,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 )
 
@@ -63,14 +65,61 @@ func recipientReason(email string) string {
 
 // Service is the workflow management API behind /api/v3/workflows. Every operation authorizes the caller on the workspace the workflow belongs to; an unknown id is refused exactly like one the caller may not see.
 type Service struct {
-	repo  *Repository
-	db    *gorm.DB
-	authz *authz.Authorizer
-	log   *slog.Logger
+	repo    *Repository
+	db      *gorm.DB
+	authz   *authz.Authorizer
+	cipher  *secret.Cipher
+	actions *actions
+	log     *slog.Logger
 }
 
-func NewService(repo *Repository, db *gorm.DB, authorizer *authz.Authorizer, log *slog.Logger) *Service {
-	return &Service{repo: repo, db: db, authz: authorizer, log: log}
+func NewService(repo *Repository, db *gorm.DB, authorizer *authz.Authorizer, cipher *secret.Cipher, guard *ssrf.Guard, log *slog.Logger) *Service {
+	return &Service{repo: repo, db: db, authz: authorizer, cipher: cipher, actions: newActions(db, guard, cipher), log: log}
+}
+
+// httpRequestsManaged is the refusal of an http_request a caller may not author: one that sends response data anywhere with headers of its own is a workspace manager's decision.
+const httpRequestsManaged = "Only workspace managers can add or change HTTP request steps."
+
+// changedHTTPRequests reports whether after has an http_request action that before does not have exactly as it is: a new one, or one whose method, URL, headers, body or signing secret changed. Re-entering a secret changes it too.
+func changedHTTPRequests(before, after *Definition) bool {
+	stored := map[string]string{}
+	if before != nil {
+		for _, n := range before.Nodes {
+			if n.HTTP != nil {
+				stored[n.ID] = string(mustJSON(n.HTTP))
+			}
+		}
+	}
+	for _, n := range after.Nodes {
+		if n.HTTP == nil {
+			continue
+		}
+		if was, ok := stored[n.ID]; !ok || was != string(mustJSON(n.HTTP)) {
+			return true
+		}
+	}
+	return false
+}
+
+// prepareDefinition is what every definition write does after the caller may write to the workspace: its secrets sealed for the workspace (sealSecrets), and, when it adds or changes an http_request, the caller must be able to manage the workspace.
+func (s *Service) prepareDefinition(ctx context.Context, actor authz.Actor, workspaceID uuid.UUID, before, after *Definition) error {
+	issues, err := sealSecrets(s.cipher, workspaceID, after, []any{"definition"})
+	if err != nil {
+		return err
+	}
+	if len(issues) > 0 {
+		return payloadProblem(issues)
+	}
+	if changedHTTPRequests(before, after) {
+		if err := v3api.RequireWorkspace(ctx, s.authz, actor, authz.WorkspaceManage, workspaceID); err != nil {
+			var problem *v3api.Problem
+			if errors.As(err, &problem) {
+				return v3api.Forbidden(httpRequestsManaged)
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // userOf is the acting user, forma2's createdBy and publishedBy; nil for an API key.
@@ -133,6 +182,9 @@ func (s *Service) Create(ctx context.Context, actor authz.Actor, readBody func()
 	if err := v3api.RequireWorkspace(ctx, s.authz, actor, authz.WorkspaceWrite, in.WorkspaceID); err != nil {
 		return nil, err
 	}
+	if err := s.prepareDefinition(ctx, actor, in.WorkspaceID, nil, in.Definition); err != nil {
+		return nil, err
+	}
 	created, err := s.repo.create(ctx, in.WorkspaceID, in.Name, in.Description, mustJSON(in.Definition), userOf(actor))
 	if err == nil {
 		s.capture(ctx, actor, lifecycleEvent{operation: "created", row: created})
@@ -164,6 +216,13 @@ func (s *Service) Patch(ctx context.Context, actor authz.Actor, id uuid.UUID, re
 	}
 	if in.Definition != nil && w.Status == StatusEnabled {
 		return nil, nil, invalidState(definitionLocked)
+	}
+	if in.Definition != nil {
+		// A stored definition that no longer parses has nothing to keep: every http_request in the new one counts as new.
+		stored, _ := ParseDefinition(w.Definition)
+		if err := s.prepareDefinition(ctx, actor, w.WorkspaceID, stored, in.Definition); err != nil {
+			return nil, nil, err
+		}
 	}
 	set := map[string]any{}
 	if in.Name != nil {

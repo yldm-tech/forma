@@ -380,7 +380,7 @@ func TestPlan(t *testing.T) {
 		t.Fatalf("missing: %v", err)
 	}
 	branch := &Definition{Trigger: &TriggerNode{ID: "trigger"}, Nodes: []Node{{ID: "x", Type: NodeIfElse}}, Edges: []Edge{{ID: "e1", Source: "trigger", Target: "x"}}}
-	if _, err := Plan(branch); err == nil || !strings.Contains(err.Error(), "not an executable send_email action") {
+	if _, err := Plan(branch); err == nil || !strings.Contains(err.Error(), "is not an executable action") {
 		t.Fatalf("if_else: %v", err)
 	}
 }
