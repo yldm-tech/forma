@@ -206,7 +206,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	// The MCP endpoint and the OAuth authorization server MCP clients discover were recorded with the management APIs; their fixtures are replayed here too.
 	guard := v3api.NewGuard(cfg, headerSessions{}, keys, limiter, log)
 	surveyHandler := survey.NewHandler(surveys, headerSessions{}, guard, limiter, log)
-	workflows := workflow.NewHandler(cfg, workflow.NewService(workflow.NewRepository(db), db, authorizer, log), guard, headerSessions{}, emitter, log)
+	workflows := workflow.NewHandler(cfg, workflow.NewService(workflow.NewRepository(db), db, authorizer, nil, nil, log), guard, headerSessions{}, emitter, log)
 	signingKeys := oauthserver.NewKeys(db, cipher)
 	oauth, err := oauthserver.NewHandler(cfg, db, signingKeys, headerSessions{}, limiter, log)
 	if err != nil {

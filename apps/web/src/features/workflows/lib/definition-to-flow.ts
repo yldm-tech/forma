@@ -4,6 +4,7 @@ import {
   type TWorkflowDefinition,
   type TWorkflowNode,
   getBlankSendEmailContentFields,
+  getWorkflowActionProblems,
   getWorkflowNodeConcreteType,
 } from "../definition";
 import type { TWorkflowNodeData, TWorkflowNodeIssue } from "../state/editor";
@@ -39,6 +40,14 @@ const getWorkflowNodeIssue = (
     if (getBlankSendEmailContentFields(node.config).length > 0) {
       return { severity, label: t("workspace.workflows.node_needs_email_content") };
     }
+  }
+  // The other steps do not author against the survey, so they are flagged whether or not it is bound.
+  if (
+    node.type === "action" &&
+    node.actionType !== "send_email" &&
+    getWorkflowActionProblems(node).length > 0
+  ) {
+    return { severity, label: t("workspace.workflows.node_needs_setup") };
   }
   return null;
 };

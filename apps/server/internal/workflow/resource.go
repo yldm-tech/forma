@@ -195,8 +195,15 @@ func toResource(w *Workflow) Resource {
 	return Resource{ListItem: toListItem(w), Definition: w.Definition}
 }
 
-// sendEmailPII are the send_email fields that can carry personal data.
-var sendEmailPII = []string{"to", "from", "replyTo", "subject", "body"}
+// actionPII are the fields of each action that can carry personal data or a credential: an email's addresses and contents, a request's URL (whose path and query often carry a token), headers, body and signing secret, a chat's webhook URL and message, and an attribute's value.
+var actionPII = map[string][]string{
+	ActionSendEmail:           {"to", "from", "replyTo", "subject", "body"},
+	ActionHTTPRequest:         {"url", "headers", "body", "signingSecret"},
+	ActionSlackMessage:        {"webhookUrl", "message"},
+	ActionDiscordMessage:      {"webhookUrl", "message"},
+	ActionTeamsMessage:        {"webhookUrl", "message"},
+	ActionSetContactAttribute: {"value"},
+}
 
 // redactValue is forma2's audit marker: the first 12 hex digits of an HMAC-SHA256 under the instance's ENCRYPTION_KEY, so an unchanged value makes no diff and a changed one does, without the value being guessable from the log.
 func redactValue(value, key string) string {
@@ -212,7 +219,15 @@ func redactValue(value, key string) string {
 	return "[redacted:" + hex.EncodeToString(sum)[:12] + "]"
 }
 
-// redactDefinition is forma2's redactWorkflowDefinitionPII: every send_email action's addresses, subject and body replaced by markers, each replyTo entry separately.
+// redactText is the marker of any value: a string's own text, anything else its JSON, so two headers or secrets are told apart.
+func redactText(v any, key string) string {
+	if s, ok := v.(string); ok {
+		return redactValue(s, key)
+	}
+	return redactValue(string(mustJSON(v)), key)
+}
+
+// redactDefinition is forma2's redactWorkflowDefinitionPII for every action: each field of actionPII replaced by a marker, a list's entries (replyTo, headers) each separately; a null stays null.
 func redactDefinition(definition any, key string) any {
 	d, ok := definition.(map[string]any)
 	if !ok {
@@ -226,31 +241,33 @@ func redactDefinition(definition any, key string) any {
 	for i, n := range nodes {
 		out[i] = n
 		node, ok := n.(map[string]any)
-		if !ok || node["type"] != NodeAction || node["actionType"] != ActionSendEmail {
+		if !ok || node["type"] != NodeAction {
 			continue
 		}
+		actionType, _ := node["actionType"].(string)
+		fields := actionPII[actionType]
 		config, ok := node["config"].(map[string]any)
-		if !ok {
+		if !ok || len(fields) == 0 {
 			continue
 		}
 		redacted := map[string]any{}
 		for k, v := range config {
 			redacted[k] = v
 		}
-		for _, field := range sendEmailPII {
+		for _, field := range fields {
 			v, present := redacted[field]
-			if !present {
+			if !present || v == nil {
 				continue
 			}
 			if list, ok := v.([]any); ok {
 				items := make([]any, len(list))
 				for j, item := range list {
-					items[j] = redactValue(jsvalue.String(item), key)
+					items[j] = redactText(item, key)
 				}
 				redacted[field] = items
 				continue
 			}
-			redacted[field] = redactValue(jsvalue.String(v), key)
+			redacted[field] = redactText(v, key)
 		}
 		copied := map[string]any{}
 		for k, v := range node {

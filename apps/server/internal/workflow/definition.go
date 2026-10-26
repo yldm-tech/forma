@@ -1,4 +1,4 @@
-// Package workflow is forma2's Workflows (packages/workflows and apps/web/modules/workflows): the definition document a workflow stores and the rules that make it persistable or executable, the /api/v3/workflows management API with its lifecycle (draft, enabled, disabled, archived) and immutable published versions, and the runner that turns a finished response into queued runs, executes their send_email steps at most once each, and reconciles runs that were lost or abandoned.
+// Package workflow is forma2's Workflows (packages/workflows and apps/web/modules/workflows): the definition document a workflow stores and the rules that make it persistable or executable, the /api/v3/workflows management API with its lifecycle (draft, enabled, disabled, archived) and immutable published versions, and the runner that turns a finished response into queued runs, executes their action steps (send_email, http_request, the Slack, Discord and Teams messages, tag_response and set_contact_attribute) at most once each, and reconciles runs that were lost or abandoned.
 package workflow
 
 import (
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf16"
@@ -27,7 +28,14 @@ const (
 	NodeTrigger = "trigger"
 
 	TriggerResponseCompleted = "response.completed"
-	ActionSendEmail          = "send_email"
+
+	ActionSendEmail           = "send_email"
+	ActionHTTPRequest         = "http_request"
+	ActionSlackMessage        = "slack_message"
+	ActionDiscordMessage      = "discord_message"
+	ActionTeamsMessage        = "teams_message"
+	ActionTagResponse         = "tag_response"
+	ActionSetContactAttribute = "set_contact_attribute"
 
 	branchThen = "then"
 	branchElse = "else"
@@ -110,7 +118,10 @@ type ConditionGroup struct {
 	Conditions []ConditionItem `json:"conditions"`
 }
 
-// Node is a node after the trigger: a send_email action (Email set) or an if_else branch (Condition set), which can be stored but not executed.
+// ActionTypes are the action nodes this server stores and runs, in the order the builder offers them.
+var ActionTypes = []string{ActionSendEmail, ActionHTTPRequest, ActionSlackMessage, ActionDiscordMessage, ActionTeamsMessage, ActionTagResponse, ActionSetContactAttribute}
+
+// Node is a node after the trigger: an action, with the config of its actionType set (Email, HTTP, Chat for the three chat messages, Tag or Attribute), or an if_else branch (Condition set), which can be stored but not executed.
 type Node struct {
 	ID         string
 	Type       string
@@ -118,6 +129,10 @@ type Node struct {
 	Label      *string
 	UI         UI
 	Email      *SendEmailConfig
+	HTTP       *HTTPRequestConfig
+	Chat       *ChatMessageConfig
+	Tag        *TagResponseConfig
+	Attribute  *SetContactAttributeConfig
 	Condition  *ConditionGroup
 }
 
@@ -132,9 +147,18 @@ type nodeJSON struct {
 
 func (n Node) MarshalJSON() ([]byte, error) {
 	out := nodeJSON{ID: n.ID, Type: n.Type, Label: n.Label, UI: n.UI, ActionType: n.ActionType}
-	if n.Email != nil {
+	switch {
+	case n.Email != nil:
 		out.Config = n.Email
-	} else {
+	case n.HTTP != nil:
+		out.Config = n.HTTP
+	case n.Chat != nil:
+		out.Config = n.Chat
+	case n.Tag != nil:
+		out.Config = n.Tag
+	case n.Attribute != nil:
+		out.Config = n.Attribute
+	default:
 		out.Config = map[string]any{"condition": n.Condition}
 	}
 	return json.Marshal(out)
@@ -178,7 +202,7 @@ func ParseDefinition(raw json.RawMessage) (*Definition, []Issue) {
 	return parseDefinition(raw, false)
 }
 
-// ParseExecutable is ZWorkflowExecutableDefinition.safeParse: the subset the runner can execute, which enable publishes and every run re-checks. It needs a trigger with exactly one outgoing edge, a graph that is acyclic with every node reachable, no if_else nodes, and a to, subject and body in every send_email action.
+// ParseExecutable is ZWorkflowExecutableDefinition.safeParse: the subset the runner can execute, which enable publishes and every run re-checks. It needs a trigger with exactly one outgoing edge, a graph that is acyclic with every node reachable, no if_else nodes, and every action configured enough to run (ActionProblems).
 func ParseExecutable(raw json.RawMessage) (*Definition, []Issue) {
 	return parseDefinition(raw, true)
 }
@@ -208,8 +232,8 @@ func parseDefinitionValue(value any, at []any, executable bool) (*Definition, []
 				p.add(path(nil, "nodes", i, "type"), "if_else nodes are not executable in this version of workflows")
 			}
 			if n.Type == NodeAction {
-				for _, field := range BlankContentFields(*n.Email) {
-					p.add(path(nil, "nodes", i, "config", field), fmt.Sprintf("send_email node %s is missing %s", n.ID, field))
+				for _, problem := range ActionProblems(n) {
+					p.add(append(path(nil, "nodes", i, "config"), fieldPath(problem.Field)...), problem.message(n))
 				}
 			}
 		}
@@ -585,18 +609,20 @@ func (p *parser) node(v any, at []any) *Node {
 	}
 	switch m["type"] {
 	case NodeAction:
-		if m["actionType"] != ActionSendEmail {
+		actionType, _ := m["actionType"].(string)
+		if !slices.Contains(ActionTypes, actionType) {
 			p.fail(path(at, "actionType"), "Invalid input")
 			return nil
 		}
-		n := &Node{Type: NodeAction, ActionType: ActionSendEmail}
+		n := &Node{Type: NodeAction, ActionType: actionType}
 		n.ID, n.Label, n.UI = p.base(m, at)
 		cfg, present := m["config"]
-		if c, ok := p.object(cfg, present, path(at, "config")); ok {
-			n.Email = p.sendEmail(c, path(at, "config"))
-		} else {
-			n.Email = &SendEmailConfig{ReplyTo: []string{}}
+		c, ok := p.object(cfg, present, path(at, "config"))
+		// A config that is not an object already failed the parse; the node still gets its type's empty config, so nothing downstream meets a nil.
+		if !ok {
+			c = map[string]any{}
 		}
+		p.actionConfig(n, c, ok, path(at, "config"))
 		return n
 	case NodeIfElse:
 		n := &Node{Type: NodeIfElse}
@@ -610,6 +636,26 @@ func (p *parser) node(v any, at []any) *Node {
 	}
 	p.fail(at, "Invalid input")
 	return nil
+}
+
+// actionConfig reads the config of the node's actionType; parsed is false when the config was not an object, which leaves the type's empty config.
+func (p *parser) actionConfig(n *Node, c map[string]any, parsed bool, at []any) {
+	switch n.ActionType {
+	case ActionSendEmail:
+		if parsed {
+			n.Email = p.sendEmail(c, at)
+		} else {
+			n.Email = &SendEmailConfig{ReplyTo: []string{}}
+		}
+	case ActionHTTPRequest:
+		n.HTTP = p.httpRequest(c, parsed, at)
+	case ActionSlackMessage, ActionDiscordMessage, ActionTeamsMessage:
+		n.Chat = p.chatMessage(c, parsed, at)
+	case ActionTagResponse:
+		n.Tag = p.tagResponse(c, parsed, at)
+	case ActionSetContactAttribute:
+		n.Attribute = p.setContactAttribute(c, parsed, at)
+	}
 }
 
 func (p *parser) sendEmail(c map[string]any, at []any) *SendEmailConfig {
@@ -887,11 +933,12 @@ func (p *parser) executableGraph(d *Definition) {
 	}
 }
 
-// Step is one executable step in run order. Only send_email actions are executable.
+// Step is one executable step in run order: an action node. Config is the send_email config, zero for the other actions, whose config the node carries.
 type Step struct {
 	ID     string
 	Type   string
 	Config SendEmailConfig
+	Node   Node
 }
 
 // PlanError is a graph the runner cannot walk, forma2's WorkflowPlanError.
@@ -901,7 +948,7 @@ type PlanError struct {
 
 func (e *PlanError) Error() string { return e.Message }
 
-// Plan is forma2's planExecutableSteps: the chain of send_email steps from the trigger along the single edge out of each node.
+// Plan is forma2's planExecutableSteps: the chain of action steps from the trigger along the single edge out of each node.
 func Plan(d *Definition) ([]Step, error) {
 	nodes := map[string]Node{}
 	for _, n := range d.Nodes {
@@ -930,10 +977,14 @@ func Plan(d *Definition) ([]Step, error) {
 		if !ok {
 			return nil, &PlanError{Message: "Workflow edge targets a missing node: " + next[0]}
 		}
-		if n.Type != NodeAction || n.ActionType != ActionSendEmail || n.Email == nil {
-			return nil, &PlanError{Message: fmt.Sprintf("Workflow node %s is not an executable send_email action", n.ID)}
+		if n.Type != NodeAction || !n.hasConfig() {
+			return nil, &PlanError{Message: fmt.Sprintf("Workflow node %s is not an executable action", n.ID)}
 		}
-		steps = append(steps, Step{ID: n.ID, Type: ActionSendEmail, Config: *n.Email})
+		step := Step{ID: n.ID, Type: n.ActionType, Node: n}
+		if n.Email != nil {
+			step.Config = *n.Email
+		}
+		steps = append(steps, step)
 		id = n.ID
 	}
 }

@@ -2,10 +2,11 @@ import type { TFunction } from "i18next";
 import { describe, expect, test } from "vite-plus/test";
 import type {
   TWorkflowIfElseNode,
+  TWorkflowNode,
   TWorkflowResponseCompletedTriggerNode,
   TWorkflowSendEmailActionNode,
 } from "../definition";
-import { getNodeRegistryEntry, getNodeRegistryKind } from "./node-registry";
+import { getNodeRegistryEntry, getNodeRegistryKind, getWorkflowActionOptions } from "./node-registry";
 
 const t = ((key: string, options?: Record<string, unknown>) =>
   options ? `${key}:${JSON.stringify(options)}` : key) as unknown as TFunction;
@@ -93,5 +94,57 @@ describe("getNodeRegistryEntry", () => {
     expect(entry.title(ifElseNode, t)).toBe("workspace.workflows.if_else");
     expect(entry.summary(ifElseNode, t)).toBe("workspace.workflows.if_else_summary");
     expect(entry.ConfigForm).toBeNull();
+  });
+});
+
+describe("the actions after send_email", () => {
+  const httpNode: TWorkflowNode = {
+    id: "http-1",
+    type: "action",
+    actionType: "http_request",
+    config: {
+      method: "PUT",
+      url: "https://api.example.com/hooks/1",
+      headers: [],
+      body: "",
+      signingSecret: null,
+    },
+  };
+
+  test("each has its own kind, icon and form, and its summary says whether it is configured", () => {
+    expect(getNodeRegistryKind(httpNode)).toBe("action:http_request");
+    const entry = getNodeRegistryEntry(httpNode);
+    expect(entry.icon).toBe("http");
+    expect(entry.ConfigForm).not.toBeNull();
+    expect(entry.title(httpNode, t)).toBe("workspace.workflows.http_request");
+    expect(entry.summary(httpNode, t)).toBe(
+      'workspace.workflows.http_request_summary:{"method":"PUT","host":"api.example.com"}'
+    );
+    const unconfigured: TWorkflowNode = {
+      id: "s",
+      type: "action",
+      actionType: "slack_message",
+      config: { webhookUrl: {}, message: "" },
+    };
+    expect(getNodeRegistryEntry(unconfigured).icon).toBe("slack");
+    expect(getNodeRegistryEntry(unconfigured).summary(unconfigured, t)).toBe(
+      "workspace.workflows.action_unconfigured"
+    );
+  });
+
+  test("the picker offers every action, the HTTP request only to managers", () => {
+    const options = getWorkflowActionOptions(t);
+    expect(options.map((option) => option.actionType)).toEqual([
+      "send_email",
+      "slack_message",
+      "discord_message",
+      "teams_message",
+      "tag_response",
+      "set_contact_attribute",
+      "http_request",
+    ]);
+    expect(options.filter((option) => option.needsManage).map((option) => option.actionType)).toEqual([
+      "http_request",
+    ]);
   });
 });

@@ -5,11 +5,17 @@ import { Checkbox } from "../../../../components/ui/checkbox";
 import { Label } from "../../../../components/ui/label";
 import { Select } from "../../../../components/ui/select";
 import { cn } from "../../../../lib/cn";
-import type { TWorkflowResponseCompletedTriggerNode } from "../../definition";
+import { WORKFLOW_ACTIONS, type TWorkflowResponseCompletedTriggerNode } from "../../definition";
 import { useWorkflowSurveyEndings, useWorkflowSurveyOptions } from "../../hooks/use-trigger-survey-picker";
 import { useWorkflowNodeFieldFocus } from "../../hooks/use-workflow-node-field-focus";
 import { reconcileEndingCardIds } from "../../lib/trigger-ending-cards";
-import { hasBoundTriggerSurveyAtom, prunedTriggerEndingCardIdsAtom, workflowAtom } from "../../state/editor";
+import {
+  canManageWorkspaceAtom,
+  hasBoundTriggerSurveyAtom,
+  prunedTriggerEndingCardIdsAtom,
+  workflowAtom,
+  workflowDefinitionAtom,
+} from "../../state/editor";
 import { WorkflowFieldError, WorkflowFieldLabel } from "./workflow-field";
 
 interface WorkflowTriggerFormProps {
@@ -29,6 +35,14 @@ export const WorkflowTriggerForm = ({ node, isEditable, onChange }: Readonly<Wor
   const triggerSurveyId = node.config.surveyId || null;
   const endingsQuery = useWorkflowSurveyEndings(triggerSurveyId);
   const hasBoundSurvey = useAtomValue(hasBoundTriggerSurveyAtom);
+  // Which survey's responses an HTTP request step sends is a workspace manager's decision, like the step itself; the API refuses the change otherwise.
+  const canManage = useAtomValue(canManageWorkspaceAtom);
+  const hasHttpRequests = Boolean(
+    useAtomValue(workflowDefinitionAtom)?.nodes.some(
+      (n) => n.type === "action" && n.actionType === WORKFLOW_ACTIONS.HTTP_REQUEST
+    )
+  );
+  const isSurveyLocked = hasHttpRequests && !canManage;
 
   // An unbound survey is restated here, so a jump from the problems dialog lands on a control that says what is wrong. Stale ending ids get no error of their own: the reconcile prunes them before this form sees them, and the notice below reports the widening.
   const isSurveyInvalid = !hasBoundSurvey;
@@ -152,7 +166,7 @@ export const WorkflowTriggerForm = ({ node, isEditable, onChange }: Readonly<Wor
         <Select
           id="workflow-trigger-survey"
           value={selectedSurveyId}
-          disabled={!isEditable || surveyOptionsQuery.isLoading}
+          disabled={!isEditable || isSurveyLocked || surveyOptionsQuery.isLoading}
           aria-invalid={isSurveyInvalid}
           aria-describedby={isSurveyInvalid ? "workflow-trigger-survey-error" : undefined}
           className={cn(isSurveyInvalid && "border-red-500")}
@@ -175,7 +189,11 @@ export const WorkflowTriggerForm = ({ node, isEditable, onChange }: Readonly<Wor
             {t("workspace.workflows.validation_problem_trigger_survey_unbound")}
           </WorkflowFieldError>
         ) : null}
-        <p className="text-xs text-slate-500">{t("workspace.workflows.trigger_survey_description")}</p>
+        <p className="text-xs text-slate-500">
+          {isEditable && isSurveyLocked
+            ? t("workspace.workflows.trigger_survey_http_manage_only")
+            : t("workspace.workflows.trigger_survey_description")}
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">

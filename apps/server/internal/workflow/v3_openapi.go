@@ -12,7 +12,7 @@ func V3OpenAPI() openapi.Spec {
 	workflow := openapi.Infer[Resource]()
 	workflow.Properties["definition"] = openapi.Ref("WorkflowDefinition")
 	definition := openapi.InferWith[Definition](map[reflect.Type]*openapi.Schema{reflect.TypeFor[Node](): openapi.Infer[nodeJSON]()})
-	definition.Description = "The workflow graph: one response.completed trigger, the nodes after it (send_email actions and if_else branches) and the edges between them."
+	definition.Description = "The workflow graph: one response.completed trigger, the nodes after it (send_email, http_request, slack_message, discord_message, teams_message, tag_response and set_contact_attribute actions, and if_else branches) and the edges between them. Secrets (an http_request header's secret and signingSecret, a chat message's webhookUrl) are written as {\"value\": \"...\"} and read back sealed, as {\"sealed\": \"...\", \"hint\": \"...\"}; send the sealed form back unchanged to keep a secret. Adding or changing an http_request needs manage access to the workspace."
 
 	workflowID := openapi.PathID("workflowId", "The workflow.")
 	limit := openapi.Query("limit", "Page size.", openapi.Integer("", 1, 100, 20))
@@ -110,7 +110,7 @@ func V3OpenAPI() openapi.Spec {
 			},
 			{
 				Method: http.MethodPost, Path: "/api/v3/workflows/{workflowId}/duplicate", ID: "duplicateWorkflow", Tag: "Workflows",
-				Summary: "Duplicate a workflow", Description: "Copies the workflow as a new draft, optionally under a new name. Needs write access to the workspace.",
+				Summary: "Duplicate a workflow", Description: "Copies the workflow as a new draft, optionally under a new name. Needs write access to the workspace, and manage access when the workflow has an HTTP request step.",
 				Parameters: []openapi.Parameter{workflowID},
 				Body:       openapi.Object("", map[string]*openapi.Schema{"name": name}), BodyOptional: true,
 				Responses: created("The copy."),

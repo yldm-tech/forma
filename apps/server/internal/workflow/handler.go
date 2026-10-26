@@ -52,10 +52,11 @@ func (h *Handler) MountV3(g gin.IRouter) {
 	g.POST("/:workflowId/test", h.test)
 }
 
-// Register mounts the builder's authoring context on the /api/app group.
+// Register mounts the builder's authoring context and its test send on the /api/app group.
 func (h *Handler) Register(r gin.IRouter) {
 	g := r.Group("", h.sessions.Require())
 	g.GET("/workspaces/:workspaceId/workflows/authoring-context", h.authoringContext)
+	g.POST("/workflows/:workflowId/steps/:stepId/test-send", h.testSend)
 }
 
 // listMeta is the meta of a cursor-paginated list.

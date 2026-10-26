@@ -37,6 +37,8 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer/mailertest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/v3api/openapi/openapitest"
@@ -109,6 +111,9 @@ type env struct {
 	meter      *meterRecorder
 	runner     *Runner
 	reconciler *Reconciler
+	cipher     *secret.Cipher
+	// guard is the runner's and the test send's SSRF guard; it lets loopback through, so a test can send to an httptest server.
+	guard *ssrf.Guard
 	// openapi checks every /api/v3 answer the published OpenAPI document describes.
 	openapi *openapitest.Document
 }
@@ -140,14 +145,19 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	limiter := ratelimit.New(cfg, nil, e.log)
-	svc := NewService(NewRepository(db), db, e.authz.Authorizer, e.log)
+	if e.cipher, err = secret.NewCipher(cfg); err != nil {
+		t.Fatal(err)
+	}
+	e.guard = ssrf.New(config.Config{DangerouslyAllowWebhookInternalURLs: true})
+	svc := NewService(NewRepository(db), db, e.authz.Authorizer, e.cipher, e.guard, e.log)
 	h := NewHandler(cfg, svc, v3api.NewGuard(cfg, headerSessions{}, apikey.NewAuthenticator(db, e.log), limiter, e.log), headerSessions{}, audit.New(cfg, e.log), e.log)
 	e.engine = httpserver.NewEngine(cfg, e.log)
 	h.Register(e.engine.Group("/api/app", httpapi.ErrorHandler(e.log), httpapi.CSRF(cfg), authz.DecisionMemo()))
 	h.RegisterV3(e.engine)
 	e.meter = &meterRecorder{}
 	e.enqueuer = NewEnqueuer(db, e.jobs, e.meter, e.log)
-	e.runner = NewRunner(cfg, db, e.mailer, e.log)
+	e.runner = NewRunner(cfg, db, e.mailer, e.guard, e.cipher, e.log)
+	e.runner.actions.retryWaits = []time.Duration{time.Millisecond, time.Millisecond}
 	e.reconciler = NewReconciler(db, e.jobs, e.log)
 	return e
 }
