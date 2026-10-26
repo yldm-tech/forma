@@ -423,9 +423,9 @@ func TestWithMigrationLockSerializesMigrators(t *testing.T) {
 	}
 }
 
-// 00021 suspends every membership of a deactivated account and leaves every account as it is: nothing tells an organization's deactivation from the operator's, so none is undone. Its Down deactivates every account with a suspended membership again, so a release without suspensions does not give their access back.
+// 00022 suspends every membership of a deactivated account and leaves every account as it is: nothing tells an organization's deactivation from the operator's, so none is undone. Its Down deactivates every account with a suspended membership again, so a release without suspensions does not give their access back.
 func TestMembershipSuspensionMigration(t *testing.T) {
-	const version = 21
+	const version = 22
 	dsn := startPostgres(t)
 	ctx := context.Background()
 	provider, cleanup, err := NewMigrator(dsn, migrations.FS)
