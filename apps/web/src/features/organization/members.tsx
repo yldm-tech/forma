@@ -6,6 +6,8 @@ import {
   SendHorizonalIcon,
   ShareIcon,
   TrashIcon,
+  UserCheckIcon,
+  UserXIcon,
   XIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -13,7 +15,14 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { DeleteDialog } from "../../components/ui/delete-dialog";
-import { Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,13 +54,15 @@ import {
   membersQuery,
   useChangeMemberRole,
   useRemoveMember,
+  useSetMemberSuspension,
 } from "../../lib/queries/organizations";
 import {
   type OrganizationRole,
   accessFlags,
   assignableRoles,
+  canChangeSuspension,
   canDeleteRow,
-  hasMoreThanOneActiveOwner,
+  hasAnotherActiveOwner,
   isRoleEditDisabled,
   roleLabel,
 } from "../../lib/roles";
@@ -82,7 +93,6 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
     ...(members.data ?? []).map((member) => ({ kind: "member" as const, member })),
     ...(invites.data ?? []).map((invite) => ({ kind: "invite" as const, invite })),
   ];
-  const doesOrgHaveMoreThanOneOwner = hasMoreThanOneActiveOwner(members.data ?? []);
   // The server sends each member's two-factor status to owners and managers only.
   const showTwoFactor = accessFlags(role).isOwnerOrManager;
   // A table missing its members, its invites or the caller's permissions would look complete and silently lose rows or actions, so any failure replaces it.
@@ -148,7 +158,8 @@ export const MembersCard = ({ organization }: { organization: OrganizationDetail
                 currentUserId={me.id}
                 userManagementEnabled={userManagementEnabled}
                 billingRoleAllowed={access.data?.billingRoleAllowed ?? false}
-                doesOrgHaveMoreThanOneOwner={doesOrgHaveMoreThanOneOwner}
+                members={members.data ?? []}
+                canManageUsers={access.data?.canManageUsers ?? false}
                 emailConfigured={emailConfigured}
                 showTwoFactor={showTwoFactor}
               />
@@ -167,7 +178,8 @@ const MemberTableRow = ({
   currentUserId,
   userManagementEnabled,
   billingRoleAllowed,
-  doesOrgHaveMoreThanOneOwner,
+  members,
+  canManageUsers,
   emailConfigured,
   showTwoFactor,
 }: {
@@ -177,10 +189,16 @@ const MemberTableRow = ({
   currentUserId: string;
   userManagementEnabled: boolean;
   billingRoleAllowed: boolean;
-  doesOrgHaveMoreThanOneOwner: boolean;
+  members: readonly Member[];
+  canManageUsers: boolean;
   emailConfigured: boolean;
   showTwoFactor: boolean;
 }) => {
+  // The owner guards count the owners other than this row's member who can still act, so a suspended owner may be demoted, removed or restored while one active owner remains.
+  const anotherActiveOwner = hasAnotherActiveOwner(
+    members,
+    row.kind === "member" ? row.member.userId : undefined
+  );
   const name = row.kind === "member" ? row.member.name : (row.invite.name ?? "");
   const email = row.kind === "member" ? row.member.email : row.invite.email;
   const memberRole = row.kind === "member" ? row.member.role : row.invite.role;
@@ -200,13 +218,13 @@ const MemberTableRow = ({
             currentUserId,
             memberRole,
             memberUserId: row.kind === "member" ? row.member.userId : undefined,
-            doesOrgHaveMoreThanOneOwner,
+            hasAnotherActiveOwner: anotherActiveOwner,
           })}
           billingRoleAllowed={billingRoleAllowed}
         />
       </TableCell>
       <TableCell>
-        <StatusBadge row={row} organizationId={organizationId} />
+        <StatusBadge row={row} />
       </TableCell>
       {showTwoFactor && (
         <TableCell>
@@ -229,8 +247,15 @@ const MemberTableRow = ({
               row.kind === "invite"
                 ? { kind: "invite" }
                 : { kind: "member", userId: row.member.userId, role: row.member.role },
-              { currentUserRole, currentUserId, doesOrgHaveMoreThanOneOwner }
+              { currentUserRole, currentUserId, hasAnotherActiveOwner: anotherActiveOwner }
             )}
+            canSuspend={
+              row.kind === "member" &&
+              canChangeSuspension(
+                { userId: row.member.userId, role: row.member.role, suspended: !!row.member.suspendedAt },
+                { currentUserRole, currentUserId, hasAnotherActiveOwner: anotherActiveOwner, canManageUsers }
+              )
+            }
           />
         </TableCell>
       )}
@@ -238,7 +263,7 @@ const MemberTableRow = ({
   );
 };
 
-const StatusBadge = ({ row, organizationId }: { row: MemberRow; organizationId: string }) => {
+const StatusBadge = ({ row }: { row: MemberRow }) => {
   const { t, i18n } = useTranslation();
   if (row.kind === "invite") {
     if (isInviteExpired(row.invite)) return <Badge type="gray" text={t("common.expired")} size="tiny" />;
@@ -253,16 +278,29 @@ const StatusBadge = ({ row, organizationId }: { row: MemberRow; organizationId: 
       </span>
     );
   }
-  if (!row.member.isActive) return <InactiveBadge organizationId={organizationId} email={row.member.email} />;
+  if (!row.member.isActive) return <InactiveBadge />;
+  if (row.member.suspendedAt) {
+    const since = t("organizations.members.suspended_since", {
+      date: new Intl.DateTimeFormat(i18n.language, { dateStyle: "long" }).format(
+        new Date(row.member.suspendedAt)
+      ),
+    });
+    return (
+      <span title={since}>
+        <Badge type="error" text={t("organizations.members.suspended")} size="tiny" />
+        <span className="sr-only">{since}</span>
+      </span>
+    );
+  }
   return <Badge type="success" text={t("common.active")} size="tiny" />;
 };
 
 /**
- * An account switched off with isActive: false, which only the v2 management API writes; the pages have no control that undoes it, so the badge says how to. Its explanation is a tooltip for the eye, reached by hover or focus, and hidden text beside the badge for a screen reader reading the table. The hidden text stays out of the badge's button: focusing the button opens the tooltip, which Radix announces as the button's description, and the explanation inside the button would be read a second time as its name.
+ * An account switched off on the instance (users.is_active), which no page or API of an organization writes any more: an organization suspends a member instead. Only the instance's operator turns the account back on, so the badge says so. Its explanation is a tooltip for the eye, reached by hover or focus, and hidden text beside the badge for a screen reader reading the table. The hidden text stays out of the badge's button: focusing the button opens the tooltip, which Radix announces as the button's description, and the explanation inside the button would be read a second time as its name.
  */
-const InactiveBadge = ({ organizationId, email }: { organizationId: string; email: string }) => {
+const InactiveBadge = () => {
   const { t } = useTranslation();
-  const restore = t("organizations.members.inactive_tooltip", { organizationId, email });
+  const restore = t("organizations.members.account_inactive_tooltip");
   return (
     <TooltipProvider delayDuration={0}>
       <Tooltip>
@@ -342,7 +380,7 @@ const RoleCell = ({
   );
 };
 
-/** forma2's MemberActions: remove, and for an invite share its link or, where the instance sends email, send it again. A membership row has nothing to share or resend, so it shows neither button; nor does an invite row for a team admin, since the server shares and resends invites for owners and managers only. */
+/** forma2's MemberActions: remove, for a member suspend or restore their access to the organization (asking first before suspending), and for an invite share its link or, where the instance sends email, send it again. A membership row has nothing to share or resend, so it shows neither button; nor does an invite row for a team admin, since the server shares and resends invites for owners and managers only. */
 const MemberActions = ({
   row,
   organizationId,
@@ -350,6 +388,7 @@ const MemberActions = ({
   canDelete,
   canManageInvites,
   emailConfigured,
+  canSuspend,
 }: {
   row: MemberRow;
   organizationId: string;
@@ -357,9 +396,14 @@ const MemberActions = ({
   canDelete: boolean;
   canManageInvites: boolean;
   emailConfigured: boolean;
+  /** The caller may suspend this member's access, or restore it (canChangeSuspension). */
+  canSuspend: boolean;
 }) => {
   const { t } = useTranslation();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const setSuspension = useSetMemberSuspension(organizationId);
+  const member = row.kind === "member" && canSuspend ? row.member : null;
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const removeMember = useRemoveMember(organizationId);
   const deleteInvite = useDeleteInvite(organizationId);
@@ -377,6 +421,21 @@ const MemberActions = ({
         toast.success(t("workspace.settings.general.member_deleted_successfully"));
       }
       setDeleteOpen(false);
+    } catch (error) {
+      toast.error(errorMessage(t, error));
+    }
+  };
+
+  const changeSuspension = async (suspended: boolean) => {
+    if (!member) return;
+    try {
+      await setSuspension.mutateAsync({ userId: member.userId, suspended });
+      toast.success(
+        suspended
+          ? t("organizations.members.suspended_successfully")
+          : t("organizations.members.restored_successfully")
+      );
+      setSuspendOpen(false);
     } catch (error) {
       toast.error(errorMessage(t, error));
     }
@@ -404,6 +463,27 @@ const MemberActions = ({
 
   return (
     <div className="flex justify-end gap-2">
+      {member &&
+        (member.suspendedAt ? (
+          <Button
+            variant="secondary"
+            size="icon"
+            loading={setSuspension.isPending}
+            title={t("organizations.members.restore_access")}
+            aria-label={t("organizations.members.restore_access")}
+            onClick={() => void changeSuspension(false)}>
+            <UserCheckIcon />
+          </Button>
+        ) : (
+          <Button
+            variant="secondary"
+            size="icon"
+            title={t("organizations.members.suspend_access")}
+            aria-label={t("organizations.members.suspend_access")}
+            onClick={() => setSuspendOpen(true)}>
+            <UserXIcon />
+          </Button>
+        ))}
       <Button
         variant="destructive"
         size="icon"
@@ -443,8 +523,50 @@ const MemberActions = ({
         isDeleting={removeMember.isPending || deleteInvite.isPending}
         text={t("workspace.settings.general.delete_member_confirmation")}
       />
+      {member && (
+        <SuspendMemberDialog
+          open={suspendOpen}
+          onOpenChange={setSuspendOpen}
+          name={name}
+          pending={setSuspension.isPending}
+          onConfirm={() => void changeSuspension(true)}
+        />
+      )}
       <ShareInviteModal url={shareUrl} onClose={() => setShareUrl(null)} />
     </div>
+  );
+};
+
+/** The confirmation before suspending a member, which says what they lose here, what they keep, and that it can be undone. */
+const SuspendMemberDialog = ({
+  open,
+  onOpenChange,
+  name,
+  pending,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  name: string;
+  pending: boolean;
+  onConfirm: () => void;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogHeader>
+        <DialogTitle>{t("organizations.members.suspend_title", { name })}</DialogTitle>
+        <DialogDescription>{t("organizations.members.suspend_description", { name })}</DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          {t("common.cancel")}
+        </Button>
+        <Button variant="destructive" onClick={onConfirm} loading={pending}>
+          {t("organizations.members.suspend_access")}
+        </Button>
+      </DialogFooter>
+    </Dialog>
   );
 };
 

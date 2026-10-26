@@ -666,8 +666,25 @@ checksums:
     onboarding/product_name_placeholder: 5ec6ce1b5ac5c32e07c8c107bc6b3b68
     organizations/landing/no_workspaces_warning_subtitle: 305578d27209f1c4f706fccd53559f52
     organizations/landing/no_workspaces_warning_title: ba051776860ec4d73c7d177b1379bbda
+    organizations/members/account_inactive_tooltip: afa13fc8be6b8a77c9846ce074871799
+    organizations/members/creator_suspended_hint: 8bfe75040d28fb5f6b65c006e84f2bc3
     organizations/members/inactive_tooltip: b8d97773412ccd96f3e87643638aa6ff
+    organizations/members/restore_access: c3fd25fcf70901ace79f9d542b082d15
+    organizations/members/restored_successfully: eee608cea7538b09397ff2751cb6cd49
+    organizations/members/suspend_access: 9a6a6602a780a22bb932e4aee6351301
+    organizations/members/suspend_description: e8833d7bf640aa5d105c8c83e3798c01
+    organizations/members/suspend_title: d8b11cb0ba14ef11e6dea0e0694e4644
+    organizations/members/suspended: 6435f2d5f2b7c08a467c4659bc24e6a1
+    organizations/members/suspended_since: 4e92a4e4b3c58c3f1021cba09778fb49
+    organizations/members/suspended_successfully: 4a2cab0cc02b3becba6cbb6041fa3a45
     organizations/security_tip_github: 0c3949dce92da2ab10e070c6033f98b4
+    organizations/suspended/page_continue: fbeb2410478168f98c569839958482b4
+    organizations/suspended/page_description: be8296f53f1ba1d3385483f7c7679e1b
+    organizations/suspended/page_other_organizations: a64613d14a36ea061ff09d876fbc3de7
+    organizations/suspended/page_restored_description: 27546f679ecb58d9800b4cc481ce7d97
+    organizations/suspended/page_restored_title: 211a8859263c17d705cf016995604ce8
+    organizations/suspended/page_title: 3301355e5d1520ad3ad7662071d9d926
+    organizations/suspended/switcher_label: 58012c593377b8e2c198cccf6ebe4d81
     organizations/two_factor/card_description: c398b77c047f099ac4edf25f3f6be0e2
     organizations/two_factor/card_title: bc68ddd9c3c82225ef641f097e0940db
     organizations/two_factor/column: 63d68e16d3d1783870c9881afef158bd
