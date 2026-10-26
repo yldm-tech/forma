@@ -11,6 +11,7 @@ import { ZBaseStyling } from "../styling";
 import { ZLanguage } from "../workspace";
 import { type TSurveyBlock, type TSurveyBlockLogicAction, ZSurveyBlocks } from "./blocks";
 import { findBlocksWithCyclicLogic } from "./blocks-validation";
+import { SCORE_VARIABLE_UNIQUE_MESSAGE } from "./scoring";
 import {
   type TSurveyElement,
   TSurveyElementTypeEnum,
@@ -207,6 +208,8 @@ export const ZSurveyVariable = z
       name: z.string(),
       type: z.literal("number"),
       value: z.number().prefault(0),
+      // The survey's total score: the runtime adds the score of every picked choice to it as each block is submitted (packages/types/surveys/scoring.ts). At most one variable of a survey holds it.
+      isScore: z.boolean().optional(),
     }),
     z.object({
       id: z.cuid2(),
@@ -957,6 +960,15 @@ export const ZSurveyBase = z.object({
       ctx.addIssue({
         code: "custom",
         message: "Variable names must be unique",
+        path: ["variables"],
+      });
+    }
+
+    // one total score at most
+    if (variables.filter((v) => v.type === "number" && v.isScore).length > 1) {
+      ctx.addIssue({
+        code: "custom",
+        message: SCORE_VARIABLE_UNIQUE_MESSAGE,
         path: ["variables"],
       });
     }
@@ -4475,6 +4487,27 @@ export const ZSurveyElementSummary = z.union([
 
 export type TSurveyElementSummary = z.infer<typeof ZSurveyElementSummary>;
 
+// The total score over the responses that carry one: the value of the survey's total score variable (scoring.ts) in each response, with its spread in bins, one per value while there are at most 11 distinct values and ten of equal width beyond.
+export const ZSurveyScoreSummary = z.object({
+  variableId: z.string(),
+  name: z.string(),
+  responseCount: z.number(),
+  average: z.number(),
+  median: z.number(),
+  min: z.number(),
+  max: z.number(),
+  bins: z.array(
+    z.object({
+      from: z.number(),
+      to: z.number(),
+      count: z.number(),
+      percentage: z.number(),
+    })
+  ),
+});
+
+export type TSurveyScoreSummary = z.infer<typeof ZSurveyScoreSummary>;
+
 export const ZSurveySummary = z.object({
   meta: z.object({
     displayCount: z.number(),
@@ -4509,6 +4542,8 @@ export const ZSurveySummary = z.object({
     })
   ),
   summary: z.array(z.union([ZSurveyElementSummary, ZSurveyElementSummaryHiddenFields])),
+  // Null when the survey has no total score variable.
+  score: ZSurveyScoreSummary.nullish(),
 });
 
 export type TSurveySummary = z.infer<typeof ZSurveySummary>;

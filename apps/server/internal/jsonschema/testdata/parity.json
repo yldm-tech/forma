@@ -248,5 +248,47 @@
     "zod": false,
     "jsonSchema": true,
     "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "Block 1", "elements": [{ "id": "hours", "type": "slider", "headline": { "default": "How many hours?" }, "required": true, "min": 0, "max": 10, "step": 3 }] }]
+  },
+  {
+    "name": "choices with scores",
+    "schema": "survey.blocks",
+    "zod": true,
+    "jsonSchema": true,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "Block 1", "elements": [{ "id": "capital", "type": "multipleChoiceSingle", "headline": { "default": "Capital of France?" }, "required": true, "choices": [{ "id": "paris", "label": { "default": "Paris" }, "score": 1 }, { "id": "lyon", "label": { "default": "Lyon" }, "score": 0 }] }] }]
+  },
+  {
+    "name": "a choice score that is not a number",
+    "schema": "survey.blocks",
+    "zod": false,
+    "jsonSchema": false,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "Block 1", "elements": [{ "id": "capital", "type": "multipleChoiceSingle", "headline": { "default": "Capital of France?" }, "required": true, "choices": [{ "id": "paris", "label": { "default": "Paris" }, "score": "1" }, { "id": "lyon", "label": { "default": "Lyon" }, "score": 0 }] }] }]
+  },
+  {
+    "name": "a choice score beyond the bound",
+    "schema": "survey.blocks",
+    "zod": false,
+    "jsonSchema": false,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "Block 1", "elements": [{ "id": "capital", "type": "multipleChoiceSingle", "headline": { "default": "Capital of France?" }, "required": true, "choices": [{ "id": "paris", "label": { "default": "Paris" }, "score": 1000001 }, { "id": "lyon", "label": { "default": "Lyon" }, "score": 0 }] }] }]
+  },
+  {
+    "name": "a picture choice with a score",
+    "schema": "survey.blocks",
+    "zod": true,
+    "jsonSchema": true,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "Block 1", "elements": [{ "id": "logo", "type": "pictureSelection", "headline": { "default": "Which logo?" }, "required": true, "allowMulti": false, "choices": [{ "id": "a", "imageUrl": "/storage/clm1x1x1x0000x1x1x1x1x1x1/public/a.png", "score": 2 }, { "id": "b", "imageUrl": "/storage/clm1x1x1x0000x1x1x1x1x1x1/public/b.png" }] }] }]
+  },
+  {
+    "name": "a total score variable",
+    "schema": "survey.variables",
+    "zod": true,
+    "jsonSchema": true,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "score", "type": "number", "value": 0, "isScore": true }]
+  },
+  {
+    "name": "a total score flag that is not a boolean",
+    "schema": "survey.variables",
+    "zod": false,
+    "jsonSchema": false,
+    "document": [{ "id": "tz4a98xxat96iws9zmbrgj3a", "name": "score", "type": "number", "value": 0, "isScore": "yes" }]
   }
 ]
