@@ -20,17 +20,21 @@ import {
 import { CreateOrganizationModal } from "./create-organization-modal";
 import { SwitcherDropdownBody } from "./switcher-dropdown-body";
 
-/** forma2's OrganizationBreadcrumb: the current organization, a switcher loaded when it opens with "Create new organization" under the list (any signed-in user may create one, as the workspace switcher offers "Add new workspace"), and a link to its settings. */
+/**
+ * forma2's OrganizationBreadcrumb: the current organization, a switcher loaded when it opens with "Create new organization" under the list (any signed-in user may create one, as the workspace switcher offers "Add new workspace"), and a link to its settings.
+ *
+ * On a phone, where the admin is read-only, it is only the switcher: another organization opens on its survey list, which a phone opens, while creating one and the settings do not appear, and choosing the current organization (which otherwise opens its settings) stays put. Before the workspace crumb it shows only its icon there, to leave the narrow bar room; the name stays its accessible name.
+ */
 export const OrganizationBreadcrumb = ({
   organizationId,
   organizationName,
   isLastCrumb,
-  className,
+  isPhone = false,
 }: {
   organizationId: string;
   organizationName: string;
   isLastCrumb: boolean;
-  className?: string;
+  isPhone?: boolean;
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -39,11 +43,11 @@ export const OrganizationBreadcrumb = ({
   const organizations = useQuery({ ...organizationsQuery, enabled: open });
 
   return (
-    <BreadcrumbItem isActive={open} className={className}>
+    <BreadcrumbItem isActive={open}>
       <DropdownMenu onOpenChange={setOpen}>
         <DropdownMenuTrigger className="focus-visible:ring-ring flex cursor-pointer items-center gap-1 rounded-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden">
           <Building2Icon className="size-3" strokeWidth={1.5} />
-          <span>{organizationName}</span>
+          <span className={isPhone && !isLastCrumb ? "sr-only" : undefined}>{organizationName}</span>
           {open || isLastCrumb ? (
             <ChevronDownIcon className="size-3" strokeWidth={1.5} />
           ) : (
@@ -58,21 +62,32 @@ export const OrganizationBreadcrumb = ({
             onRetry={() => void organizations.refetch()}
             items={switcherOrganizations(t, organizations.data ?? [])}
             selectedId={organizationId}
-            onSelect={(id) => void navigate({ href: organizationSwitchPath(id, organizationId) })}>
-            <DropdownMenuCheckboxItem className="w-full justify-between" onSelect={() => setCreateOpen(true)}>
-              <span>{t("workspace.settings.general.create_new_organization")}</span>
-              <PlusIcon className="ml-2 size-4" strokeWidth={1.5} />
-            </DropdownMenuCheckboxItem>
+            onSelect={(id) => {
+              if (isPhone && id === organizationId) return;
+              void navigate({ href: organizationSwitchPath(id, organizationId) });
+            }}>
+            {!isPhone && (
+              <DropdownMenuCheckboxItem
+                className="w-full justify-between"
+                onSelect={() => setCreateOpen(true)}>
+                <span>{t("workspace.settings.general.create_new_organization")}</span>
+                <PlusIcon className="ml-2 size-4" strokeWidth={1.5} />
+              </DropdownMenuCheckboxItem>
+            )}
           </SwitcherDropdownBody>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            onSelect={() => void navigate({ href: organizationSettingsPath(organizationId, "general") })}>
-            <SettingsIcon className="mr-2 size-4" />
-            {t("common.settings")}
-          </DropdownMenuCheckboxItem>
+          {!isPhone && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem
+                onSelect={() => void navigate({ href: organizationSettingsPath(organizationId, "general") })}>
+                <SettingsIcon className="mr-2 size-4" />
+                {t("common.settings")}
+              </DropdownMenuCheckboxItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <CreateOrganizationModal open={createOpen} setOpen={setCreateOpen} />
+      {!isPhone && <CreateOrganizationModal open={createOpen} setOpen={setCreateOpen} />}
     </BreadcrumbItem>
   );
 };

@@ -24,7 +24,7 @@ export interface ShellOrganization {
 /**
  * forma2's TopControlBar: the organization and (inside a workspace) workspace switchers on the left; on the right the command palette, scoped to the current workspace, and the user menu.
  *
- * Inside a workspace on a phone-sized screen, where the sidebar is hidden, the bar starts with a menu button that opens the workspace's navigation in a drawer from the left (MobileNavigation), and keeps only the workspace switcher and the user menu: the organization switcher and the palette lead to pages a phone does not open. The drawer closes when a page is chosen in it or the address changes otherwise (a workspace picked in the switcher).
+ * Inside a workspace on a phone-sized screen, where the sidebar is hidden, the bar starts with a menu button that opens the workspace's navigation in a drawer from the left (MobileNavigation), and drops the palette, whose destinations are mostly pages a phone does not open. On a phone both switchers only switch, to an organization's or a workspace's survey list, which a phone opens: creating an organization or a workspace and the organization's settings are left out, since the admin is read-only there. The drawer closes when a page is chosen in it or the address changes otherwise (a workspace or an organization picked in a switcher).
  */
 export const TopControlBar = ({
   user,
@@ -86,7 +86,7 @@ export const TopControlBar = ({
             organizationId={organization.id}
             organizationName={organization.name}
             isLastCrumb={!breadcrumbWorkspace}
-            className={breadcrumbWorkspace ? "hidden sm:inline-flex" : undefined}
+            isPhone={isPhone}
           />
           {breadcrumbWorkspace && (
             <WorkspaceBreadcrumb
@@ -95,6 +95,7 @@ export const TopControlBar = ({
               organizationId={organization.id}
               isOwnerOrManager={isOwnerOrManager}
               isMembershipPending={membershipRole === undefined}
+              isPhone={isPhone}
             />
           )}
         </BreadcrumbList>

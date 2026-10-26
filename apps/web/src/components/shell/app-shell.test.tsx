@@ -39,11 +39,14 @@ const stubScreen = (isPhone: boolean) =>
 const ReadyProbe = () => <p>{useIsPhoneReadyPage() ? "phone-ready" : "desktop-only"}</p>;
 
 /** The shell around a summary page (PHONE_READY), its nested response modal route (not marked) and an editor page (not marked). */
-const renderShell = async (path: string) => {
+const renderShell = async (path: string, isWorkspaceReadOnly = false) => {
   const queryClient = new QueryClient();
   queryClient.setQueryData(plainSessionQuery.queryKey, null);
   const shell = () => (
-    <AppShell sidebar={<nav aria-label="Sidebar">sidebar</nav>} topBar={<div>top bar</div>}>
+    <AppShell
+      sidebar={<nav aria-label="Sidebar">sidebar</nav>}
+      topBar={<div>top bar</div>}
+      isWorkspaceReadOnly={isWorkspaceReadOnly}>
       <Outlet />
     </AppShell>
   );
@@ -85,6 +88,13 @@ test("on a phone a page that opens there says it is read-only", async () => {
   await renderShell("/summary");
   expect(screen.getByText("phone-ready")).toBeTruthy();
   expect(notice()).toBeTruthy();
+});
+
+test("a user whose access to the workspace is read-only anyway gets no notice: a bigger screen would not let them change anything", async () => {
+  stubScreen(true);
+  await renderShell("/summary", true);
+  expect(screen.getByText("phone-ready")).toBeTruthy();
+  expect(notice()).toBeNull();
 });
 
 test("the deepest page decides: a child the phone does not open is not read-only there", async () => {

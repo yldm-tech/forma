@@ -14,6 +14,8 @@ import { afterEach, beforeAll, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../lib/i18n";
 import type { Me } from "../../lib/queries/auth";
 import { billingKeys } from "../../lib/queries/billing";
+import { type OrganizationSummary, organizationsQuery } from "../../lib/queries/organizations";
+import { type Workspace, workspacesQuery } from "../../lib/queries/workspaces";
 import { TopControlBar } from "./top-control-bar";
 
 const ORG = "0190a000-0000-7000-8000-000000000001";
@@ -58,10 +60,17 @@ const stubScreen = (isPhone: boolean) =>
     removeEventListener: () => {},
   }));
 
-/** The workspace's top bar on its survey list, with the contacts page to navigate to. */
+const OTHER_ORG = "0190a000-0000-7000-8000-000000000003";
+
+/** The workspace's top bar on its survey list, with the contacts page to navigate to. The switchers' lists are loaded already: the organization and another one, and the workspace. */
 const renderTopBar = async (role = "owner") => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   queryClient.setQueryData(billingKeys.summary(ORG), { isFormaCloud: false });
+  queryClient.setQueryData(organizationsQuery.queryKey, [
+    { id: ORG, name: "Acme", role, suspendedAt: null },
+    { id: OTHER_ORG, name: "Globex", role: "member", suspendedAt: null },
+  ] as OrganizationSummary[]);
+  queryClient.setQueryData(workspacesQuery(ORG).queryKey, [{ id: WS, name: "Website" }] as Workspace[]);
   const page = () => (
     <TopControlBar
       user={user}
@@ -171,4 +180,58 @@ test("from the sm breakpoint up the drawer does not open: the sidebar is there",
   await renderTopBar();
   fireEvent.click(await screen.findByRole("button", { name: i18n.t("common.mobile_open_navigation") }));
   expect(screen.queryByRole("dialog", { name: i18n.t("common.mobile_navigation_title") })).toBeNull();
+});
+
+/** Opens a switcher in the top bar by its trigger's name and returns the names of its menu items. */
+const openSwitcher = async (name: RegExp) => {
+  fireEvent.keyDown(await screen.findByRole("button", { name }), { key: "Enter" });
+  const menu = await screen.findByRole("menu");
+  return within(menu)
+    .getAllByRole("menuitemcheckbox")
+    .map((item) => item.textContent);
+};
+
+test("on a phone the workspace switcher only switches: an owner is not offered a new workspace", async () => {
+  stubScreen(true);
+  await renderTopBar();
+  expect(await openSwitcher(/Website/)).toEqual(["Website"]);
+  expect(screen.queryByText(i18n.t("common.add_new_workspace"))).toBeNull();
+  expect(screen.queryByText(i18n.t("common.create_workspace"))).toBeNull();
+});
+
+test("from the sm breakpoint up the workspace switcher offers an owner a new workspace", async () => {
+  stubScreen(false);
+  await renderTopBar();
+  expect(await openSwitcher(/Website/)).toEqual(["Website", i18n.t("common.add_new_workspace")]);
+});
+
+test("on a phone the organization switcher is there, as its icon, and only switches to another organization's surveys", async () => {
+  stubScreen(true);
+  const router = await renderTopBar();
+  const trigger = await screen.findByRole("button", { name: /Acme/ });
+  expect(within(trigger).getByText("Acme").className).toBe("sr-only");
+  expect(await openSwitcher(/Acme/)).toEqual(["Acme", "Globex"]);
+  expect(screen.queryByText(i18n.t("workspace.settings.general.create_new_organization"))).toBeNull();
+  expect(screen.queryByText(i18n.t("common.settings"))).toBeNull();
+
+  // The current organization would open its settings, which a phone does not open: it stays on the page.
+  fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Acme" }));
+  expect(router.state.location.pathname).toBe(`/workspaces/${WS}/surveys`);
+
+  fireEvent.keyDown(screen.getByRole("button", { name: /Acme/ }), { key: "Enter" });
+  fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Globex" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe(`/organizations/${OTHER_ORG}`));
+});
+
+test("from the sm breakpoint up the organization switcher shows its name and offers creating one and its settings", async () => {
+  stubScreen(false);
+  await renderTopBar();
+  const trigger = await screen.findByRole("button", { name: /Acme/ });
+  expect(within(trigger).getByText("Acme").className).toBe("");
+  expect(await openSwitcher(/Acme/)).toEqual([
+    "Acme",
+    "Globex",
+    i18n.t("workspace.settings.general.create_new_organization"),
+    i18n.t("common.settings"),
+  ]);
 });
