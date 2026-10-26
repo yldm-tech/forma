@@ -1,5 +1,5 @@
 import type { TSurvey } from "@forma/types/surveys/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { hashKey, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCwIcon, SparklesIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +17,7 @@ import {
   type TextSummaryRequest,
   type TextSummaryTarget,
   analysisApi,
+  analysisKeys,
   textSummaryQuery,
 } from "../../api";
 import { useResponseFilter } from "../filter/response-filter-context";
@@ -68,12 +69,19 @@ const TextSummarySection = ({
     () => ({ elementId, target, language: locale, filterCriteria }),
     [elementId, target, locale, filterCriteria]
   );
-  const query = textSummaryQuery(survey.id, request);
-  const state = useQuery(query);
+  const state = useQuery(textSummaryQuery(survey.id, request));
+  // The request travels with the mutation: a pending mutation takes the options of the latest render, so a summary must be stored under the filter and language it was asked for, not the ones the reader has switched to since.
   const generate = useMutation({
-    mutationFn: (refresh: boolean) => analysisApi.generateTextSummary(survey.id, request, refresh),
-    onSuccess: (next) => queryClient.setQueryData(query.queryKey, next),
+    mutationFn: (vars: { request: TextSummaryRequest; refresh: boolean }) =>
+      analysisApi.generateTextSummary(survey.id, vars.request, vars.refresh),
+    onSuccess: (next, vars) =>
+      queryClient.setQueryData(analysisKeys.textSummary(survey.id, vars.request), next),
   });
+  const run = (refresh: boolean) => generate.mutate({ request, refresh });
+  // A generation pending or failed for another filter or language is not this one's.
+  const isCurrent =
+    generate.variables !== undefined && hashKey([generate.variables.request]) === hashKey([request]);
+  const pending = generate.isPending && isCurrent;
   const [openResponseId, setOpenResponseId] = useState<string | null>(null);
 
   if (state.isPending) return null;
@@ -86,7 +94,7 @@ const TextSummarySection = ({
   }
   const { available, reason, summary } = state.data;
 
-  const failure = generate.isError ? generationError(generate.error, t) : null;
+  const failure = generate.isError && isCurrent ? generationError(generate.error, t) : null;
   const summarizeLabel =
     target === "other"
       ? t("workspace.surveys.summary.ai_summary.summarize_other")
@@ -96,7 +104,16 @@ const TextSummarySection = ({
     <section
       aria-label={t("workspace.surveys.summary.ai_summary.title")}
       className={cn("rounded-lg border border-slate-200 bg-slate-50 p-4", className)}>
-      {!available ? (
+      {summary ? (
+        // A member without edit access reads the summary others generated, and cannot refresh it.
+        <SummaryView
+          summary={summary}
+          locale={locale}
+          refreshing={pending}
+          onRefresh={available ? () => run(true) : undefined}
+          onOpenResponse={setOpenResponseId}
+        />
+      ) : !available ? (
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="secondary" size="sm" disabled>
             <SparklesIcon />
@@ -104,25 +121,13 @@ const TextSummarySection = ({
           </Button>
           <p className="text-sm text-slate-600">{getAIUnavailableMessage(reason, t)}</p>
         </div>
-      ) : summary ? (
-        <SummaryView
-          summary={summary}
-          locale={locale}
-          refreshing={generate.isPending}
-          onRefresh={() => generate.mutate(true)}
-          onOpenResponse={setOpenResponseId}
-        />
       ) : (
         <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={generate.isPending}
-            onClick={() => generate.mutate(false)}>
+          <Button variant="secondary" size="sm" disabled={pending} onClick={() => run(false)}>
             <SparklesIcon />
             {summarizeLabel}
           </Button>
-          {generate.isPending && (
+          {pending && (
             <p role="status" className="text-sm text-slate-600">
               {t("workspace.surveys.summary.ai_summary.summarizing")}
             </p>
@@ -170,7 +175,8 @@ const SummaryView = ({
   summary: TextSummary;
   locale: string;
   refreshing: boolean;
-  onRefresh: () => void;
+  /** Absent when the reader cannot generate a summary. */
+  onRefresh?: () => void;
   onOpenResponse: (responseId: string) => void;
 }) => {
   const { t } = useTranslation();
@@ -207,10 +213,12 @@ const SummaryView = ({
               time: timeSince(summary.generatedAt, locale),
             })}
           </span>
-          <Button variant="ghost" size="sm" loading={refreshing} onClick={onRefresh}>
-            <RefreshCwIcon />
-            {t("workspace.surveys.summary.ai_summary.refresh")}
-          </Button>
+          {onRefresh && (
+            <Button variant="ghost" size="sm" loading={refreshing} onClick={onRefresh}>
+              <RefreshCwIcon />
+              {t("workspace.surveys.summary.ai_summary.refresh")}
+            </Button>
+          )}
         </div>
       </div>
       <p className="text-xs text-slate-600">

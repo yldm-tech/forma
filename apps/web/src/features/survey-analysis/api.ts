@@ -79,7 +79,7 @@ export interface TextSummary {
   themes: TextSummaryTheme[];
 }
 
-/** Whether AI is available to the organization, why not when it is not, and the current summary, null when there is none. */
+/** Whether the reader may generate a summary, why not when they may not (AI unavailable to the organization, or read_only for a member without edit access, who still gets the current summary), and the current summary, null when there is none. */
 export interface TextSummaryState {
   available: boolean;
   reason?: AIUnavailableReason;

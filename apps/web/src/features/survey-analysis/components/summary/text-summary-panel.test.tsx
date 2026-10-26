@@ -15,7 +15,7 @@ import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../../../lib/i18n";
 import type { TextSummary, TextSummaryState } from "../../api";
-import { ResponseFilterProvider } from "../filter/response-filter-context";
+import { ResponseFilterProvider, useResponseFilter } from "../filter/response-filter-context";
 import { SharedSummaryContext } from "./summary-parts";
 import { TextSummaryPanel } from "./text-summary-panel";
 
@@ -65,8 +65,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** The server: the lookup answers with lookup, a generation with generated; every request body is recorded by path. */
-const stubServer = (lookup: TextSummaryState, generated?: TextSummaryState) => {
+/** The server: the lookup answers with lookup, a generation with generated (or what the promise it is given resolves to); every request body is recorded by path. */
+const stubServer = (lookup: TextSummaryState, generated?: TextSummaryState | Promise<TextSummaryState>) => {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   const json = (body: unknown) =>
     new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
@@ -81,7 +81,7 @@ const stubServer = (lookup: TextSummaryState, generated?: TextSummaryState) => {
         case `/api/app/surveys/${SURVEY_ID}/text-summaries/lookup`:
           return json(lookup);
         case `/api/app/surveys/${SURVEY_ID}/text-summaries`:
-          return json(generated);
+          return json(await generated);
         default:
           throw new Error(`unexpected ${path}`);
       }
@@ -126,6 +126,19 @@ const panel = (answerCount = 120) => (
   />
 );
 
+/** Switches the analysis filter between all responses and completed ones. */
+const FilterSwitch = () => {
+  const { selectedFilter, setSelectedFilter } = useResponseFilter();
+  const complete = selectedFilter.responseStatus === "complete";
+  return (
+    <button
+      type="button"
+      onClick={() => setSelectedFilter({ ...selectedFilter, responseStatus: complete ? "all" : "complete" })}>
+      {complete ? "All responses" : "Completed responses"}
+    </button>
+  );
+};
+
 describe("TextSummaryPanel", () => {
   test("offers a summary, says where the answers go, and shows the themes once generated", async () => {
     const requests = stubServer({ available: true, summary: null }, { available: true, summary });
@@ -159,6 +172,60 @@ describe("TextSummaryPanel", () => {
     await vi.waitFor(() =>
       expect(requests.some((r) => r.path.endsWith("/text-summaries") && r.body.refresh === true)).toBe(true)
     );
+  });
+
+  test("a summary generated for one filter stays with that filter when the reader switches while it runs", async () => {
+    let finish: (state: TextSummaryState) => void = () => {};
+    const requests = stubServer(
+      { available: true, summary: null },
+      new Promise<TextSummaryState>((resolve) => {
+        finish = resolve;
+      })
+    );
+    await renderPanel(
+      <>
+        <FilterSwitch />
+        {panel()}
+      </>
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Summarize answers" }));
+    expect(await screen.findByRole("status")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Completed responses" }));
+    await vi.waitFor(() =>
+      expect(
+        requests.filter((r) => r.path.endsWith("/lookup")).map((r) => r.body.filterCriteria)
+      ).toContainEqual(expect.objectContaining({ finished: true }))
+    );
+    // The other filter's card is not the one generating.
+    const summarize = await screen.findByRole("button", { name: "Summarize answers" });
+    expect((summarize as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole("status")).toBeNull();
+
+    finish({ available: true, summary });
+    await vi.waitFor(() => expect(requests.filter((r) => r.path.endsWith("/text-summaries")).length).toBe(1));
+    // It lands under the filter it was asked for, not the one on screen.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByText("Pricing")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "All responses" }));
+    expect(await screen.findByText("Pricing")).toBeTruthy();
+    const generation = requests.find((r) => r.path.endsWith("/text-summaries"));
+    expect(generation?.body.filterCriteria).not.toMatchObject({ finished: true });
+  });
+
+  test("a member without edit access reads the current summary but cannot refresh it", async () => {
+    stubServer({ available: false, reason: "read_only", summary });
+    await renderPanel(panel());
+    expect(await screen.findByText("Pricing")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Refresh summary" })).toBeNull();
+  });
+
+  test("a member without edit access is told why there is nothing to generate", async () => {
+    stubServer({ available: false, reason: "read_only", summary: null });
+    await renderPanel(panel());
+    const button = await screen.findByRole("button", { name: "Summarize answers" });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText("You need edit access to this workspace to use AI smart tools.")).toBeTruthy();
   });
 
   test("explains why AI is unavailable and offers nothing to click", async () => {
