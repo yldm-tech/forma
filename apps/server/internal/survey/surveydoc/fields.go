@@ -109,6 +109,15 @@ func FieldIssues(s *Survey) []Issue {
 	if firstDuplicate(variableNames) >= 0 {
 		is.add(path("variables"), "Variable names must be unique")
 	}
+	scores := 0
+	for _, v := range s.Variables {
+		if v.Type == "number" && v.IsScore {
+			scores++
+		}
+	}
+	if scores > 1 {
+		is.add(path("variables"), ScoreVariableUniqueMessage)
+	}
 
 	for i, f := range s.FollowUps {
 		is.followUpTrigger(path("followUps", i, "trigger"), f.Trigger)

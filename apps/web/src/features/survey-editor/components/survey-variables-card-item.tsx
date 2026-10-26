@@ -10,6 +10,7 @@ import { validateId } from "@forma/types/surveys/validation";
 import { findVariableUsedInLogic, isUsedInQuota, isUsedInRecall } from "../lib/utils";
 import { getValidateIdErrorMessage } from "../lib/validation";
 import { getElementsFromBlocks } from "../lib/client-utils";
+import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { FormControl, FormField, FormItem, FormProvider } from "../../../components/ui/form";
 import { Input } from "../../../components/ui/input";
@@ -54,8 +55,11 @@ export const SurveyVariablesCardItem = ({
 
   const editSurveyVariable = useCallback(
     (data: TSurveyVariable) => {
+      // Only a number variable can hold the total score: a variable changed to text gives the mark up.
+      const edited: TSurveyVariable =
+        data.type === "number" ? data : { id: data.id, name: data.name, type: "text", value: data.value };
       setLocalSurvey((prevSurvey) => {
-        const updatedVariables = prevSurvey.variables.map((v) => (v.id === data.id ? data : v));
+        const updatedVariables = prevSurvey.variables.map((v) => (v.id === edited.id ? edited : v));
         return { ...prevSurvey, variables: updatedVariables };
       });
     },
@@ -282,6 +286,14 @@ export const SurveyVariablesCardItem = ({
           </div>
 
           {isNameError && <p className="mt-1 text-sm text-red-500">{errors.name?.message}</p>}
+          {mode === "edit" && variable?.type === "number" && variable.isScore && (
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <Badge type="gray" size="tiny" text={t("workspace.surveys.edit.scoring_total_badge")} />
+              <p className="text-xs text-slate-500">
+                {t("workspace.surveys.edit.scoring_total_badge_description")}
+              </p>
+            </div>
+          )}
         </form>
       </FormProvider>
     </div>
