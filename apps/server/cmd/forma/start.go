@@ -37,6 +37,11 @@ func start(ctx context.Context) error {
 	// One telemetry setup covers the server and the worker sharing this process.
 	defer startTelemetry(ctx, cfg, log)()
 
+	// A database that holds only forma2's data would come up as an empty instance; refuse unless told to start empty. Checked before the migrations, as `forma migrate` does, so none of them runs on such a database: a later one may drop what release v0.2.48's `forma import-forma2` writes to.
+	if err := refuseUnreadForma2Data(ctx, cfg, log); err != nil {
+		return err
+	}
+
 	if startup.SkipMigration {
 		log.InfoContext(ctx, "skipping startup migrations (SKIP_STARTUP_MIGRATION is set; a migration job applies them)")
 	} else {
@@ -51,11 +56,6 @@ func start(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("startup migrations: %w", err)
 		}
-	}
-
-	// A database that holds only forma2's data would come up as an empty instance; refuse unless told to start empty.
-	if err := refuseUnreadForma2Data(ctx, cfg, log); err != nil {
-		return err
 	}
 
 	if !startup.WorkerEnabled {

@@ -2,9 +2,9 @@
 --
 -- Nothing reads or writes either any more. The import, its CLI and the startup guard that read forma2_imports were removed in v0.2.49 together with 00011, which kept the table only so that an image rollback to a release with that guard would still start on a database that had imported forma2, and such a rollback would now cross every release from v0.2.49 on and every migration since. No code path has read legacy_environment_id since v0.2.49 either, when the client and management APIs stopped resolving forma2 environment ids: the server's workspace model, its queries and the API responses never carried it, and the last mention, an optional field of the SPA's workspace type, goes with this change.
 --
--- Only this server's own objects are touched: forma2's tables ("User", "Survey", ...) that a self-hosted database may still hold next to this schema are left as they are, and the startup refusal that reads forma2's "User" table (database.RefuseUnreadForma2Data) is unaffected.
+-- Only this server's own objects are touched: forma2's tables ("User", "Survey", ...) that a self-hosted database may still hold next to this schema are left as they are. Release v0.2.48's `forma import-forma2` writes to both dropped objects, so this migration must not run on a database whose forma2 data was never imported: `forma migrate` and `forma start` run the refusal that reads forma2's "User" table (database.RefuseUnreadForma2Data) before any migration, as deploy/docker/forma.sh does, and only FORMA_IGNORE_FORMA2_DATA=1 lets it through.
 --
--- The Down section recreates the table and the column as they were, empty: the import records and the legacy ids are not restored.
+-- The Down section recreates the table and the column as they were, empty: the import records and the legacy ids are not restored. The forma binary runs no Down; an operator rolling back to v0.2.48 or earlier runs it with the goose CLI. On a database that still holds forma2's "User" rows, v0.2.48 then refuses to start until forma2_imports has a record again, which its `forma import-forma2 --discard-forma2-data --reason=<why>`, or a new import, writes.
 
 -- +goose Up
 
