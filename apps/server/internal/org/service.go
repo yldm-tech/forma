@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 
 	// Display time zones are validated against the IANA database; embedding it keeps validation independent of the host's zoneinfo.
@@ -115,13 +116,26 @@ func (s *Service) captureCreated(ctx context.Context, userID uuid.UUID, o *Organ
 	analytics.OrganizationCreated(userID.String(), o.ID.String(), o.Name, workspaceID.String(), workspace.DefaultName, analytics.EmailDomain(creator.Email), creator.Memberships == 1)
 }
 
-// List is forma2's getOrganizationsByUserId: the organizations the user may read, oldest first, 30 per page when a page is given.
+// List is forma2's getOrganizationsByUserId: the organizations the user may read, oldest first, 30 per page when a page is given. An organization that refuses the user (a suspension, its two-factor requirement) is listed with its name and its two-factor requirement only.
 func (s *Service) List(ctx context.Context, userID uuid.UUID, page int) ([]Summary, error) {
 	ids, err := s.authz.LookupOrganizationIDs(ctx, authz.User(userID))
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.listed(ctx, userID, ids, page, s.cfg.IsFormaCloud)
+	out, err := s.repo.listed(ctx, userID, ids, page, s.cfg.IsFormaCloud)
+	if err != nil {
+		return nil, err
+	}
+	blocked, err := s.authz.SecondFactorBlockedOrganizations(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if out[i].SuspendedAt != nil || slices.Contains(blocked, out[i].ID) {
+			out[i].Organization = out[i].limited()
+		}
+	}
+	return out, nil
 }
 
 // Detail is an organization with the caller's membership in it.
@@ -154,6 +168,9 @@ func (s *Service) Get(ctx context.Context, userID, organizationID uuid.UUID) (*D
 	status, blocked, err := s.repo.secondFactor(ctx, userID, organizationID)
 	if err != nil {
 		return nil, err
+	}
+	if m.SuspendedAt != nil || blocked {
+		o = o.limited()
 	}
 	return &Detail{Organization: o, Membership: *m, UserManagementAllowed: UserManagementAllowed(m.Role, s.cfg.UserManagementMinimumRole),
 		SurveyScheduling: scheduling.Instance(s.cfg).ForOrganization(o.SurveySchedulingTimeZone).Settings(),

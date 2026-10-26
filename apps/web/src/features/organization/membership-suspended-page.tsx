@@ -1,6 +1,6 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { UserXIcon } from "lucide-react";
+import { UserCheckIcon, UserXIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { UserDropdown } from "../../components/shell/user-dropdown";
@@ -21,6 +21,7 @@ export const MembershipSuspendedPage = ({ organizationId }: { organizationId: st
   const organizations = useQuery(organizationsQuery);
   const [leaving, setLeaving] = useState(false);
   const suspended = !!organization.membership.suspendedAt;
+  const StatusIcon = suspended ? UserXIcon : UserCheckIcon;
   const others = sortByName((organizations.data ?? []).filter((o) => o.id !== organizationId));
   const usable = others.filter((o) => !o.suspendedAt);
   // The server refuses an owner's leaving and the leaving of a member's only organization; the button is not offered for either.
@@ -38,7 +39,7 @@ export const MembershipSuspendedPage = ({ organizationId }: { organizationId: st
       </header>
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-y-8 px-6 pb-16">
         <div className="space-y-3">
-          <UserXIcon className="size-10 text-slate-700" strokeWidth={1.5} aria-hidden="true" />
+          <StatusIcon className="size-10 text-slate-700" strokeWidth={1.5} aria-hidden="true" />
           <h1 className="text-2xl font-bold text-slate-900">
             {suspended
               ? t("organizations.suspended.page_title", { organization: organization.name })

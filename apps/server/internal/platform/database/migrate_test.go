@@ -423,7 +423,7 @@ func TestWithMigrationLockSerializesMigrators(t *testing.T) {
 	}
 }
 
-// 00021 turns a deactivated account that still has memberships into a suspension of each of them and reactivates the account; an account without memberships stays inactive. Its Down deactivates every account with a suspended membership again, so a release without suspensions does not give their access back.
+// 00021 suspends every membership of a deactivated account and leaves every account as it is: nothing tells an organization's deactivation from the operator's, so none is undone. Its Down deactivates every account with a suspended membership again, so a release without suspensions does not give their access back.
 func TestMembershipSuspensionMigration(t *testing.T) {
 	const version = 21
 	dsn := startPostgres(t)
@@ -471,14 +471,15 @@ func TestMembershipSuspensionMigration(t *testing.T) {
 		}
 		return n
 	}
-	if !isActive(deactivated) || suspended(deactivated) != 2 {
-		t.Fatalf("deactivated member: active %v, %d suspended memberships", isActive(deactivated), suspended(deactivated))
+	if isActive(deactivated) || suspended(deactivated) != 2 {
+		t.Fatalf("deactivated member: active %v, %d suspended memberships; want it still inactive with both suspended", isActive(deactivated), suspended(deactivated))
 	}
 	if isActive(orphan) || !isActive(active) || suspended(active) != 0 {
 		t.Fatal("an account without memberships was reactivated, or an active member was suspended")
 	}
 
-	// Suspended in one organization only, after the migration.
+	// The operator turns the account back on, and one organization restores it.
+	mustExec(t, db, `UPDATE users SET is_active = true WHERE id = $1`, deactivated)
 	mustExec(t, db, `UPDATE memberships SET suspended_at = NULL WHERE user_id = $1 AND organization_id = $2`, deactivated, orgB)
 	if _, err := provider.DownTo(ctx, version-1); err != nil {
 		t.Fatalf("down to %d: %v", version-1, err)

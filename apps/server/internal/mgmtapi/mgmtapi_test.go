@@ -280,6 +280,27 @@ func TestV2UsersSuspendOnlyTheirMembership(t *testing.T) {
 	if data["name"] != "Renamed" || data["isActive"] != false {
 		t.Errorf("change of a user of this organization only = %v", data)
 	}
+
+	// A member whose account the instance deactivated reads as inactive, yet false still suspends their membership, so turning the account back on does not give them this organization again; true only lifts the suspension.
+	off := e.user("Deactivated Account", "off@example.com")
+	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'member', true)`, off, org)
+	e.exec(`UPDATE users SET is_active = false WHERE id = ?`, off)
+	suspendedAt := func() bool {
+		t.Helper()
+		var v bool
+		if err := e.db.Raw(`SELECT suspended_at IS NOT NULL FROM memberships WHERE user_id = ? AND organization_id = ?`, off, org).Scan(&v).Error; err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	data = expectStatus(t, "suspend a deactivated account", e.do("PATCH", users, map[string]any{"email": "off@example.com", "isActive": false}, "x-api-key", key), 200)["data"].(map[string]any)
+	if data["isActive"] != false || !suspendedAt() {
+		t.Fatalf("suspend a deactivated account = %v, suspended %v", data, suspendedAt())
+	}
+	data = expectStatus(t, "restore a deactivated account", e.do("PATCH", users, map[string]any{"email": "off@example.com", "isActive": true}, "x-api-key", key), 200)["data"].(map[string]any)
+	if data["isActive"] != false || suspendedAt() {
+		t.Fatalf("restore a deactivated account = %v, suspended %v; the membership is restored, the account stays off", data, suspendedAt())
+	}
 }
 
 // Deactivating an owner is refused when it would leave the organization without an active owner, as demoting one is.

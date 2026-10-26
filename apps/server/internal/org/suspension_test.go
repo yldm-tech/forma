@@ -110,6 +110,7 @@ func TestASuspendedMemberIsRefusedOnlyThatOrganization(t *testing.T) {
 	// A survey takes the member's own organization past onboarding, so the root page lists workspaces.
 	e.survey(other.WorkspaceID)
 	e.member(c.ID, member, RoleManager)
+	e.exec(`UPDATE organizations SET whitelabel = '{"logoUrl":"https://example.com/logo.png"}', display_time_zone = 'Asia/Tokyo' WHERE id IN (?, ?)`, c.ID, other.ID)
 	workspacePath := "/api/app/workspaces/" + c.WorkspaceID.String()
 	e.ok(e.do(member, http.MethodGet, workspacePath, nil), http.StatusOK, nil)
 
@@ -134,12 +135,19 @@ func TestASuspendedMemberIsRefusedOnlyThatOrganization(t *testing.T) {
 		}
 	}
 	e.fails(e.do(member, http.MethodPatch, orgPath(c.ID, ""), map[string]any{"displayTimeZone": "Asia/Tokyo"}), http.StatusForbidden, authz.CodeMembershipSuspended, "")
-	e.fails(e.do(member, http.MethodPost, suspensionPath(c.ID, owner), nil), http.StatusForbidden, apperr.CodeOperationNotAllowed, "")
+	// A suspended manager is told they are suspended, not that their role may not manage users, so the SPA sends them to the notice.
+	for _, req := range []struct{ method, path string }{{http.MethodPost, suspensionPath(c.ID, owner)}, {http.MethodDelete, suspensionPath(c.ID, owner)}, {http.MethodPatch, memberPath(c.ID, owner)}, {http.MethodDelete, memberPath(c.ID, owner)}} {
+		e.fails(e.do(member, req.method, req.path, map[string]string{"role": RoleMember}), http.StatusForbidden, authz.CodeMembershipSuspended, "")
+	}
 
 	var d Detail
 	e.ok(e.do(member, http.MethodGet, orgPath(c.ID, ""), nil), http.StatusOK, &d)
 	if d.Membership.SuspendedAt == nil {
 		t.Fatalf("detail membership %+v, want it suspended", d.Membership)
+	}
+	// Only the name and the two-factor requirement: not its billing, branding or settings.
+	if !limited(d.Organization) || d.Name != "Acme" {
+		t.Fatalf("detail %+v, want the organization limited to its name", d.Organization)
 	}
 	var nav Navigation
 	e.ok(e.do(member, http.MethodGet, orgPath(c.ID, "/navigation"), nil), http.StatusOK, &nav)
@@ -151,6 +159,9 @@ func TestASuspendedMemberIsRefusedOnlyThatOrganization(t *testing.T) {
 	suspended := map[uuid.UUID]bool{}
 	for _, o := range list.Organizations {
 		suspended[o.ID] = o.SuspendedAt != nil
+		if limited(o.Organization) != (o.ID == c.ID) {
+			t.Fatalf("listed %s %+v: only the suspending organization is limited", o.Name, o.Organization)
+		}
 	}
 	if len(list.Organizations) != 2 || !suspended[c.ID] || suspended[other.ID] {
 		t.Fatalf("organizations %+v, want both listed and only Acme suspended", list.Organizations)
@@ -242,4 +253,10 @@ func TestOwnersSuspendingEachOtherConcurrentlyKeepAnOwner(t *testing.T) {
 	if (errs[0] == nil) == (errs[1] == nil) {
 		t.Fatalf("want exactly one suspension to succeed, got %v", errs)
 	}
+}
+
+// limited is whether the organization is shown as to a member it refuses: no billing, branding or settings.
+func limited(o *Organization) bool {
+	limits := strings.TrimSpace(string(o.Billing.Limits))
+	return (limits == "" || limits == "null") && o.Billing.StripeCustomerID == nil && string(o.Whitelabel) == "{}" && o.DisplayTimeZone == nil && !o.IsAISmartToolsEnabled
 }

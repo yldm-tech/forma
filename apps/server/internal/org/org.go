@@ -36,6 +36,11 @@ type Organization struct {
 	TwoFactorEnforcedAt *time.Time `json:"twoFactorEnforcedAt"`
 }
 
+// limited is the organization as a member it refuses (suspended, or held to its two-factor requirement) sees it: its name and its two-factor requirement, which the suspension notice, the guide to enrolment and the account's two-factor page show. Its billing, branding and settings are left out: such a member may decide nothing else in the organization, and a suspension is often how someone leaving it is cut off.
+func (o *Organization) limited() *Organization {
+	return &Organization{ID: o.ID, CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, Name: o.Name, Whitelabel: json.RawMessage(`{}`), TwoFactorEnforcedAt: o.TwoFactorEnforcedAt}
+}
+
 // Billing is the organization's billing state, forma2's TOrganizationBilling.
 type Billing struct {
 	StripeCustomerID *string         `json:"stripeCustomerId"`

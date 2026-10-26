@@ -478,12 +478,12 @@ func (h *Handler) v2UpdateUser(c *gin.Context) {
 		return
 	}
 	h.v2Record(c, current.ID.String(), *current, nil)
-	// Only a value that changes is written: a client that sends the user's current name back is not refused for a user shared with another organization.
+	// Only a value that changes is written: a client that sends the user's current name back is not refused for a user shared with another organization. isActive is compared with the membership's own suspension, which is what it writes: a member whose account is deactivated still has their membership suspended by false, so turning the account back on does not give them this organization again.
 	patch := userPatch{Role: in.role, SetTeams: in.hasTeams}
 	if in.name != nil && *in.name != current.Name {
 		patch.Name = in.name
 	}
-	if in.isActive != nil && *in.isActive != current.IsActive {
+	if in.isActive != nil && *in.isActive == current.Suspended {
 		patch.IsActive = in.isActive
 	}
 	var teamNames []string

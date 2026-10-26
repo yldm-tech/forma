@@ -132,9 +132,21 @@ func (s *Service) requireUserManagement(ctx context.Context, actor authz.Actor, 
 		return err
 	}
 	if !allowed {
-		return errUserManagementNotAllowed()
+		return s.refusedOr(ctx, actor, organizationID, errUserManagementNotAllowed())
 	}
 	return s.authz.Require(ctx, actor, authz.OrganizationManage, authz.Organization(organizationID))
+}
+
+// refusedOr is the error of a denied invite action: the organization's refusal of the member (a suspension, its two-factor requirement) when that is what denied them, so the SPA sends them to the notice, else denied.
+func (s *Service) refusedOr(ctx context.Context, actor authz.Actor, organizationID uuid.UUID, denied error) error {
+	refusal, err := s.authz.Refusal(ctx, actor.ID, organizationID)
+	if err != nil {
+		return err
+	}
+	if refusal != nil {
+		return refusal
+	}
+	return denied
 }
 
 // checkRole refuses the billing role outside Forma Cloud.
@@ -322,7 +334,7 @@ func (s *Service) requireInviter(ctx context.Context, actor authz.Actor, organiz
 			return err
 		}
 		if !allowed {
-			return errTeamAdminTeams()
+			return s.refusedOr(ctx, actor, organizationID, errTeamAdminTeams())
 		}
 	}
 	return nil

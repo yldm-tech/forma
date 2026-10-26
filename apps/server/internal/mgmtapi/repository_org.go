@@ -138,8 +138,8 @@ func (r *Repository) creatorRole(ctx context.Context, apiKeyID, organizationID u
 
 // ---- users ----
 
-// orgUserActive selects orgUser.IsActive from users u and memberships m.
-const orgUserActive = `(u.is_active AND m.suspended_at IS NULL) AS is_active`
+// orgUserActive selects orgUser.IsActive and orgUser.Suspended from users u and memberships m.
+const orgUserActive = `(u.is_active AND m.suspended_at IS NULL) AS is_active, m.suspended_at IS NOT NULL AS suspended`
 
 // orgUser is a user as forma2's v2 users API answered: its organization role and the names of its teams.
 //
@@ -154,6 +154,8 @@ type orgUser struct {
 	IsActive    bool       `json:"isActive"`
 	Role        string     `json:"role"`
 	Teams       []string   `json:"teams" gorm:"-"`
+	// Suspended is whether this organization suspended the membership, which is what isActive writes; IsActive is also false while the account itself is deactivated, which no organization changes.
+	Suspended bool `json:"-"`
 }
 
 // userFilter is the users list's own filters beside the common ones.

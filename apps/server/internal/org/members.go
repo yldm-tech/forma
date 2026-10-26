@@ -54,7 +54,7 @@ const (
 	msgLastOwnerSuspend       = "You cannot suspend the last active owner of the organization"
 )
 
-// manageUsers is the gate of the user-management surface, in forma2's order: organization.manage_access, where USER_MANAGEMENT_MINIMUM_ROLE applies, then organization.manage, then the state-mutation rate limit. The policy check is a second check beside the capability, so a manager on an owner-restricted instance cannot manage members by calling the endpoint.
+// manageUsers is the gate of the user-management surface, in forma2's order: organization.manage_access, where USER_MANAGEMENT_MINIMUM_ROLE applies, then organization.manage, then the state-mutation rate limit. The policy check is a second check beside the capability, so a manager on an owner-restricted instance cannot manage members by calling the endpoint. A member the organization refuses (suspended, or held to its two-factor requirement) is told that rather than that their role may not manage users, so the SPA sends them to the notice.
 func (s *Service) manageUsers(ctx context.Context, userID, organizationID uuid.UUID) error {
 	actor, resource := authz.User(userID), authz.Organization(organizationID)
 	allowed, err := s.authz.Can(ctx, actor, authz.OrganizationManageAccess, resource)
@@ -62,6 +62,13 @@ func (s *Service) manageUsers(ctx context.Context, userID, organizationID uuid.U
 		return err
 	}
 	if !allowed {
+		refusal, err := s.authz.Refusal(ctx, userID, organizationID)
+		if err != nil {
+			return err
+		}
+		if refusal != nil {
+			return refusal
+		}
 		return apperr.OperationNotAllowed(msgUserManagementOff)
 	}
 	if err := s.authz.Require(ctx, actor, authz.OrganizationManage, resource); err != nil {

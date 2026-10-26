@@ -134,6 +134,7 @@ describe("MembershipSuspendedPage", () => {
         name: t("organizations.suspended.page_title", { organization: "Acme" }),
       })
     ).toBeTruthy();
+    expect(document.querySelector("svg.lucide-user-x")).not.toBeNull();
     expect(
       screen.getByText(t("organizations.suspended.page_description", { organization: "Acme" }))
     ).toBeTruthy();
@@ -176,6 +177,9 @@ describe("MembershipSuspendedPage", () => {
         name: t("organizations.suspended.page_continue", { organization: "Acme" }),
       })
     ).toBeTruthy();
+    // The restored notice does not keep the suspended glyph.
+    expect(document.querySelector("svg.lucide-user-check")).not.toBeNull();
+    expect(document.querySelector("svg.lucide-user-x")).toBeNull();
     expect(
       screen.queryByRole("button", { name: t("workspace.settings.general.leave_organization") })
     ).toBeNull();

@@ -2,9 +2,9 @@
 --
 -- suspended_at is null for a member with access and, once an owner or manager suspends them (the members page, or isActive: false through the v2 users API), the time it happened. A suspended member keeps their account, their sessions and their other organizations: the authorizer refuses them every decision in this organization except reading its name and their own membership and leaving it, the lookups leave its workspaces out, the API keys they created there stop authenticating, and its notifications stop. Restoring clears the column and gives everything back, keys included.
 --
--- Until now the only way to cut a member off was users.is_active, which belongs to the account: the v2 users API of one organization wrote it, and locked the user out of every organization they belong to. An account deactivated that way that still has memberships becomes a suspension of each of them, and the account is active again: the user keeps the access they had (none, in every organization they belonged to), can sign in, and is told which organizations suspended them. An inactive account without any membership stays inactive. users.is_active stays as the instance's own switch; no API writes it any more.
+-- Until now the only way to cut a member off was users.is_active, which belongs to the account: the v2 users API of one organization wrote it, and so did the instance's operator, by hand. Nothing recorded which of the two turned an account off, so this migration leaves every account as it is: a deactivated account stays deactivated, whoever did it, and its operator turns it back on with `forma user activate` when it should return. Every membership of a deactivated account is suspended as well, so turning the account back on does not by itself give it an organization again: each organization restores its own member.
 --
--- A nullable column without a default makes ADD COLUMN a catalog change: no existing row is rewritten. The two updates touch only deactivated accounts and their memberships, a handful of rows.
+-- A nullable column without a default makes ADD COLUMN a catalog change: no existing row is rewritten. The update touches only the memberships of deactivated accounts, a handful of rows.
 
 -- +goose Up
 
@@ -15,10 +15,6 @@ ALTER TABLE memberships ADD COLUMN suspended_at timestamptz;
 
 UPDATE memberships SET suspended_at = now()
     WHERE user_id IN (SELECT id FROM users WHERE NOT is_active);
-
--- The users trigger enqueues the projection of each reactivated account, which writes its relationships back to SpiceDB; the suspensions above keep the authorizer refusing them.
-UPDATE users SET is_active = true, updated_at = now()
-    WHERE NOT is_active AND EXISTS (SELECT 1 FROM memberships m WHERE m.user_id = users.id);
 
 -- +goose Down
 
