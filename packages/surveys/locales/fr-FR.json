@@ -116,6 +116,10 @@
       "message": "Cette réponse a déjà été complétée et ne peut plus être modifiée. Tu peux fermer cette fenêtre en toute sécurité.",
       "title": "Cette réponse a déjà été complétée."
     },
+    "response_email_already_used": {
+      "message": "Ce sondage accepte une réponse par adresse e-mail, et une réponse a déjà été envoyée avec la tienne. Tu peux fermer cette fenêtre.",
+      "title": "Cette adresse e-mail a déjà répondu."
+    },
     "response_sending_error_permanent": {
       "message": "Votre réponse n'a pas pu être envoyée et ne peut pas être retentée. Contacte le propriétaire de l'enquête si cela continue.",
       "title": "Votre réponse n'a pas pu être envoyée."

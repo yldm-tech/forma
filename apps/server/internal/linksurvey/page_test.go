@@ -391,6 +391,78 @@ func TestSurveyPageVerifyEmail(t *testing.T) {
 	}
 }
 
+// One response per verified email (D-FG03): the holder of a verification link whose address finished a response sees "already responded"; an unfinished one goes on, so a reload mid-survey continues; the address compares case-insensitively; a preview and a survey without the setting are not limited.
+func TestSurveyPageOneResponsePerEmail(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace("link_survey_branding", "false")
+	id := e.survey(ws, "is_verify_email_enabled", true, "is_single_response_per_email_enabled", true)
+	token, err := newEmailToken(e.cfg, id, "User1@Example.com", e.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := "/s/" + id.String() + "?verify=" + token
+	if p := e.page(target); p.view() != viewSurvey {
+		t.Fatalf("no response yet: view %q", p.view())
+	}
+	e.response(id, false, "data", `{"verifiedEmail": "user1@example.com"}`)
+	if p := e.page(target); p.view() != viewSurvey {
+		t.Fatalf("an unfinished response stopped the respondent going on: view %q", p.view())
+	}
+	e.response(id, true, "data", `{"verifiedEmail": "user1@example.com"}`)
+	p := e.page(target)
+	if p.view() != viewInactive || p.sub("inactive")["status"] != inactiveEmailResponded || p.sub("inactive", "workspace")["linkSurveyBranding"] != false || strings.Contains(p.Body, "What do you think?") {
+		t.Fatalf("finished: view %q inactive %v", p.view(), p.sub("inactive"))
+	}
+	if p = e.page(target + "&preview=true"); p.view() != viewSurvey {
+		t.Fatalf("preview: view %q", p.view())
+	}
+	other, _ := newEmailToken(e.cfg, id, "user2@example.com", e.now)
+	if p = e.page("/s/" + id.String() + "?verify=" + other); p.view() != viewSurvey {
+		t.Fatalf("another address: view %q", p.view())
+	}
+	// Another survey's response from the address does not count, and without the setting the address answers again.
+	unlimited := e.survey(ws, "is_verify_email_enabled", true)
+	e.response(unlimited, true, "data", `{"verifiedEmail": "user1@example.com"}`)
+	again, _ := newEmailToken(e.cfg, unlimited, "user1@example.com", e.now)
+	if p = e.page("/s/" + unlimited.String() + "?verify=" + again); p.view() != viewSurvey {
+		t.Fatalf("setting off: view %q", p.view())
+	}
+}
+
+// One response per browser (D-FG03) is the browser's to apply: the /s page tells it which survey to look up on every screen in front of the survey, not on a preview, a closed survey or a personal link.
+func TestSurveyPageOneResponsePerBrowser(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace("link_survey_branding", "false")
+	id := e.survey(ws, "is_single_response_per_browser_enabled", true)
+	limit := func(p renderedPage) map[string]any { return p.sub("browserLimit") }
+	p := e.page("/s/" + id.String())
+	if p.view() != viewSurvey || limit(p)["surveyId"] != id.String() || p.sub("browserLimit", "workspace")["linkSurveyBranding"] != false {
+		t.Fatalf("survey: view %q limit %v", p.view(), limit(p))
+	}
+	if p = e.page("/s/" + id.String() + "?preview=true"); p.State["browserLimit"] != nil {
+		t.Fatalf("preview: %v", limit(p))
+	}
+	pinned := e.survey(ws, "is_single_response_per_browser_enabled", true, "pin", "1234")
+	if p = e.page("/s/" + pinned.String()); p.view() != viewPin || limit(p)["surveyId"] != pinned.String() {
+		t.Fatalf("pin: view %q limit %v", p.view(), limit(p))
+	}
+	verified := e.survey(ws, "is_single_response_per_browser_enabled", true, "is_verify_email_enabled", true)
+	if p = e.page("/s/" + verified.String()); p.view() != viewVerifyEmail || limit(p)["surveyId"] != verified.String() {
+		t.Fatalf("verify email: view %q limit %v", p.view(), limit(p))
+	}
+	paused := e.survey(ws, "is_single_response_per_browser_enabled", true, "status", "paused")
+	if p = e.page("/s/" + paused.String()); p.view() != viewInactive || p.State["browserLimit"] != nil {
+		t.Fatalf("paused: view %q limit %v", p.view(), limit(p))
+	}
+	if p = e.page("/s/" + e.survey(ws).String()); p.State["browserLimit"] != nil {
+		t.Fatalf("setting off: %v", limit(p))
+	}
+	contact := e.contact(ws)
+	if p = e.page("/c/" + contactToken(t, e.cfg, contact.String(), id.String(), nil)); p.view() != viewSurvey || p.State["browserLimit"] != nil {
+		t.Fatalf("personal link: view %q limit %v", p.view(), limit(p))
+	}
+}
+
 // The PIN never leaves the server, and neither does the survey behind it.
 func TestSurveyPagePin(t *testing.T) {
 	e := newEnv(t)

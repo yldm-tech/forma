@@ -1,5 +1,9 @@
 import { Result, err, ok } from "@forma/types/error-handlers";
-import { ApiErrorResponse, RESPONSE_ALREADY_FINISHED_ERROR_CODE } from "@forma/types/errors";
+import {
+  ApiErrorResponse,
+  RESPONSE_ALREADY_FINISHED_ERROR_CODE,
+  RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE,
+} from "@forma/types/errors";
 import { TQuotaFullResponse } from "@forma/types/quota";
 import { TResponseUpdate } from "@forma/types/responses";
 import { RECAPTCHA_VERIFICATION_ERROR_CODE } from "@/lib/constants";
@@ -262,6 +266,9 @@ export class ResponseQueue {
     // Terminal 4xx items are dropped from the queue, so a manual Retry is pointless — return a
     // non-retryable code (never ResponseSendingError, which renders the retryable "servers
     // cannot be reached" UI).
+    if (error?.details?.code === RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE) {
+      return TResponseErrorCodesEnum.ResponseEmailAlreadyUsed;
+    }
     return this.isResponseAlreadyCompletedError(error)
       ? TResponseErrorCodesEnum.ResponseAlreadyCompleted
       : TResponseErrorCodesEnum.ResponseSendingErrorPermanent;

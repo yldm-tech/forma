@@ -116,6 +116,10 @@
       "message": "Bu javob allaqachon yakunlangan va endi o'zgartirib bo'lmaydi. Ushbu oynani xavfsiz yopishingiz mumkin.",
       "title": "Bu javob allaqachon yakunlangan."
     },
+    "response_email_already_used": {
+      "message": "Bu so'rovnoma har bir elektron pochta manzilidan bitta javob qabul qiladi va sizning manzilingiz bilan javob allaqachon yuborilgan. Ushbu oynani yopishingiz mumkin.",
+      "title": "Bu elektron pochta manzili bilan allaqachon javob berilgan."
+    },
     "response_sending_error_permanent": {
       "message": "Javobingizni yuborib bo'lmadi va qayta urinib bo'lmaydi. Agar bu holat takrorlansa, so'rovnoma egasi bilan bog'laning.",
       "title": "Javobingizni yuborib bo'lmadi."

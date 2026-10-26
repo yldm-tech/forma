@@ -168,7 +168,7 @@ export const en: SiteContent = {
       },
       control: {
         title: "Control who answers",
-        body: "Protect a survey with a PIN, require email verification before it starts, and cap or schedule submissions. Self-hosted instances can add reCAPTCHA spam protection.",
+        body: "Protect a survey with a PIN, require email verification before it starts, take one response per verified email or per browser, and cap or schedule submissions. Self-hosted instances can add reCAPTCHA spam protection.",
       },
       logic: {
         title: "Logic and data",

@@ -55,6 +55,8 @@ const (
 	inactiveLinkInvalid       = "link invalid"
 	inactiveLinkExpired       = "link expired"
 	inactiveResponseSubmitted = "response submitted"
+	// inactiveEmailResponded is a verification link whose address already finished a response to a survey that takes one response per verified email.
+	inactiveEmailResponded = "email responded"
 )
 
 // page is one rendered survey page: its status, head and the state the bundle renders.
@@ -74,6 +76,14 @@ type pageState struct {
 	Completed   *completedState   `json:"completed,omitempty"`
 	VerifyEmail *verifyEmailState `json:"verifyEmail,omitempty"`
 	Survey      *surveyState      `json:"survey,omitempty"`
+	// BrowserLimit is set on the screens in front of and of a survey that takes one response per browser.
+	BrowserLimit *browserLimitState `json:"browserLimit,omitempty"`
+}
+
+// browserLimitState is a link survey that takes one response per browser (isSingleResponsePerBrowserEnabled, owner decision D-FG03). The browser, not the server, knows whether it answered: once a response is finished the page remembers it under SurveyID in localStorage and a cookie (apps/web/src/survey-page/lib/browser-response.ts), and on a later visit shows "already responded", in Workspace's branding, instead of the screen the state names. Best effort: a private window, cleared site data or another browser answers again.
+type browserLimitState struct {
+	SurveyID  uuid.UUID `json:"surveyId"`
+	Workspace *branding `json:"workspace"`
 }
 
 // branding is the part of a workspace the inactive screens read; nil is no workspace, which shows Forma's branding.
@@ -191,6 +201,8 @@ type renderInput struct {
 	// acceptLanguage is the browser's Accept-Language header, which picks the survey language when the link names none.
 	acceptLanguage string
 	responseCount  *int
+	// limitPerBrowser applies the survey's one-response-per-browser setting: the /s page does; a personal link already takes one response per contact.
+	limitPerBrowser bool
 }
 
 // surveyPage is forma2's LinkSurveyPage with its generateMetadata.
@@ -233,9 +245,9 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 	if err != nil {
 		return page{}, err
 	}
-	p, err := s.render(renderInput{
+	p, err := s.render(ctx, renderInput{
 		survey: sv, fields: fields, q: q, singleUseID: singleUseID, singleUseResponse: singleUseResponse,
-		allowURLUserID: true, workspace: wc, locale: locale, acceptLanguage: acceptLanguage, responseCount: count,
+		allowURLUserID: true, workspace: wc, locale: locale, acceptLanguage: acceptLanguage, responseCount: count, limitPerBrowser: true,
 	})
 	if p.Status == http.StatusNotFound {
 		return notFound, err
@@ -261,8 +273,8 @@ func (s *Service) welcomeCardCount(ctx context.Context, sv *survey.Survey) (*int
 	return &n, nil
 }
 
-// render is forma2's renderSurvey: the gates in front of a survey, in forma2's order, then the survey. A draft, non-link or archived survey is a 404.
-func (s *Service) render(in renderInput) (page, error) {
+// render is forma2's renderSurvey: the gates in front of a survey, in forma2's order, then the survey. A draft, non-link or archived survey is a 404. The duplicate-submission limits (D-FG03) come after the closed and completed screens and never apply to a preview.
+func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 	sv, q := in.survey, in.q
 	langParam := q.get("lang")
 	languageCode := surveyLanguageCode(langParam, in.acceptLanguage, sv.Languages)
@@ -285,6 +297,9 @@ func (s *Service) render(in renderInput) (page, error) {
 	}
 
 	isPreview := q.get("preview") == "true"
+	if in.limitPerBrowser && sv.IsSingleResponsePerBrowserEnabled && !isPreview {
+		state.BrowserLimit = &browserLimitState{SurveyID: sv.ID, Workspace: ws}
+	}
 	public, err := publicSurvey(sv, in.fields)
 	if err != nil {
 		return page{}, err
@@ -294,6 +309,19 @@ func (s *Service) render(in renderInput) (page, error) {
 		if token := q.get("verify"); token != "" {
 			if verified = VerifyEmailToken(s.cfg, token, sv.ID, s.now()); verified == "" {
 				fishy = true
+			}
+		}
+		// Only the holder of the verification link learns that its address has answered: the endpoint that mails the link answers alike for every address, so it tells nobody which addresses responded.
+		if verified != "" && sv.IsSingleResponsePerEmailEnabled && !isPreview {
+			responded, err := s.repo.verifiedEmailResponded(ctx, sv.ID, verified)
+			if err != nil {
+				return page{}, err
+			}
+			if responded {
+				state.View = viewInactive
+				state.BrowserLimit = nil
+				state.Inactive = &inactiveState{Status: inactiveEmailResponded, SurveyClosedMessage: json.RawMessage("null"), Workspace: ws}
+				return page{Status: http.StatusOK, State: state}, nil
 			}
 		}
 		if verified == "" && !isPreview {
@@ -491,7 +519,7 @@ func (s *Service) contactPage(ctx context.Context, token string, q query, accept
 		return page{}, err
 	}
 	// forma2 passed the contact's existing response here, which the check above has already ruled out.
-	p, err := s.render(renderInput{
+	p, err := s.render(ctx, renderInput{
 		survey: sv, fields: fields, q: q, singleUseID: singleUseID, contactID: contactToken,
 		workspace: wc, locale: locale, acceptLanguage: acceptLanguage, responseCount: count,
 	})
@@ -634,7 +662,7 @@ type emailInput struct {
 	SurveyLanguageCode *string `json:"surveyLanguageCode"`
 }
 
-// sendVerificationEmail is forma2's sendLinkSurveyEmailAction: mails the respondent a link to the survey carrying a token that proves their address. The survey's name comes from its row and the language is re-resolved against its own languages, never taken from the unauthenticated caller.
+// sendVerificationEmail is forma2's sendLinkSurveyEmailAction: mails the respondent a link to the survey carrying a token that proves their address. The survey's name comes from its row and the language is re-resolved against its own languages, never taken from the unauthenticated caller. It mails the link whether or not the address has already answered a survey that takes one response per verified email: refusing here would tell anyone which addresses responded. The link itself shows "already responded" to its holder (render), and the response is refused at creation (response.Create).
 func (s *Service) sendVerificationEmail(ctx context.Context, rawID string, in emailInput) error {
 	id, _ := rowid.Parse(rawID)
 	sv, _, err := s.repo.surveyByID(ctx, id)

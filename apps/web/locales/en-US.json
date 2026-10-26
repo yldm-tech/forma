@@ -785,6 +785,8 @@
     }
   },
   "s": {
+    "already_responded_in_browser": "This survey accepts one response per browser, and one has already been submitted from this browser.",
+    "already_responded_with_email": "This survey accepts one response per email address, and one has already been submitted with this address.",
     "check_inbox_or_spam": "Please also check your spam folder if you do not see the email in your inbox.",
     "completed": "This survey is closed.",
     "completed_heading": "Survey Completed",
@@ -3785,6 +3787,11 @@
         "number": "Number",
         "numbered_list": "Numbered list",
         "once_set_the_default_language_for_this_survey_can_only_be_changed_by_disabling_the_multi_language_option_and_deleting_all_translations": "Once set, the default language for this survey can only be changed by disabling the multi-language option and deleting all translations.",
+        "one_response_per_browser": "One response per browser",
+        "one_response_per_browser_description": "Once someone submits, their browser shows \"already responded\" instead of the survey. Best effort: a private window, cleared browser data or another device can respond again, and on a shared device the next person cannot respond. Preview links are not limited.",
+        "one_response_per_email": "One response per email address",
+        "one_response_per_email_description": "Each verified email address can submit one response. The server refuses a second response from the same address.",
+        "one_response_per_email_requires_verification": "Turn on \"Verify email before submission\" to limit responses per email address.",
         "only_display_the_survey_to_a_subset_of_the_users": "Only display the survey to a subset of the users",
         "only_people_who_match_your_targeting_can_be_surveyed": "Only people who match your targeting can be surveyed.",
         "option_idx": "Option {choiceIndex}",

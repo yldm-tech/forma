@@ -1020,6 +1020,14 @@ export const ZSurveyBase = z.object({
    * "Save respondents' progress": a link survey keeps the answers given so far in the respondent's browser for 24 hours, so a reload or a tab the phone discarded goes on in the same response. On by default (`prefault`, like the column's default); a creator turns it off for a kiosk or a shared device.
    */
   isProgressSavingEnabled: z.boolean().prefault(true),
+  /**
+   * "One response per browser" (D-FG03): once a respondent's final answer reaches the server, the link page remembers it in their browser and shows "already responded" on the next visit. Best effort: a private window, cleared site data, another browser or device answer again, and on a shared device the next person cannot. Off by default.
+   */
+  isSingleResponsePerBrowserEnabled: z.boolean().prefault(false),
+  /**
+   * "One response per email" (D-FG03): with `isVerifyEmailEnabled`, the server takes one response per verified address and refuses another with 409 (`RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE`). No effect without email verification. Off by default.
+   */
+  isSingleResponsePerEmailEnabled: z.boolean().prefault(false),
   pin: z
     .string()
     .length(4, {

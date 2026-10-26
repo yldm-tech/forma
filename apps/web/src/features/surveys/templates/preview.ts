@@ -52,6 +52,8 @@ export const templatePreviewSurvey = (template: SurveyTemplate, type: "link" | "
     isCaptureIpEnabled: false,
     isAnonymizeResponsesEnabled: false,
     isProgressSavingEnabled: false,
+    isSingleResponsePerBrowserEnabled: false,
+    isSingleResponsePerEmailEnabled: false,
     pin: null,
     displayPercentage: null,
     languages: [],

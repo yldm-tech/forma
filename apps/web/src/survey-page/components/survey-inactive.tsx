@@ -9,7 +9,7 @@ const CREATE_YOUR_OWN_URL =
 const POWERED_BY_URL =
   "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=powered_by_badge";
 
-/** forma2's SurveyInactive: a paused, scheduled or closed survey, an invalid or expired link, or a contact who already answered. */
+/** forma2's SurveyInactive: a paused, scheduled or closed survey, an invalid or expired link, or a contact, verified email or browser that already answered. */
 export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, workspace }: TInactiveState) => {
   const { t } = useTranslation();
   const icons = {
@@ -18,6 +18,8 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
     "link invalid": <HelpCircleIcon className="size-20" />,
     "response submitted": <CheckCircle2Icon className="size-20" />,
     "link expired": <CalendarClockIcon className="size-20" />,
+    "email responded": <CheckCircle2Icon className="size-20" />,
+    "browser responded": <CheckCircle2Icon className="size-20" />,
   };
   const descriptions = {
     paused: isScheduled ? t("s.scheduled") : t("s.paused"),
@@ -25,6 +27,8 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
     "link invalid": t("s.link_invalid"),
     "response submitted": t("s.response_submitted"),
     "link expired": t("c.link_expired_description"),
+    "email responded": t("s.already_responded_with_email"),
+    "browser responded": t("s.already_responded_in_browser"),
   };
   const headings = {
     paused: isScheduled ? t("common.survey_scheduled") : t("s.paused_heading"),
@@ -33,6 +37,8 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
     "response submitted": t("s.survey_already_answered_heading"),
     // forma2's personal link page passed c.link_expired as the closed message's heading.
     "link expired": t("c.link_expired"),
+    "email responded": t("s.survey_already_answered_heading"),
+    "browser responded": t("s.survey_already_answered_heading"),
   };
 
   const title =
@@ -43,6 +49,8 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
     status !== "link invalid" &&
     status !== "link expired" &&
     status !== "response submitted" &&
+    status !== "email responded" &&
+    status !== "browser responded" &&
     ((status !== "paused" && status !== "completed") || workspace?.linkSurveyBranding || !workspace) &&
     !(status === "completed" && surveyClosedMessage);
 

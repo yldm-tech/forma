@@ -181,6 +181,12 @@ func (s *Service) Create(ctx context.Context, sv *Survey, in CreateInput) (*Resu
 			displayID = &id
 		}
 
+		if email := sv.oneResponseEmail(data); email != "" {
+			if err := claimVerifiedEmail(ctx, tx, sv.ID, email); err != nil {
+				return err
+			}
+		}
+
 		row, err := insertResponse(ctx, tx, sv.ID, owner, displayID, in, language, data, variables, ttc, meta, flags)
 		if err != nil {
 			return createError(err, in.DisplayID)
@@ -215,6 +221,30 @@ func (s *Service) Create(ctx context.Context, sv *Survey, in CreateInput) (*Resu
 		return nil, fmt.Errorf("create response: %w", err)
 	}
 	return result, nil
+}
+
+// oneResponseEmail is the verified address a new response of a survey that takes one response per verified email is counted under, or "" when the survey takes any number. The address is the one the verified-email gate stamped from its token (verifiedEmailKey), never one the client sent: the gate runs before Create and replaces it.
+func (sv *Survey) oneResponseEmail(data map[string]any) string {
+	if !sv.IsVerifyEmailEnabled || !sv.IsSingleResponsePerEmailEnabled {
+		return ""
+	}
+	email, _ := data[verifiedEmailKey].(string)
+	return email
+}
+
+// claimVerifiedEmail refuses to create or finish a response for an address that already finished one in the survey (409, details.code CodeEmailAlreadyResponded). Create calls it for every new response and Update for the update that finishes one. Only finished responses count, the same rule the link page uses to show "already responded" (linksurvey.Repository.verifiedEmailResponded): an unfinished response must not lock its address out, since a respondent who opens the verification link on another device, comes back after the runtime dropped its saved progress, or reloads a survey that saves no progress starts a new response and has to be able to finish it. A transaction-scoped advisory lock on the survey and address serializes the creates and finishing updates of one address, so the check and the write are one step and exactly one response per address finishes, also when two tabs race. Addresses compare case-insensitively, as PostgreSQL's lower() reads them. The query is written as the expression of the partial index responses_survey_id_verified_email_idx (migration 00025), which serves it.
+func claimVerifiedEmail(ctx context.Context, tx *jobs.Tx, surveyID uuid.UUID, email string) error {
+	if err := tx.WithContext(ctx).Exec(`SELECT pg_advisory_xact_lock(hashtextextended('response-email:' || ? || ':' || lower(?), 0))`, surveyID.String(), email).Error; err != nil {
+		return fmt.Errorf("lock verified email: %w", err)
+	}
+	var taken bool
+	if err := tx.WithContext(ctx).Raw(`SELECT EXISTS (SELECT 1 FROM responses WHERE survey_id = ? AND lower(data->>'verifiedEmail') = lower(?) AND data->>'verifiedEmail' IS NOT NULL AND finished)`, surveyID, email).Scan(&taken).Error; err != nil {
+		return fmt.Errorf("find response by verified email: %w", err)
+	}
+	if taken {
+		return emailAlreadyResponded()
+	}
+	return nil
 }
 
 func insertResponse(ctx context.Context, tx *jobs.Tx, surveyID uuid.UUID, owner *contactRef, displayID *uuid.UUID, in CreateInput, language *string,

@@ -785,6 +785,8 @@
     }
   },
   "s": {
+    "already_responded_in_browser": "此问卷每个浏览器只接受一份回复，此浏览器已提交过一份。",
+    "already_responded_with_email": "此问卷每个邮箱地址只接受一份回复，此邮箱地址已提交过一份。",
     "check_inbox_or_spam": "如果收件箱中没有看到邮件，请检查垃圾邮件文件夹。",
     "completed": "此问卷已关闭。",
     "completed_heading": "问卷已完成",
@@ -3785,6 +3787,11 @@
         "number": "数字",
         "numbered_list": "编号列表",
         "once_set_the_default_language_for_this_survey_can_only_be_changed_by_disabling_the_multi_language_option_and_deleting_all_translations": "一旦设置，此问卷的默认语言只能通过禁用多语言选项并删除所有翻译来更改。",
+        "one_response_per_browser": "每个浏览器只能回答一次",
+        "one_response_per_browser_description": "提交后，该浏览器再次打开时会显示“已回答”，而不是问卷。此限制并不可靠：无痕窗口、清除浏览器数据或换一台设备都可以再次作答，而在共用设备上下一位使用者将无法作答。预览链接不受限制。",
+        "one_response_per_email": "每个邮箱地址只能回答一次",
+        "one_response_per_email_description": "每个已验证的邮箱地址只能提交一份回复。同一地址的第二份回复会被服务器拒绝。",
+        "one_response_per_email_requires_verification": "开启“提交前验证邮箱”后才能按邮箱地址限制回复。",
         "only_display_the_survey_to_a_subset_of_the_users": "仅向部分用户显示问卷",
         "only_people_who_match_your_targeting_can_be_surveyed": "只有符合定位条件的人才会收到问卷。",
         "option_idx": "选项 {choiceIndex}",

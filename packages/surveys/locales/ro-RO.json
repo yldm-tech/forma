@@ -116,6 +116,10 @@
       "message": "Acest răspuns a fost deja completat și nu mai poate fi modificat. Poți închide în siguranță această fereastră.",
       "title": "Acest răspuns a fost deja completat."
     },
+    "response_email_already_used": {
+      "message": "Acest sondaj acceptă un singur răspuns per adresă de e-mail, iar unul a fost deja trimis cu adresa ta. Poți închide această fereastră.",
+      "title": "Această adresă de e-mail a răspuns deja."
+    },
     "response_sending_error_permanent": {
       "message": "Răspunsul tău nu a putut fi trimis și nu poate fi reîncercat. Te rugăm să contactezi proprietarul sondajului dacă problema persistă.",
       "title": "Răspunsul tău nu a putut fi trimis."

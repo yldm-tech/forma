@@ -92,6 +92,18 @@ func (s *Service) Update(ctx context.Context, sv *Survey, rawID string, in Updat
 		if len(locked) == 0 || current == nil {
 			return NotFound("Response", &rawID)
 		}
+		// A respondent finishing a response of a survey that takes one response per verified email is refused when another response of the address finished first (claimVerifiedEmail). The address is the one the create stamped; an update cannot change it (IngestUpdate). The v1 management API's PUT is the workspace's own write and, like its create (CreateManaged), is not limited.
+		if !in.Management && in.Finished != nil && *in.Finished && !current.Finished {
+			stored, err := decodeObject(current.Data)
+			if err != nil {
+				return err
+			}
+			if email := sv.oneResponseEmail(stored); email != "" {
+				if err := claimVerifiedEmail(ctx, tx, sv.ID, email); err != nil {
+					return err
+				}
+			}
+		}
 		row, data, variables, ttc, meta, err := applyUpdate(ctx, tx, current, currentFlags, in)
 		if err != nil {
 			return err

@@ -159,6 +159,15 @@ func (r *Repository) contactResponse(ctx context.Context, surveyID, contactID uu
 	return r.firstResponse(ctx, `SELECT id, finished FROM responses WHERE survey_id = ? AND contact_id = ? ORDER BY created_at LIMIT 1`, surveyID, contactID)
 }
 
+// verifiedEmailResponded says whether the address has finished a response to the survey, never cached. It is the rule response's claimVerifiedEmail enforces when a response is created or finished: only finished responses count, and addresses compare case-insensitively with PostgreSQL's lower(). The query is written as the expression of the partial index responses_survey_id_verified_email_idx (migration 00025), which serves it.
+func (r *Repository) verifiedEmailResponded(ctx context.Context, surveyID uuid.UUID, email string) (bool, error) {
+	var responded bool
+	if err := r.db.WithContext(ctx).Raw(`SELECT EXISTS (SELECT 1 FROM responses WHERE survey_id = ? AND lower(data->>'verifiedEmail') = lower(?) AND data->>'verifiedEmail' IS NOT NULL AND finished)`, surveyID, email).Scan(&responded).Error; err != nil {
+		return false, fmt.Errorf("find response by verified email: %w", err)
+	}
+	return responded, nil
+}
+
 func (r *Repository) firstResponse(ctx context.Context, query string, args ...any) (*existingResponse, error) {
 	var rows []existingResponse
 	if err := r.db.WithContext(ctx).Raw(query, args...).Scan(&rows).Error; err != nil {

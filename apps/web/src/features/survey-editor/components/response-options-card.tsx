@@ -253,6 +253,24 @@ export const ResponseOptionsCard = ({
     }));
   };
 
+  // D-FG03: off unless turned on; per email needs email verification, which stamps the address the server counts.
+  const isSingleResponsePerBrowserEnabled = localSurvey.isSingleResponsePerBrowserEnabled === true;
+  const isSingleResponsePerEmailEnabled = localSurvey.isSingleResponsePerEmailEnabled === true;
+
+  const handleSingleResponsePerBrowserToggle = () => {
+    setLocalSurvey((prevSurvey) => ({
+      ...prevSurvey,
+      isSingleResponsePerBrowserEnabled: prevSurvey.isSingleResponsePerBrowserEnabled !== true,
+    }));
+  };
+
+  const handleSingleResponsePerEmailToggle = () => {
+    setLocalSurvey((prevSurvey) => ({
+      ...prevSurvey,
+      isSingleResponsePerEmailEnabled: prevSurvey.isSingleResponsePerEmailEnabled !== true,
+    }));
+  };
+
   const handleHideBackButtonToggle = () => {
     setLocalSurvey({ ...localSurvey, isBackButtonHidden: !localSurvey.isBackButtonHidden });
   };
@@ -644,6 +662,27 @@ export const ResponseOptionsCard = ({
                 onToggle={handleVerifyEmailToogle}
                 title={t("workspace.surveys.edit.verify_email_before_submission")}
                 description={t("workspace.surveys.edit.verify_email_before_submission_description")}
+              />
+
+              {/* Duplicate-submission limits (D-FG03). Per email is the server's to enforce and needs the verified address; the switch keeps its stored value while verification is off, and applies again when it is turned back on. */}
+              <AdvancedOptionToggle
+                htmlId="singleResponsePerEmail"
+                isChecked={verifyEmailToggle && isSingleResponsePerEmailEnabled}
+                onToggle={handleSingleResponsePerEmailToggle}
+                disabled={!verifyEmailToggle}
+                title={t("workspace.surveys.edit.one_response_per_email")}
+                description={
+                  verifyEmailToggle
+                    ? t("workspace.surveys.edit.one_response_per_email_description")
+                    : t("workspace.surveys.edit.one_response_per_email_requires_verification")
+                }
+              />
+              <AdvancedOptionToggle
+                htmlId="singleResponsePerBrowser"
+                isChecked={isSingleResponsePerBrowserEnabled}
+                onToggle={handleSingleResponsePerBrowserToggle}
+                title={t("workspace.surveys.edit.one_response_per_browser")}
+                description={t("workspace.surveys.edit.one_response_per_browser_description")}
               />
 
               {/* Protect Survey with Pin */}
