@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import { alertRows, unsubscribeTarget } from "./notifications";
+import { alertRows, isUnsubscribeLink, unsubscribeSubject, unsubscribeTarget } from "./notifications";
 
 const organizations = [
   {
@@ -37,6 +37,40 @@ test("an unsubscribe link switches off only what is on and on this page", () => 
   ).toBeNull();
   expect(unsubscribeTarget({ type: "weekly", elementId: "o1" }, organizations)).toBeNull();
   expect(unsubscribeTarget({}, organizations)).toBeNull();
+});
+
+test("an unsubscribe link names the switch it is for, on or off, with its survey's or organization's name", () => {
+  expect(unsubscribeSubject({ type: "alert", elementId: "s2" }, organizations)).toEqual({
+    type: "alert",
+    id: "s2",
+    name: "CSAT",
+    enabled: false,
+  });
+  expect(unsubscribeSubject({ type: "unsubscribedOrganizationIds", elementId: "o1" }, organizations)).toEqual(
+    {
+      type: "unsubscribedOrganizationIds",
+      id: "o1",
+      name: "Acme",
+      enabled: true,
+    }
+  );
+  expect(
+    unsubscribeSubject({ type: "unsubscribedWeeklySummaryOrganizationIds", elementId: "o2" }, organizations)
+  ).toEqual({ type: "unsubscribedWeeklySummaryOrganizationIds", id: "o2", name: "Other", enabled: false });
+  expect(unsubscribeSubject({ type: "alert", elementId: "o1" }, organizations)).toBeNull();
+  expect(
+    unsubscribeSubject({ type: "unsubscribedOrganizationIds", elementId: "s1" }, organizations)
+  ).toBeNull();
+  expect(unsubscribeSubject({ type: "weekly", elementId: "o1" }, organizations)).toBeNull();
+  expect(unsubscribeSubject({ type: "alert" }, organizations)).toBeNull();
+});
+
+test("only a link with both a type and an id is an unsubscribe link", () => {
+  expect(isUnsubscribeLink({ type: "alert", elementId: "s1" })).toBe(true);
+  expect(isUnsubscribeLink({ type: "alert" })).toBe(false);
+  expect(isUnsubscribeLink({ elementId: "s1" })).toBe(false);
+  expect(isUnsubscribeLink({ type: "", elementId: "s1" })).toBe(false);
+  expect(isUnsubscribeLink({})).toBe(false);
 });
 
 const survey = (id: string, name: string, workspaceName: string) => ({

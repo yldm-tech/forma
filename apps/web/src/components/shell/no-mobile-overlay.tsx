@@ -14,6 +14,9 @@ export const PHONE_QUERY = "(max-width: 639px)";
 
 const phoneQuery = () => (typeof window.matchMedia === "function" ? window.matchMedia(PHONE_QUERY) : null);
 
+/** Whether the screen is phone-sized at this moment: what a route hook, which runs outside React, decides by. */
+export const isPhoneScreen = (): boolean => phoneQuery()?.matches ?? false;
+
 /** Whether the screen is phone-sized now, following resizes and rotation. */
 export const useIsPhone = (): boolean =>
   useSyncExternalStore(
@@ -22,7 +25,7 @@ export const useIsPhone = (): boolean =>
       query?.addEventListener("change", onChange);
       return () => query?.removeEventListener("change", onChange);
     },
-    () => phoneQuery()?.matches ?? false,
+    isPhoneScreen,
     () => false
   );
 
