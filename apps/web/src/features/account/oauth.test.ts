@@ -36,6 +36,7 @@ describe("OAuth client metadata helpers", () => {
     expect(scopeLabel("surveys:write", t)).toBe("translated:auth.oauth.scopes.surveys_write");
     expect(scopeLabel("workflows:read", t)).toBe("translated:auth.oauth.scopes.workflows_read");
     expect(scopeLabel("workflows:write", t)).toBe("translated:auth.oauth.scopes.workflows_write");
+    expect(scopeLabel("responses:read", t)).toBe("translated:auth.oauth.scopes.responses_read");
   });
 
   test("keeps unknown OAuth scopes readable", () => {

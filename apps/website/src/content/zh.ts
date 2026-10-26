@@ -277,7 +277,7 @@ export const zh: SiteContent = {
       },
       mcp: {
         title: "MCP 服务器",
-        body: "把 MCP 客户端指向 `https://forma.yldm.ai/api/mcp`，用你自己的 Forma 账号通过 OAuth 登录并授权所需权限，Agent 就能查看、创建和编辑问卷与工作流。",
+        body: "把 MCP 客户端指向 `https://forma.yldm.ai/api/mcp`，用你自己的 Forma 账号通过 OAuth 登录并授权所需权限，Agent 就能查看、创建和编辑问卷与工作流；授予回答权限后，还能读取回答和问卷汇总。",
         link: "连接客户端 →",
       },
       webhooks: {
@@ -331,6 +331,10 @@ export const zh: SiteContent = {
             {
               term: "API 密钥",
               body: "不支持 OAuth 的客户端可以像调用 REST API 一样，在请求头中发送 API 密钥。只读密钥可以查看；有写入或管理权限的密钥还可以创建和编辑。",
+            },
+            {
+              term: "回答",
+              body: "`list_responses` 按页读取问卷的回答，每个答案都附带对应的问题；`get_survey_summary` 读取问卷的统计：完成率、流失、选项计数、评分、NPS 和最近的开放式回答。两者都需要 `responses:read` 权限范围（授权页面会单独列出这一项），以及对问卷所在工作区的读取权限。所有 API 密钥都可以使用它们，就像可以通过 REST API 列出回答一样。回答的联系人、联系人属性、IP 地址和已验证邮箱，只有在调用时明确请求才会返回；询问联系方式等信息的问题，其答案会像其他答案一样返回。",
             },
           ],
         },

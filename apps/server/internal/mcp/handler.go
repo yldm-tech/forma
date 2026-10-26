@@ -1,4 +1,4 @@
-// Package mcp is the MCP server at /api/mcp, forma2's apps/web/modules/mcp: Streamable HTTP without sessions, authenticated by an API key or an OAuth access token from the authorization server in internal/oauthserver, exposing forma2's survey, workflow and workspace tools. The tools run the v3 operations in-process, so they answer with the v3 API's bodies and problems and are authorized by the same workspace checks.
+// Package mcp is the MCP server at /api/mcp, forma2's apps/web/modules/mcp: Streamable HTTP without sessions, authenticated by an API key or an OAuth access token from the authorization server in internal/oauthserver, exposing forma2's survey, workflow and workspace tools and two of its own that read survey responses. The survey and workflow tools run the v3 operations in-process, so they answer with the v3 API's bodies and problems and are authorized by the same workspace checks; the response tools have no v3 operation and answer in the same shapes (responses.go).
 package mcp
 
 import (
@@ -17,6 +17,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/apps/server/internal/analysis"
 	"github.com/yldm-tech/forma/apps/server/internal/apikey"
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
@@ -45,14 +46,15 @@ type Handler struct {
 	keys      *apikey.Authenticator
 	verifier  *oauthserver.TokenVerifier
 	limiter   *ratelimit.Limiter
+	analysis  *analysis.Service
 	ops       http.Handler
 	transport http.Handler
 	log       *slog.Logger
 }
 
-func NewHandler(cfg config.Config, db *gorm.DB, authorizer *authz.Authorizer, keys *apikey.Authenticator, verifier *oauthserver.TokenVerifier, limiter *ratelimit.Limiter, surveys *survey.Handler, workflows *workflow.Handler, log *slog.Logger) (*Handler, error) {
+func NewHandler(cfg config.Config, db *gorm.DB, authorizer *authz.Authorizer, keys *apikey.Authenticator, verifier *oauthserver.TokenVerifier, limiter *ratelimit.Limiter, surveys *survey.Handler, workflows *workflow.Handler, analyses *analysis.Service, log *slog.Logger) (*Handler, error) {
 	h := &Handler{
-		urls: oauthserver.NewURLs(cfg), db: db, authz: authorizer, keys: keys, verifier: verifier, limiter: limiter,
+		urls: oauthserver.NewURLs(cfg), db: db, authz: authorizer, keys: keys, verifier: verifier, limiter: limiter, analysis: analyses,
 		ops: newOperations(surveys, workflows, log), log: log,
 	}
 	server, err := h.newServer()
@@ -70,7 +72,7 @@ func NewHandler(cfg config.Config, db *gorm.DB, authorizer *authz.Authorizer, ke
 	return h, nil
 }
 
-// newServer registers the tools in forma2's order: surveys, workflows, then list_workspaces. There are no resources or prompts.
+// newServer registers the tools in forma2's order: surveys, workflows, then list_workspaces, followed by the response tools forma2 did not have. There are no resources or prompts.
 func (h *Handler) newServer() (*sdk.Server, error) {
 	server := sdk.NewServer(&sdk.Implementation{Name: ServerName, Version: ServerVersion}, &sdk.ServerOptions{Capabilities: &sdk.ServerCapabilities{}})
 	definitions, err := loadTools()
@@ -102,7 +104,7 @@ func refuseSubscriptions(next sdk.MethodHandler) sdk.MethodHandler {
 	}
 }
 
-// listToolsInOrder answers tools/list in forma2's registration order; the SDK lists tools by name. All 22 fit on the SDK's first page.
+// listToolsInOrder answers tools/list in forma2's registration order; the SDK lists tools by name. All 24 fit on the SDK's first page.
 func listToolsInOrder(order []string) sdk.Middleware {
 	return func(next sdk.MethodHandler) sdk.MethodHandler {
 		return func(ctx context.Context, method string, req sdk.Request) (sdk.Result, error) {
@@ -145,6 +147,13 @@ func (h *Handler) serve(c *gin.Context) {
 	}
 	p, ok := h.authenticate(c)
 	if !ok {
+		return
+	}
+	// A tool whose scope came after the token was granted is refused here, so the client can authorize again (stepUpScopes).
+	if required, request := stepUpScopes(p, body); required != nil {
+		h.log.WarnContext(c.Request.Context(), "MCP OAuth token missing a tool's MCP scope", "request_id", httpserver.RequestID(c), "status_code", http.StatusForbidden, "client_id", p.clientID)
+		c.Header("WWW-Authenticate", h.insufficientScopeChallenge(request))
+		v3api.WriteProblem(c, v3api.Forbidden("OAuth token does not include the required MCP scope: "+strings.Join(required, " ")+". Reconnect the MCP client to grant it."))
 		return
 	}
 	c.Request.Body = io.NopCloser(bytes.NewReader(body))
