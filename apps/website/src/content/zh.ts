@@ -167,7 +167,7 @@ export const zh: SiteContent = {
       },
       control: {
         title: "控制谁来回答",
-        body: "可以为问卷设置 PIN 码、要求先验证邮箱再作答，还能限制回答数量或定时开放；私有化部署还可以开启 reCAPTCHA 防刷。",
+        body: "可以为问卷设置 PIN 码、要求先验证邮箱再作答、限制每个邮箱或每个浏览器只能回答一次，还能限制回答数量或定时开放；私有化部署还可以开启 reCAPTCHA 防刷。",
       },
       logic: {
         title: "逻辑与数据",

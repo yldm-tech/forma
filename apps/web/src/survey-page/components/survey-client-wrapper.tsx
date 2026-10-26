@@ -2,6 +2,7 @@ import { getIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
 import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
 import type { TResponseData } from "@forma/types/responses";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { markRespondedInBrowser } from "../lib/browser-response";
 import { buildSurveyDocumentTitle } from "../lib/document-title";
 import { readEmbedFrameMode } from "../lib/embed-frame";
 import { getHiddenFieldsFromSearchParams, warnOnMissingIngestRows } from "../lib/hidden-fields";
@@ -92,6 +93,14 @@ export const SurveyClientWrapper = ({
   // On unless the creator turned it off for a kiosk or a shared device (D-R03); a survey from before the setting existed has it on.
   const persistProgress = survey.isProgressSavingEnabled !== false;
   const userId = canReadUserIdFromUrl ? getUserIdFromSearchParams(searchParams) : undefined;
+
+  // One response per browser (D-FG03): once the final answer is in, this browser shows "already responded" on its next visit (lib/browser-response.ts). A preview is never remembered.
+  const remembersResponse = survey.isSingleResponsePerBrowserEnabled === true && !isPreview;
+  const surveyIdForMark = survey.id;
+  const handleFinished = useCallback(() => {
+    if (remembersResponse) markRespondedInBrowser(surveyIdForMark);
+    onFinished?.();
+  }, [remembersResponse, surveyIdForMark, onFinished]);
   const elements = useMemo(() => getElementsFromSurveyBlocks(survey.blocks), [survey.blocks]);
   const startAt = searchParams.get("startAt");
   const welcomeCardEnabled = survey.welcomeCard.enabled;
@@ -261,7 +270,7 @@ export const SurveyClientWrapper = ({
           isSpamProtectionEnabled={isSpamProtectionEnabled}
           persistProgress={persistProgress}
           offlineSupport={offlineSupport}
-          onFinished={onFinished}
+          onFinished={handleFinished}
           onOfflineStatusChange={offlineSupport ? handleOfflineStatusChange : undefined}
           showCardlessPreviewLogoSlot={isCardless && hasLogo}
         />

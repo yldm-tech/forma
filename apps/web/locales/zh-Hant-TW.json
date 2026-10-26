@@ -784,6 +784,8 @@
     }
   },
   "s": {
+    "already_responded_in_browser": "此問卷每個瀏覽器只接受一份回覆，此瀏覽器已提交過一份。",
+    "already_responded_with_email": "此問卷每個電子郵件地址只接受一份回覆，此地址已提交過一份。",
     "check_inbox_or_spam": "如果您的收件匣中沒有看到電子郵件，也請檢查您的垃圾郵件資料夾。",
     "completed": "此問卷已關閉。",
     "completed_heading": "調查已完成",
@@ -3784,6 +3786,11 @@
         "number": "數字",
         "numbered_list": "編號清單",
         "once_set_the_default_language_for_this_survey_can_only_be_changed_by_disabling_the_multi_language_option_and_deleting_all_translations": "設定後，此問卷的預設語言只能藉由停用多語言選項並刪除所有翻譯來變更。",
+        "one_response_per_browser": "每個瀏覽器只能回答一次",
+        "one_response_per_browser_description": "提交後，該瀏覽器再次開啟時會顯示「已回答」，而不是問卷。此限制並非絕對：無痕視窗、清除瀏覽器資料或換一台裝置都可以再次作答，而在共用裝置上下一位使用者將無法作答。預覽連結不受限制。",
+        "one_response_per_email": "每個電子郵件地址只能回答一次",
+        "one_response_per_email_description": "每個已驗證的電子郵件地址只能提交一份回覆。同一地址的第二份回覆會被伺服器拒絕。",
+        "one_response_per_email_requires_verification": "開啟「提交前驗證電子郵件」後才能依電子郵件地址限制回覆。",
         "only_display_the_survey_to_a_subset_of_the_users": "僅向部分使用者顯示問卷",
         "only_people_who_match_your_targeting_can_be_surveyed": "只有符合您目標設定的人員才能被調查。",
         "option_idx": "選項 {choiceIndex}",

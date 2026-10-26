@@ -52,6 +52,8 @@ const Harness = ({ initial }: { initial: TSurvey }) => {
         locale="en-US"
       />
       <output data-testid="stored">{String(localSurvey.isProgressSavingEnabled)}</output>
+      <output data-testid="perBrowser">{String(localSurvey.isSingleResponsePerBrowserEnabled)}</output>
+      <output data-testid="perEmail">{String(localSurvey.isSingleResponsePerEmailEnabled)}</output>
       <output data-testid="publishOn">{localSurvey.publishOn?.toISOString() ?? ""}</output>
       <output data-testid="closeOn">{localSurvey.closeOn?.toISOString() ?? ""}</output>
     </>
@@ -92,6 +94,53 @@ describe("saving respondents' progress", () => {
   test("is not offered for an app survey, which keeps no progress", () => {
     renderCard(survey({ type: "app" }));
     expect(screen.queryByRole("switch", { name: /^Save respondents' progress/ })).toBeNull();
+  });
+});
+
+const perBrowserSwitch = () => screen.getByRole("switch", { name: /^One response per browser/ });
+const perEmailSwitch = () => screen.getByRole("switch", { name: /^One response per email address/ });
+
+describe("duplicate-submission limits", () => {
+  test("one response per browser is off for a link survey, and the switch turns it on and off", () => {
+    renderCard(survey());
+    expect(perBrowserSwitch().getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByText(/Best effort: a private window/)).toBeTruthy();
+
+    fireEvent.click(perBrowserSwitch());
+    expect(screen.getByTestId("perBrowser").textContent).toBe("true");
+    expect(perBrowserSwitch().getAttribute("aria-checked")).toBe("true");
+
+    fireEvent.click(perBrowserSwitch());
+    expect(screen.getByTestId("perBrowser").textContent).toBe("false");
+  });
+
+  test("one response per email waits for email verification, then turns on and off", () => {
+    renderCard(survey());
+    expect(perEmailSwitch().hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/Turn on "Verify email before submission"/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("switch", { name: /^Verify email before submission/ }));
+    expect(perEmailSwitch().hasAttribute("disabled")).toBe(false);
+    expect(perEmailSwitch().getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(perEmailSwitch());
+    expect(screen.getByTestId("perEmail").textContent).toBe("true");
+    expect(perEmailSwitch().getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText(/refuses a second response from the same address/)).toBeTruthy();
+
+    fireEvent.click(perEmailSwitch());
+    expect(screen.getByTestId("perEmail").textContent).toBe("false");
+  });
+
+  test("a stored per-email limit shows off while verification is off, and is kept", () => {
+    renderCard(survey({ isSingleResponsePerEmailEnabled: true }));
+    expect(perEmailSwitch().getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByTestId("perEmail").textContent).toBe("true");
+  });
+
+  test("are not offered for an app survey", () => {
+    renderCard(survey({ type: "app" }));
+    expect(screen.queryByRole("switch", { name: /^One response per/ })).toBeNull();
   });
 });
 

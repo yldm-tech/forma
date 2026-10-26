@@ -784,6 +784,8 @@
     }
   },
   "s": {
+    "already_responded_in_browser": "このフォームはブラウザごとに1件の回答を受け付けており、このブラウザからの回答はすでに送信されています。",
+    "already_responded_with_email": "このフォームはメールアドレスごとに1件の回答を受け付けており、このメールアドレスからの回答はすでに送信されています。",
     "check_inbox_or_spam": "受信トレイにメールがない場合は、迷惑メールフォルダも確認してください。",
     "completed": "このフォームはクローズしました。",
     "completed_heading": "アンケート完了",
@@ -3784,6 +3786,11 @@
         "number": "数値",
         "numbered_list": "番号付きリスト",
         "once_set_the_default_language_for_this_survey_can_only_be_changed_by_disabling_the_multi_language_option_and_deleting_all_translations": "一度設定すると、このフォームのデフォルト言語は、多言語オプションを無効にしてすべての翻訳を削除することによってのみ変更できます。",
+        "one_response_per_browser": "ブラウザごとに1回のみ回答可能",
+        "one_response_per_browser_description": "回答を送信したブラウザでは、次回からフォームの代わりに「回答済み」と表示されます。確実な制限ではありません。プライベートウィンドウ、ブラウザデータの削除、別の端末からは再び回答でき、共用端末では次の人が回答できなくなります。プレビューリンクには適用されません。",
+        "one_response_per_email": "メールアドレスごとに1回のみ回答可能",
+        "one_response_per_email_description": "認証済みのメールアドレスごとに1件の回答を受け付けます。同じアドレスからの2件目の回答はサーバーで拒否されます。",
+        "one_response_per_email_requires_verification": "メールアドレスごとに回答を制限するには、「送信前にメールアドレスを認証」をオンにしてください。",
         "only_display_the_survey_to_a_subset_of_the_users": "ユーザーの一部にのみフォームを表示する",
         "only_people_who_match_your_targeting_can_be_surveyed": "あなたのターゲティングに一致する人だけがフォームに回答できます。",
         "option_idx": "オプション {choiceIndex}",
