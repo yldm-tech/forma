@@ -1,5 +1,6 @@
 import type { TSurvey } from "@forma/types/surveys/types";
 import type { SurveyTemplate } from "../api";
+import type { OrganizationTemplate, OrganizationTemplatePreset } from "./organization-templates";
 
 /** A catalog template's preset as the server sends it (the Go `survey.Preset`): the survey document the template creates, rendered in the language it was asked in with the workspace's name filled in. */
 export type TemplatePreset = Partial<
@@ -58,3 +59,21 @@ export const templatePreviewSurvey = (template: SurveyTemplate, type: "link" | "
     slug: null,
   };
 };
+
+/** An organization's template as a survey the respondent runtime can render in preview mode: like a catalog template, with the styling, closed message and respondent settings it was saved with. */
+export const organizationTemplatePreviewSurvey = (
+  template: Pick<OrganizationTemplate, "id" | "name" | "description"> & {
+    preset: OrganizationTemplatePreset;
+  },
+  type: "link" | "app"
+): TSurvey => ({
+  ...templatePreviewSurvey(
+    { id: template.id, name: template.name, description: template.description, preset: template.preset },
+    type
+  ),
+  styling: template.preset.styling ?? null,
+  surveyClosedMessage: template.preset.surveyClosedMessage ?? null,
+  showLanguageSwitch: template.preset.showLanguageSwitch ?? false,
+  isBackButtonHidden: template.preset.isBackButtonHidden ?? false,
+  isAutoProgressingEnabled: template.preset.isAutoProgressingEnabled ?? false,
+});

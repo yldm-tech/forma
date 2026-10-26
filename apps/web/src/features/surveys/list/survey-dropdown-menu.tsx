@@ -6,6 +6,7 @@ import {
   CircleAlert,
   CopyIcon,
   EyeIcon,
+  LayoutTemplateIcon,
   LinkIcon,
   MoreVertical,
   PencilIcon,
@@ -42,6 +43,7 @@ import { cn } from "../../../lib/cn";
 import { errorMessage } from "../../../lib/errors";
 import { toast } from "../../../lib/toast";
 import { type SurveyListItem, v3ErrorMessage } from "../api";
+import { SaveAsTemplateDialog } from "../templates/template-details-dialog";
 import { CopySurveyModal } from "./copy-survey-modal";
 import { EditCautionDialog } from "./edit-caution-dialog";
 import type { SurveyStatus } from "./filters";
@@ -67,7 +69,7 @@ const statusLabelKey: Record<SurveyStatus, string> = {
   draft: "common.draft",
 };
 
-/** forma2's SurveyDropDownMenu: restore and delete for an archived survey; edit, rename, duplicate, status, copy, preview, copy link, archive and delete for any other. Delete, the one action that cannot be undone, comes last, set apart and in red. */
+/** forma2's SurveyDropDownMenu: restore and delete for an archived survey; edit, rename, duplicate, status, copy, preview, copy link, archive and delete for any other. An owner or a manager can also save it as a template of the organization. Delete, the one action that cannot be undone, comes last, set apart and in red. */
 export const SurveyDropdownMenu = ({
   survey,
   rules,
@@ -75,6 +77,7 @@ export const SurveyDropdownMenu = ({
   organizationId,
   publicDomain,
   actions,
+  canSaveAsTemplate,
 }: {
   survey: SurveyListItem;
   rules: SurveyRowRules;
@@ -82,6 +85,8 @@ export const SurveyDropdownMenu = ({
   organizationId: string;
   publicDomain: string | undefined;
   actions: SurveyActions;
+  /** The caller is an owner or a manager of the organization, who may save its surveys as templates. */
+  canSaveAsTemplate: boolean;
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -90,6 +95,7 @@ export const SurveyDropdownMenu = ({
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
+  const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [cautionOpen, setCautionOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
@@ -291,6 +297,13 @@ export const SurveyDropdownMenu = ({
                 {t("workspace.surveys.copy_to")}
               </DropdownMenuItem>
             )}
+            {!rules.isArchived && rules.canManage && canSaveAsTemplate && (
+              <DropdownMenuItem
+                icon={<LayoutTemplateIcon className="size-4" />}
+                onSelect={openDialog(setSaveAsTemplateOpen)}>
+                {t("workspace.surveys.organization_templates.save_as_template")}
+              </DropdownMenuItem>
+            )}
             {rules.canPreviewOrCopyLink && publicDomain && (
               <>
                 <DropdownMenuItem
@@ -364,6 +377,16 @@ export const SurveyDropdownMenu = ({
             organizationId={organizationId}
             copySurvey={actions.copySurvey}
           />
+          {canSaveAsTemplate && (
+            <SaveAsTemplateDialog
+              open={saveAsTemplateOpen}
+              setOpen={setSaveAsTemplateOpen}
+              surveyId={survey.id}
+              surveyName={survey.name}
+              workspaceId={workspaceId}
+              organizationId={organizationId}
+            />
+          )}
           {survey.responseCount > 0 && (
             <EditCautionDialog
               open={cautionOpen}
