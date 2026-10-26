@@ -764,11 +764,13 @@ type migrateEnv struct {
 	MigrateDatabaseURL string   `env:"MIGRATE_DATABASE_URL"`
 	LogLevel           LogLevel `env:"LOG_LEVEL" envDefault:"info"`
 	LogFormat          string   `env:"LOG_FORMAT" envDefault:"json"`
+	// IgnoreForma2Data is Config.IgnoreForma2Data: `forma migrate` refuses a database holding forma2's unread data as the server does, so that no migration runs there before the operator decides.
+	IgnoreForma2Data bool `env:"FORMA_IGNORE_FORMA2_DATA" envDefault:"0"`
 }
 
 // LoadForMigrate reads only what `forma migrate` needs, so a migration job can run with the database credentials alone. Its DatabaseURL is MIGRATE_DATABASE_URL when that is set (ignoring surrounding whitespace, as forma2 did), else DATABASE_URL.
 func LoadForMigrate() (Config, error) {
-	e, err := env.ParseAs[migrateEnv]()
+	e, err := env.ParseAsWithOptions[migrateEnv](parseOptions)
 	if err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
@@ -786,7 +788,7 @@ func LoadForMigrate() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
-	return Config{DatabaseURL: dsn, LogLevel: e.LogLevel, LogFormat: e.LogFormat}, nil
+	return Config{DatabaseURL: dsn, LogLevel: e.LogLevel, LogFormat: e.LogFormat, IgnoreForma2Data: e.IgnoreForma2Data}, nil
 }
 
 // Startup is what `forma start`, the container's default command, decides before it serves: forma2's entrypoint switches, under their names.

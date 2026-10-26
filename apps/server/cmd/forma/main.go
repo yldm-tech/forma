@@ -99,7 +99,12 @@ func migrate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return applyMigrations(ctx, cfg, logger.New(cfg, os.Stdout))
+	log := logger.New(cfg, os.Stdout)
+	// Checked before any migration: a later one may drop what release v0.2.48's `forma import-forma2` writes to (00027 does), so a database whose forma2 data was never imported keeps a schema that import still accepts.
+	if err := refuseUnreadForma2Data(ctx, cfg, log); err != nil {
+		return err
+	}
+	return applyMigrations(ctx, cfg, log)
 }
 
 // applyMigrations runs the goose schema migrations, then River's, holding the migration lock so concurrent migrators take turns.
@@ -138,7 +143,7 @@ func worker(ctx context.Context) error {
 	return runWorker(ctx, cfg, log)
 }
 
-// refuseUnreadForma2Data stops serve, worker and start on a database that holds forma2's data and no user of this server's, unless FORMA_IGNORE_FORMA2_DATA is set: started there, the server would come up empty and admit its first sign-up as administrator.
+// refuseUnreadForma2Data stops serve, worker, start and migrate on a database that holds forma2's data and no user of this server's, unless FORMA_IGNORE_FORMA2_DATA is set: started there, the server would come up empty and admit its first sign-up as administrator.
 func refuseUnreadForma2Data(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	if cfg.IgnoreForma2Data {
 		log.WarnContext(ctx, "not checking the database for forma2's data (FORMA_IGNORE_FORMA2_DATA is set); forma2's tables are not read")

@@ -573,3 +573,59 @@ func TestOAuthClientsResponsesReadMigration(t *testing.T) {
 		t.Fatalf("after Down: %s, %s", got, other)
 	}
 }
+
+// 00027 drops forma2_imports and workspaces.legacy_environment_id, with what they hold. Its Down brings both back empty, the column with its UNIQUE constraint, so that 00010's Down, which updates forma2_imports, still runs.
+func TestDropForma2LeftoversMigration(t *testing.T) {
+	const version = 27
+	dsn := startPostgres(t)
+	ctx := context.Background()
+	provider, cleanup, err := NewMigrator(dsn, migrations.FS)
+	if err != nil {
+		t.Fatalf("NewMigrator: %v", err)
+	}
+	defer cleanup()
+	if _, err := provider.UpTo(ctx, version-1); err != nil {
+		t.Fatalf("up to %d: %v", version-1, err)
+	}
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	orgID := mustScanID(t, db, `INSERT INTO organizations (name) VALUES ('Acme') RETURNING id`)
+	mustExec(t, db, `INSERT INTO workspaces (organization_id, name, legacy_environment_id) VALUES ($1, 'Main', 'clxyz')`, orgID)
+	mustExec(t, db, `INSERT INTO forma2_imports (started_at, outcome, reason) VALUES (now(), 'discarded', 'start empty')`)
+	present := func() (table, column bool) {
+		t.Helper()
+		if err := db.QueryRow(`SELECT to_regclass('public.forma2_imports') IS NOT NULL,
+			EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'workspaces' AND column_name = 'legacy_environment_id')`).Scan(&table, &column); err != nil {
+			t.Fatal(err)
+		}
+		return table, column
+	}
+
+	if _, err := provider.UpTo(ctx, version); err != nil {
+		t.Fatalf("up to %d: %v", version, err)
+	}
+	if table, column := present(); table || column {
+		t.Fatalf("after Up: forma2_imports present %v, legacy_environment_id present %v", table, column)
+	}
+	var workspaces int
+	if err := db.QueryRow(`SELECT count(*) FROM workspaces`).Scan(&workspaces); err != nil || workspaces != 1 {
+		t.Fatalf("after Up: %d workspaces (%v), want the one seeded", workspaces, err)
+	}
+
+	if _, err := provider.DownTo(ctx, version-1); err != nil {
+		t.Fatalf("down to %d: %v", version-1, err)
+	}
+	if table, column := present(); !table || !column {
+		t.Fatalf("after Down: forma2_imports present %v, legacy_environment_id present %v", table, column)
+	}
+	mustExec(t, db, `UPDATE workspaces SET legacy_environment_id = 'clxyz'`)
+	other := mustScanID(t, db, `INSERT INTO workspaces (organization_id, name) VALUES ($1, 'Other') RETURNING id`, orgID)
+	wantViolation(t, db, "23505", `UPDATE workspaces SET legacy_environment_id = 'clxyz' WHERE id = $1`, other)
+	if _, err := provider.DownTo(ctx, 9); err != nil {
+		t.Fatalf("down to 9 through 00010's Down: %v", err)
+	}
+}
