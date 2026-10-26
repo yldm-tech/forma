@@ -3778,12 +3778,37 @@ checksums:
     workspace/surveys/share/dynamic_popup/alert_description: 53d2ba39984a059a5eca4cb6cf9ba00d
     workspace/surveys/share/dynamic_popup/alert_title: 813a9160940894da26ec2a09bbb1a7bf
     workspace/surveys/share/dynamic_popup/description: 0edc128859800e35b6f10bb055af2c76
+    workspace/surveys/share/dynamic_popup/embed_popup_button: c01c04761fdd3ee7e9bd07e21d4d2c08
+    workspace/surveys/share/dynamic_popup/embed_popup_description: a4b91f75c8f185f031e5df06b64f0f05
+    workspace/surveys/share/dynamic_popup/embed_popup_title: 89f02a7ce6bc625ec3a2a59020ec5cff
     workspace/surveys/share/dynamic_popup/nav_title: 7155f06aaa8a64aae6226a2d062a2e73
+    workspace/surveys/share/embed_on_website/button_text: 4cae591a46c28378587b9df3df5bd565
+    workspace/surveys/share/embed_on_website/button_text_default: 4247ba65cd52754ac24882c464ac42e6
+    workspace/surveys/share/embed_on_website/delay_seconds: b4f01de4e2387380a96adec628104dd2
     workspace/surveys/share/embed_on_website/description: 6039663688b62843cbca4e7a6815ba43
     workspace/surveys/share/embed_on_website/embed_code_copied_to_clipboard: 94dfaa227e6e533bef7d6305961568f0
     workspace/surveys/share/embed_on_website/embed_mode: 993e6a4a75baa5849a829dfb333b705c
     workspace/surveys/share/embed_on_website/embed_mode_description: b00b9477fc7f063260b2486f1e0e45c7
+    workspace/surveys/share/embed_on_website/layout_iframe: 4db8a0f4c1e2eb165a09ff478f0f5947
+    workspace/surveys/share/embed_on_website/layout_iframe_description: 2b40f1fef56a82b3618e62c10c36fe53
+    workspace/surveys/share/embed_on_website/layout_label: 8ab849bdcd801c13e7e85474299e4ee8
+    workspace/surveys/share/embed_on_website/layout_popup: 0e4f52e9686e49e22a8730c2a5067145
+    workspace/surveys/share/embed_on_website/layout_popup_description: 32a984340ed9613dd26e83e77045f286
+    workspace/surveys/share/embed_on_website/layout_side_tab: 2aca0ad9afe94d0a63cfdb104e12ddd5
+    workspace/surveys/share/embed_on_website/layout_side_tab_description: 47cb3e772bfb615154dc3f49be968318
+    workspace/surveys/share/embed_on_website/layout_slider: d65c4bee6bbca6e9176f793f40ea5907
+    workspace/surveys/share/embed_on_website/layout_slider_description: 6dd9a9125caec680aa3f0bf5d554fbf1
+    workspace/surveys/share/embed_on_website/layout_standard: 455b063e1181932d8d3ae222583afe96
+    workspace/surveys/share/embed_on_website/layout_standard_description: 4acd2ad147c819940b24cf86ee5c3eb7
     workspace/surveys/share/embed_on_website/nav_title: 128338cf9bb8c68b3fff8c9ddafdff12
+    workspace/surveys/share/embed_on_website/open_after_delay: 0cb0b5bd1e1370049365a1abcfa6c136
+    workspace/surveys/share/embed_on_website/open_after_delay_description: 5a8d002922338bf6d4039b55163bd75d
+    workspace/surveys/share/embed_on_website/position: 8ba464c700080c55106d9e680b4b37e5
+    workspace/surveys/share/embed_on_website/position_left: f849afc23c62251a3c18c39642ea1955
+    workspace/surveys/share/embed_on_website/position_right: d2ecd32a214b897f3edddb395a04253d
+    workspace/surveys/share/embed_on_website/preview_sample_page: c11f068869e9821742b0b0bd3cc68676
+    workspace/surveys/share/embed_on_website/tab_label: 5d8b237bba92c5115e847dbab0d64cbc
+    workspace/surveys/share/embed_on_website/tab_label_default: 6fac88806e0c269a30777b283988c61c
     workspace/surveys/share/link_settings/description: 43e3858b50e40b4570bf821662918889
     workspace/surveys/share/link_settings/language_help_text: 2f4f0d76fb622388f4f00fabd5eb9d28
     workspace/surveys/share/link_settings/link_description: ba93bef6c1209a3a897c43616332eb10
