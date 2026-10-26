@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
@@ -28,10 +29,12 @@ type Service struct {
 	jobs  *jobs.Enqueuer
 	audit *audit.Emitter
 	log   *slog.Logger
+	// segments evaluates the segments a response filter names.
+	segments *contact.Evaluator
 }
 
 func NewService(cfg config.Config, db *gorm.DB, authorizer *authz.Authorizer, enqueuer *jobs.Enqueuer, emitter *audit.Emitter, log *slog.Logger) *Service {
-	return &Service{db: db, cfg: cfg, authz: authorizer, jobs: enqueuer, audit: emitter, log: log}
+	return &Service{db: db, cfg: cfg, authz: authorizer, jobs: enqueuer, audit: emitter, log: log, segments: contact.NewEvaluator(db, log)}
 }
 
 // element is one element of the survey: the typed view the statistics read, the stored JSON the summary hands back, and the block it sits in.

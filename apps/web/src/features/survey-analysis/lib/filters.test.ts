@@ -6,6 +6,7 @@ import { type TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/survey
 import { TSurvey, TSurveyLanguage } from "@forma/types/surveys/types";
 import { TTag } from "@forma/types/tags";
 import { TLanguage } from "@forma/types/workspace";
+import enUS from "../../../../locales/en-US.json";
 import { type DateRange, OptionsType, type SelectedFilterValue } from "./filter-types";
 import {
   SUMMARY_FILTER_OPERATOR,
@@ -464,6 +465,42 @@ describe("surveys", () => {
         "Screened out (overquota)",
         "Not in quota",
       ]);
+    });
+
+    test("offers the workspace's segments after the attributes, each with in and not in", () => {
+      const survey = {
+        id: "survey1",
+        name: "Test Survey",
+        blocks: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        status: "draft",
+      } as unknown as TSurvey;
+
+      const result = genOptions(survey, {
+        attributes: { plan: ["pro"] },
+        segments: [{ id: "seg-pro", title: "Pro customers" }],
+      });
+
+      const headers = result.elementOptions.map((o) => o.header);
+      expect(headers.indexOf(OptionsType.SEGMENTS)).toBe(headers.indexOf(OptionsType.ATTRIBUTES) + 1);
+      expect(result.elementOptions.find((o) => o.header === OptionsType.SEGMENTS)?.option).toEqual([
+        { label: "Pro customers", type: OptionsType.SEGMENTS, id: "seg-pro" },
+      ]);
+      expect(result.elementFilterOptions.find((o) => o.id === "seg-pro")).toEqual({
+        type: "Segments",
+        filterOptions: ["is"],
+        filterComboBoxOptions: ["In segment", "Not in segment"],
+        id: "seg-pro",
+      });
+    });
+
+    test("offers no segment group when the workspace has no public segments", () => {
+      const survey = { id: "survey1", name: "Test Survey", blocks: [] } as unknown as TSurvey;
+
+      const result = genOptions(survey, { segments: [] });
+
+      expect(result.elementOptions.some((o) => o.header === OptionsType.SEGMENTS)).toBe(false);
     });
 
     test("should include multiple quota options when multiple quotas are provided", () => {
@@ -1396,6 +1433,39 @@ describe("surveys", () => {
       expect(result.quotas?.quota1).toEqual({ op: "screenedIn" });
       expect(result.quotas?.quota2).toEqual({ op: "screenedOutNotInQuota" });
     });
+
+    test("filters by the segments the response's contact is or is not in, keyed by segment id", () => {
+      const selectedFilter: SelectedFilterValue = {
+        responseStatus: "all",
+        filter: [
+          {
+            elementType: { type: OptionsType.SEGMENTS, label: "Pro customers", id: "seg-pro" },
+            filterType: { filterValue: "is", filterComboBoxValue: "In segment" },
+          },
+          {
+            elementType: { type: OptionsType.SEGMENTS, label: "Large teams", id: "seg-large" },
+            filterType: { filterValue: "is", filterComboBoxValue: "Not in segment" },
+          },
+          {
+            elementType: { type: OptionsType.SEGMENTS, label: "Half-filled", id: "seg-empty" },
+            filterType: { filterValue: "is", filterComboBoxValue: undefined },
+          },
+        ],
+      };
+
+      const result = getFormattedFilters(survey, selectedFilter, {} as DateRange);
+
+      expect(result.segments).toEqual({
+        "seg-pro": { op: "userIsIn" },
+        "seg-large": { op: "userIsNotIn" },
+      });
+    });
+
+    test("sends no segments group without a segment row", () => {
+      const result = getFormattedFilters(survey, { responseStatus: "all", filter: [] }, {} as DateRange);
+
+      expect(result.segments).toBeUndefined();
+    });
   });
 
   describe("getTodayDate", () => {
@@ -1513,6 +1583,9 @@ describe("surveys", () => {
       expect(getFilterValueLabel(TSurveyElementTypeEnum.Consent, "Dismissed", labelT)).toBe(
         "common.dismissed"
       );
+      expect(getFilterValueLabel(OptionsType.SEGMENTS, "Not in segment", labelT)).toBe(
+        "workspace.analysis.segment_filter.not_in_this_segment"
+      );
       // A choice that happens to be called "Skipped" stays the choice.
       expect(getFilterValueLabel(TSurveyElementTypeEnum.MultipleChoiceSingle, "Skipped", labelT)).toBe(
         "Skipped"
@@ -1562,6 +1635,25 @@ describe("surveys", () => {
           labelT
         )
       ).toBe("workspace.analysis.filter_op.is workspace.analysis.filter_op.applied");
+    });
+
+    test("a segment chip reads as one English phrase after its segment's title", () => {
+      // Resolves a key against the shipped en-US catalogue, so the test reads the words the chip shows.
+      const enT = ((key: string) =>
+        key
+          .split(".")
+          .reduce<unknown>((node, part) => (node as Record<string, unknown>)[part], enUS)) as TFunction;
+      const segmentRow = (value: string) => ({
+        elementType: {
+          id: "01a17170-3025-7c6a-a738-b4abd9af54a7",
+          label: "Pro customers",
+          type: OptionsType.SEGMENTS,
+        },
+        filterType: { filterValue: "is", filterComboBoxValue: value },
+      });
+
+      expect(describeFilterCondition(segmentRow("In segment"), enT)).toBe("is in this segment");
+      expect(describeFilterCondition(segmentRow("Not in segment"), enT)).toBe("is not in this segment");
     });
   });
 });

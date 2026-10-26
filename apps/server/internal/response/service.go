@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
@@ -23,8 +24,10 @@ type Service struct {
 	limiter *ratelimit.Limiter
 	audit   *audit.Emitter
 	log     *slog.Logger
+	// segments evaluates the segments a response filter names.
+	segments *contact.Evaluator
 }
 
 func NewService(cfg config.Config, db *gorm.DB, enqueuer *jobs.Enqueuer, cipher *secret.Cipher, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, log *slog.Logger) *Service {
-	return &Service{db: db, jobs: enqueuer, cfg: cfg, cipher: cipher, authz: authorizer, limiter: limiter, audit: emitter, log: log}
+	return &Service{db: db, jobs: enqueuer, cfg: cfg, cipher: cipher, authz: authorizer, limiter: limiter, audit: emitter, log: log, segments: contact.NewEvaluator(db, log)}
 }

@@ -679,6 +679,36 @@ func (e *Evaluator) AllSegmentContacts(ctx context.Context, segmentID uuid.UUID)
 	return ids, nil
 }
 
+// SegmentMembers is the contacts of workspaceID that segmentID holds now, as a query selecting their ids from `contacts c`, with its arguments, for a caller to embed in its own query (the response filter's "in segment"). It is evaluated as the segment's contact list is, without a request device, so a device filter constrains nothing. A segment that does not exist, belongs to another workspace, or nests a segment that does not exist holds nobody, as the client API skips such a segment: found is false and there is no query.
+func (e *Evaluator) SegmentMembers(ctx context.Context, workspaceID, segmentID uuid.UUID) (query string, args []any, found bool, err error) {
+	var nf *segmentNotFoundError
+	tree, segmentWorkspaceID, err := loadSegmentFilters(ctx, e.db, segmentID.String())
+	if errors.As(err, &nf) {
+		return "", nil, false, nil
+	}
+	if err != nil {
+		return "", nil, false, err
+	}
+	if segmentWorkspaceID != workspaceID {
+		return "", nil, false, nil
+	}
+	b := &builder{db: e.db, log: e.log, workspaceID: workspaceID, now: e.now()}
+	cond, err := b.tree(ctx, tree, []string{segmentID.String()})
+	if errors.As(err, &nf) {
+		return "", nil, false, nil
+	}
+	if err != nil {
+		return "", nil, false, err
+	}
+	query = `SELECT c.id FROM contacts c WHERE c.workspace_id = ?`
+	args = []any{workspaceID}
+	if !cond.empty() {
+		query += " AND (" + cond.sql + ")"
+		args = append(args, cond.args...)
+	}
+	return query, args, true, nil
+}
+
 // segmentContactsWhere is the FROM and WHERE clauses selecting the contacts a segment matches, with their arguments; a missing segment, or a missing segment it nests, is forma2's ResourceNotFoundError.
 func (e *Evaluator) segmentContactsWhere(ctx context.Context, segmentID uuid.UUID) (string, []any, error) {
 	tree, workspaceID, err := loadSegmentFilters(ctx, e.db, segmentID.String())

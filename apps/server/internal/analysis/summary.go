@@ -292,7 +292,7 @@ func (s *Service) Summary(ctx context.Context, userID, surveyID uuid.UUID, filte
 	if err != nil {
 		return nil, err
 	}
-	clause, err := response.Where(sv.Survey, filter)
+	clause, err := response.Where(ctx, s.segments, sv.Survey, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -376,7 +376,7 @@ func readSummaryResponses(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, 
 // hasResponseFilter is forma2's hasFilter: the criteria name something other than the creation time, so only displays whose response matches count.
 func hasResponseFilter(f *response.Criteria) bool {
 	return f != nil && (f.Finished != nil || f.ResponseIDs != nil || f.ContactAttributes != nil || f.Data != nil || f.Variables != nil ||
-		f.Reserved != nil || f.Tags != nil || f.Others != nil || f.Meta != nil || f.Quotas != nil || (f.Search != nil && strings.TrimSpace(*f.Search) != ""))
+		f.Reserved != nil || f.Tags != nil || f.Others != nil || f.Meta != nil || f.Quotas != nil || f.Segments != nil || (f.Search != nil && strings.TrimSpace(*f.Search) != ""))
 }
 
 // displayCount is forma2's getDisplayCountBySurveyId as the summary calls it: the survey's displays in the filter's creation window, and under any other filter only those linked to a matching response.

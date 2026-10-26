@@ -16,7 +16,7 @@ func whereOf(t *testing.T, sv *Survey, filter string) Clause {
 	if err := json.Unmarshal([]byte(filter), &f); err != nil {
 		t.Fatal(err)
 	}
-	clause, err := Where(sv, &f)
+	clause, err := Where(t.Context(), nil, sv, &f)
 	if err != nil {
 		t.Fatal(err)
 	}

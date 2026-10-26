@@ -1763,6 +1763,11 @@
         "clear": "清除搜尋",
         "placeholder": "搜尋開放式回應"
       },
+      "segment_filter": {
+        "in_this_segment": "受訪者所屬區隔",
+        "membership_hint": "依聯絡人現在是否屬於該區隔來判斷，而不是回答當時。沒有聯絡人的回答不屬於任何區隔。",
+        "not_in_this_segment": "非受訪者所屬區隔"
+      },
       "trends": {
         "answers": "回答數",
         "answers_count": "{count, plural, other {{count} 個回答}}",

@@ -24,6 +24,7 @@ import {
   OptionsType,
   type SelectedFilterValue,
   type TContactAttributeDataType,
+  type TFilterSegment,
 } from "./filter-types";
 import { getReservedFieldLabel, getReservedFilterEntries } from "./reserved-fields";
 
@@ -39,6 +40,7 @@ const conditionOptions = {
   slider: ["Is equal to", "Is less than", "Is more than", "Submitted", "Skipped"],
   cta: ["is"],
   tags: ["is"],
+  segments: ["is"],
   languages: ["Equals", "Not equals"],
   pictureSelection: ["Includes all", "Includes either"],
   consent: ["is"],
@@ -54,6 +56,7 @@ const filterOptions = {
   csat: ["1", "2", "3", "4", "5"],
   cta: ["Clicked", "Dismissed"],
   tags: ["Applied", "Not applied"],
+  segments: ["In segment", "Not in segment"],
   consent: ["Accepted", "Dismissed"],
   address: ["Filled out", "Skipped"],
   contactInfo: ["Filled out", "Skipped"],
@@ -126,6 +129,8 @@ const FILTER_VALUE_LABELS: Record<string, TFilterLabel> = {
   "Screened in": (t) => t("workspace.analysis.filter_op.screened_in"),
   "Screened out (overquota)": (t) => t("workspace.analysis.filter_op.screened_out_overquota"),
   "Not in quota": (t) => t("workspace.analysis.filter_op.not_in_quota"),
+  "In segment": (t) => t("workspace.analysis.segment_filter.in_this_segment"),
+  "Not in segment": (t) => t("workspace.analysis.segment_filter.not_in_this_segment"),
 };
 
 // Rows whose values are the fixed vocabulary above. Every other row's values are the respondents' or the creator's own text (choice labels, observed field values, language codes), shown as they are even when one happens to read "Skipped".
@@ -138,6 +143,7 @@ const CONSTANT_VALUE_ROW_TYPES = new Set<string>([
   TSurveyElementTypeEnum.Consent,
   OptionsType.TAGS,
   OptionsType.QUOTAS,
+  OptionsType.SEGMENTS,
 ]);
 
 /** The label of a filter row's operator. A matrix row's operator slot holds the matrix row's own label, shown as it is. */
@@ -422,6 +428,7 @@ export const generateElementAndFilterOptions = ({
   hiddenFields,
   variableValues,
   quotas,
+  segments = [],
   t,
 }: {
   survey: TSurvey;
@@ -433,6 +440,8 @@ export const generateElementAndFilterOptions = ({
   hiddenFields: TResponseHiddenFieldsFilter;
   variableValues: TSurveyMetaFieldFilter;
   quotas: TSurveyQuota[];
+  /** The workspace's public segments, which a response's contact is or is not in. */
+  segments?: TFilterSegment[];
   t: TFunction;
 }): {
   elementOptions: ElementOptions[];
@@ -502,6 +511,25 @@ export const generateElementAndFilterOptions = ({
         filterComboBoxOptions: dataType === "string" ? (attributes[a] ?? []) : [],
         fieldDataType: dataType,
         id: a,
+      });
+    });
+  }
+
+  // Segments the response's contact is in now, after the attributes they are built from.
+  if (segments.length > 0) {
+    elementOptions = [
+      ...elementOptions,
+      {
+        header: OptionsType.SEGMENTS,
+        option: segments.map((s) => ({ label: s.title, type: OptionsType.SEGMENTS, id: s.id })),
+      },
+    ];
+    segments.forEach((s) => {
+      elementFilterOptions.push({
+        type: "Segments",
+        filterOptions: conditionOptions.segments,
+        filterComboBoxOptions: filterOptions.segments,
+        id: s.id,
       });
     });
   }
@@ -977,6 +1005,21 @@ const processQuotaFilters = (quotas: FilterValue[], filters: TResponseFilterCrit
   });
 };
 
+// Segment rows → the `segments` group, keyed by the segment's id: the response's contact is, or is not, in it.
+const processSegmentFilters = (segments: FilterValue[], filters: TResponseFilterCriteria) => {
+  segments.forEach(({ filterType, elementType }) => {
+    const segmentId = elementType.id;
+    if (!segmentId) return;
+    const op =
+      filterType.filterComboBoxValue === "In segment"
+        ? "userIsIn"
+        : filterType.filterComboBoxValue === "Not in segment"
+          ? "userIsNotIn"
+          : undefined;
+    if (op) addCondition((filters.segments ??= {}), segmentId, { op });
+  });
+};
+
 // get the formatted filter expression to fetch filtered responses
 export const getFormattedFilters = (
   survey: TSurvey,
@@ -993,6 +1036,7 @@ export const getFormattedFilters = (
   const hiddenFields: FilterValue[] = [];
   const variables: FilterValue[] = [];
   const quotas: FilterValue[] = [];
+  const segments: FilterValue[] = [];
 
   selectedFilter.filter.forEach((filter) => {
     if (filter.elementType?.type === "Elements") {
@@ -1011,6 +1055,8 @@ export const getFormattedFilters = (
       variables.push(filter);
     } else if (filter.elementType?.type === "Quotas") {
       quotas.push(filter);
+    } else if (filter.elementType?.type === "Segments") {
+      segments.push(filter);
     }
   });
 
@@ -1051,6 +1097,7 @@ export const getFormattedFilters = (
   processOtherFilters(others, filters);
   processReservedFilters(meta, survey, filters);
   processQuotaFilters(quotas, filters);
+  processSegmentFilters(segments, filters);
 
   // The keyword search above the response table.
   const keyword = selectedFilter.keyword?.trim();
