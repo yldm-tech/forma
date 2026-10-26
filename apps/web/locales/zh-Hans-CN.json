@@ -698,7 +698,21 @@
     "verification_email_verify_email": "验证邮箱",
     "verification_new_email_subject": "邮箱更改验证",
     "verification_security_notice": "如果你没有申请更改邮箱，请忽略此邮件或立即联系客服。",
-    "verified_link_survey_email_subject": "您的问卷已准备好进行填写。"
+    "verified_link_survey_email_subject": "您的问卷已准备好进行填写。",
+    "weekly_summary_email_completion_rate": "完成率",
+    "weekly_summary_email_csat": "CSAT（满意）",
+    "weekly_summary_email_heading": "每周摘要",
+    "weekly_summary_email_more_surveys": "其他有回复的问卷：{count} 份。在 Forma 中查看全部。",
+    "weekly_summary_email_nps": "NPS",
+    "weekly_summary_email_period": "{organizationName}，{periodStart} 至 {periodEnd}（{timeZone}）",
+    "weekly_summary_email_previous_week": "（上周：{value}）",
+    "weekly_summary_email_responses": "回复数",
+    "weekly_summary_email_subject": "{organizationName} 的每周摘要",
+    "weekly_summary_email_top_tags": "热门标签",
+    "weekly_summary_email_total_responses": "新回复：{responseCount} 条",
+    "weekly_summary_email_turn_off": "关闭此组织的每周摘要",
+    "weekly_summary_email_view_summary": "查看这一周的摘要",
+    "weekly_summary_email_why": "每周一我们会为你发送 {organizationName} 中你可查看的问卷的摘要。"
   },
   "onboarding": {
     "product_name_description": "它会成为工作区的名称，问卷模板的问题中也会用到它。之后可以在工作区设置中修改。",
@@ -3219,8 +3233,11 @@
         "set_up_an_alert_to_get_an_email_on_new_responses": "设置提醒，收到新回复时通过邮件通知",
         "use_the_integration": "使用集成",
         "want_to_loop_in_organization_mates": "想要让组织成员参与吗？",
+        "weekly_summary": "每周摘要",
+        "weekly_summary_description": "每周一 9:00（按组织时区）通过邮件发送你可查看的问卷的新回复、完成率、NPS 和 CSAT 与上周的对比，以及热门标签。",
         "you_will_not_be_auto_subscribed_to_this_organizations_surveys_anymore": "你将不再自动订阅此组织的问卷！",
-        "you_will_not_receive_any_more_emails_for_responses_on_this_survey": "你将不会再收到此问卷的回复邮件！"
+        "you_will_not_receive_any_more_emails_for_responses_on_this_survey": "你将不会再收到此问卷的回复邮件！",
+        "you_will_not_receive_the_weekly_summary_for_this_organization_anymore": "你将不再收到此组织的每周摘要。"
       },
       "profile": {
         "account_deletion_consequences_warning": "删除账户的后果",

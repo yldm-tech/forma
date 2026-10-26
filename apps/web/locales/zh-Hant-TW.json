@@ -698,7 +698,21 @@
     "verification_email_verify_email": "驗證電子郵件",
     "verification_new_email_subject": "電子郵件更改驗證",
     "verification_security_notice": "如果您沒有要求更改此電子郵件，請忽略此電子郵件或立即聯絡支援。",
-    "verified_link_survey_email_subject": "您的 survey 已準備好填寫。"
+    "verified_link_survey_email_subject": "您的 survey 已準備好填寫。",
+    "weekly_summary_email_completion_rate": "完成率",
+    "weekly_summary_email_csat": "CSAT（滿意）",
+    "weekly_summary_email_heading": "每週摘要",
+    "weekly_summary_email_more_surveys": "其他有回應的問卷：{count} 份。在 Forma 中查看全部。",
+    "weekly_summary_email_nps": "NPS",
+    "weekly_summary_email_period": "{organizationName}，{periodStart} 至 {periodEnd}（{timeZone}）",
+    "weekly_summary_email_previous_week": "（上週：{value}）",
+    "weekly_summary_email_responses": "回應數",
+    "weekly_summary_email_subject": "{organizationName} 的每週摘要",
+    "weekly_summary_email_top_tags": "熱門標籤",
+    "weekly_summary_email_total_responses": "新回應：{responseCount} 則",
+    "weekly_summary_email_turn_off": "關閉此組織的每週摘要",
+    "weekly_summary_email_view_summary": "查看這一週的摘要",
+    "weekly_summary_email_why": "每週一我們會寄送 {organizationName} 中您可檢視的問卷摘要給您。"
   },
   "onboarding": {
     "product_name_description": "它會成為工作區的名稱，問卷範本的問題中也會用到它。之後可以在工作區設定中修改。",
@@ -3219,8 +3233,11 @@
         "set_up_an_alert_to_get_an_email_on_new_responses": "設定警示以在收到新回應時收到電子郵件",
         "use_the_integration": "使用整合",
         "want_to_loop_in_organization_mates": "想要邀請組織成員一起參與嗎？",
+        "weekly_summary": "每週摘要",
+        "weekly_summary_description": "每週一 9:00（依組織時區）以電子郵件寄送您可檢視的問卷的新回應、完成率、NPS 與 CSAT 和上週的比較，以及熱門標籤。",
         "you_will_not_be_auto_subscribed_to_this_organizations_surveys_anymore": "您將不會再自動訂閱此組織的問卷！",
-        "you_will_not_receive_any_more_emails_for_responses_on_this_survey": "您將不會再收到此問卷回應的電子郵件！"
+        "you_will_not_receive_any_more_emails_for_responses_on_this_survey": "您將不會再收到此問卷回應的電子郵件！",
+        "you_will_not_receive_the_weekly_summary_for_this_organization_anymore": "您將不再收到此組織的每週摘要。"
       },
       "profile": {
         "account_deletion_consequences_warning": "帳戶刪除後果",

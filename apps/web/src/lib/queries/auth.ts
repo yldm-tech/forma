@@ -47,11 +47,16 @@ export interface NotificationOrganization {
   id: string;
   name: string;
   autoSubscribe: boolean;
+  /** Whether the user gets the organization's weekly summary email. */
+  weeklySummary: boolean;
   surveys: NotificationSurvey[];
 }
 
-/** The two kinds of switch on the notifications page, named as the unsubscribe links in emails name them. */
-export type NotificationType = "alert" | "unsubscribedOrganizationIds";
+/** The kinds of switch on the notifications page, named as the unsubscribe links in emails name them: a survey's per-response alert, an organization's auto-subscription to new surveys, and an organization's weekly summary. */
+export type NotificationType =
+  | "alert"
+  | "unsubscribedOrganizationIds"
+  | "unsubscribedWeeklySummaryOrganizationIds";
 
 export interface TwoFactorSetup {
   secret: string;

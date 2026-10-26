@@ -1,13 +1,13 @@
 import type { NotificationOrganization, NotificationSurvey, NotificationType } from "./queries/auth";
 
-/** An email's unsubscribe link: /account/settings/notifications?type=alert|unsubscribedOrganizationIds&elementId=<id>. */
+/** An email's unsubscribe link: /account/settings/notifications?type=alert|unsubscribedOrganizationIds|unsubscribedWeeklySummaryOrganizationIds&elementId=<id>. */
 export interface UnsubscribeLink {
   type?: string;
   elementId?: string;
 }
 
 /**
- * The switch an unsubscribe link turns off, when it is still on: a survey's per-response alert, or an organization's auto-subscription. forma2 did this on loading the page so the link in the email works in one click; a link to something already off, or not on this page, does nothing.
+ * The switch an unsubscribe link turns off, when it is still on: a survey's per-response alert, an organization's auto-subscription, or an organization's weekly summary. forma2 did this on loading the page so the link in the email works in one click; a link to something already off, or not on this page, does nothing.
  */
 export const unsubscribeTarget = (
   link: UnsubscribeLink,
@@ -21,6 +21,12 @@ export const unsubscribeTarget = (
   if (link.type === "unsubscribedOrganizationIds") {
     const organization = organizations.find((org) => org.id === link.elementId);
     return organization?.autoSubscribe ? { type: "unsubscribedOrganizationIds", id: organization.id } : null;
+  }
+  if (link.type === "unsubscribedWeeklySummaryOrganizationIds") {
+    const organization = organizations.find((org) => org.id === link.elementId);
+    return organization?.weeklySummary
+      ? { type: "unsubscribedWeeklySummaryOrganizationIds", id: organization.id }
+      : null;
   }
   return null;
 };

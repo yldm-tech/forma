@@ -17,13 +17,16 @@ import (
 const (
 	notificationAlert                 = "alert"
 	notificationOrganizationAutoAlert = "unsubscribedOrganizationIds"
+	// NotificationWeeklySummary is the organizations whose weekly summary email the user turned off; the summary is on for every other organization. The digest module reads the same key.
+	NotificationWeeklySummary = "unsubscribedWeeklySummaryOrganizationIds"
 )
 
-// NotificationOrganization is one organization on the notifications page: whether the user is subscribed to new surveys' alerts by default, and every survey they can see in it with its per-response alert.
+// NotificationOrganization is one organization on the notifications page: whether the user is subscribed to new surveys' alerts by default, whether they get its weekly summary email, and every survey they can see in it with its per-response alert.
 type NotificationOrganization struct {
 	ID            uuid.UUID            `json:"id"`
 	Name          string               `json:"name"`
 	AutoSubscribe bool                 `json:"autoSubscribe"`
+	WeeklySummary bool                 `json:"weeklySummary"`
 	Surveys       []NotificationSurvey `json:"surveys"`
 }
 
@@ -36,11 +39,13 @@ type NotificationSurvey struct {
 	Alert         bool      `json:"alert"`
 }
 
-// notificationSettings is users.notification_settings, forma2's ZUserNotificationSettings: per-survey "every response" alerts, and the organizations whose new surveys the user is not subscribed to. Other keys a document carries are kept on write.
+// notificationSettings is users.notification_settings, forma2's ZUserNotificationSettings: per-survey "every response" alerts, the organizations whose new surveys the user is not subscribed to, and the organizations whose weekly summary they turned off. Other keys a document carries are kept on write.
 type notificationSettings struct {
 	Alert        map[string]bool
 	Unsubscribed []string
-	rest         map[string]json.RawMessage
+	// WeeklySummaryOff is written only once the user has switched a weekly summary, so a document that never had the key keeps not having it.
+	WeeklySummaryOff []string
+	rest             map[string]json.RawMessage
 }
 
 func parseNotificationSettings(raw []byte) (*notificationSettings, error) {
@@ -61,6 +66,11 @@ func parseNotificationSettings(raw []byte) (*notificationSettings, error) {
 			return nil, fmt.Errorf("decode unsubscribed organizations: %w", err)
 		}
 	}
+	if v, ok := doc[NotificationWeeklySummary]; ok && string(v) != "null" {
+		if err := json.Unmarshal(v, &s.WeeklySummaryOff); err != nil {
+			return nil, fmt.Errorf("decode weekly summary organizations: %w", err)
+		}
+	}
 	return s, nil
 }
 
@@ -78,6 +88,13 @@ func (s *notificationSettings) marshal() ([]byte, error) {
 		return nil, err
 	}
 	doc[notificationAlert], doc[notificationOrganizationAutoAlert] = alert, unsubscribed
+	if s.WeeklySummaryOff != nil {
+		weekly, err := json.Marshal(s.WeeklySummaryOff)
+		if err != nil {
+			return nil, err
+		}
+		doc[NotificationWeeklySummary] = weekly
+	}
 	return json.Marshal(doc)
 }
 
@@ -104,6 +121,7 @@ func (s *Service) notifications(ctx context.Context, actor httpapi.Actor) ([]Not
 			out = append(out, NotificationOrganization{
 				ID: r.OrganizationID, Name: r.OrganizationName, Surveys: []NotificationSurvey{},
 				AutoSubscribe: !slices.Contains(settings.Unsubscribed, r.OrganizationID.String()),
+				WeeklySummary: !slices.Contains(settings.WeeklySummaryOff, r.OrganizationID.String()),
 			})
 		}
 		if r.SurveyID == nil {
@@ -118,7 +136,7 @@ func (s *Service) notifications(ctx context.Context, actor httpapi.Actor) ([]Not
 	return out, nil
 }
 
-// setNotification switches one setting: a survey's per-response alert, or whether new surveys of an organization alert the user. Unlike forma2, which stored whatever document the browser sent, the survey or organization must be one the page shows this user.
+// setNotification switches one setting: a survey's per-response alert, whether new surveys of an organization alert the user, or whether the user gets an organization's weekly summary. Unlike forma2, which stored whatever document the browser sent, the survey or organization must be one the page shows this user.
 func (s *Service) setNotification(ctx context.Context, actor httpapi.Actor, kind string, id uuid.UUID, enabled bool) error {
 	err := s.changeNotification(ctx, actor, kind, id, enabled)
 	if err != nil {
@@ -154,13 +172,13 @@ func (s *Service) changeNotification(ctx context.Context, actor httpapi.Actor, k
 			return err
 		}
 		key := id.String()
-		if kind == notificationAlert {
+		switch kind {
+		case notificationAlert:
 			settings.Alert[key] = enabled
-		} else {
-			settings.Unsubscribed = slices.DeleteFunc(settings.Unsubscribed, func(v string) bool { return v == key })
-			if !enabled {
-				settings.Unsubscribed = append(settings.Unsubscribed, key)
-			}
+		case NotificationWeeklySummary:
+			settings.WeeklySummaryOff = switchOff(settings.WeeklySummaryOff, key, enabled)
+		default:
+			settings.Unsubscribed = switchOff(settings.Unsubscribed, key, enabled)
 		}
 		if newDoc, err = settings.marshal(); err != nil {
 			return err
@@ -175,6 +193,18 @@ func (s *Service) changeNotification(ctx context.Context, actor httpapi.Actor, k
 		OldObject: map[string]any{"notificationSettings": json.RawMessage(oldDoc)}, NewObject: map[string]any{"notificationSettings": json.RawMessage(newDoc)},
 	})
 	return nil
+}
+
+// switchOff is an opt-out list with the organization in it when its setting is off, once, and out of it when it is on.
+func switchOff(list []string, key string, enabled bool) []string {
+	list = slices.DeleteFunc(list, func(v string) bool { return v == key })
+	if !enabled {
+		list = append(list, key)
+	}
+	if list == nil {
+		list = []string{}
+	}
+	return list
 }
 
 // notificationRow is one survey the user can see, or an organization or workspace with none; the nullable columns are empty for those.

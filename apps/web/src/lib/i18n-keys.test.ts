@@ -126,6 +126,7 @@ const SAME_IN_EVERY_LOCALE = new Set([
   "common.url",
   "common.webhook",
   "common.webhooks",
+  "emails.weekly_summary_email_nps",
   "organizations.two_factor.status_sso",
   "templates.collect_feedback_question_6_choice_1",
   "templates.collect_feedback_question_6_choice_4",

@@ -698,7 +698,21 @@
     "verification_email_verify_email": "Verify email",
     "verification_new_email_subject": "Email change verification",
     "verification_security_notice": "If you did not request this email change, please ignore this email or contact support immediately.",
-    "verified_link_survey_email_subject": "Your survey is ready to be filled out."
+    "verified_link_survey_email_subject": "Your survey is ready to be filled out.",
+    "weekly_summary_email_completion_rate": "Completion rate",
+    "weekly_summary_email_csat": "CSAT (satisfied)",
+    "weekly_summary_email_heading": "Your weekly summary",
+    "weekly_summary_email_more_surveys": "Other surveys with responses: {count}. Open Forma to see them all.",
+    "weekly_summary_email_nps": "NPS",
+    "weekly_summary_email_period": "{organizationName}, {periodStart} to {periodEnd} ({timeZone})",
+    "weekly_summary_email_previous_week": "(previous week: {value})",
+    "weekly_summary_email_responses": "Responses",
+    "weekly_summary_email_subject": "Weekly summary for {organizationName}",
+    "weekly_summary_email_top_tags": "Top tags",
+    "weekly_summary_email_total_responses": "New responses: {responseCount}",
+    "weekly_summary_email_turn_off": "Turn off the weekly summary for this organization",
+    "weekly_summary_email_view_summary": "View the summary for this week",
+    "weekly_summary_email_why": "You get this summary every Monday for the surveys you can see in {organizationName}."
   },
   "onboarding": {
     "product_name_description": "Your workspace is named after it, and survey templates use it in their questions. You can change it later in the workspace settings.",
@@ -3219,8 +3233,11 @@
         "set_up_an_alert_to_get_an_email_on_new_responses": "Set up an alert to get an email on new responses",
         "use_the_integration": "Use the integration",
         "want_to_loop_in_organization_mates": "Want to loop in organization mates?",
+        "weekly_summary": "Weekly summary",
+        "weekly_summary_description": "Every Monday at 09:00 in the organization's time zone, get an email with the new responses, completion rate, NPS and CSAT against the week before, and top tags of the surveys you can see.",
         "you_will_not_be_auto_subscribed_to_this_organizations_surveys_anymore": "You will not be auto-subscribed to this organization’s surveys anymore!",
-        "you_will_not_receive_any_more_emails_for_responses_on_this_survey": "You will not receive any more emails for responses on this survey!"
+        "you_will_not_receive_any_more_emails_for_responses_on_this_survey": "You will not receive any more emails for responses on this survey!",
+        "you_will_not_receive_the_weekly_summary_for_this_organization_anymore": "You will not receive the weekly summary for this organization anymore."
       },
       "profile": {
         "account_deletion_consequences_warning": "Account deletion consequences",

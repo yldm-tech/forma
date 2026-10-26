@@ -10,6 +10,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/billing"
 	"github.com/yldm-tech/forma/apps/server/internal/brevo"
+	"github.com/yldm-tech/forma/apps/server/internal/digest"
 	"github.com/yldm-tech/forma/apps/server/internal/integration"
 	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/apps/server/internal/pipeline"
@@ -26,7 +27,7 @@ import (
 )
 
 // NewJobRegistry is every job kind and schedule `forma worker` runs: the platform's own, then each feature module's.
-func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slog.Logger, delivery *authz.Delivery, authzAudit *authz.Audit, emitter *audit.Emitter, files *storage.Service, workspaces *workspace.Repository, responsePipeline *pipeline.Worker, webhooks *webhook.Deliverer, workflowRunner *workflow.Runner, workflowReconciler *workflow.Reconciler, billingEngine *billing.Engine, usageReporter *usagereport.Reporter, brevoClient *brevo.Client) *jobs.Registry {
+func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slog.Logger, delivery *authz.Delivery, authzAudit *authz.Audit, emitter *audit.Emitter, files *storage.Service, workspaces *workspace.Repository, responsePipeline *pipeline.Worker, webhooks *webhook.Deliverer, workflowRunner *workflow.Runner, workflowReconciler *workflow.Reconciler, billingEngine *billing.Engine, usageReporter *usagereport.Reporter, brevoClient *brevo.Client, weeklySummary *digest.Digest, enqueuer *jobs.Enqueuer) *jobs.Registry {
 	reg := jobs.NewRegistry(log)
 	authz.RegisterJobs(reg, delivery, authzAudit)
 	auth.RegisterJobs(reg, pool, log)
@@ -41,6 +42,7 @@ func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slo
 	usagereport.RegisterJobs(reg, usageReporter, log)
 	workflow.RegisterUsageSnapshot(reg, workflow.NewUsageSnapshot(cfg, db, log), log)
 	brevo.RegisterJobs(reg, brevoClient)
+	digest.RegisterJobs(reg, weeklySummary, enqueuer, log)
 	return reg
 }
 
