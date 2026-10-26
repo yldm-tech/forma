@@ -2,6 +2,7 @@ package response
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -11,9 +12,11 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
@@ -64,7 +67,7 @@ type TagFilter struct {
 	NotApplied []string `json:"notApplied"`
 }
 
-// Criteria is forma2's TResponseFilterCriteria, what the response views filter by. Every keyed group takes one condition or several per key (Conditions). Search is a keyword the response's free-text answers must contain.
+// Criteria is forma2's TResponseFilterCriteria, what the response views filter by. Every keyed group takes one condition or several per key (Conditions). Search is a keyword the response's free-text answers must contain. Segments keeps responses whose contact is, or is not, in a segment of the survey's workspace now (userIsIn, userIsNotIn), keyed by the segment's id.
 type Criteria struct {
 	Finished          *bool                    `json:"finished"`
 	ResponseIDs       []uuid.UUID              `json:"responseIds"`
@@ -78,6 +81,7 @@ type Criteria struct {
 	Meta              map[string]Conditions    `json:"meta"`
 	Quotas            map[uuid.UUID]Conditions `json:"quotas"`
 	Search            *string                  `json:"search"`
+	Segments          map[string]Conditions    `json:"segments"`
 }
 
 // clause is a conjunction of SQL conditions on the response row `r`, with their arguments in order.
@@ -305,8 +309,8 @@ func durationCondition(c Condition) (*cond, bool) {
 	return q("FALSE"), true
 }
 
-// where is forma2's buildWhereClause for one survey: every criteria group ANDed. Names the survey's declared fields or elements shadow drop out of the reserved group, and an unknown reserved or variable name filters nothing; a malformed condition is refused.
-func where(sv *Survey, f *Criteria) (*clause, error) {
+// where is forma2's buildWhereClause for one survey: every criteria group ANDed. Names the survey's declared fields or elements shadow drop out of the reserved group, and an unknown reserved or variable name filters nothing; a malformed condition is refused. segments evaluates the segments the criteria name.
+func where(ctx context.Context, segments *contact.Evaluator, sv *Survey, f *Criteria) (*clause, error) {
 	w := &clause{}
 	if f == nil {
 		return w, nil
@@ -422,6 +426,9 @@ func where(sv *Survey, f *Criteria) (*clause, error) {
 			w.add(q("r.id IN ", arg{f.ResponseIDs}))
 		}
 	}
+	if err := segmentConditions(ctx, w, segments, sv, f.Segments); err != nil {
+		return nil, err
+	}
 	for quotaID, cs := range f.Quotas {
 		if len(cs) == 0 {
 			return nil, invalidFilter("quotas")
@@ -438,6 +445,56 @@ func where(sv *Survey, f *Criteria) (*clause, error) {
 		}
 	}
 	return w, nil
+}
+
+// Segment filter operators: the response's contact is, or is not, in the segment. They are the segment editor's own operators for a nested segment.
+const (
+	segmentUserIsIn    = "userIsIn"
+	segmentUserIsNotIn = "userIsNotIn"
+)
+
+// segmentConditions adds the segments group: a response whose contact the segment holds now, or one it does not hold, which counts a response without a contact. Membership is the segment's as its contact list shows it (contact.Evaluator.SegmentMembers), decided when the filter runs rather than when the response was given. A key that names no segment of the survey's workspace (a segment since deleted, another workspace's, or no row id at all) is a segment that holds nobody.
+func segmentConditions(ctx context.Context, w *clause, segments *contact.Evaluator, sv *Survey, group map[string]Conditions) error {
+	keys := make([]string, 0, len(group))
+	for key, cs := range group {
+		if len(cs) == 0 {
+			return invalidFilter("segments")
+		}
+		for _, c := range cs {
+			if c.Op != segmentUserIsIn && c.Op != segmentUserIsNotIn {
+				return invalidFilter("segments")
+			}
+		}
+		keys = append(keys, key)
+	}
+	// Sorted, so the SQL a filter compiles to is the same on every run.
+	slices.Sort(keys)
+	for _, key := range keys {
+		var members *cond
+		if id, ok := rowid.Parse(key); ok {
+			query, args, found, err := segments.SegmentMembers(ctx, sv.WorkspaceID, id)
+			if err != nil {
+				return fmt.Errorf("evaluate segment %s: %w", id, err)
+			}
+			if found {
+				members = q("EXISTS (SELECT 1 FROM (" + query + ") m WHERE m.id = r.contact_id)")
+				members.args = args
+			}
+		}
+		for _, c := range group[key] {
+			switch {
+			case members == nil && c.Op == segmentUserIsIn:
+				w.add(q("FALSE"))
+			case members == nil:
+				// Nobody is in a segment that holds nobody.
+			case c.Op == segmentUserIsIn:
+				w.add(members)
+			default:
+				w.add(q("NOT ", members))
+			}
+		}
+	}
+	return nil
 }
 
 // searchElementTypes are the elements whose answers are the respondent's own words, what the keyword search reads: an open text answer, and the fields of an address or contact info answer.

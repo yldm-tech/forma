@@ -15,12 +15,19 @@ export enum OptionsType {
   HIDDEN_FIELDS = "Hidden Fields",
   VARIABLES = "Variables",
   QUOTAS = "Quotas",
+  SEGMENTS = "Segments",
+}
+
+/** A segment the filter offers, as the survey's filter data lists it. */
+export interface TFilterSegment {
+  id: string;
+  title: string;
 }
 
 /** A contact attribute key's data type (contact_attribute_keys.data_type). */
 export type TContactAttributeDataType = "string" | "number" | "date";
 
-/** One thing a filter row can filter on: an element, a tag, an attribute, a field or a quota. */
+/** One thing a filter row can filter on: an element, a tag, an attribute, a field, a quota or a segment. */
 export interface ElementOption {
   label: string;
   elementType?: TSurveyElementTypeEnum;
@@ -43,6 +50,7 @@ export interface ElementFilterOptions {
     | "Tags"
     | "Languages"
     | "Quotas"
+    | "Segments"
     | "Hidden Fields"
     | "Meta"
     | "Variables"
