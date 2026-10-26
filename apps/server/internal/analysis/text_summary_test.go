@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,6 +36,21 @@ func TestRedactContactDetails(t *testing.T) {
 		{"on 26.10.2026 it broke", "on 26.10.2026 it broke"},
 		{"order 1234567 and version 1.2.3", "order 1234567 and version 1.2.3"},
 		{"I paid 49.99 for 12 seats", "I paid 49.99 for 12 seats"},
+		// Full-width digits and dashes, as a Japanese or Chinese input method types them.
+		{"電話は０９０−１２３４−５６７８です", "電話は[phone]です"},
+		{"０９０－１２３４－５６７８", "[phone]"},
+		{"tel（03）1234ー5678まで", "tel[phone]まで"},
+		{"call 090‐1234‐5678 or 090–1234–5678", "call [phone] or [phone]"},
+		{"手机　138 1234 5678", "手机　[phone]"},
+		// 4-2-4 numbers are not dates.
+		{"0166-12-3456 and 0120-12-3456", "[phone] and [phone]"},
+		// Numbers written next to each other are redacted, not kept as one number too long to be a phone; dates among them stay.
+		{"090-1234-5678 03-1234-5678", "[phone]"},
+		{"4111 1111 1111 1111", "[phone]"},
+		{"2026-10-26 2026-10-27", "2026-10-26 2026-10-27"},
+		{"2026-10-26 090-1234-5678", "2026-10-26 [phone]"},
+		{"２０２６－１０－２６に壊れた", "２０２６－１０－２６に壊れた"},
+		{"10-26-2026 again", "10-26-2026 again"},
 	}
 	for _, c := range cases {
 		if got := redactContactDetails(c.in); got != c.want {
@@ -144,6 +160,8 @@ func TestOverallSentiment(t *testing.T) {
 }
 
 // textProvider is an OpenAI-compatible endpoint that groups answers by keyword: "price" is Pricing, "support" Support; "love" is positive and "hate" negative. Merging joins themes of the same title.
+//
+// A hostile provider, as answers that steer the model could make it, also puts every answer id of the sample that its chunk did not carry into each theme and each theme's quotes, and reports 100000 positive answers for the chunk that carries a1. When hold is set, each request signals arrived and waits for hold to close.
 type textProvider struct {
 	*httptest.Server
 	mu      sync.Mutex
@@ -151,11 +169,14 @@ type textProvider struct {
 	merges  int
 	status  int
 	answers int
+	hostile bool
+	hold    chan struct{}
+	arrived chan struct{}
 }
 
 func newTextProvider(t *testing.T) *textProvider {
 	t.Helper()
-	p := &textProvider{status: http.StatusOK}
+	p := &textProvider{status: http.StatusOK, arrived: make(chan struct{}, 16)}
 	p.Server = httptest.NewServer(http.HandlerFunc(p.serve))
 	t.Cleanup(p.Close)
 	return p
@@ -176,8 +197,12 @@ func (p *textProvider) serve(w http.ResponseWriter, r *http.Request) {
 	_ = json.Unmarshal(raw, &body)
 	user := body.Messages[len(body.Messages)-1].Content
 	p.mu.Lock()
-	status := p.status
+	status, hostile, hold := p.status, p.hostile, p.hold
 	p.mu.Unlock()
+	if hold != nil {
+		p.arrived <- struct{}{}
+		<-hold
+	}
 	if status != http.StatusOK {
 		w.Header().Set("Retry-After", "17")
 		w.Header().Set("Retry-After-Ms", "1")
@@ -213,10 +238,26 @@ func (p *textProvider) serve(w http.ResponseWriter, r *http.Request) {
 				sentiment["neutral"]++
 			}
 		}
+		var foreign []string
+		if hostile {
+			carried := map[string]bool{}
+			for _, a := range answers {
+				carried[a.ID] = true
+			}
+			for i := 1; i <= textSampleLimit; i++ {
+				if id := fmt.Sprintf("a%d", i); !carried[id] {
+					foreign = append(foreign, id)
+				}
+			}
+			if carried["a1"] {
+				sentiment["positive"] = 100000
+			}
+		}
 		themes := []any{}
 		for _, title := range []string{"Pricing", "Support"} {
 			if ids := groups[title]; len(ids) > 0 {
-				themes = append(themes, map[string]any{"title": title, "description": title + " comes up.", "answerIds": ids, "quoteIds": append([]string{"a99999"}, ids[:min(2, len(ids))]...)})
+				quotes := append(append([]string{"a99999"}, foreign...), ids[:min(2, len(ids))]...)
+				themes = append(themes, map[string]any{"title": title, "description": title + " comes up.", "answerIds": append(slices.Clone(ids), foreign...), "quoteIds": quotes})
 			}
 		}
 		content = map[string]any{"themes": themes, "sentiment": sentiment}
@@ -263,7 +304,7 @@ func (p *textProvider) answersRead() int {
 }
 
 // newTextEnv is the analysis module with its text summaries: the AI provider is the returned fake when configured is set, none otherwise; summaries are cached in a fresh Valkey and rate limited for real.
-func newTextEnv(t *testing.T, configured bool) (*env, *textProvider, *ratelimit.Limiter) {
+func newTextEnv(t *testing.T, configured bool) (*env, *textProvider, *TextSummaries) {
 	t.Helper()
 	e := newEnv(t)
 	provider := newTextProvider(t)
@@ -281,7 +322,7 @@ func newTextEnv(t *testing.T, configured bool) (*env, *textProvider, *ratelimit.
 	texts := NewTextSummaries(e.svc, aiService, limiter, cache, log)
 	e.engine = httpserver.NewEngine(cfg, log)
 	NewHandler(e.svc, texts, headerSessions{}, limiter).Register(e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo()))
-	return e, provider, limiter
+	return e, provider, texts
 }
 
 const textBlocks = `[{"id":"b1","name":"B1","elements":[
@@ -488,9 +529,10 @@ func TestTextSummaryChunksLargeSetsAndMergesTheirThemes(t *testing.T) {
 }
 
 func TestTextSummaryAvailabilityAccessAndLimits(t *testing.T) {
-	e, provider, limiter := newTextEnv(t, true)
-	owner, reader, stranger := e.user(), e.user(), e.user()
+	e, provider, texts := newTextEnv(t, true)
+	owner, writer, reader, stranger := e.user(), e.user(), e.user(), e.user()
 	org, ws := e.organization(owner, nil)
+	e.grant(org, ws, writer, "readWrite")
 	e.grant(org, ws, reader, "read")
 	sv := e.survey(ws, surveyOpts{blocks: textBlocks})
 	lookup, generate := textPaths(sv)
@@ -507,11 +549,22 @@ func TestTextSummaryAvailabilityAccessAndLimits(t *testing.T) {
 		t.Errorf("toggle off: %d %s", rec.Code, rec.Body)
 	}
 
-	// Anyone who can read the responses may summarize them; nobody else learns the survey exists.
+	// Generating a summary needs edit access, as every other AI tool does. A member who can only read the responses sees the current summary and is told why they cannot make one; nobody else learns the survey exists.
 	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
-	decode(t, e.request(reader, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)), &state)
+	if rec := e.request(reader, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)); rec.Code != http.StatusForbidden {
+		t.Errorf("generate by a reader: %d %s", rec.Code, rec.Body)
+	}
+	decode(t, e.request(reader, http.MethodPost, lookup, textInput("q1", TextTargetAnswers, nil)), &state)
+	if state.Available || state.Reason != ai.ReasonReadOnly || state.Summary != nil {
+		t.Errorf("lookup by a reader before any summary: %+v", state)
+	}
+	decode(t, e.request(writer, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)), &state)
 	if state.Summary == nil {
-		t.Fatal("a reader could not summarize")
+		t.Fatal("a member with edit access could not summarize")
+	}
+	decode(t, e.request(reader, http.MethodPost, lookup, textInput("q1", TextTargetAnswers, nil)), &state)
+	if state.Available || state.Reason != ai.ReasonReadOnly || state.Summary == nil {
+		t.Errorf("lookup by a reader: %+v", state)
 	}
 	for _, path := range []string{lookup, generate} {
 		if rec := e.request(stranger, http.MethodPost, path, textInput("q1", TextTargetAnswers, nil)); rec.Code != http.StatusForbidden {
@@ -526,8 +579,8 @@ func TestTextSummaryAvailabilityAccessAndLimits(t *testing.T) {
 		t.Errorf("no answers: %d %s", rec.Code, rec.Body)
 	}
 
-	// The organization's hourly budget is spent (the reader's summary took one unit of it): a cached summary is still served, a new one is refused.
-	if res, err := limiter.Check(t.Context(), ratelimit.ActionAITextSummary, org.String(), ratelimit.ActionAITextSummary.Limit-1); err != nil || !res.Allowed {
+	// The organization's hourly budget is spent (the writer's summary took one unit of it): a cached summary is still served, a new one is refused.
+	if res, err := texts.limiter.Check(t.Context(), ratelimit.ActionAITextSummary, org.String(), ratelimit.ActionAITextSummary.Limit-1); err != nil || !res.Allowed {
 		t.Fatalf("spend the budget: %+v %v", res, err)
 	}
 	decode(t, e.request(owner, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)), &state)
@@ -570,5 +623,224 @@ func TestTextSummaryWithoutAProvider(t *testing.T) {
 	}
 	if rec := e.request(owner, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)); rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), ai.CodeInstanceNotConfigured) {
 		t.Errorf("generate %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestTextSummaryMemberLimit(t *testing.T) {
+	e, _, texts := newTextEnv(t, true)
+	owner, writer := e.user(), e.user()
+	org, ws := e.organization(owner, nil)
+	e.grant(org, ws, writer, "readWrite")
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
+	sv := e.survey(ws, surveyOpts{blocks: textBlocks})
+	_, generate := textPaths(sv)
+	e.response(sv, row{at: at(1), finished: true, data: `{"q1":"the price"}`})
+
+	// One member's hourly budget is spent: they are refused, another member of the organization is not.
+	if res, err := texts.limiter.Check(t.Context(), ratelimit.ActionAITextSummaryMember, owner.String(), ratelimit.ActionAITextSummaryMember.Limit); err != nil || !res.Allowed {
+		t.Fatalf("spend the budget: %+v %v", res, err)
+	}
+	if rec := e.request(owner, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)); rec.Code != http.StatusTooManyRequests {
+		t.Errorf("over the member limit: %d %s", rec.Code, rec.Body)
+	}
+	var state TextSummaryState
+	decode(t, e.request(writer, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)), &state)
+	if state.Summary == nil {
+		t.Error("another member was refused")
+	}
+	// The refused request did not charge the organization.
+	if res, err := texts.limiter.Check(t.Context(), ratelimit.ActionAITextSummary, org.String(), ratelimit.ActionAITextSummary.Limit-1); err != nil || !res.Allowed {
+		t.Errorf("the organization was charged for a refused request: %+v %v", res, err)
+	}
+}
+
+func TestChunkSentimentIsBounded(t *testing.T) {
+	cases := []struct {
+		positive, neutral, negative, n int
+		want                           [3]int
+	}{
+		{3, 4, 3, 10, [3]int{3, 4, 3}},
+		{-5, 2, 1, 10, [3]int{0, 2, 1}},
+		{100000, 0, 0, 10, [3]int{10, 0, 0}},
+		{100000, 10, 0, 10, [3]int{5, 5, 0}},
+		{6, 6, 6, 9, [3]int{3, 3, 3}},
+	}
+	for _, c := range cases {
+		if got := chunkSentiment(c.positive, c.neutral, c.negative, c.n); got != c.want {
+			t.Errorf("%+v: %v", c, got)
+		}
+	}
+}
+
+func TestTextSummaryKeepsEachChunkToItsOwnAnswers(t *testing.T) {
+	e, provider, _ := newTextEnv(t, true)
+	provider.hostile = true
+	owner := e.user()
+	org, ws := e.organization(owner, nil)
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
+	sv := e.survey(ws, surveyOpts{blocks: textBlocks})
+	_, generate := textPaths(sv)
+	e.exec(`INSERT INTO responses (survey_id, finished, data)
+		SELECT ?, true, jsonb_build_object('q1', CASE WHEN g % 2 = 0 THEN 'the price ' ELSE 'the support ' END || repeat('detail ', 40) || g) FROM generate_series(1, 600) g`, sv)
+
+	var state TextSummaryState
+	decode(t, e.request(owner, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)), &state)
+	s := state.Summary
+	if chunks, _ := provider.calls(); s == nil || len(chunks) < 2 {
+		t.Fatalf("summary %+v over %d chunks", s, len(chunks))
+	}
+	// A theme counts only the answers its own chunk matched to it, and quotes only those.
+	if len(s.Themes) != 2 || s.Themes[0].Count+s.Themes[1].Count != s.SampledCount {
+		t.Errorf("themes counted answers of other chunks: %+v", s.Themes)
+	}
+	for _, theme := range s.Themes {
+		keyword := map[string]string{"Pricing": "price", "Support": "support"}[theme.Title]
+		for _, q := range theme.Quotes {
+			if !strings.Contains(q.Text, keyword) {
+				t.Errorf("%s quotes %q", theme.Title, q.Text)
+			}
+		}
+	}
+	// One chunk claiming 100000 positive answers weighs no more than the answers it carried.
+	if s.Sentiment.Positive >= 50 || s.Sentiment.Overall == SentimentPositive {
+		t.Errorf("sentiment %+v", s.Sentiment)
+	}
+}
+
+func TestTextSummaryOutlivesItsRequest(t *testing.T) {
+	e, provider, texts := newTextEnv(t, true)
+	owner := e.user()
+	org, ws := e.organization(owner, nil)
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
+	sv := e.survey(ws, surveyOpts{blocks: textBlocks})
+	e.response(sv, row{at: at(1), finished: true, data: `{"q1":"the price"}`})
+	e.authz.Deliver(t)
+	provider.hold = make(chan struct{})
+
+	// The reader closes the tab while the provider is still working: the summary is cached all the same.
+	ctx, cancel := context.WithCancel(t.Context())
+	in := TextSummaryInput{ElementID: "q1", Target: TextTargetAnswers, Language: "en-US"}
+	done := make(chan error, 1)
+	go func() {
+		_, err := texts.Generate(ctx, owner, sv, in)
+		done <- err
+	}()
+	<-provider.arrived
+	cancel()
+	close(provider.hold)
+	if err := <-done; err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+	state, err := texts.Lookup(t.Context(), owner, sv, in)
+	if err != nil || state.Summary == nil {
+		t.Fatalf("lookup %+v %v", state, err)
+	}
+}
+
+func TestTextSummaryClaimRunsOneGeneration(t *testing.T) {
+	_, _, texts := newTextEnv(t, true)
+	ctx := t.Context()
+	key := textKeyPrefix(uuid.New()) + "claim"
+	began := time.Now().UTC()
+	texts.now = func() time.Time { return began }
+	// The summary a refresh replaces.
+	texts.store(ctx, key, cachedTextSummary{Fingerprint: "fp", Summary: TextSummary{GeneratedAt: began.Add(-time.Hour)}})
+
+	release, done, err := texts.claim(ctx, key, "fp")
+	if err != nil || done != nil || release == nil {
+		t.Fatalf("first claim: %v %v", done, err)
+	}
+	type claimed struct {
+		release func()
+		done    *cachedTextSummary
+		err     error
+	}
+	wait := func() chan claimed {
+		ch := make(chan claimed, 1)
+		go func() {
+			r, d, err := texts.claim(ctx, key, "fp")
+			ch <- claimed{r, d, err}
+		}()
+		return ch
+	}
+
+	// A second request waits for the first and is answered with what it stored, not with the summary from before.
+	second := wait()
+	texts.store(ctx, key, cachedTextSummary{Fingerprint: "fp", Summary: TextSummary{GeneratedAt: began.Add(time.Second)}})
+	got := <-second
+	if got.err != nil || got.done == nil || !got.done.Summary.GeneratedAt.Equal(began.Add(time.Second)) {
+		t.Fatalf("second claim: %+v", got)
+	}
+
+	// When the first gives up without a summary of the same answers, a waiting request generates itself.
+	texts.store(ctx, key, cachedTextSummary{Fingerprint: "other", Summary: TextSummary{GeneratedAt: began.Add(time.Minute)}})
+	third := wait()
+	release()
+	got = <-third
+	if got.err != nil || got.done != nil || got.release == nil {
+		t.Fatalf("third claim: %+v", got)
+	}
+	got.release()
+	if n, err := texts.cache.Exists(ctx, key+":lock").Result(); err != nil || n != 0 {
+		t.Errorf("lock left behind: %d %v", n, err)
+	}
+}
+
+func TestTextSummaryStaleDeleteSparesAFreshSummary(t *testing.T) {
+	_, _, texts := newTextEnv(t, true)
+	ctx := t.Context()
+	key := textKeyPrefix(uuid.New()) + "stale"
+	texts.store(ctx, key, cachedTextSummary{Fingerprint: "old"})
+	stale := texts.cached(ctx, key)
+	// A generation stores a current summary between the lookup's read and its delete.
+	texts.store(ctx, key, cachedTextSummary{Fingerprint: "new"})
+	texts.forget(ctx, key, stale.raw)
+	fresh := texts.cached(ctx, key)
+	if fresh == nil || fresh.Fingerprint != "new" {
+		t.Fatalf("the fresh summary was deleted: %+v", fresh)
+	}
+	texts.forget(ctx, key, fresh.raw)
+	if texts.cached(ctx, key) != nil {
+		t.Error("a stale summary was kept")
+	}
+}
+
+func TestTextSummaryIsDroppedOnQuestionEditsAndReset(t *testing.T) {
+	e, _, texts := newTextEnv(t, true)
+	owner := e.user()
+	org, ws := e.organization(owner, nil)
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
+	sv := e.survey(ws, surveyOpts{blocks: textBlocks})
+	lookup, generate := textPaths(sv)
+	e.response(sv, row{at: at(1), finished: true, data: `{"pick":["Speed","the price"]}`})
+	e.response(sv, row{at: at(2), finished: true, data: `{"q1":"the support"}`})
+
+	// Renaming a choice changes which values are Other: the summary of the Other values is stale.
+	var state TextSummaryState
+	decode(t, e.request(owner, http.MethodPost, generate, textInput("pick", TextTargetOther, nil)), &state)
+	e.exec(`UPDATE surveys SET blocks = replace(blocks::text, '"Speed"', '"Pace"')::jsonb WHERE id = ?`, sv)
+	decode(t, e.request(owner, http.MethodPost, lookup, textInput("pick", TextTargetOther, nil)), &state)
+	if state.Summary != nil {
+		t.Error("a summary of the Other values outlived a renamed choice")
+	}
+	// So is one of a question whose headline changed.
+	decode(t, e.request(owner, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)), &state)
+	e.exec(`UPDATE surveys SET blocks = replace(blocks::text, 'What should we improve', 'What should we fix')::jsonb WHERE id = ?`, sv)
+	decode(t, e.request(owner, http.MethodPost, lookup, textInput("q1", TextTargetAnswers, nil)), &state)
+	if state.Summary != nil {
+		t.Error("a summary outlived its question's edit")
+	}
+
+	// A reset drops every summary of the survey at once.
+	decode(t, e.request(owner, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)), &state)
+	keys, err := texts.cache.Keys(t.Context(), textKeyPrefix(sv)+"*").Result()
+	if err != nil || len(keys) == 0 {
+		t.Fatalf("cached summaries %v %v", keys, err)
+	}
+	if rec := e.request(owner, http.MethodPost, "/api/app/surveys/"+sv.String()+"/reset", nil); rec.Code != http.StatusOK {
+		t.Fatalf("reset %d %s", rec.Code, rec.Body)
+	}
+	if keys, err := texts.cache.Keys(t.Context(), textKeyPrefix(sv)+"*").Result(); err != nil || len(keys) != 0 {
+		t.Errorf("summaries left after a reset: %v %v", keys, err)
 	}
 }

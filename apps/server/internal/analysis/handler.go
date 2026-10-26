@@ -238,6 +238,7 @@ func (h *Handler) reset(c *gin.Context) {
 		httpapi.Fail(c, err)
 		return
 	}
+	h.texts.Purge(c.Request.Context(), surveyID)
 	c.JSON(http.StatusOK, out)
 }
 

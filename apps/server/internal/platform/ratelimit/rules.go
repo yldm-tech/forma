@@ -44,6 +44,8 @@ var (
 	ActionGenerateExampleResponses = Rule{Namespace: "action:generate-example-responses", Window: time.Minute, Limit: 1}
 	// ActionAITextSummary is per organization: it bounds what the AI summaries of free-text answers spend on the instance's AI provider. Only a generation that reaches the provider is charged, never reading a cached summary.
 	ActionAITextSummary = Rule{Namespace: "action:ai-text-summary", Window: time.Hour, Limit: 60}
+	// ActionAITextSummaryMember is per user, charged with ActionAITextSummary: it keeps one member from spending the whole organization's budget.
+	ActionAITextSummaryMember = Rule{Namespace: "action:ai-text-summary:user", Window: time.Hour, Limit: 20}
 	// ActionIntegrationMutation is per user.
 	ActionIntegrationMutation = Rule{Namespace: "action:integration-mutation", Window: time.Minute, Limit: 30}
 	// ActionStateMutation is per organization or workspace: the shared guard for authenticated settings writes.

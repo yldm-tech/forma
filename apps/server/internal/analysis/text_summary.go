@@ -63,12 +63,18 @@ const (
 	// textMaxOutputTokens leaves a reasoning model room to think before it writes the themes.
 	textMaxOutputTokens = 8000
 	textTimeout         = 90 * time.Second
-	textMaxThemes       = 8
-	textMinQuotes       = 2
-	textMaxQuotes       = 3
-	textTitleRunes      = 120
-	textDescRunes       = 400
-	// textCacheTTL bounds how long a summary, and the redacted quotes in it, outlive the responses they came from: a new or changed answer invalidates it at once, a deleted response by this time at the latest.
+	// textGenerationTimeout bounds one generation: its chunk requests run in parallel, the merge after them. A generation does not stop when the request that asked for it goes away (a closed tab, a proxy timeout), so what it costs is cached for the next lookup.
+	textGenerationTimeout = 2*textTimeout + 20*time.Second
+	// textLockTTL outlives a generation, so one that crashed holds the lock no longer than that.
+	textLockTTL = textGenerationTimeout + 30*time.Second
+	// textLockPoll is how often a request waiting for another one's generation looks for its result.
+	textLockPoll   = 500 * time.Millisecond
+	textMaxThemes  = 8
+	textMinQuotes  = 2
+	textMaxQuotes  = 3
+	textTitleRunes = 120
+	textDescRunes  = 400
+	// textCacheTTL bounds how long a summary, and the redacted quotes in it, outlive the responses they came from: a new or changed answer invalidates it at once, as does a reset of the survey; a deleted response, or survey, by this time at the latest. A summary that is no longer current is never served.
 	textCacheTTL = 7 * 24 * time.Hour
 )
 
@@ -124,7 +130,7 @@ type TextQuote struct {
 	Text       string    `json:"text"`
 }
 
-// TextSummaries summarizes the free-text answers of a survey's questions with the organization's AI. Reading a summary needs what reading the answers needs (survey.response_read); generating one also needs AI to be available to the organization, and is rate limited per organization. Summaries are cached in Valkey by survey, question, target, language and filter, together with a fingerprint of the answers they were made from, so a new or changed answer makes the cached one stale.
+// TextSummaries summarizes the free-text answers of a survey's questions with the organization's AI. Reading a summary needs what reading the answers needs (survey.response_read); generating one needs what every other AI tool needs, write access to the survey's workspace (survey.write) and AI available to the organization, and is rate limited per member and per organization. Summaries are cached in Valkey by survey, question, target, language and filter, together with a fingerprint of the answers they were made from and of the question, so a new or changed answer, or an edited question, makes the cached one stale.
 type TextSummaries struct {
 	svc     *Service
 	ai      *ai.Service
@@ -138,7 +144,7 @@ func NewTextSummaries(svc *Service, aiService *ai.Service, limiter *ratelimit.Li
 	return &TextSummaries{svc: svc, ai: aiService, limiter: limiter, cache: cache, log: log, now: time.Now}
 }
 
-// textScope is one summary's subject, authorized and resolved.
+// textScope is one summary's subject, authorized and resolved. question is a hash of what the summary reads of the survey besides the answers: the element (its headline, and the choice labels that decide which values are Other) and the survey's languages.
 type textScope struct {
 	sv       *surveyDoc
 	el       *element
@@ -146,15 +152,17 @@ type textScope struct {
 	language string
 	clause   response.Clause
 	key      string
+	question string
 }
 
-// cachedTextSummary is a cache entry: the summary and the fingerprint of the answers it summarized.
+// cachedTextSummary is a cache entry: the summary and the fingerprint of the answers it summarized. raw is the entry as stored.
 type cachedTextSummary struct {
 	Fingerprint string      `json:"fingerprint"`
 	Summary     TextSummary `json:"summary"`
+	raw         []byte
 }
 
-// Lookup answers the summary card: AI availability, and the cached summary when it is still current. It never calls the AI provider.
+// Lookup answers the summary card: AI availability, and the cached summary when it is still current. It never calls the AI provider. A member who cannot generate a summary (no write access) is told read_only, and still sees the current one.
 func (x *TextSummaries) Lookup(ctx context.Context, userID, surveyID uuid.UUID, in TextSummaryInput) (*TextSummaryState, error) {
 	scope, err := x.scope(ctx, userID, surveyID, in)
 	if err != nil {
@@ -168,6 +176,13 @@ func (x *TextSummaries) Lookup(ctx context.Context, userID, surveyID uuid.UUID, 
 	if !a.Available {
 		return state, nil
 	}
+	canWrite, err := x.svc.authz.Can(ctx, authz.User(userID), authz.SurveyWrite, authz.Survey(surveyID))
+	if err != nil {
+		return nil, err
+	}
+	if !canWrite {
+		state.Available, state.Reason = false, ai.ReasonReadOnly
+	}
 	cached := x.cached(ctx, scope.key)
 	if cached == nil {
 		return state, nil
@@ -177,17 +192,20 @@ func (x *TextSummaries) Lookup(ctx context.Context, userID, surveyID uuid.UUID, 
 		return nil, err
 	}
 	if fingerprint != cached.Fingerprint {
-		x.forget(ctx, scope.key)
+		x.forget(ctx, scope.key, cached.raw)
 		return state, nil
 	}
 	state.Summary = &cached.Summary
 	return state, nil
 }
 
-// Generate summarizes the answers, unless the cached summary is current and no refresh was asked for. Only a generation that reaches the provider is charged to the organization's rate limit.
+// Generate summarizes the answers, unless the cached summary is current and no refresh was asked for. Only a generation that reaches the provider is charged to the rate limits, the member's and the organization's. Concurrent generations of one summary run once: the later requests wait for the first and are answered with its summary.
 func (x *TextSummaries) Generate(ctx context.Context, userID, surveyID uuid.UUID, in TextSummaryInput) (*TextSummaryState, error) {
 	scope, err := x.scope(ctx, userID, surveyID, in)
 	if err != nil {
+		return nil, err
+	}
+	if err := x.svc.authz.Require(ctx, authz.User(userID), authz.SurveyWrite, authz.Survey(surveyID)); err != nil {
 		return nil, err
 	}
 	organizationID := scope.sv.OrganizationID
@@ -206,10 +224,24 @@ func (x *TextSummaries) Generate(ctx context.Context, userID, surveyID uuid.UUID
 	if len(answers) == 0 {
 		return nil, apperr.InvalidInput(CodeNoTextAnswers, "There are no answers to summarize.")
 	}
+	release, done, err := x.claim(ctx, scope.key, fingerprint)
+	if err != nil {
+		return nil, err
+	}
+	if done != nil {
+		return &TextSummaryState{Available: true, Summary: &done.Summary}, nil
+	}
+	defer release()
+	if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummaryMember, userID.String()); err != nil {
+		return nil, err
+	}
 	if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummary, organizationID.String()); err != nil {
 		return nil, err
 	}
-	summary, err := x.summarize(ctx, organizationID, scope, answers)
+	// The provider work outlives the request, so a summary paid for is cached even when nobody waits for it any more.
+	work, cancel := context.WithTimeout(context.WithoutCancel(ctx), textGenerationTimeout)
+	defer cancel()
+	summary, err := x.summarize(work, organizationID, scope, answers)
 	if err != nil {
 		return nil, err
 	}
@@ -217,8 +249,42 @@ func (x *TextSummaries) Generate(ctx context.Context, userID, surveyID uuid.UUID
 		summary.ReadLimit = textReadLimit
 	}
 	summary.GeneratedAt = x.now().UTC()
-	x.store(ctx, scope.key, cachedTextSummary{Fingerprint: fingerprint, Summary: *summary})
+	x.store(work, scope.key, cachedTextSummary{Fingerprint: fingerprint, Summary: *summary})
 	return &TextSummaryState{Available: true, Summary: summary}, nil
+}
+
+// deleteIfUnchanged deletes a key only while it still holds the value given: a generation lock only while it is its holder's, a stale summary only while no generation has stored a current one over it.
+var deleteIfUnchanged = redis.NewScript(`if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0`)
+
+// claim makes the caller the one that generates the summary under key. While another request is generating it, claim waits; it returns what that one stored when it summarizes the same answers (done), and claims the generation itself when that one failed. release gives the claim up. When Valkey cannot be reached the caller generates unclaimed, as the rate limiter fails open.
+func (x *TextSummaries) claim(ctx context.Context, key, fingerprint string) (release func(), done *cachedTextSummary, err error) {
+	lock, token, since := key+":lock", uuid.NewString(), x.now()
+	for {
+		claimed, err := x.cache.SetNX(ctx, lock, token, textLockTTL).Result()
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil, nil, ctx.Err()
+			}
+			x.log.WarnContext(ctx, "text summary lock failed", "err", err)
+			return func() {}, nil, nil
+		}
+		if claimed {
+			return func() {
+				if err := deleteIfUnchanged.Run(context.WithoutCancel(ctx), x.cache, []string{lock}, token).Err(); err != nil {
+					x.log.WarnContext(ctx, "text summary unlock failed", "err", err)
+				}
+			}, nil, nil
+		}
+		select {
+		case <-ctx.Done():
+			return nil, nil, ctx.Err()
+		case <-time.After(textLockPoll):
+		}
+		// Only a summary stored since this request began waiting answers it: a refresh must not be answered with the summary it refreshes.
+		if cached := x.cached(ctx, key); cached != nil && cached.Fingerprint == fingerprint && !cached.Summary.GeneratedAt.Before(since) {
+			return nil, cached, nil
+		}
+	}
 }
 
 // scope authorizes reading the survey's responses, finds the element and checks it has answers of the target's kind, and compiles the filter.
@@ -253,8 +319,18 @@ func (x *TextSummaries) scope(ctx context.Context, userID, surveyID uuid.UUID, i
 		h.Write([]byte(part))
 		h.Write([]byte{0})
 	}
-	key := valkey.KeyPrefix + "ai-text-summary:" + sv.ID.String() + ":" + hex.EncodeToString(h.Sum(nil))
-	return &textScope{sv: sv, el: el, target: in.Target, language: in.Language, clause: clause, key: key}, nil
+	key := textKeyPrefix(sv.ID) + hex.EncodeToString(h.Sum(nil))
+	q := sha256.New()
+	q.Write(el.Raw)
+	for _, l := range sv.Languages {
+		_, _ = fmt.Fprintf(q, "\x00%s:%t", l.Code, l.Default)
+	}
+	return &textScope{sv: sv, el: el, target: in.Target, language: in.Language, clause: clause, key: key, question: hex.EncodeToString(q.Sum(nil))[:16]}, nil
+}
+
+// textKeyPrefix is the prefix of the survey's cached summaries and their generation locks.
+func textKeyPrefix(surveyID uuid.UUID) string {
+	return valkey.KeyPrefix + "ai-text-summary:" + surveyID.String() + ":"
 }
 
 // summarizable reports whether the element has free-text answers of the target's kind: an open-text question's answers, or the Other values of a choice question that has an Other option.
@@ -328,7 +404,7 @@ func readTextAnswers(ctx context.Context, db *gorm.DB, scope *textScope) (answer
 	return answers, readLimited, fingerprint, err
 }
 
-// textFingerprint identifies the answers a summary is made from: how many matching responses answered the element, and an order-independent sum of a hash of each one's id, language and answer. A response answering, changing its answer or leaving the filter changes it.
+// textFingerprint identifies what a summary is made from: how many matching responses answered the element, an order-independent sum of a hash of each one's id, language and answer, and the hash of the question. A response answering, changing its answer or leaving the filter changes it, and so does editing the question.
 func textFingerprint(ctx context.Context, db *gorm.DB, scope *textScope) (string, error) {
 	id := scope.el.ID
 	args := []any{id, scope.sv.ID, id}
@@ -343,7 +419,7 @@ func textFingerprint(ctx context.Context, db *gorm.DB, scope *textScope) (string
 	if err != nil {
 		return "", fmt.Errorf("fingerprint text answers: %w", err)
 	}
-	return strconv.FormatInt(out.N, 10) + ":" + out.H, nil
+	return strconv.FormatInt(out.N, 10) + ":" + out.H + ":" + scope.question, nil
 }
 
 func (x *TextSummaries) cached(ctx context.Context, key string) *cachedTextSummary {
@@ -358,6 +434,7 @@ func (x *TextSummaries) cached(ctx context.Context, key string) *cachedTextSumma
 	if err := json.Unmarshal(b, &entry); err != nil {
 		return nil
 	}
+	entry.raw = b
 	return &entry
 }
 
@@ -371,10 +448,26 @@ func (x *TextSummaries) store(ctx context.Context, key string, entry cachedTextS
 	}
 }
 
-// forget drops a stale summary, so the quotes in it do not wait for the TTL.
-func (x *TextSummaries) forget(ctx context.Context, key string) {
-	if err := x.cache.Del(ctx, key).Err(); err != nil {
+// forget drops a stale summary, stored as raw, so the quotes in it do not wait for the TTL.
+func (x *TextSummaries) forget(ctx context.Context, key string, raw []byte) {
+	if err := deleteIfUnchanged.Run(ctx, x.cache, []string{key}, raw).Err(); err != nil {
 		x.log.WarnContext(ctx, "text summary cache delete failed", "err", err)
+	}
+}
+
+// Purge drops every cached summary of the survey, for a reset that deleted its responses: the quotes in them must not wait for the TTL.
+func (x *TextSummaries) Purge(ctx context.Context, surveyID uuid.UUID) {
+	iter := x.cache.Scan(ctx, 0, textKeyPrefix(surveyID)+"*", 100).Iterator()
+	var keys []string
+	for iter.Next(ctx) {
+		keys = append(keys, iter.Val())
+	}
+	err := iter.Err()
+	if err == nil && len(keys) > 0 {
+		err = x.cache.Unlink(ctx, keys...).Err()
+	}
+	if err != nil {
+		x.log.WarnContext(ctx, "text summary cache purge failed", "err", err, "survey", surveyID)
 	}
 }
 
@@ -507,13 +600,15 @@ type draftTheme struct {
 // summarize sends the sampled answers to the model chunk by chunk, in parallel, merges the chunks' themes with one more request when there is more than one chunk, and counts the themes and the sentiment over the sample.
 func (x *TextSummaries) summarize(ctx context.Context, organizationID uuid.UUID, scope *textScope, answers []textAnswer) (*TextSummary, error) {
 	chunks := sampleTextAnswers(answers)
+	// Each chunk's themes may name only the answers that chunk carried, by their position in the sample.
 	var sample []sampledAnswer
-	for _, c := range chunks {
-		sample = append(sample, c...)
-	}
-	index := make(map[string]int, len(sample))
-	for i, a := range sample {
-		index[a.ID] = i
+	indexes := make([]map[string]int, len(chunks))
+	for i, c := range chunks {
+		indexes[i] = make(map[string]int, len(c))
+		for _, a := range c {
+			indexes[i][a.ID] = len(sample)
+			sample = append(sample, a)
+		}
 	}
 	question := textQuestion(scope)
 	results := make([]chunkThemes, len(chunks))
@@ -540,16 +635,17 @@ func (x *TextSummaries) summarize(ctx context.Context, organizationID uuid.UUID,
 
 	var drafts []draftTheme
 	var sentiment [3]int
-	for _, res := range results {
+	for i, res := range results {
 		for _, t := range res.Themes {
-			d := draftTheme{title: clean(t.Title, textTitleRunes), description: clean(t.Description, textDescRunes), answers: positions(t.AnswerIDs, index), quotes: positions(t.QuoteIDs, index)}
+			d := draftTheme{title: clean(t.Title, textTitleRunes), description: clean(t.Description, textDescRunes), answers: positions(t.AnswerIDs, indexes[i]), quotes: positions(t.QuoteIDs, indexes[i])}
 			if d.title != "" && len(d.answers) > 0 {
 				drafts = append(drafts, d)
 			}
 		}
-		sentiment[0] += max(0, res.Sentiment.Positive)
-		sentiment[1] += max(0, res.Sentiment.Neutral)
-		sentiment[2] += max(0, res.Sentiment.Negative)
+		counts := chunkSentiment(res.Sentiment.Positive, res.Sentiment.Neutral, res.Sentiment.Negative, len(chunks[i]))
+		for j := range sentiment {
+			sentiment[j] += counts[j]
+		}
 	}
 	if len(chunks) > 1 && len(drafts) > 1 {
 		merged, err := x.merge(ctx, organizationID, scope, question, drafts)
@@ -563,6 +659,17 @@ func (x *TextSummaries) summarize(ctx context.Context, organizationID uuid.UUID,
 		AnswerCount: len(answers), SampledCount: len(sample),
 		Sentiment: overallSentiment(sentiment), Themes: finishThemes(drafts, sample),
 	}, nil
+}
+
+// chunkSentiment bounds a chunk's positive, neutral and negative counts by the n answers it carried: each at least 0, and scaled down in proportion when they add up to more than n, so no chunk weighs more in the overall sentiment than its answers.
+func chunkSentiment(positive, neutral, negative, n int) [3]int {
+	counts := [3]int{min(max(positive, 0), n), min(max(neutral, 0), n), min(max(negative, 0), n)}
+	if sum := counts[0] + counts[1] + counts[2]; sum > n {
+		for i := range counts {
+			counts[i] = counts[i] * n / sum
+		}
+	}
+	return counts
 }
 
 // merge asks the model which of the chunks' themes are the same and unites their answers and quotes.

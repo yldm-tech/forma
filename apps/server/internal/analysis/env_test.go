@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
@@ -80,7 +81,10 @@ func newEnv(t *testing.T) *env {
 	e.svc = NewService(cfg, db, e.authz.Authorizer, enqueuer, audit.New(cfg, log), log)
 	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
-	NewHandler(e.svc, nil, headerSessions{}, ratelimit.New(cfg, nil, log)).Register(group)
+	// No Valkey here: a reset's purge of the cached AI text summaries fails at once and is logged.
+	offline := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1", MaxRetries: -1})
+	t.Cleanup(func() { _ = offline.Close() })
+	NewHandler(e.svc, NewTextSummaries(e.svc, nil, nil, offline, log), headerSessions{}, ratelimit.New(cfg, nil, log)).Register(group)
 	return e
 }
 
