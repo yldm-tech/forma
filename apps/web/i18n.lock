@@ -3110,7 +3110,7 @@ checksums:
     workspace/settings/notifications/unsubscribe_page/auto_subscribe_off: 87d4d2fb109cc5eb3c1488f696d43d91
     workspace/settings/notifications/unsubscribe_page/auto_subscribe_on: db1cbc3d1e6ea9b5b9e6aa72b202fc1f
     workspace/settings/notifications/unsubscribe_page/link_no_longer_applies: a994b13d6c4831fda8e07fa35de19457
-    workspace/settings/notifications/unsubscribe_page/link_no_longer_applies_description: 8036febc5163986861bc8f5af9cde18e
+    workspace/settings/notifications/unsubscribe_page/link_no_longer_applies_description: 8e0981e4b9a31651e4d2896ac0f1db6d
     workspace/settings/notifications/unsubscribe_page/not_changed: a855fd890a2f6ec7859f0c6a5b26d586
     workspace/settings/notifications/unsubscribe_page/resubscribed: b5e0792a0379443d159762de1d3fd60c
     workspace/settings/notifications/unsubscribe_page/subscribe_again: 51cc6f820808ba481dcd2ffae5feea99

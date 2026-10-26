@@ -70,8 +70,10 @@ export const UnsubscribePage = ({ link }: { link: UnsubscribeLink }) => {
           {failure ? (
             <Alert variant="error">{failure.message}</Alert>
           ) : view === "missing" ? (
-            <p className="text-sm text-pretty text-slate-600">
-              {t("workspace.settings.notifications.unsubscribe_page.link_no_longer_applies_description")}
+            <p className="text-sm text-pretty break-words text-slate-600">
+              {t("workspace.settings.notifications.unsubscribe_page.link_no_longer_applies_description", {
+                email: me.email,
+              })}
             </p>
           ) : (
             subject &&

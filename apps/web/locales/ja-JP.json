@@ -3244,7 +3244,7 @@
           "auto_subscribe_off": "{organization}の新しいフォームから回答メールが自動で届くことはなくなります。",
           "auto_subscribe_on": "{organization}の新しいフォームから再び回答メールが自動で届きます。",
           "link_no_longer_applies": "このリンクは無効になりました",
-          "link_no_longer_applies_description": "リンク先のフォームまたは組織は、通知設定にもうありません。",
+          "link_no_longer_applies_description": "リンク先のフォームまたは組織は、{email}の通知設定にありません。",
           "not_changed": "通知設定は変更されていません",
           "resubscribed": "配信を再開しました",
           "subscribe_again": "配信を再開",

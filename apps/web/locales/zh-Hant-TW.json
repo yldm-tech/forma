@@ -3244,7 +3244,7 @@
           "auto_subscribe_off": "{organization}中的新問卷將不再自動寄送回應郵件給您。",
           "auto_subscribe_on": "{organization}中的新問卷將再次自動寄送回應郵件給您。",
           "link_no_longer_applies": "此連結已失效",
-          "link_no_longer_applies_description": "連結中的問卷或組織已不在您的通知設定中。",
+          "link_no_longer_applies_description": "連結中的問卷或組織不在{email}的通知設定中。",
           "not_changed": "通知設定未變更",
           "resubscribed": "已重新訂閱",
           "subscribe_again": "重新訂閱",

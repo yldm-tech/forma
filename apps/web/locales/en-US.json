@@ -3244,7 +3244,7 @@
           "auto_subscribe_off": "New surveys in {organization} won't send you response emails automatically.",
           "auto_subscribe_on": "New surveys in {organization} will send you response emails automatically again.",
           "link_no_longer_applies": "This link no longer applies",
-          "link_no_longer_applies_description": "The survey or organization it names is no longer in your notification settings.",
+          "link_no_longer_applies_description": "The survey or organization it names isn't in the notification settings of {email}.",
           "not_changed": "Your notification settings were not changed",
           "resubscribed": "You're subscribed again",
           "subscribe_again": "Subscribe again",

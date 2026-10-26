@@ -171,12 +171,17 @@ describe("an unsubscribe link on a phone", () => {
     expect(patches.map((patch) => patch.body)).toEqual([{ type: "alert", id: "s2", enabled: true }]);
   });
 
-  test("says a link to a survey the user no longer has no longer applies, and changes nothing", async () => {
+  test("says a link to a survey this account does not have no longer applies, names the account, and changes nothing", async () => {
     stubScreen(true);
     const patches = stubServer();
     await renderAt("/account/unsubscribe?type=alert&elementId=gone");
 
     expect(await heading(i18n.t(key("link_no_longer_applies")))).toBeTruthy();
+    // The cause may be the account rather than the survey: the email may have gone to another account than the one signed in on this phone.
+    const description = screen.getByText(
+      i18n.t(key("link_no_longer_applies_description"), { email: USER.email })
+    );
+    expect(description.textContent).toContain(USER.email);
     expect(screen.queryByRole("button")).toBeNull();
     expect(patches).toEqual([]);
   });
