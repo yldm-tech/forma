@@ -7,8 +7,9 @@ import type {
   TSurveyElementSummaryCta,
   TSurveyElementSummaryNps,
   TSurveyElementSummaryRating,
+  TSurveyElementSummarySlider,
 } from "@forma/types/surveys/types";
-import { CircleSlash2, InboxIcon, SmileIcon, StarIcon } from "lucide-react";
+import { CircleSlash2, InboxIcon, SlidersHorizontalIcon, SmileIcon, StarIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "../../../../components/ui/empty-state";
@@ -425,6 +426,107 @@ export const CESSummary = ({
         </div>
       }
     />
+  );
+};
+
+/**
+ * A slider's answers: the mean in the header, the median and the extremes, and how the answers spread over the scale. A bin of one position filters by that value when clicked; a wider bin cannot be expressed as one filter condition and is not a button.
+ */
+export const SliderSummary = ({
+  elementSummary,
+  survey,
+  setFilter,
+}: {
+  elementSummary: TSurveyElementSummarySlider;
+  survey: TSurvey;
+  setFilter: SetSummaryFilter;
+}) => {
+  const { t } = useTranslation();
+  const { element } = elementSummary;
+  const stats = [
+    { label: t("workspace.surveys.summary.slider_median"), value: elementSummary.median },
+    { label: t("workspace.surveys.summary.slider_lowest"), value: elementSummary.min },
+    { label: t("workspace.surveys.summary.slider_highest"), value: elementSummary.max },
+  ];
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-xs">
+      <ElementSummaryHeader
+        elementSummary={elementSummary}
+        survey={survey}
+        additionalInfo={
+          <div className="flex items-center gap-x-2 rounded-lg bg-slate-100 p-2">
+            <SlidersHorizontalIcon aria-hidden="true" className="size-4" />
+            <div>
+              {t("workspace.surveys.summary.slider_average")}:{" "}
+              {elementSummary.responseCount === 0 ? "-" : formatAverage(elementSummary.average)}
+            </div>
+          </div>
+        }
+      />
+      <div className="px-4 pt-2 pb-6 md:px-6">
+        {elementSummary.responseCount === 0 ? (
+          <EmptyState text={t("workspace.surveys.summary.no_responses_found")} variant="simple" />
+        ) : (
+          <>
+            <dl className="mb-6 grid grid-cols-3 gap-2 text-center">
+              {stats.map((stat) => (
+                <div key={stat.label} className="rounded-lg bg-slate-50 p-3">
+                  <dt className="text-xs text-slate-500">{stat.label}</dt>
+                  <dd className="text-lg font-semibold text-slate-800">{stat.value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="space-y-4 text-sm md:text-base">
+              {elementSummary.bins.map((bin) => {
+                const label =
+                  bin.from === bin.to ? String(bin.from) : `${String(bin.from)} – ${String(bin.to)}`;
+                const row = (
+                  <>
+                    <div className="flex justify-between px-2 pb-2">
+                      <div className="mr-8 flex items-center gap-x-1">
+                        <p className="font-semibold text-slate-700">{label}</p>
+                        <p className="rounded-lg bg-slate-100 px-2 text-slate-700">
+                          {convertFloatToNDecimal(bin.percentage, 2)}%
+                        </p>
+                      </div>
+                      <p className="flex w-32 items-end justify-end text-slate-600">
+                        {t("common.count_responses", { count: bin.count })}
+                      </p>
+                    </div>
+                    <ProgressBar barColor="bg-slate-700" progress={bin.percentage / 100} />
+                  </>
+                );
+                return bin.from === bin.to ? (
+                  <button
+                    key={label}
+                    type="button"
+                    className="w-full cursor-pointer text-left hover:opacity-80"
+                    onClick={() =>
+                      setFilter(
+                        element.id,
+                        element.headline,
+                        element.type,
+                        SUMMARY_FILTER_OPERATOR.isEqualTo,
+                        String(bin.from)
+                      )
+                    }>
+                    {row}
+                  </button>
+                ) : (
+                  <div key={label}>{row}</div>
+                );
+              })}
+            </div>
+            {elementSummary.dismissed.count > 0 ? (
+              <p className="mt-4 px-2 text-sm text-slate-500">
+                {t("workspace.surveys.summary.slider_dismissed", { count: elementSummary.dismissed.count })}
+              </p>
+            ) : null}
+          </>
+        )}
+      </div>
+    </div>
   );
 };
 

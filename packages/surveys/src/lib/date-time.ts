@@ -42,11 +42,36 @@ export const parseDateOnly = (value: string): Date | null => {
 
 export const isValidDateString = (value: string) => parseDateOnly(value) !== null;
 
+const DATE_TIME_PATTERN = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})$/;
+
+/** Parse the answer of a date element that includes the time of day (`YYYY-MM-DDTHH:mm`) into the local date and time it names; null for any other value. */
+export const parseDateTime = (value: string): Date | null => {
+  const match = DATE_TIME_PATTERN.exec(value);
+  if (!match) return null;
+  const date = parseDateOnly(match[1]);
+  const hours = Number(match[2]);
+  const minutes = Number(match[3]);
+  if (!date || hours > 23 || minutes > 59) return null;
+  date.setHours(hours, minutes);
+  return date;
+};
+
 export const formatDateWithOrdinal = (date: Date, locale: string = "en-US"): string => {
   return new Intl.DateTimeFormat(locale, {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
+  }).format(date);
+};
+
+export const formatDateTimeWithOrdinal = (date: Date, locale: string = "en-US"): string => {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(date);
 };

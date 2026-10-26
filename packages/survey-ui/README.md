@@ -55,9 +55,10 @@ function Survey() {
 | `MultiSelect`   | Checkbox selection                |
 | `Rating`        | Star, number, or smiley rating    |
 | `NPS`           | Net Promoter Score (0-10)         |
+| `Slider`        | Number on a scale, min to max     |
 | `Matrix`        | Table/grid selection              |
 | `Ranking`       | Drag-and-drop ranking             |
-| `DateElement`   | Date picker                       |
+| `DateElement`   | Date picker, with optional time   |
 | `FileUpload`    | File upload with preview          |
 | `PictureSelect` | Image-based selection             |
 | `Consent`       | Checkbox with label               |

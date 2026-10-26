@@ -138,6 +138,23 @@ export const PARITY_SURVEY: TJsWorkspaceStateSurvey = {
             { id: "none", label: { default: "None of the above" } },
           ],
         },
+        {
+          id: "q10",
+          type: TSurveyElementTypeEnum.Date,
+          headline: { default: "Question 10" },
+          required: false,
+          format: "y-M-d",
+          includeTime: true,
+        },
+        {
+          id: "q11",
+          type: TSurveyElementTypeEnum.Slider,
+          headline: { default: "Question 11" },
+          required: false,
+          min: 0,
+          max: 100,
+          step: 5,
+        },
       ],
     },
   ],
@@ -178,6 +195,8 @@ export const PARITY_RESPONSE_DATA: TResponseData = {
   q7: ["pic1", "pic2"],
   q8: { "Row 1": "Column 1", "Row 2": "Column 2" },
   q9: "Option 1",
+  q10: "2023-01-01T09:30",
+  q11: 35,
   hfText: "hidden value",
   hfNumber: "123",
   hfList: ["a", "b"],
@@ -867,6 +886,89 @@ export const LOGIC_PARITY_CASES: readonly TLogicParityCase[] = [
       rightOperand: { type: "static", value: "2024-01-01" },
     },
     expected: false,
+  },
+  {
+    name: "equals: a date and time answer equals the calendar day it falls on",
+    condition: {
+      id: "c-datetime-1",
+      operator: "equals",
+      leftOperand: { type: "element", value: "q10" },
+      rightOperand: { type: "static", value: "2023-01-01" },
+    },
+    expected: true,
+  },
+  {
+    name: "doesNotEqual: a date and time answer is not unequal to its own day",
+    condition: {
+      id: "c-datetime-2",
+      operator: "doesNotEqual",
+      leftOperand: { type: "element", value: "q10" },
+      rightOperand: { type: "static", value: "2023-01-01" },
+    },
+    expected: false,
+  },
+  {
+    name: "isAfter: a date and time answer is not after its own day",
+    condition: {
+      id: "c-datetime-3",
+      operator: "isAfter",
+      leftOperand: { type: "element", value: "q10" },
+      rightOperand: { type: "static", value: "2023-01-01" },
+    },
+    expected: false,
+  },
+  {
+    name: "isBefore: a date and time answer precedes the next day",
+    condition: {
+      id: "c-datetime-4",
+      operator: "isBefore",
+      leftOperand: { type: "element", value: "q10" },
+      rightOperand: { type: "static", value: "2023-01-02" },
+    },
+    expected: true,
+  },
+  {
+    name: "isBefore: two date and time answers compare by the time as well",
+    condition: {
+      id: "c-datetime-5",
+      operator: "isBefore",
+      leftOperand: { type: "element", value: "q10" },
+      rightOperand: { type: "element", value: "q5" },
+    },
+    data: { q5: "2023-01-01T10:00" },
+    expected: true,
+  },
+
+  // sliders
+  {
+    name: "isGreaterThanOrEqual: a slider answer at the threshold",
+    condition: {
+      id: "c-slider-1",
+      operator: "isGreaterThanOrEqual",
+      leftOperand: { type: "element", value: "q11" },
+      rightOperand: { type: "static", value: 35 },
+    },
+    expected: true,
+  },
+  {
+    name: "isLessThan: a slider answer above the threshold",
+    condition: {
+      id: "c-slider-2",
+      operator: "isLessThan",
+      leftOperand: { type: "element", value: "q11" },
+      rightOperand: { type: "static", value: 30 },
+    },
+    expected: false,
+  },
+  {
+    name: "equals: a slider answer equals its number",
+    condition: {
+      id: "c-slider-3",
+      operator: "equals",
+      leftOperand: { type: "element", value: "q11" },
+      rightOperand: { type: "static", value: 35 },
+    },
+    expected: true,
   },
 
   // composite answers

@@ -58,6 +58,10 @@
     "welcome_video": "Vídeo do Cartão de Boas-vindas",
     "your_feedback_is_stuck": "Seu feedback está preso :("
   },
+  "date_time": {
+    "select_a_time": "Por favor, selecione um horário",
+    "time": "Horário"
+  },
   "errors": {
     "accept_to_continue": "Por favor, aceite para continuar",
     "all_options_must_be_ranked": "Por favor, classifique todas as opções",
@@ -130,5 +134,9 @@
     "invalid_type": "Este tipo de arquivo não é permitido. Formatos permitidos: {formats}",
     "max_size_hint": "Até {maxSizeInMB} MB",
     "tap_to_upload": "Toque para enviar arquivos"
+  },
+  "slider": {
+    "choose_a_value": "Por favor, mova o controle deslizante para escolher um valor",
+    "not_answered": "Mova o controle deslizante para responder"
   }
 }

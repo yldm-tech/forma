@@ -706,6 +706,30 @@ describe("surveys", () => {
       expect(result.data?.openTextQ).toEqual({ op: "filledOut" });
     });
 
+    test("should filter by a slider value with decimals, and by its being skipped", () => {
+      const row = (filterValue: string, filterComboBoxValue?: string) => ({
+        elementType: {
+          type: "Elements",
+          label: "Slider",
+          id: "sliderQ",
+          elementType: TSurveyElementTypeEnum.Slider,
+        },
+        filterType: { filterValue, filterComboBoxValue },
+      });
+      const format = (...filter: ReturnType<typeof row>[]) =>
+        getFormattedFilters(
+          survey,
+          { responseStatus: "all", filter } as unknown as SelectedFilterValue,
+          {} as DateRange
+        ).data?.sliderQ;
+
+      expect(format(row("Is more than", "2.5"))).toEqual({ op: "greaterThan", value: 2.5 });
+      expect(format(row("Is equal to", "0"))).toEqual({ op: "equals", value: 0 });
+      expect(format(row("Skipped"))).toEqual({ op: "skipped" });
+      // A value box left empty filters nothing rather than by 0.
+      expect(format(row("Is less than", ""))).toBeUndefined();
+    });
+
     test("should filter by address questions", () => {
       const selectedFilter: SelectedFilterValue = {
         responseStatus: "all",

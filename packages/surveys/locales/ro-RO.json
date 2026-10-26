@@ -58,6 +58,10 @@
     "welcome_video": "Videoclip Card de bun venit",
     "your_feedback_is_stuck": "Feedback-ul tău este blocat :("
   },
+  "date_time": {
+    "select_a_time": "Vă rugăm să selectați o oră",
+    "time": "Ora"
+  },
   "errors": {
     "accept_to_continue": "Vă rugăm să acceptați pentru a continua",
     "all_options_must_be_ranked": "Vă rugăm să ordonați toate opțiunile",
@@ -130,5 +134,9 @@
     "invalid_type": "Acest tip de fișier nu este permis. Formate permise: {formats}",
     "max_size_hint": "Până la {maxSizeInMB} MB",
     "tap_to_upload": "Atingeți pentru a încărca fișiere"
+  },
+  "slider": {
+    "choose_a_value": "Vă rugăm să mutați glisorul pentru a alege o valoare",
+    "not_answered": "Mutați glisorul pentru a răspunde"
   }
 }

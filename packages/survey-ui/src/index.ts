@@ -48,6 +48,7 @@ export { FileUpload, type FileUploadProps, type UploadedFile } from "@/component
 export { FormField, type FormFieldProps, type FormFieldConfig } from "@/components/elements/form-field";
 export { Rating, type RatingProps } from "@/components/elements/rating";
 export { NPS, type NPSProps } from "@/components/elements/nps";
+export { Slider, type SliderProps } from "@/components/elements/slider";
 export {
   Ranking,
   type RankingProps,

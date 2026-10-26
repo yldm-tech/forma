@@ -58,6 +58,8 @@ checksums:
     common/time_remaining_before_the_survey_closes: bf61ab37e14c42fa6897b6fb5f287aba
     common/welcome_video: 1f87e84c0a563c2522eef5cb71a1f95c
     common/your_feedback_is_stuck: db2b6aba26723b01aee0fc918d3ca052
+    date_time/select_a_time: dcce08522fcb7efa16fee671b0c3d713
+    date_time/time: b504a03d52e8001bfdc5cb6205364f42
     errors/accept_to_continue: 59edd831c16b6a87c28c997d3b70d53c
     errors/all_options_must_be_ranked: 360a2edff623496f7047907bad115ea1
     errors/all_rows_must_be_answered: 295f41a0ef04cbb3491c798053c61abd
@@ -117,3 +119,5 @@ checksums:
     file_upload/invalid_type: 5449e0e0eab81e991f4d3da581ba9483
     file_upload/max_size_hint: 8f4fe20db616b5f3faee357a55c75058
     file_upload/tap_to_upload: f04ebbf08246ca193023aec5d8197eae
+    slider/choose_a_value: 0a99e7359573cc81d250dce46bca62f6
+    slider/not_answered: 279534f9e9211df10dfa14a658cb7e81

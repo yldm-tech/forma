@@ -58,6 +58,10 @@
     "welcome_video": "خوش آمدید کارڈ ویڈیو",
     "your_feedback_is_stuck": "آپ کی رائے پھنس گئی ہے :("
   },
+  "date_time": {
+    "select_a_time": "براہ کرم وقت منتخب کریں",
+    "time": "وقت"
+  },
   "errors": {
     "accept_to_continue": "جاری رکھنے کے لیے براہ کرم قبول کریں",
     "all_options_must_be_ranked": "براہ کرم تمام اختیارات کو درجہ بندی کریں",
@@ -130,5 +134,9 @@
     "invalid_type": "اس قسم کی فائل کی اجازت نہیں ہے۔ اجازت شدہ فارمیٹس: {formats}",
     "max_size_hint": "زیادہ سے زیادہ {maxSizeInMB} MB",
     "tap_to_upload": "فائلیں اپ لوڈ کرنے کے لیے ٹیپ کریں"
+  },
+  "slider": {
+    "choose_a_value": "براہ کرم قدر منتخب کرنے کے لیے سلائیڈر کو حرکت دیں",
+    "not_answered": "جواب دینے کے لیے سلائیڈر کو حرکت دیں"
   }
 }

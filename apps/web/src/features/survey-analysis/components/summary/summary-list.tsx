@@ -35,6 +35,7 @@ import {
   ConsentSummary,
   NPSSummary,
   RatingSummary,
+  SliderSummary,
 } from "./score-summaries";
 import type { SetSummaryFilter } from "./summary-parts";
 
@@ -138,6 +139,8 @@ export const SummaryList = ({
         return <CSATSummary key={key} elementSummary={entry} survey={survey} setFilter={setFilter} />;
       case TSurveyElementTypeEnum.CES:
         return <CESSummary key={key} elementSummary={entry} survey={survey} setFilter={setFilter} />;
+      case TSurveyElementTypeEnum.Slider:
+        return <SliderSummary key={key} elementSummary={entry} survey={survey} setFilter={setFilter} />;
       case TSurveyElementTypeEnum.Consent:
         return <ConsentSummary key={key} elementSummary={entry} survey={survey} setFilter={setFilter} />;
       case TSurveyElementTypeEnum.PictureSelection:

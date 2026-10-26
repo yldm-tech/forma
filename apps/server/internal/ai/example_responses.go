@@ -69,6 +69,7 @@ var exampleTTCBands = map[string][2]int{
 	surveydoc.ElementContactInfo:          {10000, 30000},
 	surveydoc.ElementPictureSelection:     {3000, 9000},
 	surveydoc.ElementConsent:              {2000, 5000},
+	surveydoc.ElementSlider:               {2500, 6000},
 }
 
 var exampleDefaultTTCBand = [2]int{3000, 10000}
@@ -228,6 +229,13 @@ func supportedForGeneration(e *exampleElement) bool {
 		return shown(contactInfoFields(&e.Element))
 	case surveydoc.ElementPictureSelection:
 		return len(pictureIDs(e)) > 0
+	case surveydoc.ElementSlider:
+		scale, ok := e.SliderScale()
+		if !ok {
+			return false
+		}
+		field, _ := scale.Issue()
+		return field == ""
 	}
 	return false
 }
@@ -428,7 +436,15 @@ func closedAnswer(e *exampleElement, p exampleProfile, rowIndex int, now time.Ti
 		return npsFor(p, rowIndex)
 	case surveydoc.ElementDate:
 		daysAgo := ((rowIndex + 1) * 23) % 365
-		return now.Add(-time.Duration(daysAgo) * 24 * time.Hour).UTC().Format("2006-01-02")
+		day := now.Add(-time.Duration(daysAgo) * 24 * time.Hour).UTC()
+		if e.IncludeTime != nil && *e.IncludeTime {
+			// Office hours on the quarter hour, so the times read like ones people pick.
+			return time.Date(day.Year(), day.Month(), day.Day(), 9+(rowIndex*5)%9, 15*(rowIndex%4), 0, 0, time.UTC).Format("2006-01-02T15:04")
+		}
+		return day.Format("2006-01-02")
+	case surveydoc.ElementSlider:
+		scale, _ := e.SliderScale()
+		return scale.Value(scoreFor(p, rowIndex, 0, int(math.Round(scale.Steps()))))
 	case surveydoc.ElementRanking:
 		labels := choiceLabels(e)
 		return rotate(labels, lumpyIndex(len(labels), rowIndex))

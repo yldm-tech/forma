@@ -58,6 +58,10 @@
     "welcome_video": "ウェルカムカード動画",
     "your_feedback_is_stuck": "フィードバックが送信できません :("
   },
+  "date_time": {
+    "select_a_time": "時刻を選択してください",
+    "time": "時刻"
+  },
   "errors": {
     "accept_to_continue": "続行するには同意してください",
     "all_options_must_be_ranked": "すべてのオプションをランク付けしてください",
@@ -130,5 +134,9 @@
     "invalid_type": "このファイル形式は使用できません。使用できる形式：{formats}",
     "max_size_hint": "最大{maxSizeInMB}MB",
     "tap_to_upload": "タップしてファイルをアップロード"
+  },
+  "slider": {
+    "choose_a_value": "スライダーを動かして値を選んでください",
+    "not_answered": "スライダーを動かして回答してください"
   }
 }

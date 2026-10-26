@@ -58,6 +58,10 @@
     "welcome_video": "歡迎卡片影片",
     "your_feedback_is_stuck": "您的意見回饋卡住了 :("
   },
+  "date_time": {
+    "select_a_time": "請選擇時間",
+    "time": "時間"
+  },
   "errors": {
     "accept_to_continue": "請同意後繼續",
     "all_options_must_be_ranked": "請為所有選項排序",
@@ -130,5 +134,9 @@
     "invalid_type": "不允許此檔案類型。允許的格式：{formats}",
     "max_size_hint": "最大 {maxSizeInMB} MB",
     "tap_to_upload": "輕觸以上傳檔案"
+  },
+  "slider": {
+    "choose_a_value": "請拖曳滑桿選擇一個數值",
+    "not_answered": "拖曳滑桿來作答"
   }
 }
