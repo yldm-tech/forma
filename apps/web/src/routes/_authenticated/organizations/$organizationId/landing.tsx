@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../../components/ui/dropdown-menu";
 import { Wordmark } from "../../../../components/ui/logo";
-import { sortByName } from "../../../../lib/navigation";
+import { switcherOrganizations } from "../../../../lib/navigation";
 import { guardPageError } from "../../../../lib/route-guards";
 import { meQuery } from "../../../../lib/queries/auth";
 import {
@@ -126,7 +126,7 @@ const LandingSidebar = ({
             isLoading={organizations.isLoading}
             isError={organizations.isError}
             onRetry={() => void organizations.refetch()}
-            items={sortByName(organizations.data ?? [])}
+            items={switcherOrganizations(t, organizations.data ?? [])}
             selectedId={organizationId}
             onSelect={(id) => void navigate({ href: `/organizations/${id}/` })}
             onSettings={() => void navigate({ href: `/organizations/${organizationId}/settings/general` })}

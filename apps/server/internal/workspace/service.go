@@ -167,7 +167,7 @@ func (s *Service) Get(ctx context.Context, userID, workspaceID uuid.UUID) (*Deta
 		SurveyScheduling: scheduling.Instance(s.cfg).ForOrganization(zone).Settings()}, nil
 }
 
-// readDenied explains a refused read to a member the organization's two-factor requirement refuses and to a billing member of the workspace's organization, and to anyone else is the plain refusal.
+// readDenied explains a refused read to a member the organization refuses (suspended, or held to its two-factor requirement) and to a billing member of the workspace's organization, and to anyone else is the plain refusal.
 func (s *Service) readDenied(ctx context.Context, userID, workspaceID uuid.UUID) error {
 	denied := apperr.Forbidden("Not authorized")
 	org, err := s.repo.organizationOf(ctx, workspaceID)
@@ -177,7 +177,7 @@ func (s *Service) readDenied(ctx context.Context, userID, workspaceID uuid.UUID)
 	if org == nil {
 		return denied
 	}
-	refusal, err := s.authz.SecondFactorRefusal(ctx, userID, *org)
+	refusal, err := s.authz.Refusal(ctx, userID, *org)
 	if err != nil {
 		return err
 	}

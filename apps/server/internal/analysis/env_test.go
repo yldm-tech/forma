@@ -25,6 +25,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 )
 
 func TestMain(m *testing.M) {
@@ -79,7 +80,7 @@ func newEnv(t *testing.T) *env {
 	e.svc = NewService(cfg, db, e.authz.Authorizer, enqueuer, audit.New(cfg, log), log)
 	e.engine = httpserver.NewEngine(cfg, log)
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
-	NewHandler(e.svc, headerSessions{}).Register(group)
+	NewHandler(e.svc, headerSessions{}, ratelimit.New(cfg, nil, log)).Register(group)
 	return e
 }
 

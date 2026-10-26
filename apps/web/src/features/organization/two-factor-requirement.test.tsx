@@ -63,7 +63,7 @@ const organization = (
   surveySchedulingTimeZone: null,
   surveyScheduling: { timeZone: "UTC", localHour: 0, localMinute: 0, instanceTimeZone: "UTC" },
   whitelabel: {},
-  membership: { organizationId: ORG, userId: "u1", accepted: true, role },
+  membership: { organizationId: ORG, userId: "u1", accepted: true, role, suspendedAt: null },
   userManagementAllowed: role === "owner" || role === "manager",
   twoFactorEnforcedAt: null,
   twoFactorStatus: "enabled",
@@ -146,6 +146,7 @@ describe("TwoFactorRequirementCard", () => {
             accepted: true,
             role: "owner",
             isActive: true,
+            suspendedAt: null,
             twoFactor: "enabled",
           },
           {
@@ -155,6 +156,7 @@ describe("TwoFactorRequirementCard", () => {
             accepted: true,
             role: "member",
             isActive: true,
+            suspendedAt: null,
             twoFactor: "disabled",
           },
           {
@@ -164,6 +166,7 @@ describe("TwoFactorRequirementCard", () => {
             accepted: true,
             role: "member",
             isActive: true,
+            suspendedAt: null,
             twoFactor: "sso",
           },
         ],
@@ -348,7 +351,7 @@ describe("TwoFactorRequiredPage", () => {
       twoFactorEnforcedAt: LAST_WEEK,
       twoFactorStatus: "disabled",
       twoFactorBlocked: true,
-      membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner" },
+      membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner", suspendedAt: null },
     });
     await screen.findByText(t("organizations.two_factor.page_blocked"));
     expect(

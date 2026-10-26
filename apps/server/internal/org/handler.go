@@ -36,6 +36,8 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/:organizationId/members", h.members)
 	g.PATCH("/:organizationId/members/:userId", h.changeRole)
 	g.DELETE("/:organizationId/members/:userId", h.removeMember)
+	g.POST("/:organizationId/members/:userId/suspension", h.suspendMember)
+	g.DELETE("/:organizationId/members/:userId/suspension", h.restoreMember)
 	g.POST("/:organizationId/leave", h.leave)
 	g.GET("/:organizationId/pretty-urls", h.prettyURLs)
 	g.PUT("/:organizationId/whitelabel/email-logo", h.setEmailLogo)
@@ -335,6 +337,29 @@ func (h *Handler) removeMember(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+func (h *Handler) suspendMember(c *gin.Context) { h.setSuspension(c, true) }
+
+func (h *Handler) restoreMember(c *gin.Context) { h.setSuspension(c, false) }
+
+// setSuspension answers with the membership as it now is.
+func (h *Handler) setSuspension(c *gin.Context, suspend bool) {
+	id, ok := organizationID(c)
+	if !ok {
+		return
+	}
+	target, err := httpapi.ParamUUID(c, "userId")
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	m, err := h.svc.SetSuspension(c.Request.Context(), userID(c), id, target, suspend)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, m)
 }
 
 func (h *Handler) leave(c *gin.Context) {

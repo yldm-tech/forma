@@ -46,6 +46,8 @@ var (
 	ActionIntegrationMutation = Rule{Namespace: "action:integration-mutation", Window: time.Minute, Limit: 30}
 	// ActionStateMutation is per organization or workspace: the shared guard for authenticated settings writes.
 	ActionStateMutation = Rule{Namespace: "action:state-mutation", Window: time.Minute, Limit: 120}
+	// PublicResultShare is per client IP, charged by each read through a read-only results link. A link is opened by people without an account, so this is what bounds how fast one address can ask; the key itself carries 256 bits and is not guessable.
+	PublicResultShare = Rule{Namespace: "public:result-share", Window: time.Minute, Limit: 60}
 
 	// Better Auth's per-path limits (apps/web/modules/auth/lib/auth.ts, rateLimit.customRules), all per client IP. They guarded the endpoints the browser called directly; the flows forma2 ran through server actions were limited by the rules above instead.
 	//

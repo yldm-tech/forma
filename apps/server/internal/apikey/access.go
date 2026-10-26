@@ -73,6 +73,8 @@ type Creator struct {
 	Name string    `json:"name"`
 	// FormerMember is set when the creator no longer belongs to the key's organization.
 	FormerMember bool `json:"formerMember"`
+	// Suspended is set while the key's organization suspends its creator's access; the key does not authenticate until it is restored.
+	Suspended bool `json:"suspended"`
 }
 
 // Created is a new key with its plaintext, which is returned this once and never stored.

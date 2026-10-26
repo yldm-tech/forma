@@ -21,6 +21,7 @@ import {
   organizationSettingsPath,
   organizationSwitchPath,
   sortByName,
+  switcherOrganizations,
   workspaceSettingsPath,
   workspaceSwitchPath,
 } from "../../lib/navigation";
@@ -229,7 +230,7 @@ export const SettingsNavigation = ({
                 isLoading={organizations.isLoading}
                 isError={organizations.isError}
                 onRetry={() => void organizations.refetch()}
-                items={sortByName(organizations.data ?? [])}
+                items={switcherOrganizations(t, organizations.data ?? [])}
                 selectedId={organizationId}
                 onSelect={(id) => void navigate({ href: organizationSwitchPath(id, organizationId) })}
               />

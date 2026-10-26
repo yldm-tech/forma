@@ -32,6 +32,7 @@ commands:
   healthcheck        exit 0 when the server on HTTP_ADDR answers /health (the image's HEALTHCHECK)
   authz              operate the SpiceDB projection: schema, backfill and outbox (forma authz help)
   seed               write the demo organization, users, surveys and responses; needs ALLOW_SEED=1 [--clear]
+  user               turn an account on or off on the whole instance: forma user activate|deactivate <email> (forma user help)
   version            print the release version the binary was built as (0.0.0 for a development build)
 `
 
@@ -70,6 +71,12 @@ func run(args []string) int {
 		return authz.RunCLI(ctx, args[1:], os.Stdout, os.Stderr)
 	case "seed":
 		err = runSeed(ctx, args[1:])
+	case "user":
+		if len(args) == 2 && (args[1] == "help" || args[1] == "-h" || args[1] == "--help") {
+			fmt.Print(userUsage)
+			return 0
+		}
+		err = runUser(ctx, args[1:], os.Stdout)
 	case "version":
 		fmt.Println(buildinfo.Version)
 		return 0

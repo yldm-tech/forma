@@ -1,4 +1,4 @@
-// Package org is the organization module: creating an organization (the setup flow and the organization switcher), reading, renaming and deleting it, listing the caller's organizations, and its memberships (listing members, changing a role, removing a member, leaving), with forma2's role rules and the invariant that an organization always keeps an active owner (apps/web/lib/organization, lib/membership, modules/organization, modules/role-management). It also answers the redirect questions the root page and the organization route asked.
+// Package org is the organization module: creating an organization (the setup flow and the organization switcher), reading, renaming and deleting it, listing the caller's organizations, and its memberships (listing members, changing a role, suspending and restoring a member's access, removing a member, leaving), with forma2's role rules and the invariant that an organization always keeps an active owner (apps/web/lib/organization, lib/membership, modules/organization, modules/role-management). It also answers the redirect questions the root page and the organization route asked.
 package org
 
 import (
@@ -36,6 +36,11 @@ type Organization struct {
 	TwoFactorEnforcedAt *time.Time `json:"twoFactorEnforcedAt"`
 }
 
+// limited is the organization as a member it refuses (suspended, or held to its two-factor requirement) sees it: its name and its two-factor requirement, which the suspension notice, the guide to enrolment and the account's two-factor page show. Its billing, branding and settings are left out: such a member may decide nothing else in the organization, and a suspension is often how someone leaving it is cut off.
+func (o *Organization) limited() *Organization {
+	return &Organization{ID: o.ID, CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, Name: o.Name, Whitelabel: json.RawMessage(`{}`), TwoFactorEnforcedAt: o.TwoFactorEnforcedAt}
+}
+
 // Billing is the organization's billing state, forma2's TOrganizationBilling.
 type Billing struct {
 	StripeCustomerID *string         `json:"stripeCustomerId"`
@@ -60,6 +65,8 @@ type Membership struct {
 	UserID         uuid.UUID `json:"userId"`
 	Accepted       bool      `json:"accepted"`
 	Role           string    `json:"role"`
+	// SuspendedAt is when an owner or manager suspended the member's access to the organization, nil while they have it (authz refuses a suspended member everything in the organization but its name, their membership and leaving).
+	SuspendedAt *time.Time `json:"suspendedAt"`
 }
 
 // auditID is how forma2's audit events named a membership.
@@ -74,7 +81,10 @@ type Member struct {
 	Email    string    `json:"email"`
 	Accepted bool      `json:"accepted"`
 	Role     string    `json:"role"`
-	IsActive bool      `json:"isActive"`
+	// IsActive is the account's own switch (users.is_active), which only the instance's operator turns off; a suspension is SuspendedAt.
+	IsActive bool `json:"isActive"`
+	// SuspendedAt is when the member's access to this organization was suspended, nil while they have it.
+	SuspendedAt *time.Time `json:"suspendedAt"`
 	// TwoFactor is the member's two-factor status (authz.SecondFactorEnabled, SecondFactorDisabled or SecondFactorSSO), shown only to owners and managers, who decide on the requirement and follow it up; it is empty for anyone else.
 	TwoFactor string `json:"twoFactor,omitempty"`
 }

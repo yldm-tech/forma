@@ -431,9 +431,22 @@ const ApiKeyDisplay = ({ secret }: { secret: string }) => {
   );
 };
 
-/** Who created a key. A creator who no longer belongs to the organization, or whose account is gone, reads as a former member, so an owner can find keys left behind. */
+/** Who created a key. A creator who no longer belongs to the organization, or whose account is gone, reads as a former member, so an owner can find keys left behind. A suspended creator is marked too: their keys do not work until their access is restored. */
 const CreatedBy = ({ createdBy }: { createdBy: ApiKey["createdBy"] }) => {
   const { t } = useTranslation();
+  if (createdBy?.suspended)
+    return (
+      <span className="flex flex-wrap items-center gap-1 text-sm">
+        <span>{createdBy.name}</span>
+        <Badge
+          type="error"
+          size="tiny"
+          text={t("organizations.members.suspended")}
+          title={t("organizations.members.creator_suspended_hint")}
+        />
+        <span className="sr-only">{t("organizations.members.creator_suspended_hint")}</span>
+      </span>
+    );
   if (createdBy && !createdBy.formerMember) return <span className="text-sm">{createdBy.name}</span>;
   return (
     <span className="flex flex-wrap items-center gap-1 text-sm text-slate-500">

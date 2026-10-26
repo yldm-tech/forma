@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fails when a browser bundle every respondent downloads grows past its committed gzip budget.
 //
-// Two files are in scope, and only two: `surveys.umd.cjs` (the survey runtime) and `forma.umd.cjs` (the embed SDK). They are the whole of what a person answering a survey on a customer's site pays for, the builds of packages/surveys and packages/js-core copy them into `apps/web/public/js/` (the Go server embeds and serves them at `/js/*`), and nothing else watches them: a dependency added three packages away could double the runtime and no check would say so. The SPA's own chunks are out of scope: their names are Rolldown's, so a budget on them would break on a bundler upgrade rather than on a regression.
+// Three files are in scope, and only three: `surveys.umd.cjs` (the survey runtime), `forma.umd.cjs` (the embed SDK) and `embed.js` (the embed script that frames link surveys). They are the whole of what a person answering a survey on a customer's site pays for, the builds of packages/surveys, packages/js-core and packages/embed copy them into `apps/web/public/js/` (the Go server embeds and serves them at `/js/*`), and nothing else watches them: a dependency added three packages away could double the runtime and no check would say so. The SPA's own chunks are out of scope: their names are Rolldown's, so a budget on them would break on a bundler upgrade rather than on a regression.
 //
 // Runs in CI after the build (the TypeScript workspace job in `.github/workflows/pr.yml`), not as part of `pnpm check`: the artifacts exist only after `pnpm build`, and a check on a clean checkout would report both as missing.
 //
@@ -37,6 +37,12 @@ export const BUDGETS = [
     maxGzipBytes: 13_100,
     measuredBytes: 12_536, // 2026-10-26, after SDK identity verification (setUserId's userHash, survey keys in the user state, setup surviving a refused identify); main measured 12_126 just before
     builtBy: "pnpm --filter @forma/js-core build",
+  },
+  {
+    path: "apps/web/public/js/embed.js",
+    maxGzipBytes: 3_200,
+    measuredBytes: 3_006, // 2026-10-26, when the embed script was added (standard, popup, slider and side tab)
+    builtBy: "pnpm --filter @forma/embed build",
   },
 ];
 

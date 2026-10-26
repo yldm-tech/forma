@@ -22,6 +22,8 @@ interface LinkSurveyWrapperProps {
   surveyType: TSurveyType;
   isPreview: boolean;
   isEmbed: boolean;
+  /** Embedded in a frame that follows the survey's height (?autoHeight=true, the embed script): the survey takes the height of its content instead of filling the frame. */
+  isAutoHeight?: boolean;
   styling: TSurveyStyling | TWorkspaceStyling;
   handleResetSurvey: () => void;
   imprintUrl?: string;
@@ -43,6 +45,7 @@ export const LinkSurveyWrapper = ({
   surveyId,
   isPreview,
   isEmbed,
+  isAutoHeight = false,
   styling,
   handleResetSurvey,
   imprintUrl,
@@ -73,14 +76,15 @@ export const LinkSurveyWrapper = ({
 
   if (isEmbed) {
     return (
-      <div className={cn("h-full w-full overflow-auto", !isCardless && "overflow-clip")}>
+      <div className={cn("w-full", !isAutoHeight && "h-full overflow-auto", !isCardless && "overflow-clip")}>
         <SurveyLoadingAnimation
           isWelcomeCardEnabled={isWelcomeCardEnabled}
           isBrandingEnabled={isBrandingEnabled}
         />
         <main
           className={cn(
-            "flex h-full w-full flex-col",
+            "flex w-full flex-col",
+            !isAutoHeight && "h-full",
             isCardless && "overflow-hidden",
             !isCardless && "mx-auto",
             styling.cardArrangement?.linkSurveys === "straight" && "pt-6",

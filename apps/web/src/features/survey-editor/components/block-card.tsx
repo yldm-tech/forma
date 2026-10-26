@@ -10,6 +10,7 @@ import type { TWorkspace as Workspace } from "@forma/types/workspace";
 import { TI18nString } from "@forma/types/i18n";
 import { TSurveyBlock, TSurveyBlockLogic } from "@forma/types/surveys/blocks";
 import { TSurveyElement, TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
+import { isScorableElement } from "@forma/types/surveys/scoring";
 import { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { TUserLocale } from "@forma/types/user";
@@ -208,6 +209,10 @@ export const BlockCard = ({
     const additionalProps: Record<string, unknown> = {};
     if (elementsWithLastElement.has(element.type)) {
       additionalProps.lastElement = lastElement;
+    }
+    // Turning scoring on adds the survey's total score variable.
+    if (isScorableElement(element)) {
+      additionalProps.setLocalSurvey = setLocalSurvey;
     }
 
     // @ts-expect-error - These props should cover everything

@@ -45,13 +45,17 @@ export const assignableRoles = (
 };
 
 export interface MemberLike {
+  userId: string;
   role: OrganizationRole;
   isActive: boolean;
+  suspendedAt?: string | null;
 }
 
-/** Mirrors the server's last-owner guard, which counts owner memberships whose user can still sign in: neither a pending owner invite nor a deactivated owner counts. */
-export const hasMoreThanOneActiveOwner = (members: readonly MemberLike[]): boolean =>
-  members.filter((member) => member.role === "owner" && member.isActive).length > 1;
+/** Mirrors the server's owner guards, which count the owners other than the member acted on who can still act in the organization: neither a pending owner invite, a deactivated owner nor a suspended one counts. With userId undefined (an invite row) every active owner counts. */
+export const hasAnotherActiveOwner = (members: readonly MemberLike[], userId: string | undefined): boolean =>
+  members.some(
+    (member) => member.userId !== userId && member.role === "owner" && member.isActive && !member.suspendedAt
+  );
 
 export interface RoleEditContext {
   isUserManagementDisabled: boolean;
@@ -60,20 +64,22 @@ export interface RoleEditContext {
   memberRole: OrganizationRole;
   /** The target's user id on a membership row; undefined on an invite row. */
   memberUserId?: string;
-  doesOrgHaveMoreThanOneOwner: boolean;
+  /** Another owner than the target can still act in the organization (hasAnotherActiveOwner). */
+  hasAnotherActiveOwner: boolean;
 }
 
-/** forma2's isRoleEditDisabled: never your own role, never the last owner's (an invite is not a membership, so the rule skips invites), and a manager never touches an owner. */
+/** forma2's isRoleEditDisabled: never your own role, never the last active owner's (an invite is not a membership, so the rule skips invites), and a manager never touches an owner. */
 export const isRoleEditDisabled = (ctx: RoleEditContext): boolean =>
   ctx.isUserManagementDisabled ||
   ctx.memberUserId === ctx.currentUserId ||
-  (ctx.memberUserId !== undefined && ctx.memberRole === "owner" && !ctx.doesOrgHaveMoreThanOneOwner) ||
+  (ctx.memberUserId !== undefined && ctx.memberRole === "owner" && !ctx.hasAnotherActiveOwner) ||
   (ctx.currentUserRole === "manager" && ctx.memberRole === "owner");
 
 export interface DeleteContext {
   currentUserRole: OrganizationRole | undefined;
   currentUserId: string;
-  doesOrgHaveMoreThanOneOwner: boolean;
+  /** Another owner than the target can still act in the organization (hasAnotherActiveOwner). */
+  hasAnotherActiveOwner: boolean;
 }
 
 /** forma2's showDeleteButton: owners and managers revoke invites; nobody removes themselves; a manager never removes an owner; an owner removes another owner only while another active owner remains. */
@@ -86,7 +92,20 @@ export const canDeleteRow = (
   if (row.kind === "invite") return true;
   if (row.userId === ctx.currentUserId) return false;
   if (isManager) return row.role !== "owner";
-  if (row.role === "owner") return ctx.doesOrgHaveMoreThanOneOwner;
+  if (row.role === "owner") return ctx.hasAnotherActiveOwner;
+  return true;
+};
+
+/** Whether the caller may suspend a member's access to the organization, or restore it, by the server's rules (those of a role change): only under user management, never their own, a manager never an owner's, and an owner is suspended only while another active owner remains. Restoring needs no other owner. */
+export const canChangeSuspension = (
+  member: { userId: string; role: OrganizationRole; suspended: boolean },
+  ctx: DeleteContext & { canManageUsers: boolean }
+): boolean => {
+  const { isOwnerOrManager, isManager } = accessFlags(ctx.currentUserRole);
+  if (!ctx.canManageUsers || !isOwnerOrManager) return false;
+  if (member.userId === ctx.currentUserId) return false;
+  if (isManager && member.role === "owner") return false;
+  if (member.role === "owner" && !member.suspended) return ctx.hasAnotherActiveOwner;
   return true;
 };
 

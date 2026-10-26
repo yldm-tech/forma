@@ -25,6 +25,12 @@ export interface PendingResponseEntry {
   createdAt: number;
 }
 
+/** The variables as they were before a block was submitted, which going back from the next block restores. */
+export interface VariableStackEntry {
+  questionId: string;
+  variables: TResponseVariables;
+}
+
 export interface SurveyProgressEntry {
   surveyId: string;
   blockId: string;
@@ -32,6 +38,12 @@ export interface SurveyProgressEntry {
   ttc: TResponseTtc;
   currentVariables: TResponseVariables;
   history: string[];
+  /**
+   * The variables before each block in `history` was submitted, one entry per submit. Persisted with the history so that going back after a reload restores the variables from before the block, as it does without a reload; otherwise resubmitting the block would apply its calculations and choice scores a second time on top of the restored totals.
+   *
+   * Optional because entries written before this field existed must still restore; going back from those keeps the restored variables, which is the behaviour they already had.
+   */
+  variableStack?: VariableStackEntry[];
   selectedLanguage: string;
   surveyStateSnapshot: SerializedSurveyState;
   /**

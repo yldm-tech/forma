@@ -224,10 +224,8 @@ func TestRemoveMember(t *testing.T) {
 	if e.role(c.ID, member) != "" || e.count(`SELECT count(*) FROM team_members WHERE user_id = ?`, member) != 0 {
 		t.Fatal("membership or team membership survived")
 	}
-	// The guard counts active owners only: with the first owner deactivated, the second is the last active one, so the first may not be removed.
+	// The guard counts the active owners other than the one removed: with the first owner deactivated, the second still remains, so the first may be removed.
 	e.exec(`UPDATE users SET is_active = false WHERE id = ?`, owner)
-	e.fails(e.do(owner2, http.MethodDelete, memberPath(c.ID, owner), nil), http.StatusBadRequest, apperr.CodeValidation, "You cannot delete the last owner of the organization")
-	e.exec(`UPDATE users SET is_active = true WHERE id = ?`, owner)
 	e.ok(e.do(owner2, http.MethodDelete, memberPath(c.ID, owner), nil), http.StatusNoContent, nil)
 }
 

@@ -666,8 +666,25 @@ checksums:
     onboarding/product_name_placeholder: 5ec6ce1b5ac5c32e07c8c107bc6b3b68
     organizations/landing/no_workspaces_warning_subtitle: 305578d27209f1c4f706fccd53559f52
     organizations/landing/no_workspaces_warning_title: ba051776860ec4d73c7d177b1379bbda
+    organizations/members/account_inactive_tooltip: afa13fc8be6b8a77c9846ce074871799
+    organizations/members/creator_suspended_hint: 8bfe75040d28fb5f6b65c006e84f2bc3
     organizations/members/inactive_tooltip: b8d97773412ccd96f3e87643638aa6ff
+    organizations/members/restore_access: c3fd25fcf70901ace79f9d542b082d15
+    organizations/members/restored_successfully: eee608cea7538b09397ff2751cb6cd49
+    organizations/members/suspend_access: 9a6a6602a780a22bb932e4aee6351301
+    organizations/members/suspend_description: e8833d7bf640aa5d105c8c83e3798c01
+    organizations/members/suspend_title: d8b11cb0ba14ef11e6dea0e0694e4644
+    organizations/members/suspended: 6435f2d5f2b7c08a467c4659bc24e6a1
+    organizations/members/suspended_since: 4e92a4e4b3c58c3f1021cba09778fb49
+    organizations/members/suspended_successfully: 4a2cab0cc02b3becba6cbb6041fa3a45
     organizations/security_tip_github: 0c3949dce92da2ab10e070c6033f98b4
+    organizations/suspended/page_continue: fbeb2410478168f98c569839958482b4
+    organizations/suspended/page_description: be8296f53f1ba1d3385483f7c7679e1b
+    organizations/suspended/page_other_organizations: a64613d14a36ea061ff09d876fbc3de7
+    organizations/suspended/page_restored_description: 27546f679ecb58d9800b4cc481ce7d97
+    organizations/suspended/page_restored_title: 211a8859263c17d705cf016995604ce8
+    organizations/suspended/page_title: 3301355e5d1520ad3ad7662071d9d926
+    organizations/suspended/switcher_label: 58012c593377b8e2c198cccf6ebe4d81
     organizations/two_factor/card_description: c398b77c047f099ac4edf25f3f6be0e2
     organizations/two_factor/card_title: bc68ddd9c3c82225ef641f097e0940db
     organizations/two_factor/column: 63d68e16d3d1783870c9881afef158bd
@@ -1934,9 +1951,57 @@ checksums:
     workspace/analysis/new_responses_pill: 9d45e8c6a91b67744980b06b26ac3903
     workspace/analysis/nps_formula_tooltip: 22f37aac6d65e65a0d787badcb4cf4f5
     workspace/analysis/refresh: 8dab72d1eded5437272bb02c543e4042
+    workspace/analysis/result_shares/all_responses: 70e9dc26a05c69a6842f64ed793d36ae
+    workspace/analysis/result_shares/available_until: a13172fa78296a9cb7aa69370b21726b
+    workspace/analysis/result_shares/counts_only: af505bb3e242378c4d0a7b0a539f2cdb
+    workspace/analysis/result_shares/create: 0cbb6dc593591ff291d0f39715b32880
+    workspace/analysis/result_shares/create_title: 8c0e0f2fec815f8a8b51ac2d34c6c726
+    workspace/analysis/result_shares/created: 42a6dcd88060f2909f6fab9998914216
+    workspace/analysis/result_shares/created_by: f025c53d98519808884b5fce7dcb0bf3
+    workspace/analysis/result_shares/description: 00576967941c66fb16b2d53fd3508a43
+    workspace/analysis/result_shares/edit_link: 88f99a4ec2cab4b5217f7cf9b8984f34
+    workspace/analysis/result_shares/edit_title: 88f99a4ec2cab4b5217f7cf9b8984f34
+    workspace/analysis/result_shares/expiration_description: 338736a6cc5366fe0ecc10493993cb75
+    workspace/analysis/result_shares/expiration_never_description: 404e850e4ee4154192e2242c43db7650
+    workspace/analysis/result_shares/expired_on: 1cf4b3aee3f1e8a79a4a266589d8a4f7
+    workspace/analysis/result_shares/expires_on: 67b3cd8021cffffa2e9c1804e6b0f821
+    workspace/analysis/result_shares/filter_frozen_all: 4d9e8cbb4c4ff8672a444b32d8c2bf0e
+    workspace/analysis/result_shares/filter_frozen_filtered: caa9714063e65f7bdec59a088ee5c671
+    workspace/analysis/result_shares/filter_note_all: 109347d0044936974aee603c90555db3
+    workspace/analysis/result_shares/filter_note_filtered: ac89639be20570ac8fbfe2b03e16a526
+    workspace/analysis/result_shares/filtered_responses: 7f0910c26a8213ec21b575b055219927
+    workspace/analysis/result_shares/filtered_view: efe9b41d8c72f77a1334ff9fefa63210
+    workspace/analysis/result_shares/link_address: e3b3a56d04e821f44e27f48e70e19af7
+    workspace/analysis/result_shares/link_copied: db71229faeca1d479c346c40030f4061
+    workspace/analysis/result_shares/links_title: 0735ea4c3a2d21e4c4a78c974b3e74c5
+    workspace/analysis/result_shares/name_label: 914850cd5f4d164a9b11495a025ddf65
+    workspace/analysis/result_shares/name_placeholder: 26d6a3b238f08a93873e4ad0624b9783
+    workspace/analysis/result_shares/no_expiration: 0e784880d170f8ea5a1fe439eb0bba4d
+    workspace/analysis/result_shares/no_links: adf8d24002d424f771e8e387b5cd3386
+    workspace/analysis/result_shares/reveal_description: a81b087c1833c881ecbf099973faeb29
+    workspace/analysis/result_shares/reveal_hidden_field: 510ee890094b1c2d0b2e6cae7899e114
+    workspace/analysis/result_shares/reveal_legend: adc32d0ff2ee3ed76992e53cd1a343af
+    workspace/analysis/result_shares/reveal_other_values: 6cce545e63965534398301cec371690b
+    workspace/analysis/result_shares/revealed_count: b1d214579c93e55131a2315fa9a77f0b
+    workspace/analysis/result_shares/revoke: 6f4ddc08dce2d79b044db52f554e74af
+    workspace/analysis/result_shares/revoke_body: 8e26aee4ec2cf19c07a413d52fe5f5fa
+    workspace/analysis/result_shares/revoke_link: 404ebbf8d79e05784d107b7d7e8ed741
+    workspace/analysis/result_shares/revoke_title: cb00a8d29776b6b2b624ccbe19064943
+    workspace/analysis/result_shares/revoked: d538e774261f9130891ddfab277fa14a
+    workspace/analysis/result_shares/shared_results: dfe34bd966c4308aa8d29d72a4a6aa17
+    workspace/analysis/result_shares/title: 5db5f8ec8f0897c6da369e4d5e56f2e0
+    workspace/analysis/result_shares/unavailable_description: 6422a2735feab85736a32679571d7c2a
+    workspace/analysis/result_shares/unavailable_title: a10db84cea0bc0e42329517ba9a272c5
+    workspace/analysis/result_shares/untitled_link: 718e3e8323ac3a58eb10c2f143fbe795
+    workspace/analysis/result_shares/updated: d49cf868720a361e7772edfa6def6c26
+    workspace/analysis/result_shares/withheld_card: 14b517e9be275c82307c1769005fc8f1
+    workspace/analysis/result_shares/withheld_notice: 4dc4e2fba7923cb9b3e321ec3567aad1
     workspace/analysis/search/chip: c85a01aa86d4b45d821978d2159e0f1b
     workspace/analysis/search/clear: 0ee4a80abe134b7edd90c74f03638877
     workspace/analysis/search/placeholder: 10d646cd0c34d524946bcde9c1405b6f
+    workspace/analysis/segment_filter/in_this_segment: a371ccf832e7282053ee7440293d0a3d
+    workspace/analysis/segment_filter/membership_hint: dd1ea8093e1b89ec73112e80b6bc6f02
+    workspace/analysis/segment_filter/not_in_this_segment: 97a74aeb735dc5ea9c648c68383afe43
     workspace/analysis/trends/answers: 7589736dea1320be93d96dd3652250ee
     workspace/analysis/trends/answers_count: ec7e0a767e7d1d7c8023259ffda0530d
     workspace/analysis/trends/bucket_value: d86fb917e6655564c78fa7cb81ae90aa
@@ -3684,6 +3749,15 @@ checksums:
     workspace/surveys/edit/schedule_survey: aa9d0a74a96c325e3202bf1efbc4611a
     workspace/surveys/edit/scheduled_moment: 80246b6e22ea2a41e8d9a38a328f6fea
     workspace/surveys/edit/scheduled_moment_in_your_time_zone: 53c76a9d49b57d1e7e505c6fcc5cfd1c
+    workspace/surveys/edit/scoring_add_total_variable: b08ec359a9e191fde93609eeeef01441
+    workspace/surveys/edit/scoring_choice_score: cb82c17200f9ade36c5b053c80679a17
+    workspace/surveys/edit/scoring_image_score: dbf4773a08f23cfb43c936e81fc83aa6
+    workspace/surveys/edit/scoring_no_total_variable: 7534798df802448afdffcb18456f7383
+    workspace/surveys/edit/scoring_toggle: 3275b628f2d1e45697d575133a925064
+    workspace/surveys/edit/scoring_toggle_description: f418418ee5bca9b459c49423f35c6b14
+    workspace/surveys/edit/scoring_total_badge: 52bf3d9b021a715f5624d7c945d97eb6
+    workspace/surveys/edit/scoring_total_badge_description: db4a7c2ea4c22a5dd0cbe47176e2a8a7
+    workspace/surveys/edit/scoring_total_variable: 61fc5633fdf1971b872f2b9dae790557
     workspace/surveys/edit/search_for_images: 8b1bc3561d126cc49a1ee185c07e7aaf
     workspace/surveys/edit/select_field: 45665a44f7d5707506364f17f28db3bf
     workspace/surveys/edit/select_or_type_value: a99c307b2cc3f9f6f893babd546d7296
@@ -4030,12 +4104,37 @@ checksums:
     workspace/surveys/share/dynamic_popup/alert_description: 53d2ba39984a059a5eca4cb6cf9ba00d
     workspace/surveys/share/dynamic_popup/alert_title: 813a9160940894da26ec2a09bbb1a7bf
     workspace/surveys/share/dynamic_popup/description: 0edc128859800e35b6f10bb055af2c76
+    workspace/surveys/share/dynamic_popup/embed_popup_button: c01c04761fdd3ee7e9bd07e21d4d2c08
+    workspace/surveys/share/dynamic_popup/embed_popup_description: a4b91f75c8f185f031e5df06b64f0f05
+    workspace/surveys/share/dynamic_popup/embed_popup_title: 89f02a7ce6bc625ec3a2a59020ec5cff
     workspace/surveys/share/dynamic_popup/nav_title: 7155f06aaa8a64aae6226a2d062a2e73
+    workspace/surveys/share/embed_on_website/button_text: 4cae591a46c28378587b9df3df5bd565
+    workspace/surveys/share/embed_on_website/button_text_default: 4247ba65cd52754ac24882c464ac42e6
+    workspace/surveys/share/embed_on_website/delay_seconds: b4f01de4e2387380a96adec628104dd2
     workspace/surveys/share/embed_on_website/description: 6039663688b62843cbca4e7a6815ba43
     workspace/surveys/share/embed_on_website/embed_code_copied_to_clipboard: 94dfaa227e6e533bef7d6305961568f0
     workspace/surveys/share/embed_on_website/embed_mode: 993e6a4a75baa5849a829dfb333b705c
     workspace/surveys/share/embed_on_website/embed_mode_description: b00b9477fc7f063260b2486f1e0e45c7
+    workspace/surveys/share/embed_on_website/layout_iframe: 4db8a0f4c1e2eb165a09ff478f0f5947
+    workspace/surveys/share/embed_on_website/layout_iframe_description: 2b40f1fef56a82b3618e62c10c36fe53
+    workspace/surveys/share/embed_on_website/layout_label: 8ab849bdcd801c13e7e85474299e4ee8
+    workspace/surveys/share/embed_on_website/layout_popup: 0e4f52e9686e49e22a8730c2a5067145
+    workspace/surveys/share/embed_on_website/layout_popup_description: 32a984340ed9613dd26e83e77045f286
+    workspace/surveys/share/embed_on_website/layout_side_tab: 2aca0ad9afe94d0a63cfdb104e12ddd5
+    workspace/surveys/share/embed_on_website/layout_side_tab_description: 47cb3e772bfb615154dc3f49be968318
+    workspace/surveys/share/embed_on_website/layout_slider: d65c4bee6bbca6e9176f793f40ea5907
+    workspace/surveys/share/embed_on_website/layout_slider_description: 6dd9a9125caec680aa3f0bf5d554fbf1
+    workspace/surveys/share/embed_on_website/layout_standard: 455b063e1181932d8d3ae222583afe96
+    workspace/surveys/share/embed_on_website/layout_standard_description: 4acd2ad147c819940b24cf86ee5c3eb7
     workspace/surveys/share/embed_on_website/nav_title: 128338cf9bb8c68b3fff8c9ddafdff12
+    workspace/surveys/share/embed_on_website/open_after_delay: 0cb0b5bd1e1370049365a1abcfa6c136
+    workspace/surveys/share/embed_on_website/open_after_delay_description: 5a8d002922338bf6d4039b55163bd75d
+    workspace/surveys/share/embed_on_website/position: 8ba464c700080c55106d9e680b4b37e5
+    workspace/surveys/share/embed_on_website/position_left: f849afc23c62251a3c18c39642ea1955
+    workspace/surveys/share/embed_on_website/position_right: d2ecd32a214b897f3edddb395a04253d
+    workspace/surveys/share/embed_on_website/preview_sample_page: c11f068869e9821742b0b0bd3cc68676
+    workspace/surveys/share/embed_on_website/tab_label: 5d8b237bba92c5115e847dbab0d64cbc
+    workspace/surveys/share/embed_on_website/tab_label_default: 6fac88806e0c269a30777b283988c61c
     workspace/surveys/share/link_settings/description: 43e3858b50e40b4570bf821662918889
     workspace/surveys/share/link_settings/language_help_text: 2f4f0d76fb622388f4f00fabd5eb9d28
     workspace/surveys/share/link_settings/link_description: ba93bef6c1209a3a897c43616332eb10
@@ -4196,6 +4295,10 @@ checksums:
     workspace/surveys/summary/reset_survey: 8c88ddb81f5f787d183d2e7cb43e7c64
     workspace/surveys/summary/reset_survey_warning: 6b44be171d7e2716f234387b100b173d
     workspace/surveys/summary/reset_survey_warning_count: 8a0c57c5673fb7dc818b9418236b6415
+    workspace/surveys/summary/score_description: c965fa3395fcf1dc78e118a0b51667e5
+    workspace/surveys/summary/score_no_scored_responses: 8d61cae36078a4e5f72238a48bd6b6d6
+    workspace/surveys/summary/score_points: fce1385c086f50554ce1ce17a3ebcbac
+    workspace/surveys/summary/score_title: 52bf3d9b021a715f5624d7c945d97eb6
     workspace/surveys/summary/select_first_date: 1b10e5ee3f7fb106a02ee11f514cce51
     workspace/surveys/summary/select_last_date: 3da08777980fdaf037ef395727a0ccfd
     workspace/surveys/summary/selected_responses_csv: 9cef3faccd54d4f24647791e6359db90

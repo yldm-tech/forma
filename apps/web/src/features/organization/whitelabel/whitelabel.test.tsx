@@ -61,7 +61,7 @@ const organization = (
     instanceTimeZone: "Europe/Berlin",
   },
   whitelabel,
-  membership: { organizationId: ORG, userId: "u1", accepted: true, role },
+  membership: { organizationId: ORG, userId: "u1", accepted: true, role, suspendedAt: null },
   userManagementAllowed: role !== "member",
   twoFactorEnforcedAt: null,
   twoFactorStatus: "enabled",

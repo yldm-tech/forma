@@ -8,6 +8,7 @@ import { surveyDisplaysQuery, surveySummaryQuery } from "../../api";
 import { CustomFilter } from "../filter/custom-filter";
 import { useResponseFilter } from "../filter/response-filter-context";
 import { ElementImpressionsProvider } from "./element-impressions-context";
+import { ScoreTotalSummary } from "./score-total-summary";
 import { ScrollToTop } from "./scroll-to-top";
 import { SummaryList } from "./summary-list";
 import { SummaryMetadata, type SummaryTab } from "./summary-metadata";
@@ -88,6 +89,11 @@ export const SummaryPage = ({
         <CustomFilter survey={surveyWithRecall} />
       </div>
       <TrendsCard survey={surveyWithRecall} locale={locale} />
+      {surveySummary.score && surveySummary.meta.totalResponses > 0 && (
+        <div className="mt-10">
+          <ScoreTotalSummary score={surveySummary.score} />
+        </div>
+      )}
       <ScrollToTop />
       <ElementImpressionsProvider dropOff={surveySummary.dropOff}>
         <SummaryList

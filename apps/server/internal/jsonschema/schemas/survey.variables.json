@@ -30,6 +30,9 @@
         "value": {
           "default": 0,
           "type": "number"
+        },
+        "isScore": {
+          "type": "boolean"
         }
       },
       "required": [

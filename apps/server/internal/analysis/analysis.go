@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
@@ -28,10 +29,12 @@ type Service struct {
 	jobs  *jobs.Enqueuer
 	audit *audit.Emitter
 	log   *slog.Logger
+	// segments evaluates the segments a response filter names.
+	segments *contact.Evaluator
 }
 
 func NewService(cfg config.Config, db *gorm.DB, authorizer *authz.Authorizer, enqueuer *jobs.Enqueuer, emitter *audit.Emitter, log *slog.Logger) *Service {
-	return &Service{db: db, cfg: cfg, authz: authorizer, jobs: enqueuer, audit: emitter, log: log}
+	return &Service{db: db, cfg: cfg, authz: authorizer, jobs: enqueuer, audit: emitter, log: log, segments: contact.NewEvaluator(db, log)}
 }
 
 // element is one element of the survey: the typed view the statistics read, the stored JSON the summary hands back, and the block it sits in.
@@ -58,6 +61,8 @@ type surveyDoc struct {
 	Elements           []element
 	OrganizationID     uuid.UUID
 	DisplayTimeZone    *string
+	// ScoreVariable is the survey's total score variable, nil when it has none.
+	ScoreVariable *surveydoc.Variable
 }
 
 // loadSurveyDoc reads a survey for analysis; nil when it does not exist.
@@ -72,9 +77,10 @@ func loadSurveyDoc(ctx context.Context, db *gorm.DB, id uuid.UUID) (*surveyDoc, 
 		WelcomeCardEnabled bool
 		OrganizationID     uuid.UUID
 		DisplayTimeZone    *string
+		Variables          []byte
 	}
 	if err := db.WithContext(ctx).Raw(`SELECT s.name, s.archived_at, COALESCE(s.welcome_card -> 'enabled' = 'true'::jsonb, false) AS welcome_card_enabled,
-		w.organization_id, o.display_time_zone
+		w.organization_id, o.display_time_zone, s.variables
 		FROM surveys s JOIN workspaces w ON w.id = s.workspace_id JOIN organizations o ON o.id = w.organization_id WHERE s.id = ?`, id).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load survey: %w", err)
 	}
@@ -83,6 +89,13 @@ func loadSurveyDoc(ctx context.Context, db *gorm.DB, id uuid.UUID) (*surveyDoc, 
 	}
 	doc := &surveyDoc{Survey: sv, Name: rows[0].Name, ArchivedAt: rows[0].ArchivedAt, WelcomeCardEnabled: rows[0].WelcomeCardEnabled,
 		OrganizationID: rows[0].OrganizationID, DisplayTimeZone: rows[0].DisplayTimeZone}
+	if len(rows[0].Variables) > 0 {
+		var variables []surveydoc.Variable
+		if err := json.Unmarshal(rows[0].Variables, &variables); err != nil {
+			return nil, fmt.Errorf("decode survey %s variables: %w", id, err)
+		}
+		doc.ScoreVariable = surveydoc.ScoreVariable(variables)
+	}
 	var languages []struct {
 		Code      string
 		IsDefault bool

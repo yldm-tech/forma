@@ -68,12 +68,12 @@ type createdKey struct {
 	CreatorName string
 }
 
-// create inserts a key and its workspace grants and returns the new row. It refuses with 403 when the creator is no longer an owner or manager of the organization: the service has authorized them through SpiceDB, which follows a removal or demotion only once the outbox delivers it, and the check runs in the same Serializable transaction as the insert, so a key cannot be created after, and slip past, the disable.CreatedBy of a concurrent removal or demotion (which run Serializable too).
+// create inserts a key and its workspace grants and returns the new row. It refuses with 403 when the creator is no longer an owner or manager of the organization, or is suspended there: the service has authorized them through SpiceDB, which follows a removal or demotion only once the outbox delivers it, and the check runs in the same Serializable transaction as the insert, so a key cannot be created after, and slip past, the disable.CreatedBy of a concurrent removal or demotion (which run Serializable too).
 func (r *Repository) create(ctx context.Context, row newKeyRow) (createdKey, error) {
 	var created createdKey
 	err := database.Serializable(ctx, r.db, func(tx *gorm.DB) error {
 		var roles []string
-		if err := tx.Raw(`SELECT role FROM memberships WHERE user_id = ? AND organization_id = ?`, row.CreatedBy, row.OrganizationID).Scan(&roles).Error; err != nil {
+		if err := tx.Raw(`SELECT role FROM memberships WHERE user_id = ? AND organization_id = ? AND suspended_at IS NULL`, row.CreatedBy, row.OrganizationID).Scan(&roles).Error; err != nil {
 			return fmt.Errorf("load creator role: %w", err)
 		}
 		if len(roles) == 0 || !disable.ManagesKeys(roles[0]) {
@@ -110,6 +110,7 @@ type keyRow struct {
 	CreatorID          *uuid.UUID
 	CreatorName        *string
 	CreatorIsMember    bool
+	CreatorSuspended   bool
 }
 
 // creator is the key's Creator, or nil when its creator's account is gone.
@@ -117,7 +118,7 @@ func (k keyRow) creator() *Creator {
 	if k.CreatorID == nil {
 		return nil
 	}
-	c := &Creator{ID: *k.CreatorID, FormerMember: !k.CreatorIsMember}
+	c := &Creator{ID: *k.CreatorID, FormerMember: !k.CreatorIsMember, Suspended: k.CreatorSuspended}
 	if k.CreatorName != nil {
 		c.Name = *k.CreatorName
 	}
@@ -150,9 +151,10 @@ func oneView(ctx context.Context, db *gorm.DB, organizationID, id uuid.UUID) (*V
 }
 
 func views(ctx context.Context, db *gorm.DB, organizationID uuid.UUID, id *uuid.UUID) ([]View, error) {
-	// The creator is read through users, and whether they still belong to the key's organization through memberships, so a key whose creator left reads as a former member's.
+	// The creator is read through users, and whether they still belong to the key's organization, and whether it suspended them, through memberships, so a key whose creator left reads as a former member's and one whose creator is suspended says why it does not authenticate.
 	query := `SELECT k.id, k.label, k.created_at, k.organization_access, k.last_used_at, k.disabled_at, k.disabled_reason, k.key_hint, k.expires_at, u.id AS creator_id, u.name AS creator_name,
-		EXISTS (SELECT 1 FROM memberships m WHERE m.user_id = k.created_by AND m.organization_id = k.organization_id) AS creator_is_member
+		EXISTS (SELECT 1 FROM memberships m WHERE m.user_id = k.created_by AND m.organization_id = k.organization_id) AS creator_is_member,
+		EXISTS (SELECT 1 FROM memberships m WHERE m.user_id = k.created_by AND m.organization_id = k.organization_id AND m.suspended_at IS NOT NULL) AS creator_suspended
 		FROM api_keys k LEFT JOIN users u ON u.id = k.created_by WHERE k.organization_id = ?`
 	args := []any{organizationID}
 	if id != nil {
@@ -230,12 +232,16 @@ type storedKey struct {
 	DisabledAt sql.NullTime
 	// ExpiresAt is set for a key that stops working then; from that time on it never authenticates.
 	ExpiresAt sql.NullTime
+	// CreatorSuspended is set while the organization suspends the access of the member who created the key; the key does not authenticate until it is restored.
+	CreatorSuspended bool
 }
 
 // byLookupHash finds the key whose lookup_hash is hash, or nil.
 func (r *Repository) byLookupHash(ctx context.Context, hash string) (*storedKey, error) {
 	var rows []storedKey
-	err := r.db.WithContext(ctx).Raw(`SELECT id, organization_id, hashed_key, organization_access, last_used_at, disabled_at, expires_at FROM api_keys WHERE lookup_hash = ?`, hash).Scan(&rows).Error
+	err := r.db.WithContext(ctx).Raw(`SELECT k.id, k.organization_id, k.hashed_key, k.organization_access, k.last_used_at, k.disabled_at, k.expires_at,
+		EXISTS (SELECT 1 FROM memberships m WHERE m.user_id = k.created_by AND m.organization_id = k.organization_id AND m.suspended_at IS NOT NULL) AS creator_suspended
+		FROM api_keys k WHERE k.lookup_hash = ?`, hash).Scan(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("look up api key: %w", err)
 	}
