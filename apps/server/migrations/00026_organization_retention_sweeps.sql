@@ -1,6 +1,6 @@
 -- The last retention sweep of each organization: what the daily sweep (internal/retention) counted, or deleted, under the organization's retention windows (organizations.workflow_run_retention_days and display_retention_days), which the owner's Data retention card shows.
 --
--- One row per organization, replaced by every sweep that visits it: only organizations with at least one window are visited, and an organization whose sweep fails keeps its previous row. dry_run says whether the instance only counted (RETENTION_SWEEP_DRY_RUN=1, the default; the *_matched columns hold the counts) or deleted (the *_deleted columns). The windows the sweep applied are kept with the counts, so the card shows them only while the organization's windows are still the same. *_capped_units counts the units (a workspace and status for runs, a survey for impressions) that reached the sweep's batch limit and left the rest for the next day.
+-- One row per organization, replaced by every sweep that visits it, one that failed partway included; only organizations with at least one window are visited. dry_run says whether the instance only counted (RETENTION_SWEEP_DRY_RUN=1, the default; the *_matched columns hold the counts) or deleted (the *_deleted columns). stopped_early marks a sweep in which a pass failed: its counts are what it got through before the failure, which on an instance that deletes is data already gone. The windows the sweep applied are kept with the counts, so the card shows them only while the organization's windows are still the same. *_capped_units counts the units (a workspace and status for runs, a survey for impressions) that reached the sweep's batch limit and left the rest for the next day.
 --
 -- The rows carry no relationships of their own, so the table has no authorization projection; they go with their organization.
 
@@ -13,6 +13,7 @@ CREATE TABLE organization_retention_sweeps (
     organization_id uuid PRIMARY KEY REFERENCES organizations (id) ON DELETE CASCADE,
     swept_at timestamptz NOT NULL,
     dry_run boolean NOT NULL,
+    stopped_early boolean NOT NULL DEFAULT false,
     workflow_run_retention_days integer CHECK (workflow_run_retention_days > 0),
     display_retention_days integer CHECK (display_retention_days > 0),
     workflow_runs_matched bigint NOT NULL DEFAULT 0 CHECK (workflow_runs_matched >= 0),

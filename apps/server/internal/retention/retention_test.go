@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"testing"
 	"time"
@@ -282,5 +283,87 @@ func TestSweepRecordsEachOrganizationsLastSweep(t *testing.T) {
 	}
 	if n := e.count(`SELECT count(*) FROM organization_retention_sweeps`); n != 2 {
 		t.Errorf("%d reports, want one per organization with a window", n)
+	}
+}
+
+// TestSweepRecordsWhatAFailedPassDeleted: when a pass fails partway, the rows it already deleted are on the organization's report, marked as stopped early, and the other pass still runs; the next complete sweep clears the mark.
+func TestSweepRecordsWhatAFailedPassDeleted(t *testing.T) {
+	e := newEnv(t)
+	org := e.org(days(1), days(1))
+	first, second := e.workspace(org), e.workspace(org)
+	if second.String() < first.String() {
+		first, second = second, first
+	}
+	e.run(e.workflow(first), first, "completed", 2*day)
+	e.run(e.workflow(second), second, "completed", 2*day)
+	e.display(e.survey(first), 2*day)
+
+	s := NewSweeper(e.db, slog.New(slog.DiscardHandler))
+	if _, err := s.Sweep(t.Context(), e.now, true); err != nil {
+		t.Fatal(err)
+	}
+	// The runs pass deletes in the first workspace, then fails in the second.
+	for _, statement := range []string{
+		`CREATE FUNCTION refuse_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'refused'; END $$`,
+		`CREATE TRIGGER refuse_delete BEFORE DELETE ON workflow_runs FOR EACH ROW WHEN (OLD.workspace_id = '` + second.String() + `') EXECUTE FUNCTION refuse_delete()`,
+	} {
+		if err := e.db.Exec(statement).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := s.Sweep(t.Context(), e.now, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.WorkflowRuns.Deleted != 1 || result.Displays.Deleted != 1 {
+		t.Fatalf("result = %+v, want the first workspace's run and the impression deleted", result)
+	}
+	r, err := LastReport(t.Context(), e.db, org)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r == nil || r.DryRun || !r.StoppedEarly || r.WorkflowRuns != (PassResult{Deleted: 1}) || r.Displays != (PassResult{Deleted: 1}) {
+		t.Fatalf("report = %+v, want a deleting sweep that stopped early after one run and one impression", r)
+	}
+	if n := e.count(`SELECT count(*) FROM workflow_runs`); n != 1 {
+		t.Fatalf("%d runs left, want the refused one", n)
+	}
+
+	if err := e.db.Exec(`DROP TRIGGER refuse_delete ON workflow_runs`).Error; err != nil {
+		t.Fatal(err)
+	}
+	later := e.now.Add(day)
+	if _, err := s.Sweep(t.Context(), later, false); err != nil {
+		t.Fatal(err)
+	}
+	if r, err = LastReport(t.Context(), e.db, org); err != nil {
+		t.Fatal(err)
+	}
+	if r.StoppedEarly || r.WorkflowRuns != (PassResult{Deleted: 1}) || r.Displays != (PassResult{}) {
+		t.Fatalf("report after a complete sweep = %+v, want the remaining run deleted and no stopped-early mark", r)
+	}
+}
+
+// TestSweepStopsWhenItsContextEnds: a canceled sweep returns the context's error and leaves the organizations it did not reach with their last report.
+func TestSweepStopsWhenItsContextEnds(t *testing.T) {
+	e := newEnv(t)
+	org := e.org(days(1), nil)
+	ws := e.workspace(org)
+	e.run(e.workflow(ws), ws, "completed", 2*day)
+	s := NewSweeper(e.db, slog.New(slog.DiscardHandler))
+	if _, err := s.Sweep(t.Context(), e.now, true); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := s.Sweep(ctx, e.now.Add(day), false); !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+	r, err := LastReport(t.Context(), e.db, org)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r == nil || !r.DryRun || r.StoppedEarly || !r.SweptAt.Equal(e.now) || r.WorkflowRuns != (PassResult{Matched: 1}) {
+		t.Fatalf("report = %+v, want the earlier dry run kept", r)
 	}
 }

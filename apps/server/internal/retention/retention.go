@@ -3,6 +3,7 @@ package retention
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -22,6 +23,8 @@ const (
 	maxDeleteBatches = 50
 	// surveyPageSize is how many survey ids are read per round trip while walking an organization's displays.
 	surveyPageSize = 200
+	// recordTimeout bounds recording a sweep that failed, which outlives the job's context.
+	recordTimeout = 10 * time.Second
 )
 
 // Schedule is when the sweep runs: every day at midnight UTC, as forma2's every-24-hours repeat aligned to the epoch did.
@@ -79,7 +82,7 @@ func Cutoff(now time.Time, days int) time.Time {
 	return now.Add(-time.Duration(days) * 24 * time.Hour)
 }
 
-// Sweep applies every organization's windows as of now. One organization's failure is logged and the others are still swept. The columns' CHECK keeps a window a positive number of days, so every non-null window is usable.
+// Sweep applies every organization's windows as of now. One organization's failure is logged and the others are still swept; a canceled ctx ends the sweep with its error. The columns' CHECK keeps a window a positive number of days, so every non-null window is usable.
 func (s *Sweeper) Sweep(ctx context.Context, now time.Time, dryRun bool) (Result, error) {
 	var orgs []organizationWindows
 	err := s.db.WithContext(ctx).Raw(`SELECT id, workflow_run_retention_days, display_retention_days FROM organizations
@@ -89,6 +92,10 @@ func (s *Sweeper) Sweep(ctx context.Context, now time.Time, dryRun bool) (Result
 	}
 	result := Result{DryRun: dryRun}
 	for _, org := range orgs {
+		// A job that is shutting down stops between organizations, so the ones it never reached keep their last report rather than an empty stopped-early one.
+		if err := ctx.Err(); err != nil {
+			return result, err
+		}
 		result.Organizations++
 		if err := s.sweepOrganization(ctx, org, now, dryRun, &result); err != nil {
 			s.log.ErrorContext(ctx, "Retention sweep failed for an organization", "organizationId", org.ID.String(), "err", err)
@@ -97,37 +104,41 @@ func (s *Sweeper) Sweep(ctx context.Context, now time.Time, dryRun bool) (Result
 	return result, nil
 }
 
-// sweepOrganization applies one organization's windows, adds what it counted or deleted to result, and records it as the organization's last sweep. A failed pass records nothing, so the organization keeps the report of its last complete sweep.
+// sweepOrganization applies one organization's windows, adds what it counted or deleted to result, and records it as the organization's last sweep. A pass that fails does not stop the other one, and what the passes did before the failure is still recorded, marked as stopped early: on an instance that deletes, those rows are gone for good, and the owner's card has to say so.
 func (s *Sweeper) sweepOrganization(ctx context.Context, org organizationWindows, now time.Time, dryRun bool, result *Result) error {
 	var runs, displays PassResult
+	var runsErr, displaysErr error
 	if org.WorkflowRunRetentionDays != nil {
-		var err error
-		if runs, err = s.sweepWorkflowRuns(ctx, org.ID, Cutoff(now, *org.WorkflowRunRetentionDays), dryRun); err != nil {
-			return err
-		}
+		runs, runsErr = s.sweepWorkflowRuns(ctx, org.ID, Cutoff(now, *org.WorkflowRunRetentionDays), dryRun)
 		result.WorkflowRuns.add(runs)
 	}
 	if org.DisplayRetentionDays != nil {
-		var err error
-		if displays, err = s.sweepDisplays(ctx, org.ID, Cutoff(now, *org.DisplayRetentionDays), dryRun); err != nil {
-			return err
-		}
+		displays, displaysErr = s.sweepDisplays(ctx, org.ID, Cutoff(now, *org.DisplayRetentionDays), dryRun)
 		result.Displays.add(displays)
 	}
-	return s.record(ctx, Report{SweptAt: now, DryRun: dryRun, WorkflowRunRetentionDays: org.WorkflowRunRetentionDays, DisplayRetentionDays: org.DisplayRetentionDays, WorkflowRuns: runs, Displays: displays}, org.ID)
+	failed := errors.Join(runsErr, displaysErr)
+	report := Report{SweptAt: now, DryRun: dryRun, StoppedEarly: failed != nil, WorkflowRunRetentionDays: org.WorkflowRunRetentionDays, DisplayRetentionDays: org.DisplayRetentionDays, WorkflowRuns: runs, Displays: displays}
+	recordCtx := ctx
+	if failed != nil {
+		// The failure may be the job's context ending; what was already deleted is recorded all the same.
+		var cancel context.CancelFunc
+		recordCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), recordTimeout)
+		defer cancel()
+	}
+	return errors.Join(failed, s.record(recordCtx, report, org.ID))
 }
 
 // record replaces the organization's last sweep. An organization deleted while it was being swept has nothing to record, and its row is not inserted.
 func (s *Sweeper) record(ctx context.Context, r Report, organizationID uuid.UUID) error {
 	err := s.db.WithContext(ctx).Exec(`
-		INSERT INTO organization_retention_sweeps (organization_id, swept_at, dry_run, workflow_run_retention_days, display_retention_days,
+		INSERT INTO organization_retention_sweeps (organization_id, swept_at, dry_run, stopped_early, workflow_run_retention_days, display_retention_days,
 			workflow_runs_matched, workflow_runs_deleted, workflow_runs_capped_units, displays_matched, displays_deleted, displays_capped_units)
-		SELECT id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM organizations WHERE id = ?
-		ON CONFLICT (organization_id) DO UPDATE SET swept_at = excluded.swept_at, dry_run = excluded.dry_run,
+		SELECT id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM organizations WHERE id = ?
+		ON CONFLICT (organization_id) DO UPDATE SET swept_at = excluded.swept_at, dry_run = excluded.dry_run, stopped_early = excluded.stopped_early,
 			workflow_run_retention_days = excluded.workflow_run_retention_days, display_retention_days = excluded.display_retention_days,
 			workflow_runs_matched = excluded.workflow_runs_matched, workflow_runs_deleted = excluded.workflow_runs_deleted, workflow_runs_capped_units = excluded.workflow_runs_capped_units,
 			displays_matched = excluded.displays_matched, displays_deleted = excluded.displays_deleted, displays_capped_units = excluded.displays_capped_units`,
-		r.SweptAt, r.DryRun, r.WorkflowRunRetentionDays, r.DisplayRetentionDays,
+		r.SweptAt, r.DryRun, r.StoppedEarly, r.WorkflowRunRetentionDays, r.DisplayRetentionDays,
 		r.WorkflowRuns.Matched, r.WorkflowRuns.Deleted, r.WorkflowRuns.CappedUnits, r.Displays.Matched, r.Displays.Deleted, r.Displays.CappedUnits, organizationID).Error
 	if err != nil {
 		return fmt.Errorf("record the retention sweep: %w", err)
@@ -140,6 +151,8 @@ type Report struct {
 	SweptAt time.Time `json:"sweptAt"`
 	// DryRun is whether the sweep only counted (the PassResults' Matched) or deleted (their Deleted).
 	DryRun bool `json:"dryRun"`
+	// StoppedEarly is a sweep where a pass failed: the counts are what it got through before the failure, and the rest waits for the next sweep.
+	StoppedEarly bool `json:"stoppedEarly"`
 	// The windows the sweep applied; nil is a pass it did not run.
 	WorkflowRunRetentionDays *int       `json:"workflowRunRetentionDays"`
 	DisplayRetentionDays     *int       `json:"displayRetentionDays"`
@@ -152,6 +165,7 @@ func LastReport(ctx context.Context, db *gorm.DB, organizationID uuid.UUID) (*Re
 	var rows []struct {
 		SweptAt                  time.Time
 		DryRun                   bool
+		StoppedEarly             bool
 		WorkflowRunRetentionDays *int
 		DisplayRetentionDays     *int
 		WorkflowRunsMatched      int64
@@ -161,7 +175,7 @@ func LastReport(ctx context.Context, db *gorm.DB, organizationID uuid.UUID) (*Re
 		DisplaysDeleted          int64
 		DisplaysCappedUnits      int64
 	}
-	if err := db.WithContext(ctx).Raw(`SELECT swept_at, dry_run, workflow_run_retention_days, display_retention_days, workflow_runs_matched, workflow_runs_deleted,
+	if err := db.WithContext(ctx).Raw(`SELECT swept_at, dry_run, stopped_early, workflow_run_retention_days, display_retention_days, workflow_runs_matched, workflow_runs_deleted,
 		workflow_runs_capped_units, displays_matched, displays_deleted, displays_capped_units FROM organization_retention_sweeps WHERE organization_id = ?`, organizationID).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load the last retention sweep: %w", err)
 	}
@@ -169,12 +183,39 @@ func LastReport(ctx context.Context, db *gorm.DB, organizationID uuid.UUID) (*Re
 		return nil, nil
 	}
 	r := rows[0]
-	return &Report{SweptAt: r.SweptAt, DryRun: r.DryRun, WorkflowRunRetentionDays: r.WorkflowRunRetentionDays, DisplayRetentionDays: r.DisplayRetentionDays,
+	return &Report{SweptAt: r.SweptAt, DryRun: r.DryRun, StoppedEarly: r.StoppedEarly, WorkflowRunRetentionDays: r.WorkflowRunRetentionDays, DisplayRetentionDays: r.DisplayRetentionDays,
 		WorkflowRuns: PassResult{Matched: r.WorkflowRunsMatched, Deleted: r.WorkflowRunsDeleted, CappedUnits: r.WorkflowRunsCappedUnits},
 		Displays:     PassResult{Matched: r.DisplaysMatched, Deleted: r.DisplaysDeleted, CappedUnits: r.DisplaysCappedUnits}}, nil
 }
 
-// sweepWorkflowRuns goes one workspace and one status at a time, so each statement is an equality on the status, and by created_at, because a run canceled before it was dispatched never finished.
+// Preview is what a deleting sweep run now would delete under a set of windows; nil is a window that keeps that data forever, which deletes nothing and is not counted.
+type Preview struct {
+	WorkflowRuns *int64 `json:"workflowRuns"`
+	Displays     *int64 `json:"displays"`
+}
+
+// PreviewWindows counts, as of now, what the organization's sweep would delete under the given windows, with the queries a dry run counts with, so an owner sees what windows the organization does not have yet would delete before saving them. db is the caller's connection.
+func PreviewWindows(ctx context.Context, db *gorm.DB, organizationID uuid.UUID, now time.Time, workflowRunDays, displayDays *int) (Preview, error) {
+	s := &Sweeper{db: db}
+	var out Preview
+	if workflowRunDays != nil {
+		runs, err := s.sweepWorkflowRuns(ctx, organizationID, Cutoff(now, *workflowRunDays), true)
+		if err != nil {
+			return Preview{}, err
+		}
+		out.WorkflowRuns = &runs.Matched
+	}
+	if displayDays != nil {
+		displays, err := s.sweepDisplays(ctx, organizationID, Cutoff(now, *displayDays), true)
+		if err != nil {
+			return Preview{}, err
+		}
+		out.Displays = &displays.Matched
+	}
+	return out, nil
+}
+
+// sweepWorkflowRuns goes one workspace and one status at a time, so each statement is an equality on the status, and by created_at, because a run canceled before it was dispatched never finished. On an error it returns what it counted or deleted before it, as sweepDisplays does.
 func (s *Sweeper) sweepWorkflowRuns(ctx context.Context, organizationID uuid.UUID, cutoff time.Time, dryRun bool) (PassResult, error) {
 	var workspaces []idRow
 	if err := s.db.WithContext(ctx).Raw(`SELECT id FROM workspaces WHERE organization_id = ? ORDER BY id`, organizationID).Scan(&workspaces).Error; err != nil {
@@ -188,7 +229,7 @@ func (s *Sweeper) sweepWorkflowRuns(ctx context.Context, organizationID uuid.UUI
 				var n int64
 				err := s.db.WithContext(ctx).Raw(`SELECT count(*) FROM workflow_runs WHERE workspace_id = ? AND status = ? AND created_at < ?`, workspaceID, status, cutoff).Scan(&n).Error
 				if err != nil {
-					return PassResult{}, fmt.Errorf("count expired workflow runs: %w", err)
+					return result, fmt.Errorf("count expired workflow runs: %w", err)
 				}
 				result.Matched += n
 				continue
@@ -201,10 +242,11 @@ func (s *Sweeper) sweepWorkflowRuns(ctx context.Context, organizationID uuid.UUI
 					DELETE FROM workflow_runs AS run USING expired WHERE run.id = expired.id`, workspaceID, status, cutoff, deleteBatchSize)
 				return res.RowsAffected, res.Error
 			})
-			if err != nil {
-				return PassResult{}, fmt.Errorf("delete expired workflow runs: %w", err)
-			}
+			// The batches drain committed before a failure stay deleted, so they count.
 			result.Deleted += deleted
+			if err != nil {
+				return result, fmt.Errorf("delete expired workflow runs: %w", err)
+			}
 			if capped {
 				result.CappedUnits++
 			}
@@ -222,7 +264,7 @@ func (s *Sweeper) sweepDisplays(ctx context.Context, organizationID uuid.UUID, c
 		err := s.db.WithContext(ctx).Raw(`SELECT s.id FROM surveys s JOIN workspaces w ON w.id = s.workspace_id
 			WHERE w.organization_id = ? AND s.id > ? ORDER BY s.id LIMIT ?`, organizationID, after, surveyPageSize).Scan(&surveys).Error
 		if err != nil {
-			return PassResult{}, fmt.Errorf("list surveys: %w", err)
+			return result, fmt.Errorf("list surveys: %w", err)
 		}
 		for _, row := range surveys {
 			surveyID := row.ID
@@ -231,7 +273,7 @@ func (s *Sweeper) sweepDisplays(ctx context.Context, organizationID uuid.UUID, c
 				err := s.db.WithContext(ctx).Raw(`SELECT count(*) FROM displays d WHERE d.survey_id = ? AND d.created_at < ?
 					AND NOT EXISTS (SELECT 1 FROM responses r WHERE r.display_id = d.id)`, surveyID, cutoff).Scan(&n).Error
 				if err != nil {
-					return PassResult{}, fmt.Errorf("count expired displays: %w", err)
+					return result, fmt.Errorf("count expired displays: %w", err)
 				}
 				result.Matched += n
 				continue
@@ -246,10 +288,11 @@ func (s *Sweeper) sweepDisplays(ctx context.Context, organizationID uuid.UUID, c
 					DELETE FROM displays AS target USING expired WHERE target.id = expired.id`, surveyID, cutoff, deleteBatchSize)
 				return res.RowsAffected, res.Error
 			})
-			if err != nil {
-				return PassResult{}, fmt.Errorf("delete expired displays: %w", err)
-			}
+			// The batches drain committed before a failure stay deleted, so they count.
 			result.Deleted += deleted
+			if err != nil {
+				return result, fmt.Errorf("delete expired displays: %w", err)
+			}
 			if capped {
 				result.CappedUnits++
 			}
