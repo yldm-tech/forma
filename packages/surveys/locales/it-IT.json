@@ -58,6 +58,10 @@
     "welcome_video": "Video della scheda di benvenuto",
     "your_feedback_is_stuck": "Il tuo feedback è bloccato :("
   },
+  "date_time": {
+    "select_a_time": "Seleziona un orario",
+    "time": "Ora"
+  },
   "errors": {
     "accept_to_continue": "Accetta per continuare",
     "all_options_must_be_ranked": "Classifica tutte le opzioni",
@@ -130,5 +134,9 @@
     "invalid_type": "Questo tipo di file non è consentito. Formati consentiti: {formats}",
     "max_size_hint": "Fino a {maxSizeInMB} MB",
     "tap_to_upload": "Tocca per caricare i file"
+  },
+  "slider": {
+    "choose_a_value": "Sposta il cursore per scegliere un valore",
+    "not_answered": "Sposta il cursore per rispondere"
   }
 }

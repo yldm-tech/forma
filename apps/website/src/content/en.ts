@@ -105,16 +105,16 @@ export const en: SiteContent = {
       },
       build: {
         title: "Build the survey you actually need",
-        body: "Start from one of more than 50 templates or from a blank survey. Combine 17 question types with conditional logic, hidden fields, variables and recall, and style it to match your brand.",
+        body: "Start from one of more than 50 templates or from a blank survey. Combine 18 question types with conditional logic, hidden fields, variables and recall, and style it to match your brand.",
         checklist: [
-          "Free text, single and multiple choice, picture choice, rating, NPS, CSAT, CES, ranking, matrix, date, address, contact info, file upload, consent, statement, and meeting scheduling with Cal.com",
+          "Free text, single and multiple choice, picture choice, rating, NPS, CSAT, CES, slider, ranking, matrix, date and time, address, contact info, file upload, consent, statement, and meeting scheduling with Cal.com",
           "One survey in many languages",
           "Partial submissions, quotas, scheduling and response limits",
         ],
       },
       understand: {
         title: "Read the results where they were collected",
-        body: "Every survey has its own summary and response views. Filter responses, tag them, export to CSV or Excel, or share the results with a public link.",
+        body: "Every survey has its own summary and response views. Follow responses, completion, NPS and CSAT by day, week or month, filter responses, tag them, export to CSV or Excel, or share the results with a public link.",
       },
       act: {
         title: "Turn responses into next steps",
@@ -151,7 +151,7 @@ export const en: SiteContent = {
       meta: {
         title: "Link surveys and forms · Forma",
         description:
-          "Create link surveys with 17 question types, conditional logic, hidden fields and multiple languages. Share by link, embed on a page or send single-use links.",
+          "Create link surveys with 18 question types, conditional logic, hidden fields and multiple languages. Share by link, embed on a page or send single-use links.",
       },
       title: "Link surveys and forms",
       sub: "Build a survey once and send it anywhere a link can go: email, chat, QR code, or embedded on your own page.",

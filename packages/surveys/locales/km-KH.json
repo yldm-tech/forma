@@ -58,6 +58,10 @@
     "welcome_video": "វីដេអូកាតស្វាគមន៍",
     "your_feedback_is_stuck": "មតិកែលម្អរបស់អ្នកជាប់គាំង :("
   },
+  "date_time": {
+    "select_a_time": "សូមជ្រើសរើសម៉ោង",
+    "time": "ម៉ោង"
+  },
   "errors": {
     "accept_to_continue": "សូមយល់ព្រមដើម្បីបន្ត",
     "all_options_must_be_ranked": "សូមចាត់ថ្នាក់ជម្រើសទាំងអស់",
@@ -130,5 +134,9 @@
     "invalid_type": "មិនអនុញ្ញាតប្រភេទឯកសារនេះទេ។ ទម្រង់ដែលអនុញ្ញាត៖ {formats}",
     "max_size_hint": "រហូតដល់ {maxSizeInMB} MB",
     "tap_to_upload": "ប៉ះដើម្បីផ្ទុកឡើងឯកសារ"
+  },
+  "slider": {
+    "choose_a_value": "សូមរំកិលគ្រាប់រំកិលដើម្បីជ្រើសរើសតម្លៃ",
+    "not_answered": "រំកិលគ្រាប់រំកិលដើម្បីឆ្លើយ"
   }
 }

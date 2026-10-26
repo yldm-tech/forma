@@ -20,6 +20,7 @@ import { OpenTextElement } from "@/components/elements/open-text-element";
 import { PictureSelectionElement } from "@/components/elements/picture-selection-element";
 import { RankingElement } from "@/components/elements/ranking-element";
 import { RatingElement } from "@/components/elements/rating-element";
+import { SliderElement } from "@/components/elements/slider-element";
 import { getLocalizedValue } from "@/lib/i18n";
 
 interface ElementConditionalProps {
@@ -339,6 +340,21 @@ export function ElementConditional({
       case TSurveyElementTypeEnum.CES:
         return (
           <RatingElement
+            key={element.id}
+            element={element}
+            value={typeof value === "number" ? value : undefined}
+            onChange={onChange}
+            languageCode={languageCode}
+            ttc={ttc}
+            setTtc={wrappedSetTtc}
+            currentElementId={currentElementId}
+            dir={dir}
+            errorMessage={errorMessage}
+          />
+        );
+      case TSurveyElementTypeEnum.Slider:
+        return (
+          <SliderElement
             key={element.id}
             element={element}
             value={typeof value === "number" ? value : undefined}

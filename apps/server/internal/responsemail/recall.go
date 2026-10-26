@@ -113,11 +113,22 @@ func truthy(v any) bool {
 var (
 	isoStoredDate    = regexp.MustCompile(`^(\d{4})-(\d{1,2})-(\d{1,2})$`)
 	legacyStoredDate = regexp.MustCompile(`^(\d{1,2})-(\d{1,2})-(\d{4})$`)
+	// storedDateTime is the answer of a date element that includes the time of day: the local date and time picked, with no time zone.
+	storedDateTime = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$`)
 )
 
 // formatStoredDate is forma2's formatStoredDateForDisplay without an element format: a stored date answer (YYYY-M-D, or the legacy D-M-YYYY) in the locale's long form with its weekday, formatDateWithOrdinal.
 func formatStoredDate(value, locale string) (string, bool) {
 	var y, mo, d int
+	if m := storedDateTime.FindStringSubmatch(value); m != nil {
+		y, mo, d = atoi(m[1]), atoi(m[2]), atoi(m[3])
+		h, mi := atoi(m[4]), atoi(m[5])
+		t := time.Date(y, time.Month(mo), d, h, mi, 0, 0, time.UTC)
+		if t.Year() != y || int(t.Month()) != mo || t.Day() != d || h > 23 || mi > 59 {
+			return "", false
+		}
+		return longDateTime(t, locale), true
+	}
 	if m := isoStoredDate.FindStringSubmatch(value); m != nil {
 		y, mo, d = atoi(m[1]), atoi(m[2]), atoi(m[3])
 	} else if m := legacyStoredDate.FindStringSubmatch(value); m != nil {
@@ -153,4 +164,19 @@ func longDate(t time.Time, locale string) string {
 		return fmt.Sprintf("%d年%d月%d日 %s", t.Year(), t.Month(), t.Day(), chineseWeekdays[t.Weekday()])
 	}
 	return t.Format("Monday, January 2, 2006")
+}
+
+// longDateTime is longDate with the time of day, Intl.DateTimeFormat's {hour: "numeric", minute: "2-digit"} added, for the locales the app ships; any other locale is written as en-US.
+func longDateTime(t time.Time, locale string) string {
+	switch locale {
+	case "ja-JP", "zh-Hans-CN":
+		return longDate(t, locale) + " " + t.Format("15:04")
+	case "zh-Hant-TW":
+		period := "上午"
+		if t.Hour() >= 12 {
+			period = "下午"
+		}
+		return longDate(t, locale) + " " + period + t.Format("3:04")
+	}
+	return t.Format("Monday, January 2, 2006 at 3:04 PM")
 }

@@ -257,6 +257,23 @@ type (
 		ResponseCount int             `json:"responseCount"`
 		Choices       []RankingCount  `json:"choices"`
 	}
+	SliderBin struct {
+		From       float64 `json:"from"`
+		To         float64 `json:"to"`
+		Count      int     `json:"count"`
+		Percentage float64 `json:"percentage"`
+	}
+	SliderSummary struct {
+		Type          string          `json:"type"`
+		Element       json.RawMessage `json:"element"`
+		ResponseCount int             `json:"responseCount"`
+		Average       float64         `json:"average"`
+		Median        float64         `json:"median"`
+		Min           float64         `json:"min"`
+		Max           float64         `json:"max"`
+		Bins          []SliderBin     `json:"bins"`
+		Dismissed     DismissedCount  `json:"dismissed"`
+	}
 	HiddenFieldSummary struct {
 		Type          string    `json:"type"`
 		ID            string    `json:"id"`
@@ -581,6 +598,13 @@ func newElementAggregate(sv *surveyDoc, index int) elementAggregate {
 		return newScaleAggregate(el)
 	case surveydoc.ElementNPS:
 		return newNPSAggregate(el)
+	case surveydoc.ElementSlider:
+		if scale, ok := el.SliderScale(); ok {
+			if field, _ := scale.Issue(); field == "" {
+				return &sliderAggregate{el: el, scale: scale}
+			}
+		}
+		return nil
 	case surveydoc.ElementCTA:
 		return &ctaAggregate{el: el, index: index}
 	case surveydoc.ElementConsent:
@@ -851,6 +875,82 @@ func (g *scaleAggregate) result([]DropOff) (any, bool) {
 			}
 		}
 		out.CSAT = &Satisfaction{SatisfiedCount: satisfied, SatisfiedPercentage: percent(float64(satisfied), float64(g.count))}
+	}
+	return out, true
+}
+
+// sliderBinLimit is the most bins a slider summary has: a scale of at most this many positions gets one per position, a longer one this many bins of whole steps.
+const sliderBinLimit = 11
+
+// sliderBinCount is the number of bins a longer scale is grouped into.
+const sliderBinCount = 10
+
+// sliderAggregate is the Slider summary: the numeric answers' count, mean, median and extremes, and their spread over the scale in bins. An answer off the scale (the scale changed after it was given) counts in the bin of the nearest position. A response that spent time on the element without a number is counted as dismissed, as for a rating.
+type sliderAggregate struct {
+	el        *element
+	scale     surveydoc.SliderScale
+	values    []float64
+	dismissed int
+}
+
+func (g *sliderAggregate) add(r *summaryResponse) {
+	if n, ok := member(r.Data, g.el.ID).(float64); ok {
+		g.values = append(g.values, n)
+	} else if positive(r.TTC[g.el.ID]) {
+		g.dismissed++
+	}
+}
+
+// bins are the scale's bins, each the positions from its first to its last.
+func (g *sliderAggregate) bins() [][2]int {
+	positions := int(math.Round(g.scale.Steps())) + 1
+	var out [][2]int
+	if positions <= sliderBinLimit {
+		for p := range positions {
+			out = append(out, [2]int{p, p})
+		}
+		return out
+	}
+	for i := range sliderBinCount {
+		out = append(out, [2]int{i * positions / sliderBinCount, (i+1)*positions/sliderBinCount - 1})
+	}
+	return out
+}
+
+func (g *sliderAggregate) result([]DropOff) (any, bool) {
+	ranges := g.bins()
+	counts := make([]int, len(ranges))
+	for _, v := range g.values {
+		p := g.scale.Position(v)
+		i, _ := slices.BinarySearchFunc(ranges, p, func(r [2]int, p int) int {
+			switch {
+			case r[1] < p:
+				return -1
+			case r[0] > p:
+				return 1
+			}
+			return 0
+		})
+		counts[min(i, len(counts)-1)]++
+	}
+	total := len(g.values)
+	bins := make([]SliderBin, len(ranges))
+	for i, r := range ranges {
+		bins[i] = SliderBin{From: g.scale.Value(r[0]), To: g.scale.Value(r[1]), Count: counts[i], Percentage: percent(float64(counts[i]), float64(total))}
+	}
+	out := SliderSummary{Type: g.el.Type, Element: g.el.Raw, ResponseCount: total, Bins: bins, Dismissed: DismissedCount{Count: g.dismissed}}
+	if total > 0 {
+		sorted := slices.Clone(g.values)
+		slices.Sort(sorted)
+		sum := 0.0
+		for _, v := range sorted {
+			sum += v
+		}
+		median := sorted[total/2]
+		if total%2 == 0 {
+			median = (sorted[total/2-1] + sorted[total/2]) / 2
+		}
+		out.Average, out.Median, out.Min, out.Max = round2(sum/float64(total)), round2(median), sorted[0], sorted[total-1]
 	}
 	return out, true
 }

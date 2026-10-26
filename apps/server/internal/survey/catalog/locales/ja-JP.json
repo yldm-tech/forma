@@ -728,6 +728,8 @@
   "templates.site_abandonment_survey_question_7_label": "はい、連絡を希望します。",
   "templates.site_abandonment_survey_question_8_headline": "メールアドレスを教えてください：",
   "templates.site_abandonment_survey_question_9_headline": "他に何かコメントや提案はありますか？",
+  "templates.slider": "スライダー",
+  "templates.slider_description": "回答者がスケール上で数値を選びます",
   "templates.smileys_survey_name": "スマイリーアンケート",
   "templates.smileys_survey_question_1_headline": "$[workspaceName]はいかがですか？",
   "templates.smileys_survey_question_1_lower_label": "良くない",

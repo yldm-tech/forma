@@ -58,6 +58,10 @@
     "welcome_video": "Karşılama Kartı videosu",
     "your_feedback_is_stuck": "Geri bildiriminiz takıldı :("
   },
+  "date_time": {
+    "select_a_time": "Lütfen bir saat seçin",
+    "time": "Saat"
+  },
   "errors": {
     "accept_to_continue": "Devam etmek için lütfen onaylayın",
     "all_options_must_be_ranked": "Lütfen tüm seçenekleri sıralayın",
@@ -130,5 +134,9 @@
     "invalid_type": "Bu dosya türüne izin verilmiyor. İzin verilen biçimler: {formats}",
     "max_size_hint": "En fazla {maxSizeInMB} MB",
     "tap_to_upload": "Dosya yüklemek için dokunun"
+  },
+  "slider": {
+    "choose_a_value": "Lütfen bir değer seçmek için kaydırıcıyı hareket ettirin",
+    "not_answered": "Yanıtlamak için kaydırıcıyı hareket ettirin"
   }
 }

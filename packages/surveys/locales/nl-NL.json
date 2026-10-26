@@ -58,6 +58,10 @@
     "welcome_video": "Welkomstkaart video",
     "your_feedback_is_stuck": "Je feedback blijft hangen :("
   },
+  "date_time": {
+    "select_a_time": "Kies een tijd",
+    "time": "Tijd"
+  },
   "errors": {
     "accept_to_continue": "Ga akkoord om door te gaan",
     "all_options_must_be_ranked": "Rangschik alle opties",
@@ -130,5 +134,9 @@
     "invalid_type": "Dit bestandstype is niet toegestaan. Toegestane formaten: {formats}",
     "max_size_hint": "Max. {maxSizeInMB} MB",
     "tap_to_upload": "Tik om bestanden te uploaden"
+  },
+  "slider": {
+    "choose_a_value": "Verschuif de schuifregelaar om een waarde te kiezen",
+    "not_answered": "Verschuif de schuifregelaar om te antwoorden"
   }
 }

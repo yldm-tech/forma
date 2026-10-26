@@ -16,7 +16,9 @@ import {
   TSurveyMultipleChoiceElement,
   TSurveyOpenTextElement,
   TSurveyPictureSelectionElement,
+  TSurveySliderElement,
 } from "@forma/types/surveys/elements";
+import { getSliderScaleIssue } from "@forma/types/surveys/slider";
 import {
   TSurvey,
   TSurveyEndScreenCard,
@@ -140,6 +142,9 @@ export const validationRules = {
   },
   address: (element: TSurveyAddressElement, languages: TSurveyLanguage[]) => {
     return handleI18nCheckForContactAndAddressFields(element, languages);
+  },
+  slider: (element: TSurveySliderElement) => {
+    return getSliderScaleIssue(element) === null;
   },
   // Assuming headline is of type TI18nString
   defaultValidation: (element: TSurveyElement, languages: TSurveyLanguage[]) => {

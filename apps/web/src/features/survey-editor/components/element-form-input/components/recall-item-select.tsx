@@ -13,6 +13,7 @@ import {
   PhoneIcon,
   PresentationIcon,
   Rows3Icon,
+  SlidersHorizontalIcon,
   SmilePlusIcon,
   StarIcon,
 } from "lucide-react";
@@ -50,6 +51,7 @@ const elementIconMapping = {
   ranking: ListOrderedIcon,
   csat: SmilePlusIcon,
   ces: GaugeIcon,
+  slider: SlidersHorizontalIcon,
 };
 
 interface RecallItemSelectProps {

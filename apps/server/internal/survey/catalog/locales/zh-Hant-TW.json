@@ -728,6 +728,8 @@
   "templates.site_abandonment_survey_question_7_label": "是的，請聯絡我。",
   "templates.site_abandonment_survey_question_8_headline": "請分享您的電子郵件地址：",
   "templates.site_abandonment_survey_question_9_headline": "任何其他意見或建議？",
+  "templates.slider": "滑桿",
+  "templates.slider_description": "受訪者在刻度上選擇一個數值",
   "templates.smileys_survey_name": "表情符號問卷",
   "templates.smileys_survey_question_1_headline": "你覺得 $[workspaceName] 如何？",
   "templates.smileys_survey_question_1_lower_label": "不好",

@@ -7,7 +7,9 @@ import {
   TSurveyMultipleChoiceElement,
   TSurveyPictureSelectionElement,
   TSurveyRatingElement,
+  TSurveySliderElement,
 } from "@forma/types/surveys/elements";
+import { isSliderValueOnScale } from "@forma/types/surveys/slider";
 import { matchOptionByIdOrLabel } from "./matchers";
 import { parseCommaSeparated, parseNumber } from "./parsers";
 import { TValidationResult } from "./types";
@@ -153,6 +155,15 @@ export const validateRating = (
   return { isValid: true, type: element.type };
 };
 
+/** A slider takes a position of its scale, a number from min to max a whole number of steps from min. */
+export const validateSlider = (element: TSurveySliderElement, answer: string): TValidationResult => {
+  const answerNumber = parseNumber(answer);
+  if (answerNumber === null || !isSliderValueOnScale(element, answerNumber)) {
+    return invalid(TSurveyElementTypeEnum.Slider);
+  }
+  return { isValid: true, type: TSurveyElementTypeEnum.Slider };
+};
+
 export const validatePictureSelection = (
   element: TSurveyPictureSelectionElement,
   answer: string
@@ -221,6 +232,8 @@ export const validateElement = (
       case TSurveyElementTypeEnum.CSAT:
       case TSurveyElementTypeEnum.CES:
         return validateRating(element, answer);
+      case TSurveyElementTypeEnum.Slider:
+        return validateSlider(element, answer);
       case TSurveyElementTypeEnum.PictureSelection:
         return validatePictureSelection(element, answer);
       default:

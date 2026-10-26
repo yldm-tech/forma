@@ -17,6 +17,7 @@ import { SurveyEditor } from "../../../../../../features/survey-editor/component
 import { SURVEY_BG_COLORS } from "../../../../../../features/survey-editor/lib/constants";
 import { resolveSurveySchedulingConfig } from "../../../../../../features/survey-editor/lib/scheduling-config";
 import { meQuery } from "../../../../../../lib/queries/auth";
+import { accessFlags } from "../../../../../../lib/roles";
 import { workspaceQuery } from "../../../../../../lib/queries/workspaces";
 import { guardPageError } from "../../../../../../lib/route-guards";
 
@@ -95,6 +96,7 @@ function SurveyEditorPage() {
         userEmail={me.email}
         teamMemberDetails={teamMemberDetails}
         quotas={quotas}
+        canSaveAsTemplate={accessFlags(workspaceDetail.access.role).isOwnerOrManager}
       />
     </div>
   );

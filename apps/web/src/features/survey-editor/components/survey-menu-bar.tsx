@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
-import { ArrowLeftIcon, SettingsIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowLeftIcon, LayoutTemplateIcon, SettingsIcon, TriangleAlertIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getLanguageLabel } from "@forma/i18n-utils/utils";
@@ -27,6 +27,7 @@ import { FALLBACK_MISSING_TOAST_ID, checkForEmptyFallBackValue } from "../../../
 import { toast } from "../../../lib/toast";
 import { analysisKeys } from "../../survey-analysis/api";
 import { useCreateSegment } from "../../segments/api";
+import { SaveAsTemplateDialog } from "../../surveys/templates/template-details-dialog";
 import { type SurveySaveInput, saveSurvey, surveyEditorKeys } from "../api";
 import { ZEditorSurvey } from "../lib/editor-schema";
 import { surveyNameFocusFrom } from "../lib/name-focus";
@@ -60,6 +61,8 @@ interface SurveyMenuBarProps {
   selectedLanguageCode: string;
   locale: string;
   setIsCautionDialogOpen: (open: boolean) => void;
+  /** The editor's user is an owner or a manager of the organization, who may save the survey as a template of it. */
+  canSaveAsTemplate: boolean;
   /** The zone the editor shows publish and close dates in, sent with every save. */
   schedulingTimeZone: string;
 }
@@ -79,6 +82,7 @@ export const SurveyMenuBar = ({
   locale,
   setIsCautionDialogOpen,
   schedulingTimeZone,
+  canSaveAsTemplate,
 }: Readonly<SurveyMenuBarProps>) => {
   const workspaceBasePath = `/workspaces/${workspace.id}`;
   const { t } = useTranslation();
@@ -99,6 +103,11 @@ export const SurveyMenuBar = ({
   const [autoSaveStatus, setAutoSaveStatus] = useState<AutoSaveStatus>({ state: "idle" });
   const [isLeaving, setIsLeaving] = useState(false);
   const [isNameInvalid, setIsNameInvalid] = useState(false);
+  // "Save as template" copies the survey as stored; null while closed, otherwise the stored survey's name, which the template is offered under, and whether the editor held unsaved changes when it was opened, which the template will not include.
+  const [saveAsTemplate, setSaveAsTemplate] = useState<{
+    storedName: string;
+    hasUnsavedChanges: boolean;
+  } | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autoSaveFailuresRef = useRef(0);
   // The draft as it stood when the server refused it as invalid; every edit replaces the editor's survey object, so autosave tries again only after one.
@@ -725,6 +734,26 @@ export const SurveyMenuBar = ({
             </TooltipRenderer>
           </>
         )}
+        {canSaveAsTemplate && (
+          <TooltipRenderer tooltipContent={t("workspace.surveys.organization_templates.save_as_template")}>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="size-8"
+              aria-label={t("workspace.surveys.organization_templates.save_as_template")}
+              onClick={() =>
+                setSaveAsTemplate({
+                  storedName: (lastSavedSurveyRef.current ?? survey).name,
+                  hasUnsavedChanges: hasUnsavedSurveyChanges(localSurvey, [
+                    survey,
+                    lastSavedSurveyRef.current,
+                  ]),
+                })
+              }>
+              <LayoutTemplateIcon aria-hidden="true" />
+            </Button>
+          </TooltipRenderer>
+        )}
         <Button
           data-save-button
           disabled={isSurveySaving}
@@ -821,6 +850,27 @@ export const SurveyMenuBar = ({
         buttonVariant="default"
         onConfirm={confirmPendingPublish}
       />
+      {canSaveAsTemplate && (
+        <SaveAsTemplateDialog
+          open={saveAsTemplate !== null}
+          setOpen={(open) => {
+            if (!open) setSaveAsTemplate(null);
+          }}
+          surveyId={localSurvey.id}
+          surveyName={saveAsTemplate?.storedName ?? survey.name}
+          workspaceId={workspace.id}
+          organizationId={workspace.organizationId}
+          notice={
+            saveAsTemplate?.hasUnsavedChanges ? (
+              <Alert variant="warning" size="small" role="status">
+                <AlertTitle>
+                  {t("workspace.surveys.organization_templates.unsaved_changes_not_included")}
+                </AlertTitle>
+              </Alert>
+            ) : undefined
+          }
+        />
+      )}
     </div>
   );
 };

@@ -113,7 +113,11 @@ const stubApi = ({
   return Object.assign(queries, { mutations });
 };
 
-const renderList = (workspaceId = WORKSPACE_A, channel: "link" | "app" | null = null) => {
+const renderList = (
+  workspaceId = WORKSPACE_A,
+  channel: "link" | "app" | null = null,
+  { canSaveAsTemplate = false }: { canSaveAsTemplate?: boolean } = {}
+) => {
   const rootRoute = createRootRoute({ component: Outlet });
   const routeTree = rootRoute.addChildren([
     createRoute({
@@ -124,6 +128,7 @@ const renderList = (workspaceId = WORKSPACE_A, channel: "link" | "app" | null = 
           workspaceId={workspaceId}
           organizationId="org-1"
           isReadOnly={false}
+          canSaveAsTemplate={canSaveAsTemplate}
           channel={channel}
           surveyType="link"
           defaultLanguage="default"
@@ -330,5 +335,68 @@ describe("SurveysList SDK state", () => {
     await screen.findByText("Survey 1");
     expect(screen.queryByTestId("sdk-state-truncated")).toBeNull();
     expect(sdkStateRequested()).toBe(false);
+  });
+});
+
+describe("SurveysList save as template", () => {
+  test("an owner or a manager saves a survey as a template under the name and description given", async () => {
+    const api = stubApi({ pages: [[survey(1, { name: "Release NPS" })]] });
+    renderList(WORKSPACE_A, null, { canSaveAsTemplate: true });
+
+    const trigger = await screen.findByRole("button", {
+      name: i18n.t("workspace.surveys.open_options_for", { name: "Release NPS" }),
+    });
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: i18n.t("workspace.surveys.organization_templates.save_as_template"),
+      })
+    );
+    const name = await screen.findByRole<HTMLInputElement>("textbox", { name: i18n.t("common.name") });
+    expect(name.value).toBe("Release NPS");
+    fireEvent.change(name, { target: { value: "  " } });
+    fireEvent.click(
+      screen.getByRole("button", { name: i18n.t("workspace.surveys.organization_templates.save_template") })
+    );
+    expect(
+      await screen.findByText(i18n.t("workspace.surveys.organization_templates.name_required"))
+    ).toBeTruthy();
+    expect(api.mutations).toEqual([]);
+
+    fireEvent.change(name, { target: { value: " Quarterly NPS " } });
+    fireEvent.change(screen.getByRole("textbox", { name: i18n.t("common.description") }), {
+      target: { value: "Run after every release" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: i18n.t("workspace.surveys.organization_templates.save_template") })
+    );
+    await waitFor(() =>
+      expect(api.mutations).toEqual([
+        'POST /api/app/surveys/survey-1/save-as-template {"name":"Quarterly NPS","description":"Run after every release"}',
+      ])
+    );
+    await waitFor(() =>
+      expect(
+        toast
+          .getSnapshot()
+          .some((item) => item.message === i18n.t("workspace.surveys.organization_templates.saved"))
+      ).toBe(true)
+    );
+  });
+
+  test("a member who is not an owner or a manager is not offered it", async () => {
+    stubApi({ pages: [[survey(1, { name: "Release NPS" })]] });
+    renderList();
+
+    const trigger = await screen.findByRole("button", {
+      name: i18n.t("workspace.surveys.open_options_for", { name: "Release NPS" }),
+    });
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    expect(await screen.findByRole("menuitem", { name: i18n.t("workspace.surveys.archive") })).toBeTruthy();
+    expect(
+      screen.queryByRole("menuitem", {
+        name: i18n.t("workspace.surveys.organization_templates.save_as_template"),
+      })
+    ).toBeNull();
   });
 });
