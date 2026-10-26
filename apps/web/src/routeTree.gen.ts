@@ -29,6 +29,7 @@ import { Route as SetupIntroRouteImport } from './routes/setup/intro'
 import { Route as SetupSignupRouteImport } from './routes/setup/signup'
 import { Route as AuthenticatedAccountAuthorizeRouteImport } from './routes/_authenticated/account/authorize'
 import { Route as AuthenticatedAccountSettingsRouteImport } from './routes/_authenticated/account/settings'
+import { Route as AuthenticatedAccountUnsubscribeRouteImport } from './routes/_authenticated/account/unsubscribe'
 import { Route as AuthenticatedWorkspacesWorkspaceIdRouteImport } from './routes/_authenticated/workspaces/$workspaceId'
 import { Route as AuthForgotPasswordIndexRouteImport } from './routes/auth/forgot-password/index'
 import { Route as AuthForgotPasswordEmailSentRouteImport } from './routes/auth/forgot-password/email-sent'
@@ -195,6 +196,12 @@ const AuthenticatedAccountSettingsRoute =
   AuthenticatedAccountSettingsRouteImport.update({
     id: '/account/settings',
     path: '/account/settings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAccountUnsubscribeRoute =
+  AuthenticatedAccountUnsubscribeRouteImport.update({
+    id: '/account/unsubscribe',
+    path: '/account/unsubscribe',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedWorkspacesWorkspaceIdRoute =
@@ -610,6 +617,7 @@ export interface FileRoutesByFullPath {
   '/setup/': typeof SetupIndexRoute
   '/account/authorize': typeof AuthenticatedAccountAuthorizeRoute
   '/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
+  '/account/unsubscribe': typeof AuthenticatedAccountUnsubscribeRoute
   '/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
   '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
   '/auth/forgot-password/': typeof AuthForgotPasswordIndexRoute
@@ -692,6 +700,7 @@ export interface FileRoutesByTo {
   '/setup/signup': typeof SetupSignupRoute
   '/setup': typeof SetupIndexRoute
   '/account/authorize': typeof AuthenticatedAccountAuthorizeRoute
+  '/account/unsubscribe': typeof AuthenticatedAccountUnsubscribeRoute
   '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
   '/auth/forgot-password': typeof AuthForgotPasswordIndexRoute
   '/account/settings/notifications': typeof AuthenticatedAccountSettingsNotificationsRoute
@@ -772,6 +781,7 @@ export interface FileRoutesById {
   '/setup/': typeof SetupIndexRoute
   '/_authenticated/account/authorize': typeof AuthenticatedAccountAuthorizeRoute
   '/_authenticated/account/settings': typeof AuthenticatedAccountSettingsRouteWithChildren
+  '/_authenticated/account/unsubscribe': typeof AuthenticatedAccountUnsubscribeRoute
   '/_authenticated/workspaces/$workspaceId': typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
   '/auth/forgot-password/email-sent': typeof AuthForgotPasswordEmailSentRoute
   '/auth/forgot-password/': typeof AuthForgotPasswordIndexRoute
@@ -857,6 +867,7 @@ export interface FileRouteTypes {
     | '/setup/'
     | '/account/authorize'
     | '/account/settings'
+    | '/account/unsubscribe'
     | '/workspaces/$workspaceId'
     | '/auth/forgot-password/email-sent'
     | '/auth/forgot-password/'
@@ -939,6 +950,7 @@ export interface FileRouteTypes {
     | '/setup/signup'
     | '/setup'
     | '/account/authorize'
+    | '/account/unsubscribe'
     | '/auth/forgot-password/email-sent'
     | '/auth/forgot-password'
     | '/account/settings/notifications'
@@ -1018,6 +1030,7 @@ export interface FileRouteTypes {
     | '/setup/'
     | '/_authenticated/account/authorize'
     | '/_authenticated/account/settings'
+    | '/_authenticated/account/unsubscribe'
     | '/_authenticated/workspaces/$workspaceId'
     | '/auth/forgot-password/email-sent'
     | '/auth/forgot-password/'
@@ -1235,6 +1248,13 @@ declare module '@tanstack/react-router' {
       path: '/account/settings'
       fullPath: '/account/settings'
       preLoaderRoute: typeof AuthenticatedAccountSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/account/unsubscribe': {
+      id: '/_authenticated/account/unsubscribe'
+      path: '/account/unsubscribe'
+      fullPath: '/account/unsubscribe'
+      preLoaderRoute: typeof AuthenticatedAccountUnsubscribeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/workspaces/$workspaceId': {
@@ -1936,6 +1956,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedBillingConfirmationRoute: typeof AuthenticatedBillingConfirmationRoute
   AuthenticatedAccountAuthorizeRoute: typeof AuthenticatedAccountAuthorizeRoute
   AuthenticatedAccountSettingsRoute: typeof AuthenticatedAccountSettingsRouteWithChildren
+  AuthenticatedAccountUnsubscribeRoute: typeof AuthenticatedAccountUnsubscribeRoute
   AuthenticatedWorkspacesWorkspaceIdRoute: typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
   AuthenticatedOrganizationsOrganizationIdLandingRoute: typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   AuthenticatedOrganizationsOrganizationIdSettingsRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
@@ -1954,6 +1975,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountAuthorizeRoute: AuthenticatedAccountAuthorizeRoute,
   AuthenticatedAccountSettingsRoute:
     AuthenticatedAccountSettingsRouteWithChildren,
+  AuthenticatedAccountUnsubscribeRoute: AuthenticatedAccountUnsubscribeRoute,
   AuthenticatedWorkspacesWorkspaceIdRoute:
     AuthenticatedWorkspacesWorkspaceIdRouteWithChildren,
   AuthenticatedOrganizationsOrganizationIdLandingRoute:
