@@ -15,6 +15,7 @@ import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, expect, test, vi } from "vite-plus/test";
 import { ApiError } from "../../lib/api";
 import { initI18n } from "../../lib/i18n";
+import { forgetWorkspace, rememberWorkspace } from "../../lib/storage";
 import { NoMobileOverlay, useIsPhone } from "./no-mobile-overlay";
 import { NotFound, RootNotFound, RouteError } from "./route-states";
 import { UnsavedChangesGuard, useUnsavedChanges } from "./unsaved-changes";
@@ -126,6 +127,26 @@ test("the mobile overlay is a modal dialog that names the account and lets the u
   fireEvent.click(screen.getByRole("button", { name: i18n.t("common.logout") }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/auth/login"));
   expect(signOut).toHaveBeenCalledWith("/api/app/auth/sign-out", expect.anything());
+});
+
+test("the mobile overlay over a workspace's page leads back to its survey list, whose results open on a phone", async () => {
+  await renderInRouter(<NoMobileOverlay email="ada@example.com" workspaceId="ws1" />);
+  expect(screen.getByText(i18n.t("common.mobile_overlay_results_on_phone"))).toBeTruthy();
+  const surveys = screen.getByRole("link", { name: i18n.t("common.mobile_overlay_go_to_surveys") });
+  expect(surveys.getAttribute("href")).toBe("/workspaces/ws1");
+});
+
+test("outside a workspace the mobile overlay leads to the one this browser used last, else only offers the link and logging out", async () => {
+  rememberWorkspace("ws2");
+  await renderInRouter(<NoMobileOverlay email="ada@example.com" />);
+  expect(
+    screen.getByRole("link", { name: i18n.t("common.mobile_overlay_go_to_surveys") }).getAttribute("href")
+  ).toBe("/");
+  cleanup();
+  forgetWorkspace();
+  await renderInRouter(<NoMobileOverlay email="ada@example.com" />);
+  expect(screen.queryByRole("link", { name: i18n.t("common.mobile_overlay_go_to_surveys") })).toBeNull();
+  expect(screen.queryByText(i18n.t("common.mobile_overlay_results_on_phone"))).toBeNull();
 });
 
 test("logging out of the mobile overlay with unsaved edits behind it goes straight to the sign-in page", async () => {

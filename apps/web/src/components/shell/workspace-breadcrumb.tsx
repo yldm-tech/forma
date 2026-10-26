@@ -16,19 +16,21 @@ import { DisabledReason } from "../ui/popover";
 import { CreateWorkspaceModal } from "./create-workspace-modal";
 import { SwitcherDropdownBody } from "./switcher-dropdown-body";
 
-/** forma2's WorkspaceBreadcrumb: the current workspace, a switcher loaded when it opens, and "add new workspace" for owners and managers. */
+/** forma2's WorkspaceBreadcrumb: the current workspace, a switcher loaded when it opens, and "add new workspace" for owners and managers. On a phone, where the admin is read-only, it is only the switcher: no workspace is created there. */
 export const WorkspaceBreadcrumb = ({
   workspaceId,
   workspaceName,
   organizationId,
   isOwnerOrManager,
   isMembershipPending,
+  isPhone,
 }: {
   workspaceId: string;
   workspaceName: string;
   organizationId: string;
   isOwnerOrManager: boolean;
   isMembershipPending: boolean;
+  isPhone: boolean;
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -53,7 +55,7 @@ export const WorkspaceBreadcrumb = ({
             items={sortByName(workspaces.data ?? [])}
             selectedId={workspaceId}
             onSelect={(id) => void navigate({ href: workspaceHomePath(id) })}>
-            {isMembershipPending || !isOwnerOrManager ? (
+            {isPhone ? null : isMembershipPending || !isOwnerOrManager ? (
               <DisabledReason
                 reason={
                   isMembershipPending
@@ -79,7 +81,9 @@ export const WorkspaceBreadcrumb = ({
           </SwitcherDropdownBody>
         </DropdownMenuContent>
       </DropdownMenu>
-      <CreateWorkspaceModal open={createOpen} setOpen={setCreateOpen} organizationId={organizationId} />
+      {!isPhone && (
+        <CreateWorkspaceModal open={createOpen} setOpen={setCreateOpen} organizationId={organizationId} />
+      )}
     </BreadcrumbItem>
   );
 };

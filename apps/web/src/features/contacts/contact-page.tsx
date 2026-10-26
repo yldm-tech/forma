@@ -104,7 +104,7 @@ export const ContactPage = ({
         }
       />
       <section className="pt-6 pb-24">
-        <div className="grid grid-cols-4 gap-x-8">
+        <div className="grid grid-cols-1 gap-y-10 sm:grid-cols-4 sm:gap-x-8">
           <AttributesSection
             contactId={contactId}
             attributes={detail.attributes}

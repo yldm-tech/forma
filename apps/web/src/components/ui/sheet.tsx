@@ -5,7 +5,7 @@ import { cn } from "../../lib/cn";
 import { PortalContainer, dialogEventHandlers } from "./dialog";
 import { Toaster } from "./toaster";
 
-// forma2's Sheet: a panel that slides over the right edge of the page, on the native <dialog> element like Dialog, so it gets the same focus trap, inert background, Escape and top layer.
+// forma2's Sheet: a panel that slides over the right edge of the page (or the left one, for the phone's navigation drawer), on the native <dialog> element like Dialog, so it gets the same focus trap, inert background, Escape and top layer.
 
 interface SheetProps {
   open: boolean;
@@ -15,9 +15,19 @@ interface SheetProps {
   description?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** The edge the panel sits on: right by default, left for navigation. */
+  side?: "left" | "right";
 }
 
-export const Sheet = ({ open, onOpenChange, title, description, children, className }: SheetProps) => {
+export const Sheet = ({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  className,
+  side = "right",
+}: SheetProps) => {
   const { t } = useTranslation();
   const ref = useRef<HTMLDialogElement>(null);
   const [element, setElement] = useState<HTMLDialogElement | null>(null);
@@ -52,7 +62,8 @@ export const Sheet = ({ open, onOpenChange, title, description, children, classN
       aria-describedby={description ? descriptionId : undefined}
       {...dialogEventHandlers({ open, onOpenChange, disableCloseOnOutsideClick: false })}
       className={cn(
-        "m-0 ml-auto h-dvh max-h-dvh w-full max-w-full border-l border-slate-200 bg-white p-0 text-left text-slate-900 shadow-lg backdrop:bg-black/80 sm:max-w-2xl",
+        "m-0 h-dvh max-h-dvh w-full max-w-full border-slate-200 bg-white p-0 text-left text-slate-900 shadow-lg backdrop:bg-black/80",
+        side === "right" ? "ml-auto border-l sm:max-w-2xl" : "mr-auto border-r",
         className
       )}>
       {open && (

@@ -22,19 +22,24 @@ import { AnalysisEmptyState } from "../analysis-empty-state";
 import { CustomFilter } from "../filter/custom-filter";
 import { useResponseFilter } from "../filter/response-filter-context";
 import { ResponseKeywordSearch, hasSearchableAnswers } from "../filter/response-keyword-search";
+import { ResponseCardList } from "./response-card-list";
 import { ResponseTable } from "./response-table";
 
 /**
  * forma2's ResponsePage: the filter bar over the response table, 25 responses a page under the current filter, newest first, with how many of the matching responses are loaded. A deleted response leaves the loaded pages at once, and the pages are then read again; a tag change reads the response again, and a bulk tag change every loaded page. With nothing to show it says why: no response yet (share the survey) or none matching the filter (clear it).
+ *
+ * The "cards" layout, for a phone-sized screen, stacks the responses as the cards the table opens (ResponseCardList). It leaves out the share action of the empty state: the share modal belongs to the header's tools, which a phone does not show.
  */
 export const ResponsePage = ({
   survey,
   locale,
   isReadOnly,
+  layout = "table",
 }: {
   survey: TSurvey;
   locale: string;
   isReadOnly: boolean;
+  layout?: "table" | "cards";
 }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -105,7 +110,8 @@ export const ResponsePage = ({
     <AnalysisEmptyState
       title={t("workspace.surveys.responses.no_responses_yet")}
       action={
-        !survey.archivedAt && (
+        !survey.archivedAt &&
+        layout === "table" && (
           <Button size="sm" onClick={openShare}>
             {t("workspace.surveys.summary.share_survey")}
           </Button>
@@ -143,24 +149,42 @@ export const ResponsePage = ({
         </p>
       )}
       <div className="w-full">
-        <ResponseTable
-          survey={survey}
-          responses={loaded}
-          environmentTags={environmentTags}
-          isReadOnly={isReadOnly}
-          fetchNextPage={() => responses.fetchNextPage().then((result) => result.data?.pages.flat() ?? [])}
-          hasMore={responses.hasNextPage}
-          isFetchingFirstPage={isLoadingRows}
-          totalCount={total}
-          countSummary={countSummary}
-          emptyState={emptyState}
-          showQuotasColumn={(quotas.data?.length ?? 0) > 0}
-          locale={locale}
-          filterCriteria={filterCriteria}
-          onResponseChanged={(responseId) => void onResponseChanged(responseId)}
-          onResponsesDeleted={onResponsesDeleted}
-          onTagsChanged={onTagsChanged}
-        />
+        {layout === "cards" ? (
+          <ResponseCardList
+            survey={survey}
+            responses={loaded}
+            environmentTags={environmentTags}
+            isReadOnly={isReadOnly}
+            locale={locale}
+            isFetchingFirstPage={isLoadingRows}
+            hasMore={responses.hasNextPage}
+            isFetchingMore={responses.isFetchingNextPage}
+            fetchNextPage={() => void responses.fetchNextPage()}
+            countSummary={countSummary}
+            emptyState={emptyState}
+            onResponseChanged={(responseId) => void onResponseChanged(responseId)}
+            onResponsesDeleted={onResponsesDeleted}
+          />
+        ) : (
+          <ResponseTable
+            survey={survey}
+            responses={loaded}
+            environmentTags={environmentTags}
+            isReadOnly={isReadOnly}
+            fetchNextPage={() => responses.fetchNextPage().then((result) => result.data?.pages.flat() ?? [])}
+            hasMore={responses.hasNextPage}
+            isFetchingFirstPage={isLoadingRows}
+            totalCount={total}
+            countSummary={countSummary}
+            emptyState={emptyState}
+            showQuotasColumn={(quotas.data?.length ?? 0) > 0}
+            locale={locale}
+            filterCriteria={filterCriteria}
+            onResponseChanged={(responseId) => void onResponseChanged(responseId)}
+            onResponsesDeleted={onResponsesDeleted}
+            onTagsChanged={onTagsChanged}
+          />
+        )}
       </div>
     </>
   );

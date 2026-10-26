@@ -354,11 +354,19 @@ checksums:
     common/membership_not_found: 7ac63584af23396aace9992ad919ffd4
     common/meta: 842eac888f134f3525f8ea613d933687
     common/metadata: 695d4f7da261ba76e3be4de495491028
+    common/mobile_completed_responses_count: a4ddedd805285b4aa85d7732cc8c72a0
+    common/mobile_navigation_more_on_desktop: fccc9eddf2604e100fa45826d8e278a0
+    common/mobile_navigation_title: 520968a9770cddeb6d339c0fcbd70240
+    common/mobile_no_surveys_create_on_desktop: 7109c2cabb1ecd1cab51ab67d3234991
+    common/mobile_open_navigation: c6c2f2d552ca10e5c6000aa850bbdc7c
     common/mobile_overlay_app_works_best_on_desktop: 71797108f906c8bb15fefd5bf2028e52
     common/mobile_overlay_copy_link: 6473a73398cefaafcd230db94ff405a4
+    common/mobile_overlay_go_to_surveys: 42b0bc9a9f7a370ce2def5248da26107
+    common/mobile_overlay_results_on_phone: 9b080bf00be5c09b525ff34fbaccc6ae
     common/mobile_overlay_signed_in_as: 79d321352a22229399243a07fc20deec
     common/mobile_overlay_surveys_look_good: d85169e86077738b9837647bf6d1c7d2
     common/mobile_overlay_title: 42f52259b7527989fb3a3240f5352a8b
+    common/mobile_view_only_notice: b6bb1a84120e103723da7a89180fdc54
     common/months: da74749fbe80394fa0f72973d7b0964a
     common/move_down: 4f4de55743043355ad4a839aff2c48ff
     common/move_up: 69f25b205c677abdb26cbb69d97cd10b

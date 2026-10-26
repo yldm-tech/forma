@@ -12,6 +12,7 @@ import {
   UserIcon,
   WorkflowIcon,
 } from "lucide-react";
+import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TrialAlert } from "../../features/billing/components/trial-alert";
@@ -54,6 +55,66 @@ const UpdateNotice = ({ organizationId }: { organizationId: string }) => {
   );
 };
 
+/** Why the workspace's entries are disabled: the membership is still loading, or it is the billing role's, which sees no survey work. Undefined when they are not. */
+const navigationDisabledReason = (t: TFunction, membershipRole: string | undefined): string | undefined => {
+  if (membershipRole === undefined) return t("common.loading");
+  if (membershipRole === "billing") return t("common.you_are_not_authorized_to_perform_this_action");
+  return undefined;
+};
+
+/** The workspace's areas in sidebar order, each marked active for the pages under it. isPhoneReady marks the areas whose pages open on a phone, the only ones the phone's navigation drawer lists. */
+const workspaceAreas = (t: TFunction, workspaceId: string, pathname: string) => {
+  const homeHref = workspaceHomePath(workspaceId);
+  const base = `/workspaces/${workspaceId}`;
+  return [
+    {
+      href: homeHref,
+      label: t("common.surveys"),
+      icon: MessageCircle,
+      isActive: pathname === homeHref || pathname.startsWith(`${base}/surveys`),
+      isPhoneReady: true,
+    },
+    {
+      href: `${base}/contacts`,
+      label: t("common.contacts"),
+      icon: UserIcon,
+      isActive:
+        pathname.startsWith(`${base}/contacts`) ||
+        pathname.startsWith(`${base}/segments`) ||
+        pathname.startsWith(`${base}/attributes`),
+      isPhoneReady: true,
+    },
+    {
+      href: `${base}/workflows`,
+      label: t("common.workflows"),
+      icon: WorkflowIcon,
+      isActive: pathname.startsWith(`${base}/workflows`),
+      isPhoneReady: false,
+    },
+    {
+      href: `${base}/user-actions`,
+      label: t("common.user_actions"),
+      icon: MousePointerClickIcon,
+      isActive: pathname.startsWith(`${base}/user-actions`),
+      isPhoneReady: false,
+    },
+    {
+      href: `${base}/integrations`,
+      label: t("common.integrations"),
+      icon: BlocksIcon,
+      isActive: pathname.startsWith(`${base}/integrations`),
+      isPhoneReady: false,
+    },
+    {
+      href: `${base}/tags`,
+      label: t("common.tags"),
+      icon: TagIcon,
+      isActive: pathname.startsWith(`${base}/tags`),
+      isPhoneReady: false,
+    },
+  ];
+};
+
 /**
  * forma2's MainNavigation for a workspace: the wordmark and collapse toggle, the workspace's areas as one flat list, and Settings pinned to the foot. Entries are disabled, with the reason, while the membership is unknown or for the billing role. The areas of later modules join the list as they land. Above Settings an owner or manager sees forma2's MainNavigationNotices: self-hosted, the new-release notice; on Forma Cloud, the trial's countdown linking to billing.
  */
@@ -73,58 +134,11 @@ export const MainNavigation = ({
 }) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(() => readStorage(NAV_COLLAPSED_KEY) === "true");
-  const isPending = membershipRole === undefined;
-  const isBilling = membershipRole === "billing";
   const isOwnerOrManager = membershipRole === "owner" || membershipRole === "manager";
-  const disabledReason = isPending
-    ? t("common.loading")
-    : isBilling
-      ? t("common.you_are_not_authorized_to_perform_this_action")
-      : undefined;
+  const disabledReason = navigationDisabledReason(t, membershipRole);
   const homeHref = workspaceHomePath(workspaceId);
-  const base = `/workspaces/${workspaceId}`;
   const iconClassName = "h-4 w-4 shrink-0";
-  const items = [
-    {
-      href: homeHref,
-      label: t("common.surveys"),
-      icon: MessageCircle,
-      isActive: pathname === homeHref || pathname.startsWith(`${base}/surveys`),
-    },
-    {
-      href: `${base}/contacts`,
-      label: t("common.contacts"),
-      icon: UserIcon,
-      isActive:
-        pathname.startsWith(`${base}/contacts`) ||
-        pathname.startsWith(`${base}/segments`) ||
-        pathname.startsWith(`${base}/attributes`),
-    },
-    {
-      href: `${base}/workflows`,
-      label: t("common.workflows"),
-      icon: WorkflowIcon,
-      isActive: pathname.startsWith(`${base}/workflows`),
-    },
-    {
-      href: `${base}/user-actions`,
-      label: t("common.user_actions"),
-      icon: MousePointerClickIcon,
-      isActive: pathname.startsWith(`${base}/user-actions`),
-    },
-    {
-      href: `${base}/integrations`,
-      label: t("common.integrations"),
-      icon: BlocksIcon,
-      isActive: pathname.startsWith(`${base}/integrations`),
-    },
-    {
-      href: `${base}/tags`,
-      label: t("common.tags"),
-      icon: TagIcon,
-      isActive: pathname.startsWith(`${base}/tags`),
-    },
-  ];
+  const items = workspaceAreas(t, workspaceId, pathname);
 
   const toggle = () => {
     writeStorage(NAV_COLLAPSED_KEY, isCollapsed ? "false" : "true");
@@ -190,5 +204,44 @@ export const MainNavigation = ({
         </ul>
       </div>
     </aside>
+  );
+};
+
+/**
+ * The workspace's navigation in the phone's drawer: the areas whose pages open on a phone, the survey list and the contacts, with a note that the others need a bigger screen. Entries are disabled, with the reason, as in the sidebar. Following one calls onNavigate, so the drawer closes even when the entry is the page already open.
+ */
+export const MobileNavigation = ({
+  workspaceId,
+  membershipRole,
+  pathname,
+  onNavigate,
+}: {
+  workspaceId: string;
+  membershipRole?: string;
+  pathname: string;
+  onNavigate: () => void;
+}) => {
+  const { t } = useTranslation();
+  const disabledReason = navigationDisabledReason(t, membershipRole);
+  const items = workspaceAreas(t, workspaceId, pathname).filter((item) => item.isPhoneReady);
+  return (
+    <div className="-mx-5 flex flex-col gap-4">
+      <nav aria-label={t("common.workspace")}>
+        <ul>
+          {items.map((item) => (
+            <NavigationLink
+              key={item.href}
+              href={item.href}
+              isActive={item.isActive}
+              label={item.label}
+              icon={<item.icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />}
+              disabledReason={disabledReason}
+              onClick={onNavigate}
+            />
+          ))}
+        </ul>
+      </nav>
+      <p className="px-5 text-sm text-slate-500">{t("common.mobile_navigation_more_on_desktop")}</p>
+    </div>
   );
 };
