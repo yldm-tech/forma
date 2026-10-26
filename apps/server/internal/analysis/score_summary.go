@@ -13,7 +13,7 @@ type ScoreBin struct {
 	Percentage float64 `json:"percentage"`
 }
 
-// ScoreSummary is the total score over the responses that carry one (ZSurveyScoreSummary): the value of the survey's total score variable in each response, its mean, median and extremes, and its spread.
+// ScoreSummary is the total score over the completed responses that carry one (ZSurveyScoreSummary): the value of the survey's total score variable in each response, its mean, median and extremes, and its spread.
 type ScoreSummary struct {
 	VariableID    string     `json:"variableId"`
 	Name          string     `json:"name"`
@@ -31,13 +31,16 @@ const (
 	scoreBinCount = 10
 )
 
-// scoreAggregate collects the total score of every response that has one. The runtime writes the score into the response's variables as the respondent answers, so a response the score variable did not exist for yet, or one created through the API without it, has none and is left out.
+// scoreAggregate collects the total score of every completed response that has one. The runtime writes the score into the response's variables after every block, so a response the respondent has not finished holds only the points of the blocks answered so far; counting it would pull the average and the lowest score down as if it were final, so it is left out. A response the score variable did not exist for yet, or one created through the API without it, has none and is left out too.
 type scoreAggregate struct {
 	variableID, name string
 	values           []float64
 }
 
 func (g *scoreAggregate) add(r *summaryResponse) {
+	if !r.Finished {
+		return
+	}
 	if v, ok := r.Variables[g.variableID].(float64); ok && !math.IsNaN(v) && !math.IsInf(v, 0) {
 		g.values = append(g.values, v)
 	}

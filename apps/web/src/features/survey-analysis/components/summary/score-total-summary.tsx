@@ -9,7 +9,7 @@ import { convertFloatToNDecimal, formatAverage } from "../../lib/summary";
 export const scoreBinLabel = (bin: TSurveyScoreSummary["bins"][number]): string =>
   bin.from === bin.to ? String(bin.from) : `${String(bin.from)} – ${String(bin.to)}`;
 
-/** The total score card: the score the responses under the current filter reached, from the survey's total score variable, with its mean, median, extremes and spread. */
+/** The total score card: the score the completed responses under the current filter reached, from the survey's total score variable, with its mean, median, extremes and spread. */
 export const ScoreTotalSummary = ({ score }: { score: TSurveyScoreSummary }) => {
   const { t } = useTranslation();
   const stats = [

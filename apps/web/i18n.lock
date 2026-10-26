@@ -3953,8 +3953,8 @@ checksums:
     workspace/surveys/summary/reset_survey: 8c88ddb81f5f787d183d2e7cb43e7c64
     workspace/surveys/summary/reset_survey_warning: 6b44be171d7e2716f234387b100b173d
     workspace/surveys/summary/reset_survey_warning_count: 8a0c57c5673fb7dc818b9418236b6415
-    workspace/surveys/summary/score_description: 0c698a70381922399fd7f2b762ae21aa
-    workspace/surveys/summary/score_no_scored_responses: cf0d2f7436486a396b65df190cc4d038
+    workspace/surveys/summary/score_description: c965fa3395fcf1dc78e118a0b51667e5
+    workspace/surveys/summary/score_no_scored_responses: 8d61cae36078a4e5f72238a48bd6b6d6
     workspace/surveys/summary/score_points: fce1385c086f50554ce1ce17a3ebcbac
     workspace/surveys/summary/score_title: 52bf3d9b021a715f5624d7c945d97eb6
     workspace/surveys/summary/select_first_date: 1b10e5ee3f7fb106a02ee11f514cce51

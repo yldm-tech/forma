@@ -52,7 +52,7 @@ describe("ScoreTotalSummary", () => {
 
   test("says so when no response under the filter has a score", () => {
     renderCard({ ...score, responseCount: 0, bins: [] });
-    expect(screen.getByText("No response under this filter has a score yet.")).toBeTruthy();
+    expect(screen.getByText("No completed response under this filter has a score yet.")).toBeTruthy();
   });
 
   test("labels a grouped bin by its range", () => {

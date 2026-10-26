@@ -14,7 +14,7 @@ func scoreSummary(variables ...map[string]any) *ScoreSummary {
 	sv := &surveyDoc{Survey: &response.Survey{}, ScoreVariable: &surveydoc.Variable{ID: "v", Name: "score", Type: "number", IsScore: true}}
 	agg := newSummarizer(sv)
 	for _, v := range variables {
-		agg.add(&summaryResponse{Data: map[string]any{}, TTC: map[string]any{}, Variables: v})
+		agg.add(&summaryResponse{Data: map[string]any{}, TTC: map[string]any{}, Variables: v, Finished: true})
 	}
 	return agg.result(0, []QuotaProgress{}).Score
 }
@@ -60,6 +60,25 @@ func TestScoreSummaryGroupsManyScoresIntoTenBins(t *testing.T) {
 	}
 }
 
+func TestScoreSummaryLeavesOutUnfinishedResponses(t *testing.T) {
+	t.Parallel()
+	sv := &surveyDoc{Survey: &response.Survey{}, ScoreVariable: &surveydoc.Variable{ID: "v", Name: "score", Type: "number", IsScore: true}}
+	agg := newSummarizer(sv)
+	agg.add(&summaryResponse{Data: map[string]any{}, TTC: map[string]any{}, Variables: map[string]any{"v": 4.5}, Finished: true})
+	agg.add(&summaryResponse{Data: map[string]any{}, TTC: map[string]any{}, Variables: map[string]any{"v": 6.5}, Finished: true})
+	// Dropped out after the first block: the score holds only that block's points.
+	agg.add(&summaryResponse{Data: map[string]any{}, TTC: map[string]any{}, Variables: map[string]any{"v": 2.0}})
+	agg.add(&summaryResponse{Data: map[string]any{}, TTC: map[string]any{}, Variables: map[string]any{"v": 0.0}})
+	got := agg.result(0, []QuotaProgress{}).Score
+	want := &ScoreSummary{VariableID: "v", Name: "score", ResponseCount: 2, Average: 5.5, Median: 5.5, Min: 4.5, Max: 6.5, Bins: []ScoreBin{
+		{From: 4.5, To: 4.5, Count: 1, Percentage: 50},
+		{From: 6.5, To: 6.5, Count: 1, Percentage: 50},
+	}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("score summary %+v, want %+v", got, want)
+	}
+}
+
 func TestSummaryScoreIsNullWithoutAScoreVariable(t *testing.T) {
 	t.Parallel()
 	agg := newSummarizer(&surveyDoc{Survey: &response.Survey{}})
@@ -93,6 +112,8 @@ func TestSummaryReportsTheTotalScoreOfTheResponses(t *testing.T) {
 	e.response(sv, row{at: at(1), finished: true, variables: `{"total": 4, "bonus": 100}`})
 	e.response(sv, row{at: at(2), finished: true, variables: `{"total": 2}`})
 	e.response(sv, row{at: at(3), variables: `{"bonus": 1}`})
+	// Not finished: its score is a partial total and is left out.
+	e.response(sv, row{at: at(4), variables: `{"total": 1}`})
 
 	var s struct {
 		Score *ScoreSummary `json:"score"`

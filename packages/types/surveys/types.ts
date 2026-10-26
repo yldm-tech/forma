@@ -4487,7 +4487,7 @@ export const ZSurveyElementSummary = z.union([
 
 export type TSurveyElementSummary = z.infer<typeof ZSurveyElementSummary>;
 
-// The total score over the responses that carry one: the value of the survey's total score variable (scoring.ts) in each response, with its spread in bins, one per value while there are at most 11 distinct values and ten of equal width beyond.
+// The total score over the completed responses that carry one (an unfinished response holds only the points of the blocks answered so far): the value of the survey's total score variable (scoring.ts) in each response, with its spread in bins, one per value while there are at most 11 distinct values and ten of equal width beyond.
 export const ZSurveyScoreSummary = z.object({
   variableId: z.string(),
   name: z.string(),
