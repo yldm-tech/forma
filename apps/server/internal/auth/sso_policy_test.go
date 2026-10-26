@@ -145,26 +145,22 @@ func TestValidatedCallbackURL(t *testing.T) {
 // forma2's oauth-urls.test.ts and better-auth-providers.test.ts: the redirect URIs registered at the providers.
 func TestRedirectURIs(t *testing.T) {
 	cases := []struct {
-		name                 string
-		webApp, better, next string
-		base                 string
+		name         string
+		webApp, auth string
+		base         string
 	}{
-		{"WEBAPP_URL", "https://app.example.com", "", "", "https://app.example.com/api/auth"},
-		{"trailing slash", "https://app.example.com/", "", "", "https://app.example.com/api/auth"},
-		{"BETTER_AUTH_URL first", "https://app.example.com", "https://auth.example.com", "https://next.example.com", "https://auth.example.com/api/auth"},
-		{"NEXTAUTH_URL second", "https://app.example.com", "", "https://next.example.com", "https://next.example.com/api/auth"},
-		{"already ends in /api/auth", "https://app.example.com", "https://app.example.com/api/auth/", "", "https://app.example.com/api/auth"},
-		{"subpath", "https://example.com/forma", "", "", "https://example.com/forma/api/auth"},
-		{"origin normalized", "https://APP.example.com:443?x=1#y", "", "", "https://app.example.com/api/auth"},
+		{"WEBAPP_URL", "https://app.example.com", "", "https://app.example.com/api/auth"},
+		{"trailing slash", "https://app.example.com/", "", "https://app.example.com/api/auth"},
+		{"AUTH_URL first", "https://app.example.com", "https://auth.example.com", "https://auth.example.com/api/auth"},
+		{"already ends in /api/auth", "https://app.example.com", "https://app.example.com/api/auth/", "https://app.example.com/api/auth"},
+		{"subpath", "https://example.com/forma", "", "https://example.com/forma/api/auth"},
+		{"origin normalized", "https://APP.example.com:443?x=1#y", "", "https://app.example.com/api/auth"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := config.Config{WebAppURL: mustURL(t, tc.webApp)}
-			if tc.better != "" {
-				cfg.SSO.BetterAuthURL = mustURL(t, tc.better)
-			}
-			if tc.next != "" {
-				cfg.SSO.NextAuthURL = mustURL(t, tc.next)
+			if tc.auth != "" {
+				cfg.SSO.AuthURL = mustURL(t, tc.auth)
 			}
 			cfg.SSO = enableAllSSO(cfg.SSO)
 			providers := newSSOProviders(cfg, slog.New(slog.DiscardHandler))

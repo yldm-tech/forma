@@ -127,7 +127,7 @@ func contentSecurityPolicy(cfg config.Config, wasm bool) string {
 	return "default-src 'self'; script-src " + scriptSrc + " https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data:" + loopback + " https:; font-src 'self' data: https:; connect-src 'self'" + loopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
 }
 
-// loopbackSources is forma2's devLoopbackSources: outside production (NODE_ENV set to anything but production; unset is production, as it was for forma2's production build) or under E2E_TESTING, any port of an http loopback host, then each of WEBAPP_URL, NEXTAUTH_URL and S3_ENDPOINT_URL that is on a loopback host, under both loopback spellings, each source once.
+// loopbackSources is forma2's devLoopbackSources: outside production (NODE_ENV set to anything but production; unset is production, as it was for forma2's production build) or under E2E_TESTING, any port of an http loopback host, then each of WEBAPP_URL, AUTH_URL and S3_ENDPOINT_URL that is on a loopback host, under both loopback spellings, each source once.
 func loopbackSources(cfg config.Config) []string {
 	production := cfg.Telemetry.NodeEnv == "" || cfg.Telemetry.NodeEnv == "production"
 	if production && !cfg.E2ETesting {
@@ -137,7 +137,7 @@ func loopbackSources(cfg config.Config) []string {
 	for _, host := range loopbackHosts {
 		sources = append(sources, "http://"+host+":*")
 	}
-	for _, u := range []*url.URL{cfg.WebAppURL, cfg.SSO.NextAuthURL, cfg.S3.EndpointURL} {
+	for _, u := range []*url.URL{cfg.WebAppURL, cfg.SSO.AuthURL, cfg.S3.EndpointURL} {
 		for _, origin := range loopbackOriginVariants(u) {
 			if !slices.Contains(sources, origin) {
 				sources = append(sources, origin)

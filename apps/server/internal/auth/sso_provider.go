@@ -98,14 +98,11 @@ type discoveredProvider struct {
 	verifier *oidc.IDTokenVerifier
 }
 
-// IssuerURL is forma2's getAuthIssuerUrl: BETTER_AUTH_URL, else NEXTAUTH_URL, else WEBAPP_URL, without query, fragment or trailing slashes, with /api/auth appended unless the path already ends with it.
+// IssuerURL is forma2's getAuthIssuerUrl: AUTH_URL (forma2's BETTER_AUTH_URL, else NEXTAUTH_URL), else WEBAPP_URL, without query, fragment or trailing slashes, with /api/auth appended unless the path already ends with it.
 func IssuerURL(cfg config.Config) string {
 	base := cfg.WebAppURL
-	switch {
-	case cfg.SSO.BetterAuthURL != nil:
-		base = cfg.SSO.BetterAuthURL
-	case cfg.SSO.NextAuthURL != nil:
-		base = cfg.SSO.NextAuthURL
+	if cfg.SSO.AuthURL != nil {
+		base = cfg.SSO.AuthURL
 	}
 	path := strings.TrimRight(base.Path, "/")
 	if !strings.HasSuffix(path, "/api/auth") {

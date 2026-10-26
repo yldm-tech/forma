@@ -3102,6 +3102,24 @@ checksums:
     workspace/settings/notifications/need_slack_or_discord_notifications: a18009dcb3ff19ec9b60e1497cbbec93
     workspace/settings/notifications/notification_settings_updated: 948fb98c8a9225ba6b17c43365576df9
     workspace/settings/notifications/set_up_an_alert_to_get_an_email_on_new_responses: 4168ae6f5962244a4894a22b56fbb55f
+    workspace/settings/notifications/unsubscribe_page/alert_off: 0e29a150d7d5f543193fbb448a592353
+    workspace/settings/notifications/unsubscribe_page/alert_on: d952660e238b683e1725a74e756e3f27
+    workspace/settings/notifications/unsubscribe_page/all_settings: 022591b1cb1cdb4bd31d916cda3b5200
+    workspace/settings/notifications/unsubscribe_page/all_settings_on_computer: 591cfc3f91a7492ae8e9a71501335047
+    workspace/settings/notifications/unsubscribe_page/already_unsubscribed: c32553f42c1a2a5de046919ae7deae2b
+    workspace/settings/notifications/unsubscribe_page/auto_subscribe_off: 87d4d2fb109cc5eb3c1488f696d43d91
+    workspace/settings/notifications/unsubscribe_page/auto_subscribe_on: db1cbc3d1e6ea9b5b9e6aa72b202fc1f
+    workspace/settings/notifications/unsubscribe_page/link_no_longer_applies: a994b13d6c4831fda8e07fa35de19457
+    workspace/settings/notifications/unsubscribe_page/link_no_longer_applies_description: 8e0981e4b9a31651e4d2896ac0f1db6d
+    workspace/settings/notifications/unsubscribe_page/not_changed: a855fd890a2f6ec7859f0c6a5b26d586
+    workspace/settings/notifications/unsubscribe_page/resubscribed: b5e0792a0379443d159762de1d3fd60c
+    workspace/settings/notifications/unsubscribe_page/subscribe_again: 51cc6f820808ba481dcd2ffae5feea99
+    workspace/settings/notifications/unsubscribe_page/undo: 6fa10b811e2894dcdd73718f66c1b481
+    workspace/settings/notifications/unsubscribe_page/unsubscribe: d1a0b07295687d1f08d4df1c411072dd
+    workspace/settings/notifications/unsubscribe_page/unsubscribed: 283949f2fe70d9458e0ac44b0fa7b711
+    workspace/settings/notifications/unsubscribe_page/unsubscribing: e7118166d36604648efe9c3c7ce824c4
+    workspace/settings/notifications/unsubscribe_page/weekly_summary_off: 900427d8a7a006ac03e976829f90b6f2
+    workspace/settings/notifications/unsubscribe_page/weekly_summary_on: 79d4940401f40c12267909ba1d9d9e75
     workspace/settings/notifications/use_the_integration: 765ec5b4959cb096234e8b9a0d6b01f5
     workspace/settings/notifications/want_to_loop_in_organization_mates: 46b06df5be0d610c2c3b552a5553ee2b
     workspace/settings/notifications/weekly_summary: 7bc546965ba43e24fb52d1b96b557210

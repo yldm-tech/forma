@@ -22,16 +22,16 @@ const (
 	nodeContactToken        = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb250YWN0SWQiOiIwZTlkZGI2Y2VhOTUzYmM3MGUyNmY1NDNjMDQzMDc0MzpjYWM3NWU0NjQ1YzdlOGE0YzAzMTUzNjUzZjhiOWQ2NGJjZmI0N2U1MWFhZjVhNGQ6MjRjM2RhMGZhYTQwYmFhN2YxY2Q1MjVmYmY3YjIxYmUiLCJzdXJ2ZXlJZCI6IjE2YzI1MWNiZmJmN2ZhZTg5MjZhYmIwZmVhNDE5N2I3OjQ5MDFiNmVlNzM1NzI4YWZhM2RlMjg3NWEyMzBiZDBmZjY2NzlhZDFiZmE4ZGNlODo4NjVkNGYwNDA1NzY3ODU3NDE1MzhiNzI5MDE3MmRhZCIsImlhdCI6MTc2MDAwMDAwMH0.j5A5V4Q996uQL7c9pN7zTqc5dCNhFNnBiDr7X3mye5o"
 	nodeExpiredContactToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb250YWN0SWQiOiJjMDJiYWNjOTRjNGFlOWM5Y2QyMmI2MzIzNDZhYjllYjowZGZmZWJhMjE1N2U5MWEyZDdmZDM1ODNjMDE3NDQ2ZTAxMDQzYzZjYjVmMDYzNGQ6MjQ5ZGE1OGJmNjg1NWQ2OTlmYTFhODBlYmNlYzY1NWQiLCJzdXJ2ZXlJZCI6IjM5ZGZmZmU2ODI3YmYwZmQzYTE5NzRhZjAyZjBkNWE3OjJmZWNiYTNlZWYxOGFlMmRiMmVkNGU2YzE3MTY5NDgwYmEyOTE3NWRkMzk0MWQwNToyMDY0YjQyNmMwNzIzNGZiYjQ3NDQ0MDdiMTQ2ZjNmZiIsImlhdCI6MTAwMCwiZXhwIjoyMDAwfQ.zzAqAH6CCjg70w5g6oDP28X7yR_8NFemAjA_WGUk_LU"
 
-	testNextAuthSecret   = "next-secret-0123456789abcdefghijklmnop"
-	testBetterAuthSecret = "better-secret-0123456789abcdefghijklmnop"
+	testTokenSecret    = "next-secret-0123456789abcdefghijklmnop"
+	testPinTokenSecret = "better-secret-0123456789abcdefghijklmnop"
 )
 
 func tokenConfig() config.Config {
 	return config.Config{
-		EncryptionKey:     bytes.Repeat([]byte{7}, 32),
-		EncryptionKeyText: config.Secret(strings.Repeat("07", 32)),
-		NextAuthSecret:    testNextAuthSecret,
-		BetterAuthSecret:  testBetterAuthSecret,
+		EncryptionKey:            bytes.Repeat([]byte{7}, 32),
+		EncryptionKeyText:        config.Secret(strings.Repeat("07", 32)),
+		LinkSurveyTokenSecret:    testTokenSecret,
+		LinkSurveyPinTokenSecret: testPinTokenSecret,
 	}
 }
 
@@ -89,20 +89,20 @@ func TestPinToken(t *testing.T) {
 	}
 }
 
-// BETTER_AUTH_SECRET wins over NEXTAUTH_SECRET, which is the fallback.
+// LINK_SURVEY_PIN_TOKEN_SECRET wins over LINK_SURVEY_TOKEN_SECRET, which is the fallback.
 func TestPinTokenSecretPrecedence(t *testing.T) {
 	cfg := tokenConfig()
 	surveyID := uuid.New()
 	token, _ := NewPinToken(cfg, surveyID, testNow)
 	nextOnly := cfg
-	nextOnly.BetterAuthSecret = ""
+	nextOnly.LinkSurveyPinTokenSecret = ""
 	if VerifyPinToken(nextOnly, token, surveyID, testNow) {
-		t.Fatal("a BETTER_AUTH_SECRET token verified under NEXTAUTH_SECRET")
+		t.Fatal("a LINK_SURVEY_PIN_TOKEN_SECRET token verified under LINK_SURVEY_TOKEN_SECRET")
 	}
 	fallback, _ := NewPinToken(nextOnly, surveyID, testNow)
-	viaNext, _ := sign(testNextAuthSecret, pinClaims{SurveyID: surveyID.String(), Purpose: pinTokenPurpose, Claims: jwt.Claims{Expiry: jwt.NewNumericDate(testNow.Add(time.Hour))}})
+	viaNext, _ := sign(testTokenSecret, pinClaims{SurveyID: surveyID.String(), Purpose: pinTokenPurpose, Claims: jwt.Claims{Expiry: jwt.NewNumericDate(testNow.Add(time.Hour))}})
 	if !VerifyPinToken(nextOnly, fallback, surveyID, testNow) || !VerifyPinToken(nextOnly, viaNext, surveyID, testNow) {
-		t.Fatal("the NEXTAUTH_SECRET fallback does not sign PIN tokens")
+		t.Fatal("the LINK_SURVEY_TOKEN_SECRET fallback does not sign PIN tokens")
 	}
 }
 
@@ -118,7 +118,7 @@ func TestEmailToken(t *testing.T) {
 		t.Fatal("the address travels unencrypted")
 	}
 	claims := func(c emailClaims) string {
-		s, err := sign(testNextAuthSecret, c)
+		s, err := sign(testTokenSecret, c)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -140,7 +140,7 @@ func TestEmailToken(t *testing.T) {
 		{"tampered", tamper(token), surveyID, testNow, ""},
 		{"garbage", "not-a-token", surveyID, testNow, ""},
 		{"no survey claim", claims(emailClaims{Email: encrypted, Claims: future}), surveyID, testNow, ""},
-		{"signed with the secret followed by the survey id", sign2(t, testNextAuthSecret+surveyID.String(), emailClaims{Email: encrypted, Claims: future}), surveyID, testNow, ""},
+		{"signed with the secret followed by the survey id", sign2(t, testTokenSecret+surveyID.String(), emailClaims{Email: encrypted, Claims: future}), surveyID, testNow, ""},
 		{"another flow's purpose", claims(emailClaims{Email: encrypted, SurveyID: &id, Purpose: &inviteish, Claims: future}), surveyID, testNow, ""},
 		{"no email", claims(emailClaims{SurveyID: &id, Purpose: &purpose, Claims: future}), surveyID, testNow, ""},
 		{"plain-text address", claims(emailClaims{Email: "plain@example.com", SurveyID: &id, Claims: future}), surveyID, testNow, ""},
@@ -155,10 +155,10 @@ func TestEmailToken(t *testing.T) {
 	}
 }
 
-// Without NEXTAUTH_SECRET the token is signed with the derived secret.
-func TestEmailTokenWithoutNextAuthSecret(t *testing.T) {
+// Without LINK_SURVEY_TOKEN_SECRET the token is signed with the derived secret.
+func TestEmailTokenWithoutTokenSecret(t *testing.T) {
 	cfg := tokenConfig()
-	cfg.NextAuthSecret = ""
+	cfg.LinkSurveyTokenSecret = ""
 	surveyID := uuid.New()
 	token, err := newEmailToken(cfg, surveyID, "user1@example.com", testNow)
 	if err != nil {

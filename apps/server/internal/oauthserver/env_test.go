@@ -281,15 +281,15 @@ func (e *env) verify(token string) (*AccessTokenClaims, error) {
 	return e.verifier.Verify(context.Background(), token)
 }
 
-func configFor(t *testing.T, webApp, betterAuth string) config.Config {
+func configFor(t *testing.T, webApp, authURL string) config.Config {
 	t.Helper()
 	u, err := url.Parse(webApp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cfg := config.Config{WebAppURL: u}
-	if betterAuth != "" {
-		if cfg.SSO.BetterAuthURL, err = url.Parse(betterAuth); err != nil {
+	if authURL != "" {
+		if cfg.SSO.AuthURL, err = url.Parse(authURL); err != nil {
 			t.Fatal(err)
 		}
 	}

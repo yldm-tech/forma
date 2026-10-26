@@ -68,7 +68,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	cfg := config.Config{
 		WebAppURL: u, RateLimitingDisabled: true, TrustedProxyHopCount: 1, MailFrom: "noreply@forma.yldm.ai", MailFromName: "Forma",
 		EncryptionKey: bytes.Repeat([]byte{7}, 32), EncryptionKeyText: config.Secret(strings.Repeat("07", 32)), EncryptionKeyVersion: 1,
-		NextAuthSecret: testNextAuthSecret, BetterAuthSecret: testBetterAuthSecret, SurveySchedulingTimeZone: "Europe/Berlin",
+		LinkSurveyTokenSecret: testTokenSecret, LinkSurveyPinTokenSecret: testPinTokenSecret, SurveySchedulingTimeZone: "Europe/Berlin",
 	}
 	for _, f := range configure {
 		f(&cfg)
