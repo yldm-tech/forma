@@ -17,6 +17,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/analysis"
 	"github.com/yldm-tech/forma/apps/server/internal/auth"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
@@ -136,11 +137,12 @@ type Recipient struct {
 	Manager bool
 }
 
-// Recipients are the organization's members who get its summary: active accounts with a membership that is not suspended, in a role that reads responses (not billing), who can see a workspace there, and who have not turned the summary off. With only set, just that member, if they still qualify. The rules are the notifications page's, which lists the organizations the switch is for.
+// Recipients are the organization's members who get its summary: active accounts with a membership that is not suspended and that the organization's two-factor requirement does not refuse (authz's userAllowed: once its grace period is over, a member who signs in with a password and has not enrolled), in a role that reads responses (not billing), who can see a workspace there, and who have not turned the summary off. With only set, just that member, if they still qualify. The rules are the notifications page's, which lists the organizations the switch is for.
 func (d *Digest) Recipients(ctx context.Context, orgID uuid.UUID, only *uuid.UUID) ([]Recipient, error) {
 	query := `SELECT u.id AS user_id, u.email, u.locale, m.role IN ('owner', 'manager') AS manager
-		FROM memberships m JOIN users u ON u.id = m.user_id
+		FROM memberships m JOIN users u ON u.id = m.user_id JOIN organizations o ON o.id = m.organization_id
 		WHERE m.organization_id = ? AND u.is_active AND m.suspended_at IS NULL AND m.role <> 'billing'
+		AND NOT (o.two_factor_enforced_at IS NOT NULL AND o.two_factor_enforced_at <= now() AND ` + authz.SecondFactorStatusSQL("u.id") + ` = '` + authz.SecondFactorDisabled + `')
 		AND NOT COALESCE(u.notification_settings -> '` + auth.NotificationWeeklySummary + `', '[]'::jsonb) @> jsonb_build_array(?::text)
 		AND (m.role IN ('owner', 'manager') OR EXISTS (
 			SELECT 1 FROM team_members tm JOIN workspace_teams wt ON wt.team_id = tm.team_id JOIN workspaces w ON w.id = wt.workspace_id

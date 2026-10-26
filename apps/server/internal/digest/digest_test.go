@@ -175,6 +175,7 @@ type fixture struct {
 	*env
 	org, ws1, ws2                        uuid.UUID
 	owner, manager, teamMember, optedOut uuid.UUID
+	enrolled, ssoOnly, unenrolled        uuid.UUID
 	feedback, exitPoll                   uuid.UUID
 }
 
@@ -198,6 +199,15 @@ func newFixture(t *testing.T) *fixture {
 	inactive := e.member(f.org, "inactive@example.com", "owner", `{}`)
 	e.exec(`UPDATE users SET is_active = false WHERE id = ?`, inactive)
 	f.optedOut = e.member(f.org, "opted-out@example.com", "owner", `{"unsubscribedWeeklySummaryOrganizationIds": ["`+f.org.String()+`"]}`)
+	// The organization requires two-factor authentication and the grace period is over. It refuses the member who signs in with a password and has not enrolled, so they get nothing; the one who enrolled and the one who can only sign in through SSO (exempt from the requirement) still get the summary. The members above have no sign-in method at all, which counts as SSO-only.
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() - interval '1 minute' WHERE id = ?`, f.org)
+	f.unenrolled = e.member(f.org, "unenrolled@example.com", "owner", `{}`)
+	e.exec(`INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES (?, 'credential', ?, '$2a$10$hash')`, f.unenrolled, f.unenrolled.String())
+	f.enrolled = e.member(f.org, "enrolled@example.com", "manager", `{}`)
+	e.exec(`INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES (?, 'credential', ?, '$2a$10$hash')`, f.enrolled, f.enrolled.String())
+	e.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, '\x00', '\x00', true)`, f.enrolled)
+	f.ssoOnly = e.member(f.org, "sso@example.com", "manager", `{}`)
+	e.exec(`INSERT INTO user_identities (user_id, provider, issuer, subject) VALUES (?, 'saml', 'https://idp.example.com', ?)`, f.ssoOnly, f.ssoOnly.String())
 
 	tokyo := mustZone(t, "Asia/Tokyo")
 	at := func(day, hour int) time.Time { return time.Date(2026, 10, day, hour, 0, 0, 0, tokyo) }
@@ -228,8 +238,10 @@ func TestRecipientsAreTheMembersWhoCanSeeSurveysAndKeptItOn(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []Recipient{
+		{UserID: f.enrolled, Email: "enrolled@example.com", Locale: "en-US", Manager: true},
 		{UserID: f.manager, Email: "manager@example.com", Locale: "en-US", Manager: true},
 		{UserID: f.owner, Email: "owner@example.com", Locale: "en-US", Manager: true},
+		{UserID: f.ssoOnly, Email: "sso@example.com", Locale: "en-US", Manager: true},
 		{UserID: f.teamMember, Email: "team@example.com", Locale: "en-US", Manager: false},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -237,6 +249,14 @@ func TestRecipientsAreTheMembersWhoCanSeeSurveysAndKeptItOn(t *testing.T) {
 	}
 	if got, err := f.digest.Recipients(t.Context(), f.org, &f.optedOut); err != nil || len(got) != 0 {
 		t.Errorf("opted out: %+v, %v", got, err)
+	}
+	if got, err := f.digest.Recipients(t.Context(), f.org, &f.unenrolled); err != nil || len(got) != 0 {
+		t.Errorf("refused by the two-factor requirement: %+v, %v", got, err)
+	}
+	// Before the grace period ends the requirement refuses no one yet.
+	f.exec(`UPDATE organizations SET two_factor_enforced_at = now() + interval '1 day' WHERE id = ?`, f.org)
+	if got, err := f.digest.Recipients(t.Context(), f.org, &f.unenrolled); err != nil || len(got) != 1 {
+		t.Errorf("in the grace period: %+v, %v", got, err)
 	}
 }
 
@@ -304,14 +324,17 @@ func TestSendMailsTheRecipientOnce(t *testing.T) {
 	if id := msgs[0].MessageID; !strings.HasPrefix(id, "<") || !strings.HasSuffix(id, "@mail.example.com>") || id != f.digest.messageID(f.org, f.owner, week) {
 		t.Errorf("message id %s", id)
 	}
-	// Someone who turned the summary off, or is not a member, gets nothing.
-	for _, user := range []uuid.UUID{f.optedOut, uuid.New()} {
+	// Someone who turned the summary off, whom the two-factor requirement refuses, or who is not a member, gets nothing; an SSO-only member, whom the requirement exempts, gets it.
+	for _, user := range []uuid.UUID{f.optedOut, f.unenrolled, uuid.New()} {
 		if sent, err := f.digest.Send(t.Context(), f.org, user, week); err != nil || sent {
 			t.Errorf("send to %s = %v, %v", user, sent, err)
 		}
 	}
-	if len(f.transport.Messages()) != 1 {
-		t.Errorf("messages %d, want 1", len(f.transport.Messages()))
+	if sent, err := f.digest.Send(t.Context(), f.org, f.ssoOnly, week); err != nil || !sent {
+		t.Errorf("send to the SSO-only member = %v, %v", sent, err)
+	}
+	if msgs := f.transport.Messages(); len(msgs) != 2 || msgs[1].To != "sso@example.com" {
+		t.Errorf("messages %+v, want the owner's and the SSO-only member's", msgs)
 	}
 }
 
@@ -350,10 +373,12 @@ func TestOrganizationJobFansOutOncePerWeek(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if n := f.count(`SELECT count(*) FROM river_job WHERE kind = ? AND args ->> 'week' = ? AND max_attempts = ?`, RecipientArgs{}.Kind(), week, recipientAttempts); n != 3 {
-		t.Errorf("recipient jobs %d, want 3", n)
+	if n := f.count(`SELECT count(*) FROM river_job WHERE kind = ? AND args ->> 'week' = ? AND max_attempts = ?`, RecipientArgs{}.Kind(), week, recipientAttempts); n != 5 {
+		t.Errorf("recipient jobs %d, want 5", n)
 	}
-	if n := f.count(`SELECT count(*) FROM river_job WHERE kind = ? AND args ->> 'userId' = ?`, RecipientArgs{}.Kind(), f.optedOut.String()); n != 0 {
-		t.Errorf("a job for the member who opted out")
+	for _, user := range []uuid.UUID{f.optedOut, f.unenrolled} {
+		if n := f.count(`SELECT count(*) FROM river_job WHERE kind = ? AND args ->> 'userId' = ?`, RecipientArgs{}.Kind(), user.String()); n != 0 {
+			t.Errorf("a job for %s, who must not get the summary", user)
+		}
 	}
 }
