@@ -106,7 +106,7 @@ func TestCreateResponseGates(t *testing.T) {
 		expectError(t, 403, "forbidden", "Survey requires email verification")
 }
 
-// One response per verified email (D-FG03): with email verification on, a second response for an address that has one, finished or not and in any letter case, is refused with 409 and details.code response_email_already_used on both creates; racing creates for one address make one response; other addresses, other surveys and a survey without the setting are not limited, and an update of the started response goes on.
+// One response per verified email (D-FG03): with email verification on, only one response per address, in any letter case, finishes. Unfinished responses never lock the address out: a respondent on a second device, or back after the runtime dropped its saved progress, starts a new response and can finish it. Once one has finished, creating another or finishing another is refused with 409 and details.code response_email_already_used on both creates and the update; racing creates and racing finishing updates for one address finish one response; other addresses, other surveys and a survey without the setting are not limited.
 func TestCreateResponseOneResponsePerEmail(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
@@ -116,20 +116,45 @@ func TestCreateResponseOneResponsePerEmail(t *testing.T) {
 		url := webAppURL + "/s/" + surveyID + "?verify=" + e.emailToken(t, uuid.MustParse(surveyID), email)
 		return e.post(t, respond(ws, v), map[string]any{"surveyId": surveyID, "finished": finished, "data": map[string]any{}, "meta": map[string]any{"url": url}})
 	}
+	finish := func(id string) result {
+		return e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+id, map[string]any{"finished": true, "data": map[string]any{}})
+	}
+	refused := func(what string, r result) {
+		t.Helper()
+		if details := r.expectError(t, 409, "conflict", "A response was already submitted with this email address"); details["code"] != "response_email_already_used" {
+			t.Fatalf("%s: details %v", what, details)
+		}
+	}
 	first := create("v2", sv.String(), "Real@Example.com", false)
 	if first.Status != 200 {
 		t.Fatalf("first: %d %s", first.Status, first.Body)
 	}
-	for _, v := range []string{"v1", "v2"} {
-		details := create(v, sv.String(), "real@example.COM", true).expectError(t, 409, "conflict", "A response was already submitted with this email address")
-		if details["code"] != "response_email_already_used" {
-			t.Fatalf("%s: details %v", v, details)
-		}
+	firstID := first.data(t)["id"].(string)
+	// The respondent left it two days ago, past the runtime's 24-hour progress window, or opens the link on another device: a new response for the address is taken.
+	e.exec(`UPDATE responses SET created_at = now() - interval '2 days', updated_at = now() - interval '2 days' WHERE id = ?`, firstID)
+	second := create("v2", sv.String(), "real@example.COM", false)
+	if second.Status != 200 {
+		t.Fatalf("second device: %d %s", second.Status, second.Body)
 	}
-	// The respondent goes on in the response they started.
-	put := e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+first.data(t)["id"].(string), map[string]any{"finished": true, "data": map[string]any{}})
-	if put.Status != 200 {
-		t.Fatalf("update: %d %s", put.Status, put.Body)
+	if put := finish(second.data(t)["id"].(string)); put.Status != 200 {
+		t.Fatalf("finish the second: %d %s", put.Status, put.Body)
+	}
+	// One response of the address has finished: neither another create nor finishing the earlier response goes through.
+	for _, v := range []string{"v1", "v2"} {
+		refused(v+" create, finished", create(v, sv.String(), "REAL@example.com", true))
+	}
+	refused("create, unfinished", create("v2", sv.String(), "real@example.com", false))
+	refused("finish the first", finish(firstID))
+	var finished int64
+	if err := e.db.Raw(`SELECT count(*) FROM responses WHERE survey_id = ? AND finished`, sv).Scan(&finished).Error; err != nil {
+		t.Fatal(err)
+	}
+	if finished != 1 {
+		t.Fatalf("%d finished responses for one address", finished)
+	}
+	// An update that does not finish the earlier response still goes on, and so does another address.
+	if put := e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+firstID, map[string]any{"data": map[string]any{}}); put.Status != 200 {
+		t.Fatalf("update the unfinished one: %d %s", put.Status, put.Body)
 	}
 	if r := create("v2", sv.String(), "other@example.com", true); r.Status != 200 {
 		t.Fatalf("another address: %d %s", r.Status, r.Body)
@@ -175,6 +200,34 @@ func TestCreateResponseOneResponsePerEmail(t *testing.T) {
 	}
 	if counts[200] != 1 || counts[409] != racers-1 || stored != 1 {
 		t.Fatalf("racing creates: statuses %v, %d stored", counts, stored)
+	}
+
+	// Tabs racing to finish their responses for one address: exactly one finishes.
+	tabs := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true, is_single_response_per_email_enabled = true WHERE id = ?`, tabs)
+	ids := make([]string, racers)
+	for i := range ids {
+		r := create("v2", tabs.String(), "tabs@example.com", false)
+		if r.Status != 200 {
+			t.Fatalf("tab %d: %d %s", i, r.Status, r.Body)
+		}
+		ids[i] = r.data(t)["id"].(string)
+	}
+	finishes := make(chan int, racers)
+	for _, id := range ids {
+		wg.Go(func() { finishes <- finish(id).Status })
+	}
+	wg.Wait()
+	close(finishes)
+	counts = map[int]int{}
+	for s := range finishes {
+		counts[s]++
+	}
+	if err := e.db.Raw(`SELECT count(*) FROM responses WHERE survey_id = ? AND finished`, tabs).Scan(&finished).Error; err != nil {
+		t.Fatal(err)
+	}
+	if counts[200] != 1 || counts[409] != racers-1 || finished != 1 {
+		t.Fatalf("racing finishes: statuses %v, %d finished", counts, finished)
 	}
 }
 

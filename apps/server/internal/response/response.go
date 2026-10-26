@@ -82,7 +82,7 @@ const (
 
 	// CodeResponseAlreadyFinished is forma2's RESPONSE_ALREADY_FINISHED_ERROR_CODE, the details.code the runtime keys off to stop retrying.
 	CodeResponseAlreadyFinished = "response_already_finished"
-	// CodeEmailAlreadyResponded is the details.code of the 409 a survey that takes one response per verified email answers to a second response from an address (RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE in packages/types/errors.ts), which the runtime keys off to tell the respondent why.
+	// CodeEmailAlreadyResponded is the details.code of the 409 a survey that takes one response per verified email answers when a response from an address that already finished one is created or finished (RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE in packages/types/errors.ts), which the runtime keys off to tell the respondent why.
 	CodeEmailAlreadyResponded = "response_email_already_used"
 )
 

@@ -13,7 +13,7 @@ export const FILE_UPLOAD_ERROR_NAMES = {
 export const RESPONSE_ALREADY_FINISHED_ERROR_CODE = "response_already_finished";
 
 /**
- * The `details.code` of the 409 a survey that takes one response per verified email (`isSingleResponsePerEmailEnabled`) answers when a new response comes from an address that already has one (response.CodeEmailAlreadyResponded on the server).
+ * The `details.code` of the 409 a survey that takes one response per verified email (`isSingleResponsePerEmailEnabled`) answers when a response from an address that already finished one is created or finished (response.CodeEmailAlreadyResponded on the server).
  */
 export const RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE = "response_email_already_used";
 
