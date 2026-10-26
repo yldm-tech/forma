@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -215,6 +216,22 @@ func TestSchemaConstraints(t *testing.T) {
 		var left int
 		if err := db.QueryRow(`SELECT count(*) FROM survey_templates`).Scan(&left); err != nil || left != 0 {
 			t.Fatalf("survey templates left after their organization was deleted: %d, %v", left, err)
+		}
+	})
+
+	t.Run("a results link has a well-formed key of its own and goes with its survey", func(t *testing.T) {
+		shareSurvey := mustScanID(t, db, `INSERT INTO surveys (workspace_id, name) VALUES ($1, 'Shared') RETURNING id`, workspaceID)
+		insert := `INSERT INTO survey_result_shares (survey_id, created_by, share_key, filter_criteria) VALUES ($1, $2, $3, $4::jsonb)`
+		key := strings.Repeat("a", 42) + "-"
+		wantViolation(t, db, "23514", insert, shareSurvey, userID, "short", "{}")
+		wantViolation(t, db, "23514", insert, shareSurvey, userID, strings.Repeat("a", 42)+"=", "{}")
+		wantViolation(t, db, "23514", insert, shareSurvey, userID, key, "[]")
+		mustExec(t, db, insert, shareSurvey, userID, key, "{}")
+		wantViolation(t, db, "23505", insert, shareSurvey, userID, key, "{}")
+		mustExec(t, db, `DELETE FROM surveys WHERE id = $1`, shareSurvey)
+		var left int
+		if err := db.QueryRow(`SELECT count(*) FROM survey_result_shares`).Scan(&left); err != nil || left != 0 {
+			t.Fatalf("results links left after their survey was deleted: %d, %v", left, err)
 		}
 	})
 

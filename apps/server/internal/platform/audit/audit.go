@@ -100,13 +100,15 @@ const (
 	TargetCubeQuery           Target = "cubeQuery"
 	// TargetSurveyTemplate is one of an organization's own survey templates; forma2 had none.
 	TargetSurveyTemplate Target = "surveyTemplate"
+	// TargetResultShare is a read-only results link of a survey; forma2 had none.
+	TargetResultShare Target = "resultShare"
 )
 
 var targets = []Target{
 	TargetSegment, TargetSurvey, TargetWorkflow, TargetWebhook, TargetUser, TargetContactAttributeKey,
 	TargetWorkspaceTeam, TargetTeam, TargetActionClass, TargetResponse, TargetContact, TargetOrganization,
 	TargetTag, TargetWorkspace, TargetLanguage, TargetInvite, TargetMembership, TargetTwoFactorAuth,
-	TargetAPIKey, TargetIntegration, TargetFile, TargetQuota, TargetCubeQuery, TargetSurveyTemplate,
+	TargetAPIKey, TargetIntegration, TargetFile, TargetQuota, TargetCubeQuery, TargetSurveyTemplate, TargetResultShare,
 }
 
 type ActorType string
