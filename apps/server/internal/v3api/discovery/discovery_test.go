@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -45,7 +46,7 @@ func TestMeWithAnAPIKey(t *testing.T) {
 	e.OK(rec, http.StatusOK, &body)
 	doc.Check(t, http.MethodGet, "/api/v3/me", rec)
 	me := body.Data
-	if me.Type != "apiKey" || me.User != nil || me.APIKey == nil || me.APIKey.Label != "CI" || !me.APIKey.OrganizationAccess.AccessControl.Read || me.APIKey.OrganizationAccess.AccessControl.Write {
+	if me.Type != "apiKey" || me.User != nil || me.APIKey == nil || me.APIKey.Label != "CI" || !me.APIKey.OrganizationAccess.AccessControl.Read || me.APIKey.OrganizationAccess.AccessControl.Write || me.APIKey.ExpiresAt != nil {
 		t.Fatalf("me %+v", me)
 	}
 	if len(me.Organizations) != 1 || me.Organizations[0].ID != org || me.Organizations[0].Name != "Acme" || me.Organizations[0].Role != nil {
@@ -64,12 +65,14 @@ func TestMeWithAnAPIKey(t *testing.T) {
 
 	// A key with only organization access (no workspace grant), which the API Keys page creates for the members and teams routes, is answered too: its organization, its access and no workspaces.
 	orgOnly := e.APIKey(org, nil)
-	e.Exec(`UPDATE api_keys SET label = 'Directory', organization_access = '{"accessControl":{"read":true,"write":false}}' WHERE label = 'test' AND organization_id = ?`, org)
+	// It expires, which /me tells its holder.
+	expires := time.Now().Add(30 * 24 * time.Hour).UTC().Truncate(time.Microsecond)
+	e.Exec(`UPDATE api_keys SET label = 'Directory', organization_access = '{"accessControl":{"read":true,"write":false}}', expires_at = ? WHERE label = 'test' AND organization_id = ?`, expires, org)
 	rec = e.Do(v3apitest.Request{Method: http.MethodGet, Path: "/api/v3/me", APIKey: orgOnly})
 	body = meBody{}
 	e.OK(rec, http.StatusOK, &body)
 	doc.Check(t, http.MethodGet, "/api/v3/me", rec)
-	if me := body.Data; me.Type != "apiKey" || me.APIKey == nil || me.APIKey.Label != "Directory" || !me.APIKey.OrganizationAccess.AccessControl.Read || len(me.Organizations) != 1 || me.Organizations[0].ID != org || me.Workspaces == nil || len(me.Workspaces) != 0 {
+	if me := body.Data; me.Type != "apiKey" || me.APIKey == nil || me.APIKey.Label != "Directory" || !me.APIKey.OrganizationAccess.AccessControl.Read || me.APIKey.ExpiresAt == nil || !me.APIKey.ExpiresAt.Equal(expires) || len(me.Organizations) != 1 || me.Organizations[0].ID != org || me.Workspaces == nil || len(me.Workspaces) != 0 {
 		t.Fatalf("an organization-only key %+v", me)
 	}
 	if !strings.Contains(rec.Body.String(), `"workspaces":[]`) {

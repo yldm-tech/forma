@@ -310,7 +310,7 @@ export const en: SiteContent = {
             },
             {
               term: "API keys",
-              body: "Organization owners and managers create keys in the app under Organization Settings → API Keys → Add API key. Grant read, write or manage access one workspace at a time, then copy the key: it is shown only once. A key stops working for good when the person who created it leaves the organization, is removed from it, deletes their account or is given a role below Manager; the API Keys page shows which keys were disabled and why.",
+              body: "Organization owners and managers create keys in the app under Organization Settings → API Keys → Add API key. Grant read, write or manage access one workspace at a time, then copy the key: it is shown only once. A key stops working for good when the person who created it leaves the organization, is removed from it, deletes their account or is given a role below Manager; the API Keys page shows which keys were disabled and why. A key can also be given an expiry when it is created; from then on it is refused. The list shows each key's last four characters (`fbk_…abcd`), so a key found in a log or a repository can be matched to its row.",
             },
             {
               term: "OpenAPI",
@@ -319,7 +319,7 @@ export const en: SiteContent = {
           ],
           resourcesTitle: "Main resources",
           resources: [
-            "`/api/v3/me`: the organization a key belongs to and the workspaces it may use, with its permission in each. Start here to find a `workspaceId`.",
+            "`/api/v3/me`: the organization a key belongs to, when the key expires (`expiresAt`, null for never) and the workspaces it may use, with its permission in each. Start here to find a `workspaceId`.",
             "`/api/v3/surveys`: list, create, validate, read, update, archive, restore and delete surveys.",
             "`/api/v3/workflows`: create and edit workflows, enable, disable or test them, and list their runs.",
             "`/api/v3/action-classes` and `/api/v3/contact-attribute-keys`: the actions and attributes in-app surveys target, read-only.",

@@ -272,9 +272,10 @@ func ResponseID(key string, i int) uuid.UUID {
 func (s *seeder) apiKey(keySecret, hashedKey string) error {
 	sum := sha256.Sum256([]byte(keySecret))
 	access := apikey.OrganizationAccess{}
-	if err := s.exec("api key", `INSERT INTO api_keys (id, organization_id, created_by, label, hashed_key, lookup_hash, organization_access) VALUES (?, ?, ?, 'Seed API key', ?, ?, ?::jsonb)
-		ON CONFLICT (id) DO UPDATE SET organization_id = excluded.organization_id, hashed_key = excluded.hashed_key, lookup_hash = excluded.lookup_hash, organization_access = excluded.organization_access`,
-		APIKeyID, OrganizationID, Users[0].ID, hashedKey, hex.EncodeToString(sum[:]), jsonOf(access)); err != nil {
+	// The hint is null for a secret too short to have one, as for a key created before hints.
+	if err := s.exec("api key", `INSERT INTO api_keys (id, organization_id, created_by, label, hashed_key, lookup_hash, organization_access, key_hint) VALUES (?, ?, ?, 'Seed API key', ?, ?, ?::jsonb, NULLIF(?, ''))
+		ON CONFLICT (id) DO UPDATE SET organization_id = excluded.organization_id, hashed_key = excluded.hashed_key, lookup_hash = excluded.lookup_hash, organization_access = excluded.organization_access, key_hint = excluded.key_hint`,
+		APIKeyID, OrganizationID, Users[0].ID, hashedKey, hex.EncodeToString(sum[:]), jsonOf(access), apikey.Hint(keySecret)); err != nil {
 		return err
 	}
 	return s.exec("api key workspace", `INSERT INTO api_key_workspaces (api_key_id, workspace_id, permission) VALUES (?, ?, 'manage')

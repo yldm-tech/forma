@@ -134,11 +134,14 @@ const existing: ApiKey = {
   createdBy: { id: "u1", name: "Ada Owner", formerMember: false },
   disabledAt: null,
   disabledReason: null,
+  keyHint: null,
+  expiresAt: null,
 };
 
-/** The API keys endpoints over an in-memory list, so a create or delete shows up in the next list read. */
+/** The API keys endpoints over an in-memory list, so a create or delete shows up in the next list read. The bodies of the creates are kept in order. */
 const stubKeysServer = (listed: ApiKey[] = [existing]) => {
   const keys: ApiKey[] = [...listed];
+  const creates: Record<string, unknown>[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string, init: RequestInit = {}) => {
@@ -148,6 +151,8 @@ const stubKeysServer = (listed: ApiKey[] = [existing]) => {
       if (key === `GET ${API}/workspaces`) return json({ workspaces: [] });
       if (key === `GET ${API}/api-keys`) return json(keys);
       if (key === `POST ${API}/api-keys`) {
+        const body = JSON.parse(init.body as string) as Record<string, unknown>;
+        creates.push(body);
         const created: CreatedApiKey = {
           id: "k2",
           label: "CI",
@@ -158,6 +163,8 @@ const stubKeysServer = (listed: ApiKey[] = [existing]) => {
           createdBy: { id: "u1", name: "Ada Owner", formerMember: false },
           disabledAt: null,
           disabledReason: null,
+          keyHint: "text",
+          expiresAt: typeof body.expiresAt === "string" ? body.expiresAt : null,
           key: "fbk_plaintext",
         };
         keys.push(created);
@@ -173,6 +180,7 @@ const stubKeysServer = (listed: ApiKey[] = [existing]) => {
       throw new Error(`unexpected ${key}`);
     })
   );
+  return creates;
 };
 
 const renderPage = async (node: ReactNode) => {
@@ -194,7 +202,7 @@ const renderPage = async (node: ReactNode) => {
 };
 
 test("tells the creator of a key that v3 and MCP can lag, and how to check what it reaches, only while that key is listed", async () => {
-  stubKeysServer();
+  const creates = stubKeysServer();
   await renderPage(<ApiKeysPage organization={owner} />);
   const note = i18n.t("workspace.api_keys.v3_propagation_note");
   const hint = i18n.t("workspace.api_keys.check_key_hint");
@@ -214,6 +222,8 @@ test("tells the creator of a key that v3 and MCP can lag, and how to check what 
 
   expect((await screen.findByText(note)).getAttribute("role")).toBe("status");
   expect(await screen.findByText("fbk_plaintext")).toBeTruthy();
+  // No expiry unless one is chosen.
+  expect(creates).toEqual([expect.objectContaining({ label: "CI", expiresAt: null })]);
   // The command keeps the key in an environment variable, never in the shell history; the hint says to set it first, and the command copies with one click.
   expect(screen.getByText(hint).textContent).toContain("FORMA_API_KEY");
   const shown = screen.getByText(command);
@@ -314,4 +324,118 @@ test("links the API reference on the website from the page header", async () => 
   const link = await screen.findByRole("link", { name: i18n.t("workspace.api_keys.api_reference") });
   expect(link.getAttribute("href")).toBe("https://forma.yldm.ai/developers/#reference");
   expect(link.getAttribute("target")).toBe("_blank");
+});
+
+/** Opens the add dialog with a label and organization read access, enough to create a key. */
+const openAddDialog = async () => {
+  fireEvent.click(
+    await screen.findByRole("button", { name: i18n.t("workspace.settings.api_keys.add_api_key") })
+  );
+  const dialog = await screen.findByRole("dialog");
+  fireEvent.change(within(dialog).getByLabelText(i18n.t("workspace.api_keys.api_key_label")), {
+    target: { value: "CI" },
+  });
+  fireEvent.click(
+    within(dialog).getByRole("switch", { name: i18n.t("workspace.api_keys.organization_read") })
+  );
+  return within(dialog);
+};
+
+test("creates a key that expires after the chosen number of days", async () => {
+  const creates = stubKeysServer();
+  await renderPage(<ApiKeysPage organization={owner} />);
+  const dialog = await openAddDialog();
+  expect(dialog.getByText(i18n.t("workspace.api_keys.expiration_never_description"))).toBeTruthy();
+
+  fireEvent.change(dialog.getByLabelText(i18n.t("workspace.api_keys.expiration")), {
+    target: { value: "30" },
+  });
+  expect(dialog.getByText(/^The key will stop working on /)).toBeTruthy();
+  const before = Date.now();
+  fireEvent.click(dialog.getByRole("button", { name: i18n.t("workspace.api_keys.add_api_key") }));
+  await waitFor(() => expect(creates).toHaveLength(1));
+  const sent = Date.parse(String(creates[0]?.expiresAt));
+  const day = 24 * 60 * 60 * 1000;
+  expect(sent).toBeGreaterThanOrEqual(before + 30 * day);
+  expect(sent).toBeLessThanOrEqual(Date.now() + 30 * day);
+});
+
+test("creates a key that expires at the end of a chosen day, and needs the day first", async () => {
+  const creates = stubKeysServer();
+  await renderPage(<ApiKeysPage organization={owner} />);
+  const dialog = await openAddDialog();
+  const submit = dialog.getByRole("button", { name: i18n.t("workspace.api_keys.add_api_key") });
+
+  fireEvent.change(dialog.getByLabelText(i18n.t("workspace.api_keys.expiration")), {
+    target: { value: "custom" },
+  });
+  expect(submit.hasAttribute("disabled")).toBe(true);
+  const day = dialog.getByLabelText(i18n.t("workspace.api_keys.expiration_date"));
+  const now = new Date();
+  const year = now.getFullYear() + 1;
+  fireEvent.change(day, { target: { value: `${year}-03-15` } });
+  expect(submit.hasAttribute("disabled")).toBe(false);
+  fireEvent.click(submit);
+  await waitFor(() => expect(creates).toHaveLength(1));
+  expect(creates[0]?.expiresAt).toBe(new Date(year, 2, 15, 23, 59, 59).toISOString());
+});
+
+test("lists each key by its last four characters, when it expires, and which keys expired or expire within a week", async () => {
+  const day = 24 * 60 * 60 * 1000;
+  const soon = new Date(Date.now() + 2 * day).toISOString();
+  const later = new Date(Date.now() + 60 * day).toISOString();
+  const past = new Date(Date.now() - day).toISOString();
+  stubKeysServer([
+    { ...existing, keyHint: "Ab-_" },
+    { ...existing, id: "k2", label: "Soon", keyHint: "soon", expiresAt: soon },
+    { ...existing, id: "k3", label: "Later", keyHint: "late", expiresAt: later },
+    { ...existing, id: "k4", label: "Gone", keyHint: "gone", expiresAt: past },
+  ]);
+  await renderPage(<ApiKeysPage organization={owner} />);
+  const row = (label: string) => {
+    const found = screen.getByText(label).closest("tr");
+    if (!found) throw new Error(`no row for ${label}`);
+    return within(found);
+  };
+  await screen.findByText("Gone");
+  const formatDay = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
+
+  expect(row("Existing").getByText("fbk_…Ab-_")).toBeTruthy();
+  expect(row("Existing").getByText(i18n.t("workspace.api_keys.never_expires"))).toBeTruthy();
+  expect(row("Existing").queryByText(i18n.t("common.expired"))).toBeNull();
+  expect(row("Existing").queryByText(i18n.t("workspace.api_keys.expires_soon"))).toBeNull();
+
+  expect(row("Soon").getByText(i18n.t("workspace.api_keys.expires_soon"))).toBeTruthy();
+  expect(row("Soon").getByText(formatDay.format(new Date(soon)))).toBeTruthy();
+  expect(row("Later").queryByText(i18n.t("workspace.api_keys.expires_soon"))).toBeNull();
+  expect(row("Later").getByText(formatDay.format(new Date(later)))).toBeTruthy();
+  expect(row("Gone").getByText(i18n.t("common.expired"))).toBeTruthy();
+
+  // The expired key's dialog says when it stopped working and what to do, with its hint and expiry.
+  fireEvent.click(
+    screen.getByRole("button", { name: i18n.t("workspace.api_keys.view_permissions_for", { label: "Gone" }) })
+  );
+  const dialog = within(await screen.findByRole("dialog"));
+  expect(dialog.getByText(/^This key expired on /)).toBeTruthy();
+  expect(dialog.getByText(i18n.t("workspace.api_keys.expired_description"))).toBeTruthy();
+  expect(dialog.getByText("fbk_…gone")).toBeTruthy();
+});
+
+test("a key created before hints were kept shows a dash for its hint, in the list and in its dialog", async () => {
+  stubKeysServer();
+  await renderPage(<ApiKeysPage organization={owner} />);
+  await screen.findByText("Existing");
+  expect(screen.queryByText(/^fbk_…/)).toBeNull();
+  const row = screen.getByText("Existing").closest("tr");
+  if (!row) throw new Error("no row for Existing");
+  expect(within(row).getByText("—")).toBeTruthy();
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: i18n.t("workspace.api_keys.view_permissions_for", { label: "Existing" }),
+    })
+  );
+  const dialog = within(await screen.findByRole("dialog"));
+  const term = dialog.getByText(i18n.t("workspace.api_keys.api_key"), { selector: "dt" });
+  expect(term.nextElementSibling?.textContent).toBe("—");
 });

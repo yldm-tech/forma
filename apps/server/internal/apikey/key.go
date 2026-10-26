@@ -1,6 +1,6 @@
 // Package apikey is the organization API key module, forma2's apps/web/modules/organization/settings/api-keys plus the API key half of its request authentication (apps/web/modules/api/lib/api-key-auth.ts): keys are created, listed, relabelled and deleted under /api/app by an organization's owners and managers, and the public APIs authenticate a request carrying one through Authenticator.
 //
-// A key is "fbk_" followed by 32 random bytes in unpadded base64url. It is stored twice: lookup_hash, the hex SHA-256 of the secret (without the prefix), finds the row through a unique index, and hashed_key, a bcrypt of the secret at cost 12, verifies it. Keys minted before forma2 added bcrypt hold the hex SHA-256 of the whole raw key in both columns and are still accepted, through the x-api-key header only.
+// A key is "fbk_" followed by 32 random bytes in unpadded base64url. It is stored twice: lookup_hash, the hex SHA-256 of the secret (without the prefix), finds the row through a unique index, and hashed_key, a bcrypt of the secret at cost 12, verifies it. Keys minted before forma2 added bcrypt hold the hex SHA-256 of the whole raw key in both columns and are still accepted, through the x-api-key header only. key_hint keeps the key's last four characters in the clear, so the list can show which key is which, and expires_at, when set at creation, is when the key stops authenticating.
 package apikey
 
 import (
@@ -16,11 +16,15 @@ import (
 // Prefix marks a current-format key. forma2 named the format v2; everything else is a legacy key.
 const Prefix = "fbk_"
 
-// issuedKey is a freshly minted key: the plaintext the caller sees once, and the two hashes that are stored.
+// HintLength is how many of a key's last characters key_hint keeps: 24 of the secret's 256 bits, enough to tell keys apart and nothing a guess can use.
+const HintLength = 4
+
+// issuedKey is a freshly minted key: the plaintext the caller sees once, the two hashes that are stored, and its hint.
 type issuedKey struct {
 	Key        string
 	LookupHash string
 	HashedKey  string
+	Hint       string
 }
 
 // newKey mints a key as forma2's createApiKey did: randomBytes(32) as base64url, sha256 hex for the lookup, bcrypt cost 12 for the verification.
@@ -33,7 +37,15 @@ func newKey() (issuedKey, error) {
 	if err != nil {
 		return issuedKey{}, fmt.Errorf("hash api key: %w", err)
 	}
-	return issuedKey{Key: Prefix + s, LookupHash: sha256Hex(s), HashedKey: hashed}, nil
+	return issuedKey{Key: Prefix + s, LookupHash: sha256Hex(s), HashedKey: hashed, Hint: Hint(s)}, nil
+}
+
+// Hint is the key_hint of a key or of its secret, which end alike: its last HintLength characters, or "" for one too short to have them.
+func Hint(key string) string {
+	if len(key) < HintLength {
+		return ""
+	}
+	return key[len(key)-HintLength:]
 }
 
 // parseV2 returns the secret of a current-format key: the prefix, then at least one base64url character and nothing else. There is no length check, as in forma2's parseApiKeyV2.

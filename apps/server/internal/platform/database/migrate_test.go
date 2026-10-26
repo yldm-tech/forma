@@ -222,6 +222,14 @@ func TestSchemaConstraints(t *testing.T) {
 		wantViolation(t, db, "23514", `INSERT INTO integrations (workspace_id, type, last_error_at) VALUES ($1, 'slack', now())`, workspaceID)
 	})
 
+	t.Run("an API key's hint is its last four characters or nothing", func(t *testing.T) {
+		insert := `INSERT INTO api_keys (organization_id, label, hashed_key, lookup_hash, key_hint, expires_at) VALUES ($1, 'k', 'h', $2, $3, $4::timestamptz)`
+		wantViolation(t, db, "23514", insert, orgID, "l1", "abc", nil)
+		wantViolation(t, db, "23514", insert, orgID, "l2", "abcde", nil)
+		mustExec(t, db, insert, orgID, "l3", "ab-_", "2026-01-01T00:00:00Z")
+		mustExec(t, db, insert, orgID, "l4", nil, nil)
+	})
+
 	t.Run("an organization holds one invite per address regardless of case, and its links go with it", func(t *testing.T) {
 		inviteID := mustScanID(t, db, `INSERT INTO invites (organization_id, email, creator_id, expires_at) VALUES ($1, 'grace@example.com', $2, now() + interval '7 days') RETURNING id`, orgID, userID)
 		wantViolation(t, db, "23505", `INSERT INTO invites (organization_id, email, creator_id, expires_at) VALUES ($1, 'Grace@Example.com', $2, now() + interval '7 days')`, orgID, userID)

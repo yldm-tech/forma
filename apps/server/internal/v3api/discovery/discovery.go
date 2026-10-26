@@ -7,6 +7,7 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -82,6 +83,7 @@ type MeAPIKey struct {
 	Label string    `json:"label"`
 	// OrganizationAccess is the key's access to the organization's members and teams (the v2 organization routes).
 	OrganizationAccess apikey.OrganizationAccess `json:"organizationAccess"`
+	ExpiresAt          *time.Time                `json:"expiresAt" jsonschema:"When the key stops working, chosen when it was created; null for a key that works until it is deleted."`
 }
 
 // MeUser is the signed-in user.
@@ -123,7 +125,7 @@ func Spec() openapi.Spec {
 			{
 				Method: http.MethodGet, Path: "/api/v3/me", ID: "getMe", Tag: "Discovery",
 				Summary:     "Who am I",
-				Description: "The API key (or signed-in user) the request authenticated as, its organization and the workspaces it may use with their permission. A key with only organization access (to members and teams) is answered as well, with no workspaces. Start here to find the workspaceId the other operations take.",
+				Description: "The API key (or signed-in user) the request authenticated as, when the key expires, its organization and the workspaces it may use with their permission. A key with only organization access (to members and teams) is answered as well, with no workspaces. Start here to find the workspaceId the other operations take.",
 				Responses:   []openapi.Response{{Status: http.StatusOK, Description: "The caller.", Schema: openapi.Data(openapi.Ref("Me"))}},
 			},
 			{
@@ -159,9 +161,10 @@ func (h *Handler) me(c *gin.Context) {
 func (h *Handler) keyMe(ctx context.Context, p *apikey.Principal) (*Me, error) {
 	var row struct {
 		Label            string
+		ExpiresAt        *time.Time
 		OrganizationName string
 	}
-	err := h.db.WithContext(ctx).Raw(`SELECT k.label, o.name AS organization_name FROM api_keys k JOIN organizations o ON o.id = k.organization_id WHERE k.id = ?`, p.APIKeyID).Scan(&row).Error
+	err := h.db.WithContext(ctx).Raw(`SELECT k.label, k.expires_at, o.name AS organization_name FROM api_keys k JOIN organizations o ON o.id = k.organization_id WHERE k.id = ?`, p.APIKeyID).Scan(&row).Error
 	if err != nil {
 		return nil, fmt.Errorf("load API key: %w", err)
 	}
@@ -172,7 +175,7 @@ func (h *Handler) keyMe(ctx context.Context, p *apikey.Principal) (*Me, error) {
 	sortWorkspaces(workspaces)
 	return &Me{
 		Type:          typeAPIKey,
-		APIKey:        &MeAPIKey{ID: p.APIKeyID, Label: row.Label, OrganizationAccess: p.OrganizationAccess},
+		APIKey:        &MeAPIKey{ID: p.APIKeyID, Label: row.Label, OrganizationAccess: p.OrganizationAccess, ExpiresAt: row.ExpiresAt},
 		Organizations: []Organization{{ID: p.OrganizationID, Name: row.OrganizationName}},
 		Workspaces:    workspaces,
 	}, nil

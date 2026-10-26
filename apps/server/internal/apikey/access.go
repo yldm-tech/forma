@@ -61,6 +61,10 @@ type View struct {
 	// DisabledAt and DisabledReason are set together once the key was disabled (apikey/disable), and are nil while it works.
 	DisabledAt     *time.Time `json:"disabledAt"`
 	DisabledReason *string    `json:"disabledReason"`
+	// KeyHint is the key's last HintLength characters, which the list shows after the prefix to tell keys apart; nil for a key created before hints were kept.
+	KeyHint *string `json:"keyHint"`
+	// ExpiresAt is when the key stops working, chosen at creation; nil for a key that works until it is deleted. An expired key stays listed, like a disabled one.
+	ExpiresAt *time.Time `json:"expiresAt"`
 }
 
 // Creator is the user who created a key, as the organization's managers may see them.

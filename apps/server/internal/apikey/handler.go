@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -61,6 +62,8 @@ type createRequest struct {
 	Label                string              `json:"label"`
 	WorkspacePermissions []permissionRequest `json:"workspacePermissions" binding:"omitempty,dive"`
 	OrganizationAccess   json.RawMessage     `json:"organizationAccess"`
+	// ExpiresAt is an RFC 3339 time, read by input so that a malformed one is a field error; absent or null for a key that never expires.
+	ExpiresAt *string `json:"expiresAt"`
 }
 
 type permissionRequest struct {
@@ -68,11 +71,30 @@ type permissionRequest struct {
 	Permission  string `json:"permission" binding:"required,oneof=read write manage"`
 }
 
-// input applies forma2's ZApiKeyCreateInput (organization access as its JSON Schema, no workspace twice) and the rules forma2 left to its form: a label that is not blank, and at least one grant of any kind.
-func (r *createRequest) input(schemas *jsonschema.Validator) (CreateInput, error) {
+// latestExpiry bounds an expiry from above: before year 9999 in UTC, so that no time zone (at most 14 hours ahead) renders it past year 9999, the last year encoding/json can write a time in. A later one would be stored, then fail the create response and every list of the organization's keys.
+var latestExpiry = time.Date(9999, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+// input applies forma2's ZApiKeyCreateInput (organization access as its JSON Schema, no workspace twice) and the rules forma2 left to its form: a label that is not blank, and at least one grant of any kind. An expiry must be an RFC 3339 time after now and before latestExpiry.
+func (r *createRequest) input(schemas *jsonschema.Validator, now time.Time) (CreateInput, error) {
 	var fields []apperr.FieldError
 	if strings.TrimSpace(r.Label) == "" {
 		fields = append(fields, apperr.FieldError{Field: "label", Rule: "required"})
+	}
+	var expiresAt *time.Time
+	if r.ExpiresAt != nil {
+		at, err := time.Parse(time.RFC3339Nano, *r.ExpiresAt)
+		switch {
+		case err != nil:
+			fields = append(fields, apperr.FieldError{Field: "expiresAt", Rule: "datetime"})
+		case !at.After(now):
+			fields = append(fields, apperr.FieldError{Field: "expiresAt", Rule: "future"})
+		case !at.Before(latestExpiry):
+			fields = append(fields, apperr.FieldError{Field: "expiresAt", Rule: "max"})
+		default:
+			// PostgreSQL keeps microseconds; the view the create returns is read back from the row.
+			at = at.UTC()
+			expiresAt = &at
+		}
 	}
 	var access OrganizationAccess
 	switch {
@@ -90,7 +112,7 @@ func (r *createRequest) input(schemas *jsonschema.Validator) (CreateInput, error
 		return CreateInput{}, apperr.Validation(fields)
 	}
 
-	in := CreateInput{Label: r.Label, OrganizationAccess: access}
+	in := CreateInput{Label: r.Label, OrganizationAccess: access, ExpiresAt: expiresAt}
 	seen := make(map[uuid.UUID]bool, len(r.WorkspacePermissions))
 	for _, p := range r.WorkspacePermissions {
 		// The binding tags have checked the format.
@@ -122,7 +144,7 @@ func (h *Handler) create(c *gin.Context) {
 		httpapi.Fail(c, err)
 		return
 	}
-	in, err := req.input(h.schemas)
+	in, err := req.input(h.schemas, time.Now())
 	if err != nil {
 		httpapi.Fail(c, err)
 		return

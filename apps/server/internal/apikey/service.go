@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -32,6 +33,8 @@ type CreateInput struct {
 	Label                string
 	WorkspacePermissions []WorkspacePermissionInput
 	OrganizationAccess   OrganizationAccess
+	// ExpiresAt is when the key stops working, in the future when the request was read; nil for a key that never expires.
+	ExpiresAt *time.Time
 }
 
 // WorkspacePermissionInput is one requested workspace grant.
@@ -79,7 +82,7 @@ func (s *Service) Create(ctx context.Context, user httpapi.Actor, organizationID
 	if err != nil {
 		return nil, fmt.Errorf("encode organization access: %w", err)
 	}
-	row := newKeyRow{OrganizationID: organizationID, CreatedBy: user.UserID, Label: in.Label, HashedKey: key.HashedKey, LookupHash: key.LookupHash, OrganizationAccess: access}
+	row := newKeyRow{OrganizationID: organizationID, CreatedBy: user.UserID, Label: in.Label, HashedKey: key.HashedKey, LookupHash: key.LookupHash, KeyHint: key.Hint, OrganizationAccess: access, ExpiresAt: in.ExpiresAt}
 	grants := make([]WorkspaceGrant, 0, len(in.WorkspacePermissions))
 	for _, p := range in.WorkspacePermissions {
 		row.Grants = append(row.Grants, grantInput(p))
@@ -94,7 +97,7 @@ func (s *Service) Create(ctx context.Context, user httpapi.Actor, organizationID
 	s.delivery.DeliverAPIKey(ctx, id)
 	view := View{
 		ID: id, Label: in.Label, CreatedAt: stored.CreatedAt, OrganizationAccess: in.OrganizationAccess, WorkspacePermissions: grants,
-		CreatedBy: &Creator{ID: user.UserID, Name: stored.CreatorName},
+		CreatedBy: &Creator{ID: user.UserID, Name: stored.CreatorName}, KeyHint: &key.Hint, ExpiresAt: stored.ExpiresAt,
 	}
 	analytics.Capture(user.UserID.String(), "api_key_created", analytics.Properties{"api_key_id": id.String()}, analytics.Groups{OrganizationID: organizationID.String()})
 	return &Created{View: view, Key: key.Key}, nil
@@ -147,7 +150,7 @@ func (s *Service) UpdateLabel(ctx context.Context, user httpapi.Actor, organizat
 	return view, nil
 }
 
-// Delete revokes a key. Keys never expire; besides deletion, a key is only ever disabled, when its creator leaves the organization or loses the role that may create keys (apikey/disable).
+// Delete revokes a key. Besides deletion, a key stops working only when it expires (at the expiry chosen when it was created, if any) or is disabled, when its creator leaves the organization or loses the role that may create keys (apikey/disable).
 func (s *Service) Delete(ctx context.Context, user httpapi.Actor, organizationID, id uuid.UUID) (err error) {
 	event := audit.Event{Action: audit.ActionDeleted, TargetType: audit.TargetAPIKey, TargetID: id.String(), OrganizationID: organizationID.String()}
 	var deleted *View
@@ -172,7 +175,7 @@ func (s *Service) Delete(ctx context.Context, user httpapi.Actor, organizationID
 	return nil
 }
 
-// auditInput is the create request as forma2 recorded it (newObject = apiKeyData).
+// auditInput is the create request as forma2 recorded it (newObject = apiKeyData). The expiry is left out: the audit redaction masks every expiresAt.
 func auditInput(in CreateInput) map[string]any {
 	perms := in.WorkspacePermissions
 	if perms == nil {
