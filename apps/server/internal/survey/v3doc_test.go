@@ -170,3 +170,25 @@ func TestLanguageAndReferenceParams(t *testing.T) {
 		t.Error("an editor marker leaked")
 	}
 }
+
+func TestScoreFields(t *testing.T) {
+	doc := mustDecode(t, `{
+	  "name": "Quiz",
+	  "blocks": [{"name": "B", "elements": [
+	    {"id": "single", "type": "multipleChoiceSingle", "headline": {"en-US": "Q"}, "required": true, "choices": [{"id": "a", "label": {"en-US": "A"}, "score": 1}, {"id": "b", "label": {"en-US": "B"}}]},
+	    {"id": "multi", "type": "multipleChoiceMulti", "headline": {"en-US": "Q"}, "required": true, "choices": [{"id": "a", "label": {"en-US": "A"}, "score": -1}, {"id": "b", "label": {"en-US": "B"}}]},
+	    {"id": "picture", "type": "pictureSelection", "headline": {"en-US": "Q"}, "required": true, "choices": [{"id": "a", "imageUrl": "/storage/x/public/a.png", "score": 2}, {"id": "b", "imageUrl": "/storage/x/public/b.png"}]},
+	    {"id": "ranking", "type": "ranking", "headline": {"en-US": "Q"}, "required": true, "choices": [{"id": "a", "label": {"en-US": "A"}, "score": 1}, {"id": "b", "label": {"en-US": "B"}}]},
+	    {"id": "matrix", "type": "matrix", "headline": {"en-US": "Q"}, "required": true, "rows": [{"id": "r", "label": {"en-US": "R"}, "score": 1}], "columns": [{"id": "c", "label": {"en-US": "C"}}]}
+	  ]}],
+	  "variables": [{"id": "v", "name": "score", "type": "number", "value": 0, "isScore": true}]
+	}`)
+	var names []string
+	for _, p := range unsupportedFields(doc, createRootKeys, defaultV3Language, nil) {
+		names = append(names, p.Name)
+	}
+	want := []string{"blocks.0.elements.3.choices.0.score", "blocks.0.elements.4.rows.0.score"}
+	if strings.Join(names, ",") != strings.Join(want, ",") {
+		t.Fatalf("unsupported fields %v, want %v", names, want)
+	}
+}
