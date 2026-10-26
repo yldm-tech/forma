@@ -15,6 +15,12 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test
 import { initI18n } from "../../../lib/i18n";
 import { type WorkspaceDetail, workspaceQuery } from "../../../lib/queries/workspaces";
 import { type SurveyTemplate, surveyTemplatesInLanguageQuery, surveyTemplatesQuery } from "../api";
+import {
+  type OrganizationTemplate,
+  type OrganizationTemplateList,
+  organizationTemplateQuery,
+  organizationTemplatesQuery,
+} from "./organization-templates";
 import { TemplateGallery } from "./template-gallery";
 
 // The gallery previews the chosen template with the respondent runtime: beside the cards on a wide screen, in a dialog from the card's Preview button on a narrower one.
@@ -128,7 +134,15 @@ const stubScreen = (wide: boolean) => {
 
 const renderGallery = (
   surveyType: "link" | "app" = "link",
-  { defaultLanguage = "en-US", templatesInSurveyLanguage = templates } = {}
+  {
+    defaultLanguage = "en-US",
+    templatesInSurveyLanguage = templates,
+    ownTemplates = { templates: [], canManage: false },
+  }: {
+    defaultLanguage?: string;
+    templatesInSurveyLanguage?: SurveyTemplate[];
+    ownTemplates?: OrganizationTemplateList;
+  } = {}
 ) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   queryClient.setQueryData(surveyTemplatesQuery(WS, i18n.language).queryKey, {
@@ -140,6 +154,13 @@ const renderGallery = (
     xmTemplateIds: ["nps"],
   });
   queryClient.setQueryData(workspaceQuery(WS).queryKey, workspace);
+  queryClient.setQueryData(organizationTemplatesQuery(ORG).queryKey, ownTemplates);
+  for (const template of ownTemplates.templates) {
+    queryClient.setQueryData(organizationTemplateQuery(template.id).queryKey, {
+      ...template,
+      preset: ownPreset,
+    });
+  }
   const rootRoute = createRootRoute({ component: Outlet });
   const routeTree = rootRoute.addChildren([
     createRoute({
@@ -298,5 +319,147 @@ describe("TemplateGallery preview", () => {
     // The card's Preview button still opens it.
     fireEvent.click(screen.getByRole("button", { name: i18n.t("common.preview") }));
     expect(await screen.findByRole("dialog", { name: "Net Promoter Score (NPS)" })).toBeTruthy();
+  });
+});
+
+const OWN_TEMPLATE_ID = "0190a000-0000-7000-8000-000000000010";
+
+const ownBlock = {
+  id: "blk-own",
+  name: "Block 1",
+  elements: [
+    {
+      id: "el-own",
+      type: "openText",
+      headline: { default: "What shipped well this release?", "ja-JP": "今回のリリースで良かった点は？" },
+      required: true,
+    },
+  ],
+};
+
+const ownPreset = {
+  welcomeCard: { enabled: false, timeToFinish: false, showResponseCount: false },
+  blocks: [ownBlock],
+  endings: [{ id: "end-own", type: "endScreen", headline: { default: "Thanks, team" } }],
+  hiddenFields: { enabled: true, fieldIds: [] },
+  variables: [],
+  metadata: {},
+  styling: { brandColor: { light: "#123456" } },
+  surveyClosedMessage: null,
+  isBackButtonHidden: true,
+} as unknown as OrganizationTemplate["preset"];
+
+const ownTemplate: OrganizationTemplate = {
+  id: OWN_TEMPLATE_ID,
+  createdAt: "2026-10-20T00:00:00Z",
+  updatedAt: "2026-10-20T00:00:00Z",
+  organizationId: ORG,
+  name: "Release retro",
+  description: "What we ask after every release.",
+  creator: { name: "Ada" },
+  questionCount: 1,
+  languages: [
+    { code: "en-US", alias: null, default: true, enabled: true },
+    { code: "ja-JP", alias: null, default: false, enabled: true },
+  ],
+};
+
+describe("TemplateGallery organization templates", () => {
+  test("lists the organization's templates above the catalog, previews one as saved and creates a survey from it", async () => {
+    stubScreen(true);
+    const renderSurvey = stubRuntime();
+    const posts: { path: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init: RequestInit = {}) => {
+        if (init.method !== "POST") throw new Error(`unexpected ${init.method ?? "GET"} ${path}`);
+        posts.push({ path, body: JSON.parse(init.body as string) });
+        return Response.json({ id: "0190a000-0000-7000-8000-000000000011" }, { status: 201 });
+      })
+    );
+    renderGallery("app", { ownTemplates: { templates: [ownTemplate], canManage: false } });
+
+    const headings = (await screen.findAllByRole("heading", { level: 2 })).map((h) => h.textContent);
+    expect(headings).toEqual([
+      i18n.t("workspace.surveys.organization_templates.section_title"),
+      i18n.t("workspace.surveys.organization_templates.catalog_title"),
+    ]);
+    expect(
+      screen.getByText(i18n.t("workspace.surveys.organization_templates.saved_by", { name: "Ada" }))
+    ).toBeTruthy();
+    expect(
+      screen.getByText(i18n.t("workspace.surveys.organization_templates.language_count", { count: 2 }))
+    ).toBeTruthy();
+    // A description may run to 1000 characters; the card keeps to a few lines of it.
+    expect(screen.getByText("What we ask after every release.").className).toContain("line-clamp-3");
+
+    await chooseTemplate("Release retro");
+    const pane = screen.getByRole("complementary", {
+      name: i18n.t("workspace.surveys.templates.template_preview"),
+    });
+    expect(within(pane).getByRole("heading", { name: "Release retro" })).toBeTruthy();
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    const props = renderedSurvey(renderSurvey);
+    expect(props?.survey.blocks).toEqual([ownBlock]);
+    expect(props?.survey.type).toBe("app");
+    expect(props?.survey.styling).toEqual({ brandColor: { light: "#123456" } });
+    expect(props?.survey.isBackButtonHidden).toBe(true);
+    // Using it is open to whoever may create surveys here; managing it is not.
+    expect(
+      screen.queryByRole("button", {
+        name: i18n.t("workspace.surveys.organization_templates.delete_template_named", {
+          name: "Release retro",
+        }),
+      })
+    ).toBeNull();
+
+    fireEvent.click(
+      within(pane).getByRole("button", { name: i18n.t("workspace.surveys.templates.use_this_template") })
+    );
+    await waitFor(() =>
+      expect(posts).toEqual([
+        {
+          path: `/api/app/survey-templates/${OWN_TEMPLATE_ID}/surveys`,
+          body: { workspaceId: WS, surveyType: "app" },
+        },
+      ])
+    );
+  });
+
+  test("a filter leaves them out, a search finds them by name, and an owner or a manager may edit and delete them", async () => {
+    stubScreen(true);
+    stubRuntime();
+    renderGallery("link", { ownTemplates: { templates: [ownTemplate], canManage: true } });
+
+    expect(await screen.findByRole("button", { name: "Release retro" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.customer_success") }));
+    expect(screen.queryByRole("button", { name: "Release retro" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: i18n.t("common.search") }), {
+      target: { value: "retro" },
+    });
+    expect(screen.getByRole("button", { name: "Release retro" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Net Promoter Score (NPS)" })).toBeNull();
+
+    await chooseTemplate("Release retro");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("workspace.surveys.organization_templates.delete_template_named", {
+          name: "Release retro",
+        }),
+      })
+    );
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText(i18n.t("workspace.surveys.organization_templates.delete_template_description"))
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: i18n.t("workspace.surveys.organization_templates.edit_template_named", {
+          name: "Release retro",
+        }),
+      })
+    ).toBeTruthy();
   });
 });

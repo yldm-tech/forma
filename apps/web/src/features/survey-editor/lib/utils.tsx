@@ -513,7 +513,8 @@ export const getMatchValueProps = (
           TSurveyElementTypeEnum.Rating,
           TSurveyElementTypeEnum.NPS,
           TSurveyElementTypeEnum.CSAT,
-          TSurveyElementTypeEnum.CES
+          TSurveyElementTypeEnum.CES,
+          TSurveyElementTypeEnum.Slider
         );
       }
 
@@ -697,6 +698,30 @@ export const getMatchValueProps = (
         show: true,
         showInput: false,
         options: groupedOptions,
+      };
+    } else if (selectedElement?.type === TSurveyElementTypeEnum.Slider) {
+      // A slider can have up to a thousand positions, too many to list: its value is typed, and a number variable can stand in for it.
+      const variableOptions = variables
+        .filter((variable) => variable.type === "number")
+        .map((variable) => {
+          return {
+            icon: FileDigitIcon,
+            label: variable.name,
+            value: variable.id,
+            meta: {
+              type: "variable",
+            },
+          };
+        });
+
+      return {
+        show: true,
+        showInput: true,
+        inputType: "number",
+        options:
+          variableOptions.length > 0
+            ? [{ label: t("common.variables"), value: "variables", options: variableOptions }]
+            : [],
       };
     } else if (selectedElement?.type === TSurveyElementTypeEnum.NPS) {
       const choices = Array.from({ length: 11 }, (_, idx) => {
@@ -924,6 +949,7 @@ export const getMatchValueProps = (
             TSurveyElementTypeEnum.NPS,
             TSurveyElementTypeEnum.CSAT,
             TSurveyElementTypeEnum.CES,
+            TSurveyElementTypeEnum.Slider,
           ].includes(element.type) ||
           (element.type === TSurveyElementTypeEnum.OpenText && element.inputType === "number")
       );
@@ -1097,6 +1123,7 @@ export const getMatchValueProps = (
             TSurveyElementTypeEnum.NPS,
             TSurveyElementTypeEnum.CSAT,
             TSurveyElementTypeEnum.CES,
+            TSurveyElementTypeEnum.Slider,
           ].includes(element.type) ||
           (element.type === TSurveyElementTypeEnum.OpenText && element.inputType === "number")
         );
@@ -1423,6 +1450,7 @@ export const getActionValueOptions = (
           TSurveyElementTypeEnum.NPS,
           TSurveyElementTypeEnum.CSAT,
           TSurveyElementTypeEnum.CES,
+          TSurveyElementTypeEnum.Slider,
         ].includes(element.type) ||
         (element.type === TSurveyElementTypeEnum.OpenText && element.inputType === "number")
     );

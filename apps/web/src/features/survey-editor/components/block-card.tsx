@@ -37,6 +37,7 @@ import { OpenElementForm } from "./open-element-form";
 import { PictureSelectionForm } from "./picture-selection-form";
 import { RankingElementForm } from "./ranking-element-form";
 import { RatingElementForm } from "./rating-element-form";
+import { SliderElementForm } from "./slider-element-form";
 import { BLOCK_NAME_MAX_LENGTH } from "../lib/blocks";
 import { formatTextWithSlashes } from "../lib/utils";
 import { getElementIconMap, getTSurveyElementTypeEnumName } from "../lib/elements";
@@ -185,6 +186,7 @@ export const BlockCard = ({
     [TSurveyElementTypeEnum.Address]: AddressElementForm,
     [TSurveyElementTypeEnum.Ranking]: RankingElementForm,
     [TSurveyElementTypeEnum.ContactInfo]: ContactInfoElementForm,
+    [TSurveyElementTypeEnum.Slider]: SliderElementForm,
   };
 
   // Elements that need lastElement prop

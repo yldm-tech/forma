@@ -54,6 +54,18 @@ export interface ResponseTagChange {
   tagId: string;
 }
 
+/** POST /api/app/surveys/{id}/responses/tags/{add,remove}: how many of the survey's responses matched the filter when the change ran, and how many of them gained or lost the tag. */
+export interface BulkTagResult {
+  tagId: string;
+  matched: number;
+  changed: number;
+}
+
+export type BulkTagOperation = "add" | "remove";
+
+/** The server's bound on the response ids of one bulk tag change (MaxBulkTagResponseIDs in apps/server/internal/response/bulk_tags.go). */
+export const BULK_TAG_MAX_RESPONSE_IDS = 1000;
+
 /** One link of POST /api/app/surveys/{id}/single-use-links. */
 export interface SingleUseLink {
   suId: string;
@@ -61,6 +73,49 @@ export interface SingleUseLink {
 }
 
 export type ExportFormat = "csv" | "xlsx";
+
+/** The length of one trend bucket; the server picks one from the range when none is asked for. */
+export type TrendInterval = "day" | "week" | "month";
+
+/** What an element trend's values are: the NPS score (-100 to 100), the satisfied share (4 or 5) in percent, or the average answer. */
+export type TrendMetric = "nps" | "satisfied" | "average";
+
+/** One trend bucket: its first and last day (local dates in the trend's time zone, both inclusive, cut to the range at the two ends), the responses started in it and how many of them are completed. */
+export interface TrendBucket {
+  start: string;
+  end: string;
+  /** The responses read cover only part of the period: the filter's window starts or ends inside it, or it has not ended yet, so its counts are not comparable with a whole period's. */
+  partial: boolean;
+  responses: number;
+  completed: number;
+  completionPercentage: number;
+}
+
+/** An element's metric in one bucket; value is null when nobody answered it with a number. */
+export interface TrendPoint {
+  answered: number;
+  value: number | null;
+}
+
+/** One NPS, CSAT, rating or CES element's metric per bucket, its points lined up with the buckets. */
+export interface ElementTrend {
+  elementId: string;
+  type: string;
+  headline: string;
+  metric: TrendMetric;
+  points: TrendPoint[];
+}
+
+/** POST /api/app/surveys/{id}/trends (apps/server/internal/analysis/trends.go): the responses matching the filter by day, ISO week or month in the organization's display time zone. */
+export interface SurveyTrends {
+  interval: TrendInterval;
+  timeZone: string;
+  buckets: TrendBucket[];
+  elements: ElementTrend[];
+}
+
+/** The error code of a trend whose range needs too many buckets at the interval asked for. */
+export const TREND_TOO_MANY_BUCKETS = "trend_too_many_buckets";
 
 /** The dry run of the attachment export: how many files the archive would hold, and whether that is over its limit. */
 export interface AttachmentCounts {
@@ -142,6 +197,8 @@ export const analysisKeys = {
   survey: (surveyId: string) => [...analysisKeys.all(surveyId), "survey"] as const,
   summary: (surveyId: string, criteria: TResponseFilterCriteria) =>
     [...analysisKeys.all(surveyId), "summary", criteria] as const,
+  trends: (surveyId: string, criteria: TResponseFilterCriteria, interval: TrendInterval | undefined) =>
+    [...analysisKeys.all(surveyId), "trends", criteria, interval ?? "auto"] as const,
   filterData: (surveyId: string) => [...analysisKeys.all(surveyId), "filter-data"] as const,
   displays: (surveyId: string) => [...analysisKeys.all(surveyId), "displays"] as const,
   responses: (surveyId: string, criteria: TResponseFilterCriteria) =>
@@ -166,6 +223,22 @@ export const surveySummaryQuery = (surveyId: string, criteria: TResponseFilterCr
       api
         .post<TSurveySummary>(`${surveyPath(surveyId)}/summary`, { filterCriteria: criteria }, { signal })
         .then(parseSummary),
+  });
+
+/** The trend under the current filter; without an interval the server picks one from the range and says which. */
+export const surveyTrendsQuery = (
+  surveyId: string,
+  criteria: TResponseFilterCriteria,
+  interval: TrendInterval | undefined
+) =>
+  queryOptions({
+    queryKey: analysisKeys.trends(surveyId, criteria, interval),
+    queryFn: ({ signal }) =>
+      api.post<SurveyTrends>(
+        `${surveyPath(surveyId)}/trends`,
+        { filterCriteria: criteria, interval },
+        { signal }
+      ),
   });
 
 export const surveyFilterDataQuery = (surveyId: string) =>
@@ -259,6 +332,17 @@ export const analysisApi = {
     api.post<ResponseTagChange>(`/api/app/responses/${responseId}/tags`, { tagId }),
   removeTag: (responseId: string, tagId: string) =>
     api.delete<ResponseTagChange>(`/api/app/responses/${responseId}/tags/${tagId}`),
+  /** Adds the tag to, or removes it from, every response of the survey matching the criteria: a selection is its responseIds (at most BULK_TAG_MAX_RESPONSE_IDS), "all matching" the view's filter. */
+  bulkTag: (
+    surveyId: string,
+    operation: BulkTagOperation,
+    tagId: string,
+    criteria: TResponseFilterCriteria
+  ) =>
+    api.post<BulkTagResult>(`${surveyPath(surveyId)}/responses/tags/${operation}`, {
+      tagId,
+      filterCriteria: criteria,
+    }),
   createTag: (workspaceId: string, name: string) =>
     api
       .post<Stamped<TTag>>(`/api/app/workspaces/${workspaceId}/tags`, { name })
@@ -270,6 +354,13 @@ export const analysisApi = {
   /** The export file itself, named by the server's Content-Disposition. */
   exportResponses: (surveyId: string, format: ExportFormat, criteria: TResponseFilterCriteria) =>
     downloadFile(`${surveyPath(surveyId)}/responses/export`, { format, filterCriteria: criteria }),
+  /** The trend as a file, a row per bucket, named by the server's Content-Disposition. */
+  exportTrends: (
+    surveyId: string,
+    format: ExportFormat,
+    criteria: TResponseFilterCriteria,
+    interval: TrendInterval | undefined
+  ) => downloadFile(`${surveyPath(surveyId)}/trends/export`, { format, filterCriteria: criteria, interval }),
   /** The attachment export's dry run, which the download asks before navigating. */
   attachmentCounts: (surveyId: string, criteria?: TResponseFilterCriteria) =>
     api.get<{ data: AttachmentCounts }>(attachmentsUrl(surveyId, criteria, true)).then((res) => res.data),

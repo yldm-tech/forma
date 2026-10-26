@@ -35,6 +35,7 @@ function TemplatesPage() {
       <div className="h-full overflow-y-auto bg-slate-50">
         <TemplateGallery
           workspaceId={workspace.id}
+          organizationId={workspace.organizationId}
           surveyType={surveyTypeForChannel(config.channel)}
           defaultLanguage={resolveDefaultSurveyLanguage({
             workspaceDefaultLanguage: config.defaultSurveyLanguage,

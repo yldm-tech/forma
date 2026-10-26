@@ -205,6 +205,19 @@ func TestSchemaConstraints(t *testing.T) {
 		}
 	})
 
+	t.Run("a survey template is named, keeps a document, and goes with its organization", func(t *testing.T) {
+		templateOrg := mustScanID(t, db, `INSERT INTO organizations (name) VALUES ('Templates') RETURNING id`)
+		insert := `INSERT INTO survey_templates (organization_id, created_by, name, welcome_card, blocks, endings, hidden_fields, variables) VALUES ($1, $2, $3, '{"enabled": false}', $4::jsonb, '[]', '{"enabled": false}', '[]')`
+		wantViolation(t, db, "23514", insert, templateOrg, userID, "", "[]")
+		wantViolation(t, db, "23514", insert, templateOrg, userID, "NPS", "{}")
+		mustExec(t, db, insert, templateOrg, userID, "NPS", "[]")
+		mustExec(t, db, `DELETE FROM organizations WHERE id = $1`, templateOrg)
+		var left int
+		if err := db.QueryRow(`SELECT count(*) FROM survey_templates`).Scan(&left); err != nil || left != 0 {
+			t.Fatalf("survey templates left after their organization was deleted: %d, %v", left, err)
+		}
+	})
+
 	t.Run("an integration error has both a time and a message or neither", func(t *testing.T) {
 		wantViolation(t, db, "23514", `INSERT INTO integrations (workspace_id, type, last_error_at) VALUES ($1, 'slack', now())`, workspaceID)
 	})

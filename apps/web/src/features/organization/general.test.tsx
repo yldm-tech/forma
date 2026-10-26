@@ -51,6 +51,9 @@ const organization: OrganizationDetail = {
   whitelabel: {},
   membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner" },
   userManagementAllowed: true,
+  twoFactorEnforcedAt: null,
+  twoFactorStatus: "enabled",
+  twoFactorBlocked: false,
 };
 
 /** The server behind the page's other cards. */

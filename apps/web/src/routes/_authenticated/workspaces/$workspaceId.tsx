@@ -10,6 +10,7 @@ import { TopControlBar } from "../../../components/shell/top-control-bar";
 import { Button } from "../../../components/ui/button";
 import { Wordmark } from "../../../components/ui/logo";
 import { LimitsReachedBanner } from "../../../features/billing/components/limits-reached-banner";
+import { TwoFactorReminder } from "../../../features/organization/two-factor-requirement";
 import { ApiError } from "../../../lib/api";
 import { workspaceHomePath } from "../../../lib/navigation";
 import { guardPageError } from "../../../lib/route-guards";
@@ -98,16 +99,17 @@ function WorkspaceLayout() {
   return (
     <AppShell
       banner={
-        // forma2 left the limits banner out during a trial, whose own notice is in the sidebar.
-        billing?.isFormaCloud &&
-        billing.usage &&
-        !isTrialing && (
-          <LimitsReachedBanner
-            organizationId={organization.id}
-            limits={billing.limits}
-            responseCount={billing.usage.responses}
-          />
-        )
+        <>
+          {/* forma2 left the limits banner out during a trial, whose own notice is in the sidebar. */}
+          {billing?.isFormaCloud && billing.usage && !isTrialing && (
+            <LimitsReachedBanner
+              organizationId={organization.id}
+              limits={billing.limits}
+              responseCount={billing.usage.responses}
+            />
+          )}
+          <TwoFactorReminder organization={organization} />
+        </>
       }
       sidebar={
         isSettingsMode ? (

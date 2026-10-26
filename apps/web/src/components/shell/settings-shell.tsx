@@ -2,6 +2,7 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { LimitsReachedBanner } from "../../features/billing/components/limits-reached-banner";
+import { TwoFactorReminder } from "../../features/organization/two-factor-requirement";
 import { meQuery } from "../../lib/queries/auth";
 import { billingSummaryQuery } from "../../lib/queries/billing";
 import type { OrganizationDetail } from "../../lib/queries/organizations";
@@ -19,7 +20,7 @@ export const currentSettingsWorkspace = <T extends { id: string }>(
   rememberedId: string | null
 ): T | undefined => workspaces?.find((workspace) => workspace.id === rememberedId) ?? workspaces?.[0];
 
-/** forma2's SettingsShell for the organization and account settings pages, whose address names no workspace: the settings sidebar with its workspace section for the current workspace, a top bar with the organization switcher and the command palette, and on Forma Cloud the limits banner. */
+/** forma2's SettingsShell for the organization and account settings pages, whose address names no workspace: the settings sidebar with its workspace section for the current workspace, a top bar with the organization switcher and the command palette, on Forma Cloud the limits banner, and the reminder of a two-factor requirement the user has yet to meet. */
 export const SettingsShell = ({
   organization,
   children,
@@ -36,14 +37,16 @@ export const SettingsShell = ({
   return (
     <AppShell
       banner={
-        billing?.isFormaCloud &&
-        billing.usage && (
-          <LimitsReachedBanner
-            organizationId={organization.id}
-            limits={billing.limits}
-            responseCount={billing.usage.responses}
-          />
-        )
+        <>
+          {billing?.isFormaCloud && billing.usage && (
+            <LimitsReachedBanner
+              organizationId={organization.id}
+              limits={billing.limits}
+              responseCount={billing.usage.responses}
+            />
+          )}
+          <TwoFactorReminder organization={organization} />
+        </>
       }
       sidebar={
         <SettingsNavigation

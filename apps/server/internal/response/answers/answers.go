@@ -6,11 +6,13 @@ package answers
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 // Element types the checks treat specially.
@@ -24,6 +26,8 @@ const (
 	typeAddress              = "address"
 	typeContactInfo          = "contactInfo"
 	typeFileUpload           = "fileUpload"
+	typeSlider               = "slider"
+	typeDate                 = "date"
 )
 
 // otherChoiceID is the id of a choice element's "Other" option.
@@ -73,6 +77,11 @@ type element struct {
 	Choices    []choice    `json:"choices"`
 	Rows       []any       `json:"rows"`
 	Validation *validation `json:"validation"`
+
+	Min         *float64 `json:"min"`
+	Max         *float64 `json:"max"`
+	Step        *float64 `json:"step"`
+	IncludeTime bool     `json:"includeTime"`
 
 	AddressLine1 *field `json:"addressLine1"`
 	AddressLine2 *field `json:"addressLine2"`
@@ -196,6 +205,12 @@ func (c checker) element(e *element, value any) []Error {
 		errs = append(errs, err)
 	}
 	if err, ok := c.choiceMembership(e, value); ok {
+		errs = append(errs, err)
+	}
+	if err, ok := c.sliderValue(e, value); ok {
+		errs = append(errs, err)
+	}
+	if err, ok := c.dateTimeValue(e, value); ok {
 		errs = append(errs, err)
 	}
 
@@ -333,6 +348,32 @@ func (c checker) choiceMembership(e *element, value any) (Error, bool) {
 	}
 	return Error{}, false
 }
+
+// sliderValue is the runtime's validateSliderValue: a slider answer is a position of its scale, a number from min to max a whole number of steps from min.
+func (c checker) sliderValue(e *element, value any) (Error, bool) {
+	if e.Type != typeSlider || isEmpty(value) || e.Min == nil || e.Max == nil || e.Step == nil {
+		return Error{}, false
+	}
+	n, ok := value.(float64)
+	if !ok || !(surveydoc.SliderScale{Min: *e.Min, Max: *e.Max, Step: *e.Step}).Holds(n) {
+		return c.invalidOption(), true
+	}
+	return Error{}, false
+}
+
+// dateTimeValue is the runtime's validateDateTimeValue: an element that asks for the time of day takes a date and a time, YYYY-MM-DDTHH:mm. The runtime words a day without a time as "select a time"; the server, whose messages are the runtime's errors namespace, answers with the invalid-format message.
+func (c checker) dateTimeValue(e *element, value any) (Error, bool) {
+	if e.Type != typeDate || !e.IncludeTime || isEmpty(value) {
+		return Error{}, false
+	}
+	if s, ok := value.(string); !ok || !dateTimeAnswer.MatchString(s) {
+		return c.invalidOption(), true
+	}
+	return Error{}, false
+}
+
+// dateTimeAnswer is DATE_TIME_ANSWER_PATTERN, a date and time as the date element stores it.
+var dateTimeAnswer = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$`)
 
 func hasRule(rules []rule, typ, field string) bool {
 	return slices.ContainsFunc(rules, func(r rule) bool { return r.Type == typ && r.Field == field })

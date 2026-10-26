@@ -18,6 +18,7 @@ var operatorsByElementType = map[string][]string{
 	ElementRating:               numericOperators,
 	ElementCSAT:                 numericOperators,
 	ElementCES:                  numericOperators,
+	ElementSlider:               numericOperators,
 	ElementCTA:                  {"isClicked", "isNotClicked"},
 	ElementConsent:              {"isAccepted", "isSkipped"},
 	ElementCal:                  {"isBooked", "isSkipped"},
@@ -150,7 +151,7 @@ func (li *logicIssues) elementCondition(s *Survey, c *Condition, ref ElementRef,
 		li.openTextRight(s, el, op, right, elements)
 	case ElementMultipleChoiceSingle, ElementMultipleChoiceMulti, ElementPictureSelection, ElementRanking:
 		li.choiceRight(el, ref, op, right)
-	case ElementNPS, ElementRating:
+	case ElementNPS, ElementRating, ElementSlider:
 		li.scoreRight(s, el, op, right)
 	case ElementDate:
 		li.dateRight(s, right, elements)
@@ -189,7 +190,7 @@ func (li *logicIssues) openTextRight(s *Survey, el *Element, op string, right *O
 		}
 		valid := []string{ElementOpenText}
 		if el.OpenTextInputType() == "number" {
-			valid = append(valid, ElementRating, ElementNPS)
+			valid = append(valid, ElementRating, ElementNPS, ElementSlider)
 		}
 		if (op == "equals" || op == "doesNotEqual") && el.OpenTextInputType() != "number" {
 			valid = append(valid, ElementDate, ElementMultipleChoiceSingle, ElementMultipleChoiceMulti)
@@ -265,6 +266,14 @@ func (li *logicIssues) scoreRight(s *Survey, el *Element, op string, right *Oper
 		case el.Type == ElementNPS:
 			if n < 0 || n > 10 {
 				li.add(fmt.Sprintf(`Conditional Logic: NPS score should be between 0 and 10 for "%s" %s`, op, li.where()))
+			}
+		case el.Type == ElementSlider:
+			lo, hi := math.NaN(), math.NaN()
+			if el.Min != nil && el.Max != nil {
+				lo, hi = *el.Min, *el.Max
+			}
+			if !(n >= lo && n <= hi) {
+				li.add(fmt.Sprintf(`Conditional Logic: Slider value should be between %s and %s for "%s" %s`, formatNumber(lo), formatNumber(hi), op, li.where()))
 			}
 		default:
 			r := math.NaN()

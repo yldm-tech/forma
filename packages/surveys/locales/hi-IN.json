@@ -58,6 +58,10 @@
     "welcome_video": "स्वागत कार्ड वीडियो",
     "your_feedback_is_stuck": "आपकी प्रतिक्रिया अटक गई है :("
   },
+  "date_time": {
+    "select_a_time": "कृपया समय चुनें",
+    "time": "समय"
+  },
   "errors": {
     "accept_to_continue": "जारी रखने के लिए कृपया स्वीकार करें",
     "all_options_must_be_ranked": "कृपया सभी विकल्पों को रैंक करें",
@@ -130,5 +134,9 @@
     "invalid_type": "इस प्रकार की फ़ाइल की अनुमति नहीं है। अनुमत फ़ॉर्मेट: {formats}",
     "max_size_hint": "अधिकतम {maxSizeInMB} MB",
     "tap_to_upload": "फ़ाइलें अपलोड करने के लिए टैप करें"
+  },
+  "slider": {
+    "choose_a_value": "कृपया मान चुनने के लिए स्लाइडर खिसकाएँ",
+    "not_answered": "उत्तर देने के लिए स्लाइडर खिसकाएँ"
   }
 }

@@ -58,6 +58,10 @@
     "welcome_video": "Vidéo de la carte de bienvenue",
     "your_feedback_is_stuck": "Votre feedback est bloqué :("
   },
+  "date_time": {
+    "select_a_time": "Veuillez sélectionner une heure",
+    "time": "Heure"
+  },
   "errors": {
     "accept_to_continue": "Veuillez accepter pour continuer",
     "all_options_must_be_ranked": "Veuillez classer toutes les options",
@@ -130,5 +134,9 @@
     "invalid_type": "Ce type de fichier n'est pas autorisé. Formats autorisés : {formats}",
     "max_size_hint": "Jusqu'à {maxSizeInMB} Mo",
     "tap_to_upload": "Touchez pour importer des fichiers"
+  },
+  "slider": {
+    "choose_a_value": "Veuillez déplacer le curseur pour choisir une valeur",
+    "not_answered": "Déplacez le curseur pour répondre"
   }
 }

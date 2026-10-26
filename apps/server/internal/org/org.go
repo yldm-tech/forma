@@ -32,6 +32,8 @@ type Organization struct {
 	DisplayTimeZone *string `json:"displayTimeZone"`
 	// SurveySchedulingTimeZone is the IANA zone the organization's scheduled surveys open and close in; nil means the instance's SURVEY_SCHEDULING_TIME_ZONE.
 	SurveySchedulingTimeZone *string `json:"surveySchedulingTimeZone"`
+	// TwoFactorEnforcedAt is nil while two-factor authentication is optional. Once an owner requires it, it is the end of the grace period: members who sign in with a password and have not turned it on are reminded until then and refused the organization from then on (authz).
+	TwoFactorEnforcedAt *time.Time `json:"twoFactorEnforcedAt"`
 }
 
 // Billing is the organization's billing state, forma2's TOrganizationBilling.
@@ -73,6 +75,8 @@ type Member struct {
 	Accepted bool      `json:"accepted"`
 	Role     string    `json:"role"`
 	IsActive bool      `json:"isActive"`
+	// TwoFactor is the member's two-factor status (authz.SecondFactorEnabled, SecondFactorDisabled or SecondFactorSSO), shown only to owners and managers, who decide on the requirement and follow it up; it is empty for anyone else.
+	TwoFactor string `json:"twoFactor,omitempty"`
 }
 
 // UserManagementAllowed is forma2's getUserManagementAccess: whether a role may manage members and invites under USER_MANAGEMENT_MINIMUM_ROLE. It shapes the SPA's pages and bounds what an organization API key may do with users and teams (the key acts with its creator's role); the session endpoints decide through organization.manage_access, which the authorizer maps the same way.

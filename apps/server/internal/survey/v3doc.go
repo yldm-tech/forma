@@ -67,7 +67,7 @@ var (
 	elementI18nKeys     = []string{"headline", "subheader", "placeholder", "label", "otherOptionPlaceholder", "lowerLabel", "upperLabel", "ctaButtonLabel", "html"}
 	toggleInputI18nKeys = []string{"addressLine1", "addressLine2", "city", "state", "zip", "country", "firstName", "lastName", "email", "phone", "company"}
 	metadataI18nKeys    = []string{"title", "description"}
-	allElementExtraKeys = keySet("allowMulti", "allowMultipleFiles", "allowedFileExtensions", "addressLine1", "addressLine2", "buttonExternal", "buttonUrl", "calHost", "calUserName", "charLimit", "choices", "city", "columns", "company", "country", "ctaButtonLabel", "displayType", "email", "firstName", "format", "html", "inputType", "insightsEnabled", "isColorCodingEnabled", "label", "lastName", "longAnswer", "lowerLabel", "maxSizeInMB", "otherOptionPlaceholder", "phone", "placeholder", "rows", "shuffleOption", "state", "upperLabel", "validation", "zip")
+	allElementExtraKeys = keySet("allowMulti", "allowMultipleFiles", "allowedFileExtensions", "addressLine1", "addressLine2", "buttonExternal", "buttonUrl", "calHost", "calUserName", "charLimit", "choices", "city", "columns", "company", "country", "ctaButtonLabel", "displayType", "email", "firstName", "format", "html", "includeTime", "inputType", "insightsEnabled", "isColorCodingEnabled", "label", "lastName", "longAnswer", "lowerLabel", "max", "maxSizeInMB", "min", "otherOptionPlaceholder", "phone", "placeholder", "rows", "shuffleOption", "state", "step", "upperLabel", "validation", "zip")
 	elementKeysAnyType  = union(elementBaseKeys, allElementExtraKeys)
 	elementKeysByType   = map[string]map[string]bool{
 		"address":              union(elementBaseKeys, keySet("addressLine1", "addressLine2", "city", "state", "zip", "country", "validation")),
@@ -77,7 +77,7 @@ var (
 		"contactInfo":          union(elementBaseKeys, keySet("firstName", "lastName", "email", "phone", "company", "validation")),
 		"csat":                 union(elementBaseKeys, keySet("scale", "range", "lowerLabel", "upperLabel", "isColorCodingEnabled")),
 		"cta":                  union(elementBaseKeys, keySet("buttonExternal", "buttonUrl", "ctaButtonLabel")),
-		"date":                 union(elementBaseKeys, keySet("html", "format", "validation")),
+		"date":                 union(elementBaseKeys, keySet("html", "format", "includeTime", "validation")),
 		"fileUpload":           union(elementBaseKeys, keySet("allowMultipleFiles", "maxSizeInMB", "allowedFileExtensions", "validation")),
 		"matrix":               union(elementBaseKeys, keySet("rows", "columns", "shuffleOption", "validation")),
 		"multipleChoiceMulti":  union(elementBaseKeys, keySet("choices", "shuffleOption", "otherOptionPlaceholder", "validation", "displayType")),
@@ -87,6 +87,7 @@ var (
 		"pictureSelection":     union(elementBaseKeys, keySet("allowMulti", "choices", "validation")),
 		"ranking":              union(elementBaseKeys, keySet("choices", "otherOptionPlaceholder", "shuffleOption", "validation")),
 		"rating":               union(elementBaseKeys, keySet("scale", "range", "lowerLabel", "upperLabel", "isColorCodingEnabled")),
+		"slider":               union(elementBaseKeys, keySet("min", "max", "step", "lowerLabel", "upperLabel")),
 	}
 )
 

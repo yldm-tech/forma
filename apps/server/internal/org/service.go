@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	// Display time zones are validated against the IANA database; embedding it keeps validation independent of the host's zoneinfo.
 	_ "time/tzdata"
@@ -131,11 +132,15 @@ type Detail struct {
 	UserManagementAllowed bool `json:"userManagementAllowed"`
 	// SurveyScheduling is when the organization's scheduled surveys open and close: its own zone or the instance's, at the instance's local time.
 	SurveyScheduling scheduling.Settings `json:"surveyScheduling"`
+	// TwoFactorStatus is the caller's own two-factor status (authz.SecondFactorEnabled, SecondFactorDisabled or SecondFactorSSO), which with TwoFactorEnforcedAt tells the SPA whether to remind them to turn it on.
+	TwoFactorStatus string `json:"twoFactorStatus"`
+	// TwoFactorBlocked is whether the organization's two-factor requirement refuses the caller now; the SPA then sends them to enrol instead of opening the organization.
+	TwoFactorBlocked bool `json:"twoFactorBlocked"`
 }
 
 // Get is forma2's getOrganizationAuth: organization.read and a membership are both required, and a caller without them gets a not-found, so an organization's existence never leaks to a non-member.
 func (s *Service) Get(ctx context.Context, userID, organizationID uuid.UUID) (*Detail, error) {
-	m, err := s.memberWith(ctx, userID, organizationID, authz.OrganizationRead)
+	m, err := s.memberDespiteSecondFactor(ctx, userID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -146,8 +151,13 @@ func (s *Service) Get(ctx context.Context, userID, organizationID uuid.UUID) (*D
 	if o == nil {
 		return nil, errOrganizationNotFound()
 	}
+	status, blocked, err := s.repo.secondFactor(ctx, userID, organizationID)
+	if err != nil {
+		return nil, err
+	}
 	return &Detail{Organization: o, Membership: *m, UserManagementAllowed: UserManagementAllowed(m.Role, s.cfg.UserManagementMinimumRole),
-		SurveyScheduling: scheduling.Instance(s.cfg).ForOrganization(o.SurveySchedulingTimeZone).Settings()}, nil
+		SurveyScheduling: scheduling.Instance(s.cfg).ForOrganization(o.SurveySchedulingTimeZone).Settings(),
+		TwoFactorStatus:  status, TwoFactorBlocked: blocked}, nil
 }
 
 func errOrganizationNotFound() *apperr.Error { return apperr.NotFound("Organization", "") }
@@ -158,6 +168,19 @@ func (s *Service) memberWith(ctx context.Context, userID, organizationID uuid.UU
 	if err != nil {
 		return nil, err
 	}
+	return s.membershipIf(ctx, userID, organizationID, allowed)
+}
+
+// memberDespiteSecondFactor is memberWith organization.read with the organization's two-factor requirement set aside: the organization's page and navigation, which guide a member it refuses to enrolment, use it.
+func (s *Service) memberDespiteSecondFactor(ctx context.Context, userID, organizationID uuid.UUID) (*Membership, error) {
+	allowed, err := s.authz.CanReadOrganizationDespiteSecondFactor(ctx, authz.User(userID), organizationID)
+	if err != nil {
+		return nil, err
+	}
+	return s.membershipIf(ctx, userID, organizationID, allowed)
+}
+
+func (s *Service) membershipIf(ctx context.Context, userID, organizationID uuid.UUID, allowed bool) (*Membership, error) {
 	if !allowed {
 		return nil, errOrganizationNotFound()
 	}
@@ -179,6 +202,7 @@ type UpdateInput struct {
 	// SurveySchedulingTimeZone is set when the request names the field; a nil Value means the instance's zone.
 	SurveySchedulingTimeZone *TimeZone
 	IsAISmartToolsEnabled    *bool
+	TwoFactorRequirement     *TwoFactorRequirement
 }
 
 // TimeZone is a time zone change.
@@ -186,10 +210,22 @@ type TimeZone struct {
 	Value *string
 }
 
+// TwoFactorRequirement turns the organization's two-factor requirement off, or on with GracePeriodDays (0 to MaxTwoFactorGracePeriodDays) for members to turn it on before they are refused. Turning it on again restarts the grace period from now.
+type TwoFactorRequirement struct {
+	Required        bool
+	GracePeriodDays int
+}
+
+// MaxTwoFactorGracePeriodDays bounds the grace period an owner may give.
+const MaxTwoFactorGracePeriodDays = 90
+
+// CodeEnableTwoFactorFirst refuses an owner who requires two-factor authentication without using it: the requirement would refuse them at once.
+const CodeEnableTwoFactorFirst = "enable_two_factor_first"
+
 // CodeAIInstanceNotConfigured is forma2's ai_instance_not_configured refusal.
 const CodeAIInstanceNotConfigured = "ai_instance_not_configured"
 
-// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone and the AI smart tools toggle organization.manage (owners and managers). The survey scheduling time zone, which forma2 did not have, needs organization.manage too; changing it moves the organization's scheduled publish and close dates to the same calendar days in the new zone. Enabling AI smart tools needs an AI provider configured on the instance (forma2's assertOrganizationAISettingsUpdateAllowed); disabling is always allowed.
+// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone and the AI smart tools toggle organization.manage (owners and managers). The two-factor requirement needs organization.write (owners only), and an owner who signs in with a password must use two-factor authentication before requiring it. The survey scheduling time zone, which forma2 did not have, needs organization.manage too; changing it moves the organization's scheduled publish and close dates to the same calendar days in the new zone. Enabling AI smart tools needs an AI provider configured on the instance (forma2's assertOrganizationAISettingsUpdateAllowed); disabling is always allowed.
 func (s *Service) Update(ctx context.Context, userID, organizationID uuid.UUID, in UpdateInput) (*Organization, error) {
 	old, o, err := s.update(ctx, userID, organizationID, in)
 	s.record(ctx, audit.ActionUpdated, audit.TargetOrganization, organizationID.String(), organizationID.String(), err, old, o)
@@ -198,7 +234,7 @@ func (s *Service) Update(ctx context.Context, userID, organizationID uuid.UUID, 
 
 func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, in UpdateInput) (old, updated *Organization, err error) {
 	actor, resource := authz.User(userID), authz.Organization(organizationID)
-	if in.Name != nil {
+	if in.Name != nil || in.TwoFactorRequirement != nil {
 		if err := s.authz.Require(ctx, actor, authz.OrganizationWrite, resource); err != nil {
 			return nil, nil, err
 		}
@@ -208,7 +244,7 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 			return nil, nil, err
 		}
 	}
-	if in.Name == nil && in.DisplayTimeZone == nil && in.SurveySchedulingTimeZone == nil && in.IsAISmartToolsEnabled == nil {
+	if in.Name == nil && in.DisplayTimeZone == nil && in.SurveySchedulingTimeZone == nil && in.IsAISmartToolsEnabled == nil && in.TwoFactorRequirement == nil {
 		if err := s.authz.Require(ctx, actor, authz.OrganizationRead, resource); err != nil {
 			return nil, nil, err
 		}
@@ -235,6 +271,22 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 	}
 	if in.IsAISmartToolsEnabled != nil {
 		columns = append(columns, column{"is_ai_smart_tools_enabled", *in.IsAISmartToolsEnabled})
+	}
+	if r := in.TwoFactorRequirement; r != nil {
+		var enforcedAt *time.Time
+		if r.Required {
+			status, _, err := s.repo.secondFactor(ctx, userID, organizationID)
+			if err != nil {
+				return old, nil, err
+			}
+			if status == authz.SecondFactorDisabled {
+				return old, nil, &apperr.Error{Status: http.StatusForbidden, Code: CodeEnableTwoFactorFirst,
+					Message: "Turn on two-factor authentication for your own account before requiring it of the organization's members"}
+			}
+			at := time.Now().Add(time.Duration(r.GracePeriodDays) * 24 * time.Hour)
+			enforcedAt = &at
+		}
+		columns = append(columns, column{"two_factor_enforced_at", enforcedAt})
 	}
 	err = s.repo.transaction(ctx, func(tx *Repository) error {
 		exists, err := tx.lock(ctx, organizationID)

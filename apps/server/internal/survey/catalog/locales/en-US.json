@@ -728,6 +728,8 @@
   "templates.site_abandonment_survey_question_7_label": "Yes, please reach out.",
   "templates.site_abandonment_survey_question_8_headline": "Please share your email address:",
   "templates.site_abandonment_survey_question_9_headline": "Any additional comments or suggestions?",
+  "templates.slider": "Slider",
+  "templates.slider_description": "Respondents pick a number on a scale",
   "templates.smileys_survey_name": "Smileys Survey",
   "templates.smileys_survey_question_1_headline": "How do you like $[workspaceName]?",
   "templates.smileys_survey_question_1_lower_label": "Not good",

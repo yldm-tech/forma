@@ -38,6 +38,7 @@ export type TValidationResult =
         | TSurveyElementTypeEnum.Rating
         | TSurveyElementTypeEnum.CSAT
         | TSurveyElementTypeEnum.CES
+        | TSurveyElementTypeEnum.Slider
         | TSurveyElementTypeEnum.Consent;
     })
   | (TSingleChoiceValidResult & { type: TSurveyElementTypeEnum.MultipleChoiceSingle })

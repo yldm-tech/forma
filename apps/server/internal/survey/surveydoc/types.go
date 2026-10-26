@@ -115,6 +115,7 @@ const (
 	ElementContactInfo          = "contactInfo"
 	ElementCSAT                 = "csat"
 	ElementCES                  = "ces"
+	ElementSlider               = "slider"
 )
 
 // Choice is a choice of a choice element, a matrix row or column, or a picture of a picture selection.
@@ -161,6 +162,11 @@ type Element struct {
 	LowerLabel             I18nString `json:"lowerLabel,omitempty"`
 	UpperLabel             I18nString `json:"upperLabel,omitempty"`
 	HTML                   I18nString `json:"html,omitempty"`
+	IncludeTime            *bool      `json:"includeTime,omitempty"`
+
+	Min  *float64 `json:"min,omitempty"`
+	Max  *float64 `json:"max,omitempty"`
+	Step *float64 `json:"step,omitempty"`
 
 	ButtonExternal *bool      `json:"buttonExternal,omitempty"`
 	ButtonURL      *string    `json:"buttonUrl,omitempty"`
@@ -199,7 +205,7 @@ var (
 		ElementCTA:                  {"buttonExternal", "buttonUrl", "ctaButtonLabel"},
 		ElementRating:               labelKeys,
 		ElementPictureSelection:     {"choices"},
-		ElementDate:                 {"html"},
+		ElementDate:                 {"html", "includeTime"},
 		ElementFileUpload:           {"allowedFileExtensions"},
 		ElementCal:                  {"calUserName", "calHost"},
 		ElementMatrix:               {"rows", "columns"},
@@ -208,6 +214,7 @@ var (
 		ElementContactInfo:          {"firstName", "lastName", "email", "phone", "company"},
 		ElementCSAT:                 labelKeys,
 		ElementCES:                  labelKeys,
+		ElementSlider:               {"min", "max", "step", "lowerLabel", "upperLabel"},
 	}
 )
 

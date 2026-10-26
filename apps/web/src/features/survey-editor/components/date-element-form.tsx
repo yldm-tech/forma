@@ -8,6 +8,7 @@ import { TUserLocale } from "@forma/types/user";
 import { createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
 import { ElementFormInput } from "./element-form-input/index";
 import { ValidationRulesEditor } from "./validation-rules-editor";
+import { AdvancedOptionToggle } from "../../../components/ui/advanced-option-toggle";
 import { Button } from "../../../components/ui/button";
 
 interface IDateElementFormProps {
@@ -79,6 +80,16 @@ export const DateElementForm = ({
           </Button>
         )}
       </div>
+
+      <AdvancedOptionToggle
+        isChecked={element.includeTime ?? false}
+        onToggle={(checked) => updateElement(elementIdx, { includeTime: checked })}
+        htmlId={`includeTime-${element.id}`}
+        title={t("workspace.surveys.edit.date_include_time")}
+        description={t("workspace.surveys.edit.date_include_time_description")}
+        childBorder
+        customContainerClass="p-0 mt-4"
+      />
 
       <ValidationRulesEditor
         elementType={element.type}

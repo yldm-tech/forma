@@ -232,8 +232,10 @@ type newSurvey struct {
 	WorkspaceID uuid.UUID
 	Record      record
 	Languages   []languageLink
-	TriggerIDs  []uuid.UUID
-	FollowUps   []followUpWrite
+	// TemplateLanguages are an organization template's languages, resolved (and created where the workspace lacks them) in the survey's transaction and linked after Languages.
+	TemplateLanguages []TemplateLanguage
+	TriggerIDs        []uuid.UUID
+	FollowUps         []followUpWrite
 	// SegmentID connects an existing segment; an app survey without one gets a private segment with PrivateSegmentFilters.
 	SegmentID             *uuid.UUID
 	PrivateSegmentFilters json.RawMessage
@@ -278,7 +280,15 @@ func (s *Service) insertSurvey(ctx context.Context, n newSurvey, organizationID 
 		if err := tx.setTriggers(ctx, n.ID, n.TriggerIDs); err != nil {
 			return err
 		}
-		if err := tx.setLanguages(ctx, n.ID, n.Languages); err != nil {
+		languages := n.Languages
+		if len(n.TemplateLanguages) > 0 {
+			links, err := tx.templateLanguageLinks(ctx, n.WorkspaceID, n.TemplateLanguages)
+			if err != nil {
+				return err
+			}
+			languages = append(append([]languageLink{}, languages...), links...)
+		}
+		if err := tx.setLanguages(ctx, n.ID, languages); err != nil {
 			return err
 		}
 		if err := tx.applyFollowUps(ctx, n.ID, n.FollowUps); err != nil {

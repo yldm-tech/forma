@@ -67,7 +67,7 @@ func (t *TwoFactor) startEnrolment(ctx context.Context, actor httpapi.Actor, pas
 	if err != nil {
 		return totpEnrolment{}, err
 	}
-	if acc.HasExternalIdentity {
+	if acc.ssoOnly() {
 		return totpEnrolment{}, errThirdPartyLogin()
 	}
 	if acc.TwoFactorEnabled {
@@ -145,7 +145,7 @@ func (t *TwoFactor) confirmEnrolment(ctx context.Context, actor httpapi.Actor, c
 	if err != nil {
 		return err
 	}
-	if acc.HasExternalIdentity {
+	if acc.ssoOnly() {
 		return errThirdPartyLogin()
 	}
 	if !acc.hasPassword() {
@@ -199,7 +199,7 @@ func (t *TwoFactor) removeSecondFactor(ctx context.Context, actor httpapi.Actor,
 	if !acc.TwoFactorEnabled {
 		return errTwoFactorNotEnabled()
 	}
-	if acc.HasExternalIdentity {
+	if acc.ssoOnly() {
 		return errThirdPartyLogin()
 	}
 	if err := t.checkPassword(acc, password); err != nil {

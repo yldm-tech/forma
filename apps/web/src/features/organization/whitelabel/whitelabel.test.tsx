@@ -63,6 +63,9 @@ const organization = (
   whitelabel,
   membership: { organizationId: ORG, userId: "u1", accepted: true, role },
   userManagementAllowed: role !== "member",
+  twoFactorEnforcedAt: null,
+  twoFactorStatus: "enabled",
+  twoFactorBlocked: false,
 });
 
 interface Call {

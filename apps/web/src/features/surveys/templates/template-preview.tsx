@@ -4,7 +4,8 @@ import { PreviewSurvey } from "../../../components/ui/preview-survey/index";
 import { workspaceQuery } from "../../../lib/queries/workspaces";
 import { toEditorWorkspace } from "../../survey-editor/api";
 import { surveyTemplatesInLanguageQuery } from "../api";
-import { templatePreviewSurvey } from "./preview";
+import { organizationTemplateQuery } from "./organization-templates";
+import { organizationTemplatePreviewSurvey, templatePreviewSurvey } from "./preview";
 
 /**
  * forma2's template preview: the template rendered by the respondent runtime in preview mode, with the workspace's theme and branding, exactly as the editor's preview shows the draft it creates (a link survey full width, an app survey in a mock web app), with the editor's phone and desktop frames and its restart. The template is read from the catalog in the survey's default language, not the dashboard's, because that is the language "Use this template" creates the draft in. Answers go nowhere. Lazy-loaded by the gallery, so the preview's code stays out of the survey list until a template is previewed.
@@ -28,6 +29,42 @@ export const TemplatePreview = ({
   const survey = useMemo(
     () => (template ? templatePreviewSurvey(template, surveyType) : null),
     [template, surveyType]
+  );
+  if (!survey) return null;
+  return (
+    <PreviewSurvey
+      survey={survey}
+      workspace={workspace}
+      previewType={surveyType === "app" ? "modal" : "fullwidth"}
+      languageCode="default"
+      isSpamProtectionAllowed={false}
+    />
+  );
+};
+
+/** One of the organization's own templates previewed like a catalog template: its document as saved, in its default language, with the styling it was saved with where the workspace lets a survey override its theme. */
+export const OrganizationTemplatePreview = ({
+  workspaceId,
+  templateId,
+  surveyType,
+}: {
+  workspaceId: string;
+  templateId: string;
+  surveyType: "link" | "app";
+}) => {
+  const { data: detail } = useSuspenseQuery(workspaceQuery(workspaceId));
+  const { data: template } = useSuspenseQuery(organizationTemplateQuery(templateId));
+  const workspace = useMemo(() => toEditorWorkspace(detail), [detail]);
+  const preset = template.preset;
+  const survey = useMemo(
+    () =>
+      preset
+        ? organizationTemplatePreviewSurvey(
+            { id: template.id, name: template.name, description: template.description, preset },
+            surveyType
+          )
+        : null,
+    [template.id, template.name, template.description, preset, surveyType]
   );
   if (!survey) return null;
   return (

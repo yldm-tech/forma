@@ -15,7 +15,12 @@ export interface Organization {
   surveySchedulingTimeZone: string | null;
   /** The email logo and survey favicon that replace Forma's, forma2's TOrganizationWhitelabel. */
   whitelabel?: { logoUrl?: string | null; faviconUrl?: string | null } | null;
+  /** Null while two-factor authentication is optional. Once an owner requires it, the end of the grace period: members who sign in with a password and have not turned it on are reminded until then and refused the organization from then on. */
+  twoFactorEnforcedAt: string | null;
 }
+
+/** A user's two-factor status: an authenticator turned on, none although they sign in with a password, or none needed because they sign in through SSO, which a requirement exempts. */
+export type TwoFactorStatus = "enabled" | "disabled" | "sso";
 
 /** An organization in the caller's list, with the caller's role in it. */
 export interface OrganizationSummary extends Organization {
@@ -44,6 +49,10 @@ export interface OrganizationDetail extends Organization {
   /** Whether the caller's role may manage members and invites under USER_MANAGEMENT_MINIMUM_ROLE. */
   userManagementAllowed: boolean;
   surveyScheduling: SurveyScheduling;
+  /** The caller's own two-factor status. */
+  twoFactorStatus: TwoFactorStatus;
+  /** The organization's two-factor requirement refuses the caller now: its grace period is over and they have not turned it on. */
+  twoFactorBlocked: boolean;
 }
 
 export interface Member {
@@ -53,6 +62,8 @@ export interface Member {
   accepted: boolean;
   role: OrganizationRole;
   isActive: boolean;
+  /** Sent to owners and managers only. */
+  twoFactor?: TwoFactorStatus;
 }
 
 /** Where /organizations/{id} sends the browser. */
@@ -131,6 +142,9 @@ export interface OrganizationUpdate {
   displayTimeZone?: string | null;
   surveySchedulingTimeZone?: string | null;
   isAISmartToolsEnabled?: boolean;
+  /** Owners only. Turning it on needs twoFactorGracePeriodDays, and restarts the grace period from now. */
+  requireTwoFactor?: boolean;
+  twoFactorGracePeriodDays?: number;
 }
 
 /** After the organization's survey scheduling zone changed, the server has moved every scheduled publish and close date to the new zone. Cached surveys still hold the old instants, and the editor's never refetches on its own (its baseline would be sent back with the old zone's dates), so they are dropped; workspaces, which tell the editor the zone, are read again. */

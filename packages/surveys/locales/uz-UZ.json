@@ -58,6 +58,10 @@
     "welcome_video": "Xush kelibsiz kartasi videosi",
     "your_feedback_is_stuck": "Sizning fikr-mulohazangiz qotib qoldi :("
   },
+  "date_time": {
+    "select_a_time": "Iltimos, vaqtni tanlang",
+    "time": "Vaqt"
+  },
   "errors": {
     "accept_to_continue": "Davom etish uchun rozilik bering",
     "all_options_must_be_ranked": "Iltimos, barcha variantlarni tartiblang",
@@ -130,5 +134,9 @@
     "invalid_type": "Bu fayl turiga ruxsat berilmagan. Ruxsat etilgan formatlar: {formats}",
     "max_size_hint": "{maxSizeInMB} MB gacha",
     "tap_to_upload": "Fayllarni yuklash uchun bosing"
+  },
+  "slider": {
+    "choose_a_value": "Iltimos, qiymat tanlash uchun slayderni suring",
+    "not_answered": "Javob berish uchun slayderni suring"
   }
 }

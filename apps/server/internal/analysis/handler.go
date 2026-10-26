@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,6 +28,8 @@ func NewHandler(svc *Service, sessions httpapi.SessionAuth) *Handler {
 func (h *Handler) Register(r gin.IRouter) {
 	g := r.Group("", h.sessions.Require())
 	g.POST("/surveys/:surveyId/summary", h.summary)
+	g.POST("/surveys/:surveyId/trends", h.trends)
+	g.POST("/surveys/:surveyId/trends/export", h.exportTrends)
 	g.GET("/surveys/:surveyId/filter-data", h.filterData)
 	g.GET("/surveys/:surveyId/displays", h.displays)
 	g.POST("/surveys/:surveyId/responses/export", h.export)
@@ -68,6 +71,62 @@ func (h *Handler) summary(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// trendsRequest is the summary's request with the bucket length; no interval lets the server pick one from the range.
+type trendsRequest struct {
+	FilterCriteria *response.Criteria `json:"filterCriteria"`
+	Interval       string             `json:"interval" binding:"omitempty,oneof=day week month"`
+}
+
+func (h *Handler) trends(c *gin.Context) {
+	surveyID, ok := surveyParam(c)
+	if !ok {
+		return
+	}
+	var in trendsRequest
+	if err := httpapi.BindJSON(c, &in); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	out, err := h.svc.Trends(c.Request.Context(), userID(c), surveyID, in.FilterCriteria, in.Interval)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// trendsExportRequest is the trend's request with the file format.
+type trendsExportRequest struct {
+	Format         string             `json:"format" binding:"required,oneof=csv xlsx"`
+	FilterCriteria *response.Criteria `json:"filterCriteria"`
+	Interval       string             `json:"interval" binding:"omitempty,oneof=day week month"`
+}
+
+// exportTrends answers the trend as a file, named by Content-Disposition. The file holds a row per bucket, at most maxTrendBuckets, so it is built in memory.
+func (h *Handler) exportTrends(c *gin.Context) {
+	surveyID, ok := surveyParam(c)
+	if !ok {
+		return
+	}
+	var in trendsExportRequest
+	if err := httpapi.BindJSON(c, &in); err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	var buf bytes.Buffer
+	name, err := h.svc.ExportTrends(c.Request.Context(), userID(c), surveyID, in.Format, in.FilterCriteria, in.Interval, &buf)
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	contentType := ContentTypeCSV
+	if in.Format == FormatXLSX {
+		contentType = ContentTypeXLSX
+	}
+	c.Header("Cache-Control", "private, no-store")
+	c.DataFromReader(http.StatusOK, int64(buf.Len()), contentType, &buf, map[string]string{"Content-Disposition": `attachment; filename="` + name + `"`})
 }
 
 func (h *Handler) filterData(c *gin.Context) {

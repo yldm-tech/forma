@@ -293,6 +293,8 @@ var validators = map[string]validator{
 			if !ok {
 				return true
 			}
+			// A date answer with a time of day is held to the rule's calendar days by its day alone.
+			s = answerDay(s)
 			// Relative bounds are inclusive, fixed ones exclusive.
 			if bound, ok := relativeBound(p, "relative"); ok {
 				return s >= resolveRelativeDate(bound, timezoneGrace(c.now, -1))
@@ -315,6 +317,8 @@ var validators = map[string]validator{
 			if !ok {
 				return true
 			}
+			// A date answer with a time of day is held to the rule's calendar days by its day alone.
+			s = answerDay(s)
 			if bound, ok := relativeBound(p, "relative"); ok {
 				return s <= resolveRelativeDate(bound, timezoneGrace(c.now, 1))
 			}
@@ -335,6 +339,8 @@ var validators = map[string]validator{
 			if !ok {
 				return true
 			}
+			// A date answer with a time of day is held to the rule's calendar days by its day alone.
+			s = answerDay(s)
 			if start, end, ok := relativeRange(p, c.now, graceInside); ok {
 				return s >= start && s <= end
 			}
@@ -352,6 +358,8 @@ var validators = map[string]validator{
 			if !ok {
 				return true
 			}
+			// A date answer with a time of day is held to the rule's calendar days by its day alone.
+			s = answerDay(s)
 			if start, end, ok := relativeRange(p, c.now, graceOutside); ok {
 				return s < start || s > end
 			}

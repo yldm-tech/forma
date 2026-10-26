@@ -56,6 +56,7 @@ export const SurveyCard = ({
   isReadOnly,
   publicDomain,
   actions,
+  canSaveAsTemplate,
 }: {
   survey: SurveyListItem;
   workspaceId: string;
@@ -63,6 +64,7 @@ export const SurveyCard = ({
   isReadOnly: boolean;
   publicDomain: string | undefined;
   actions: SurveyActions;
+  canSaveAsTemplate: boolean;
 }) => {
   const { t, i18n } = useTranslation();
   const rules = surveyRowRules(survey, workspaceId, isReadOnly);
@@ -163,6 +165,7 @@ export const SurveyCard = ({
           organizationId={organizationId}
           publicDomain={publicDomain}
           actions={actions}
+          canSaveAsTemplate={canSaveAsTemplate}
         />
       </div>
     </div>
