@@ -86,17 +86,22 @@ interface FormValues {
   name: string;
   expiry: ApiKeyExpiryChoice;
   customDay: string;
+  /** The link's stored expiry, sent back as it is until the expiry field is changed: picking its day again would move it to the end of that day. */
+  keptExpiresAt: string | null;
   revealed: string[];
 }
 
-const NEW_LINK: FormValues = { name: "", expiry: "never", customDay: "", revealed: [] };
+const NEW_LINK: FormValues = { name: "", expiry: "never", customDay: "", keptExpiresAt: null, revealed: [] };
 
-/** A link's settings as the form edits them: its expiry as the end of its day, picked as a custom date. */
-const formValues = (share: ResultShare): FormValues => ({
+/** A link's settings as the form edits them: its expiry kept as it is, shown as its day, and the cards it reveals that the survey still offers (the server drops the others when the link is saved). */
+const formValues = (share: ResultShare, revealable: Revealable[]): FormValues => ({
   name: share.name,
   expiry: share.expiresAt ? "custom" : "never",
   customDay: share.expiresAt ? inputDay(new Date(share.expiresAt)) : "",
-  revealed: share.revealedElementIds,
+  keptExpiresAt: share.expiresAt,
+  revealed: share.revealedElementIds.filter((revealedId) =>
+    revealable.some((item) => item.id === revealedId)
+  ),
 });
 
 /** The settings of a link, new or existing: its name, when it stops working and which cards with individual answers it shows. The filter is not among them: a new link takes the summary's current one, and it never changes after. */
@@ -125,7 +130,9 @@ const ResultShareForm = ({
   const id = useId();
   const [values, setValues] = useState<FormValues>(initial);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const expiresAt = apiKeyExpiry(values.expiry, values.customDay);
+  const kept = values.keptExpiresAt;
+  const expiresAt = kept ? new Date(kept) : apiKeyExpiry(values.expiry, values.customDay);
+  const firstDay = firstCustomExpiryDay();
   const formatDate = new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
     dateStyle: "long",
     timeStyle: "short",
@@ -133,14 +140,14 @@ const ResultShareForm = ({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    // The expiry is worked out again from the time of the submit.
-    const at = apiKeyExpiry(values.expiry, values.customDay);
+    // A changed expiry is worked out again from the time of the submit; a kept one is sent as the server gave it.
+    const at = kept ? kept : apiKeyExpiry(values.expiry, values.customDay);
     if (at === undefined || isSubmitting) return;
     setIsSubmitting(true);
     try {
       await onSubmit({
         name: values.name.trim(),
-        expiresAt: at ? at.toISOString() : null,
+        expiresAt: typeof at === "string" ? at : at ? at.toISOString() : null,
         revealedElementIds: values.revealed,
       });
     } finally {
@@ -177,7 +184,9 @@ const ResultShareForm = ({
         <Select
           id={`${id}-expiry`}
           value={values.expiry}
-          onChange={(event) => setValues({ ...values, expiry: event.target.value as ApiKeyExpiryChoice })}>
+          onChange={(event) =>
+            setValues({ ...values, expiry: event.target.value as ApiKeyExpiryChoice, keptExpiresAt: null })
+          }>
           {API_KEY_EXPIRY_CHOICES.map((choice) => (
             <option key={choice} value={choice}>
               {expiryChoiceLabel(t, choice)}
@@ -188,19 +197,22 @@ const ResultShareForm = ({
           <Input
             type="date"
             aria-label={t("workspace.api_keys.expiration_date")}
-            min={firstCustomExpiryDay()}
+            // A kept expiry may be today or past; the browser would refuse to submit a day before min.
+            min={kept && values.customDay < firstDay ? values.customDay : firstDay}
             max={LAST_CUSTOM_EXPIRY_DAY}
             value={values.customDay}
-            onChange={(event) => setValues({ ...values, customDay: event.target.value })}
+            onChange={(event) => setValues({ ...values, customDay: event.target.value, keptExpiresAt: null })}
           />
         )}
         {expiresAt !== undefined && (
           <p className="text-sm text-slate-500">
-            {expiresAt
-              ? t("workspace.analysis.result_shares.expiration_description", {
-                  date: formatDate.format(expiresAt),
-                })
-              : t("workspace.analysis.result_shares.expiration_never_description")}
+            {!expiresAt
+              ? t("workspace.analysis.result_shares.expiration_never_description")
+              : kept && isResultShareExpired({ expiresAt: kept })
+                ? t("workspace.analysis.result_shares.expired_on", { date: formatDate.format(expiresAt) })
+                : t("workspace.analysis.result_shares.expiration_description", {
+                    date: formatDate.format(expiresAt),
+                  })}
           </p>
         )}
       </div>
@@ -425,7 +437,7 @@ export const ShareResultsDialog = ({
                     key={`edit-${editing.id}`}
                     survey={survey}
                     revealable={revealable}
-                    initial={formValues(editing)}
+                    initial={formValues(editing, revealable)}
                     submitLabel={t("common.save")}
                     filterNote={
                       hasCriteria(editing.filterCriteria)

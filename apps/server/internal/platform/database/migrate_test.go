@@ -226,6 +226,9 @@ func TestSchemaConstraints(t *testing.T) {
 		wantViolation(t, db, "23514", insert, shareSurvey, userID, "short", "{}")
 		wantViolation(t, db, "23514", insert, shareSurvey, userID, strings.Repeat("a", 42)+"=", "{}")
 		wantViolation(t, db, "23514", insert, shareSurvey, userID, key, "[]")
+		withRevealed := `INSERT INTO survey_result_shares (survey_id, share_key, revealed) VALUES ($1, $2, $3::jsonb)`
+		wantViolation(t, db, "23514", withRevealed, shareSurvey, strings.Repeat("b", 43), `{"id":"q1"}`)
+		wantViolation(t, db, "23514", withRevealed, shareSurvey, strings.Repeat("b", 43), `[`+strings.TrimSuffix(strings.Repeat(`{"id":"q1"},`, 501), ",")+`]`)
 		mustExec(t, db, insert, shareSurvey, userID, key, "{}")
 		wantViolation(t, db, "23505", insert, shareSurvey, userID, key, "{}")
 		mustExec(t, db, `DELETE FROM surveys WHERE id = $1`, shareSurvey)

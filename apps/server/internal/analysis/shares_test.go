@@ -3,6 +3,8 @@ package analysis
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -12,7 +14,11 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey/valkeytest"
 )
 
 // Read-only results links: managed by whoever may publish the survey, read without a session by whoever holds the key, and never showing who answered.
@@ -42,6 +48,17 @@ func (e *env) public(path string, body any) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	e.engine.ServeHTTP(rec, req)
 	return rec
+}
+
+// createShare reads the link a creation answered.
+func createShare(t *testing.T, rec *httptest.ResponseRecorder, out *ResultShare) {
+	t.Helper()
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create: %d %s", rec.Code, rec.Body)
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), out); err != nil {
+		t.Fatal(err)
+	}
 }
 
 type sharedResultsBody struct {
@@ -263,5 +280,151 @@ func TestResultSharesAreManagedByThoseWhoMayPublish(t *testing.T) {
 	e.exec(`DELETE FROM surveys WHERE id = ?`, sv)
 	if n := e.count(`SELECT count(*) FROM survey_result_shares WHERE survey_id = ?`, sv); n != 0 {
 		t.Errorf("%d links left after the survey was deleted", n)
+	}
+}
+
+func TestResultShareRevealsOnlyCardsTheSurveyStillOffers(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner, nil)
+	sv := e.survey(ws, surveyOpts{blocks: shareBlocks})
+	e.field(ws, sv, "utm", "utm", "ingested", "string")
+	e.response(sv, row{at: at(1), finished: true, data: `{"q1":"Faster support","pick":"Zed","utm":"newsletter"}`})
+	path := "/api/app/surveys/" + sv.String() + "/result-shares"
+
+	var share ResultShare
+	createShare(t, e.request(owner, http.MethodPost, path, map[string]any{"name": "Board", "revealedElementIds": []string{"q1", "pick", "utm"}}), &share)
+	stored := func() string {
+		var raw string
+		if err := e.db.Raw(`SELECT revealed::text FROM survey_result_shares WHERE id = ?`, share.ID).Row().Scan(&raw); err != nil {
+			t.Fatal(err)
+		}
+		return raw
+	}
+	withheld := func() []string {
+		var got sharedResultsBody
+		decode(t, e.public("/api/app/shared-results/summary", map[string]any{"token": share.Key}), &got)
+		return got.WithheldIDs
+	}
+
+	// The hidden field leaves the survey. The people editing the link no longer see it, yet a form opened before still sends it: the save goes through and drops it.
+	e.exec(`DELETE FROM survey_embedded_data WHERE survey_id = ? AND storage_key = 'utm'`, sv)
+	rec := e.request(owner, http.MethodPut, path+"/"+share.ID.String(), map[string]any{"name": "Renamed", "revealedElementIds": []string{"q1", "pick", "utm"}})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("saving a link that reveals a removed card: %d %s", rec.Code, rec.Body)
+	}
+	decode(t, rec, &share)
+	if want := []string{"q1", "pick"}; share.Name != "Renamed" || !reflect.DeepEqual(share.RevealedElementIDs, want) {
+		t.Errorf("updated %+v", share)
+	}
+	// A card the link never revealed and the survey does not offer is still refused.
+	if rec := e.request(owner, http.MethodPut, path+"/"+share.ID.String(), map[string]any{"revealedElementIds": []string{"q1", "nope"}}); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "nope") {
+		t.Errorf("revealing an unknown card: %d %s", rec.Code, rec.Body)
+	}
+	// Added back under the same key, the hidden field is withheld until someone reveals it again.
+	e.field(ws, sv, "utm", "utm again", "ingested", "string")
+	if got, want := withheld(), []string{"ci", "cv", "utm"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("withheld after the field came back %v, want %v", got, want)
+	}
+
+	// A different card under a revealed id (the open text question becomes a date question) is not revealed, and reading the link drops the stale card for good.
+	e.exec(`UPDATE surveys SET blocks = replace(blocks::text, '"type": "openText"', '"type": "date"')::jsonb WHERE id = ?`, sv)
+	if got, want := withheld(), []string{"q1", "ci", "cv", "utm"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("withheld after q1 changed type %v, want %v", got, want)
+	}
+	if got := stored(); strings.Contains(got, `"q1"`) || !strings.Contains(got, `"pick"`) {
+		t.Errorf("stored reveals after a read %s", got)
+	}
+	e.exec(`UPDATE surveys SET blocks = ?::jsonb WHERE id = ?`, shareBlocks, sv)
+	if got, want := withheld(), []string{"q1", "ci", "cv", "utm"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("withheld after q1 came back %v, want %v", got, want)
+	}
+
+	// The list shows only what the link reveals now; an Other option that goes away is dropped the same way.
+	e.exec(`UPDATE surveys SET blocks = replace(blocks::text, '{"id": "other", "label": {"default": "Other"}}', '{"id": "c", "label": {"default": "C"}}')::jsonb WHERE id = ?`, sv)
+	var listed ResultShares
+	decode(t, e.request(owner, http.MethodGet, path, nil), &listed)
+	if len(listed.Shares) != 1 || len(listed.Shares[0].RevealedElementIDs) != 0 {
+		t.Errorf("listed %+v", listed.Shares)
+	}
+	if got := stored(); got != "[]" {
+		t.Errorf("stored reveals after listing %s", got)
+	}
+}
+
+func TestResultShareReadsAreLimitedPerClientAddress(t *testing.T) {
+	e := newEnv(t)
+	cfg := e.cfg
+	cfg.RateLimitingDisabled = false
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	frozen := time.Now()
+	limiter := ratelimit.New(cfg, valkeytest.Client(t), log).WithClock(func() time.Time { return frozen })
+	engine := httpserver.NewEngine(cfg, log)
+	engine.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
+	NewHandler(e.svc, headerSessions{}, limiter).Register(engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo()))
+	read := func(ip, path string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"token":"`+strings.Repeat("a", 43)+`"}`))
+		req.RemoteAddr = ip + ":40000"
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", webApp)
+		req.Header.Set(httpapi.CSRFHeader, "XMLHttpRequest")
+		rec := httptest.NewRecorder()
+		engine.ServeHTTP(rec, req)
+		return rec
+	}
+
+	// Summary and trend reads share one budget per address; an unknown key is charged like any other.
+	for i := range ratelimit.PublicResultShare.Limit {
+		path := "/api/app/shared-results/summary"
+		if i%2 == 1 {
+			path = "/api/app/shared-results/trends"
+		}
+		if rec := read("198.51.100.7", path); rec.Code != http.StatusNotFound {
+			t.Fatalf("read %d: %d %s", i+1, rec.Code, rec.Body)
+		}
+	}
+	for _, path := range []string{"/api/app/shared-results/summary", "/api/app/shared-results/trends"} {
+		if rec := read("198.51.100.7", path); rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") == "" {
+			t.Errorf("%s over the limit: %d %s", path, rec.Code, rec.Body)
+		}
+	}
+	if rec := read("198.51.100.8", "/api/app/shared-results/summary"); rec.Code != http.StatusNotFound {
+		t.Errorf("another address: %d %s", rec.Code, rec.Body)
+	}
+	// Managing links is not charged to that budget.
+	owner := e.user()
+	_, ws := e.organization(owner, nil)
+	sv := e.survey(ws, surveyOpts{blocks: shareBlocks})
+	e.engine = engine
+	if rec := e.request(owner, http.MethodGet, "/api/app/surveys/"+sv.String()+"/result-shares", nil); rec.Code != http.StatusOK {
+		t.Errorf("listing links: %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestResultShareKeepsItsExpiryWhenEdited(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner, nil)
+	sv := e.survey(ws, surveyOpts{blocks: shareBlocks})
+	path := "/api/app/surveys/" + sv.String() + "/result-shares"
+	var share ResultShare
+	createShare(t, e.request(owner, http.MethodPost, path, map[string]any{"name": "Board", "expiresAt": time.Now().Add(time.Hour)}), &share)
+
+	// The link expires. Its expiry, sent back as it is, still lets it be renamed; any other past expiry is refused.
+	e.exec(`UPDATE survey_result_shares SET expires_at = now() - interval '1 minute' WHERE id = ?`, share.ID)
+	var listed ResultShares
+	decode(t, e.request(owner, http.MethodGet, path, nil), &listed)
+	expired := listed.Shares[0].ExpiresAt
+	rec := e.request(owner, http.MethodPut, path+"/"+share.ID.String(), map[string]any{"name": "Old board", "revealedElementIds": []string{}, "expiresAt": expired})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("renaming an expired link: %d %s", rec.Code, rec.Body)
+	}
+	decode(t, rec, &share)
+	if share.Name != "Old board" || share.ExpiresAt == nil || !share.ExpiresAt.Equal(*expired) {
+		t.Errorf("renamed %+v, expiry %v", share, share.ExpiresAt)
+	}
+	rec = e.request(owner, http.MethodPut, path+"/"+share.ID.String(), map[string]any{"revealedElementIds": []string{}, "expiresAt": expired.Add(-time.Second)})
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "future") {
+		t.Errorf("another past expiry: %d %s", rec.Code, rec.Body)
 	}
 }

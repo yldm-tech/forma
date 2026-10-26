@@ -81,10 +81,10 @@ const existing: ResultShare = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
-const stubApi = () => {
+const stubApi = (share: ResultShare = existing) => {
   const calls: { method: string; path: string; body?: unknown }[] = [];
   let list: ResultShares = {
-    shares: [existing],
+    shares: [share],
     revealable: [
       { id: "q1", kind: "answers", type: "openText" },
       { id: "utm", kind: "hiddenField" },
@@ -102,6 +102,11 @@ const stubApi = () => {
         const created = { ...existing, id: "new", key: "b".repeat(43), ...(body as object) };
         list = { ...list, shares: [created as ResultShare, ...list.shares] };
         return json(created, 201);
+      }
+      if (path === `${base}/${existing.id}` && method === "PUT") {
+        const updated = { ...share, ...(body as object) } as ResultShare;
+        list = { ...list, shares: [updated] };
+        return json(updated);
       }
       if (path === `${base}/${existing.id}` && method === "DELETE") {
         list = { ...list, shares: list.shares.filter((share) => share.id !== existing.id) };
@@ -160,6 +165,43 @@ describe("ShareResultsDialog", () => {
       filterCriteria: { finished: true },
     });
     await waitFor(() => expect(screen.getAllByTestId("result-share")).toHaveLength(2));
+  });
+
+  test("editing a link keeps its expiry, even a past one, and drops cards the survey no longer offers", async () => {
+    // The link expired, and reveals q1 and a card since removed from the survey.
+    const expiresAt = "2020-01-01T10:00:00.123456Z";
+    const calls = stubApi({ ...existing, expiresAt, revealedElementIds: ["q1", "removed_q"] });
+    renderDialog();
+    await screen.findByTestId("result-share");
+    fireEvent.click(screen.getByRole("button", { name: "Edit Board" }));
+    expect(screen.getByRole("checkbox", { name: "What could be better?" }).getAttribute("aria-checked")).toBe(
+      "true"
+    );
+    fireEvent.change(screen.getByLabelText("Name (optional)"), { target: { value: "Board renamed" } });
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save.hasAttribute("disabled")).toBe(false);
+    fireEvent.click(save);
+    await waitFor(() => expect(calls.some((call) => call.method === "PUT")).toBe(true));
+    expect(calls.find((call) => call.method === "PUT")?.body).toEqual({
+      name: "Board renamed",
+      expiresAt,
+      revealedElementIds: ["q1"],
+    });
+  });
+
+  test("changing an edited link's expiry replaces it", async () => {
+    const calls = stubApi({ ...existing, expiresAt: "2020-01-01T10:00:00.123456Z" });
+    renderDialog();
+    await screen.findByTestId("result-share");
+    fireEvent.click(screen.getByRole("button", { name: "Edit Board" }));
+    fireEvent.change(screen.getByLabelText("Expiration"), { target: { value: "never" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls.some((call) => call.method === "PUT")).toBe(true));
+    expect(calls.find((call) => call.method === "PUT")?.body).toEqual({
+      name: "Board",
+      expiresAt: null,
+      revealedElementIds: [],
+    });
   });
 
   test("revoking asks first, then deletes the link", async () => {

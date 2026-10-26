@@ -24,7 +24,9 @@ import (
 
 // Read-only results links (the survey_result_shares table): a survey's summary, under a filter frozen when the link was created, published to people without an account. Whoever may publish the survey lists, creates, changes and revokes its links; anyone holding a link's key reads the summary and the trend through it, rate limited per client address, until the link expires or is revoked.
 //
-// A link never shows who answered: contacts, their attributes and response ids are dropped from every card. Cards that list individual answers (revealableTypes, the values typed into an Other option, and hidden fields) show only their counts unless the link reveals them by id, and uploaded files are never shown.
+// A link never shows who answered: contacts, their attributes and response ids are dropped from every card. Cards that list individual answers (revealableTypes, the values typed into an Other option, and hidden fields) show only their counts unless the link reveals them, and uploaded files are never shown.
+//
+// The survey is the authority on what a link reveals. A link stores each card it reveals as the survey offered it when someone chose it (its id, kind and type), and a stored card counts only while the survey still offers one exactly like it: a card removed from the survey, or replaced by a different card under the same id, is dropped from the link the next time the link is listed, read or saved, and is never revealed meanwhile.
 
 // maxResultShares bounds the links one survey keeps, so the list stays one a person can review.
 const maxResultShares = 50
@@ -66,6 +68,8 @@ type ResultShare struct {
 	RevealedElementIDs []string            `json:"revealedElementIds"`
 	ExpiresAt          *time.Time          `json:"expiresAt"`
 	Creator            *ResultShareCreator `json:"creator"`
+	// revealed are the cards the link reveals, as stored: the survey may since have dropped some (keepOffered).
+	revealed []Revealable
 }
 
 // Revealable is a card of the survey that lists individual answers, which a link hides unless it reveals the card's id.
@@ -126,29 +130,30 @@ type SharedResults struct {
 
 // resultShareRow is a survey_result_shares row with its creator.
 type resultShareRow struct {
-	ID                 uuid.UUID
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	SurveyID           uuid.UUID
-	ShareKey           string
-	Name               string
-	FilterCriteria     []byte
-	RevealedElementIDs []byte
-	ExpiresAt          *time.Time
-	CreatorID          *uuid.UUID
-	CreatorName        *string
+	ID             uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	SurveyID       uuid.UUID
+	ShareKey       string
+	Name           string
+	FilterCriteria []byte
+	Revealed       []byte
+	ExpiresAt      *time.Time
+	CreatorID      *uuid.UUID
+	CreatorName    *string
 }
 
 const selectResultShare = `SELECT s.id, s.created_at, s.updated_at, s.survey_id, s.share_key, s.name, s.filter_criteria,
-	to_jsonb(s.revealed_element_ids) AS revealed_element_ids, s.expires_at, u.id AS creator_id, u.name AS creator_name
+	s.revealed, s.expires_at, u.id AS creator_id, u.name AS creator_name
 	FROM survey_result_shares s LEFT JOIN users u ON u.id = s.created_by `
 
 func (r resultShareRow) share() (ResultShare, error) {
 	out := ResultShare{ID: r.ID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, SurveyID: r.SurveyID, Key: r.ShareKey, Name: r.Name,
 		FilterCriteria: r.FilterCriteria, ExpiresAt: r.ExpiresAt}
-	if err := json.Unmarshal(r.RevealedElementIDs, &out.RevealedElementIDs); err != nil {
-		return out, fmt.Errorf("decode result share %s revealed ids: %w", r.ID, err)
+	if err := json.Unmarshal(r.Revealed, &out.revealed); err != nil {
+		return out, fmt.Errorf("decode result share %s revealed cards: %w", r.ID, err)
 	}
+	out.RevealedElementIDs = revealedIDs(out.revealed)
 	if r.CreatorID != nil {
 		out.Creator = &ResultShareCreator{ID: *r.CreatorID}
 		if r.CreatorName != nil {
@@ -172,6 +177,56 @@ func (s *Service) resultShares(ctx context.Context, where string, args ...any) (
 		out = append(out, share)
 	}
 	return out, nil
+}
+
+// revealedIDs are the ids of the cards, each once, in their order.
+func revealedIDs(cards []Revealable) []string {
+	out := []string{}
+	for _, c := range cards {
+		if !slices.Contains(out, c.ID) {
+			out = append(out, c.ID)
+		}
+	}
+	return out
+}
+
+// reveals tells whether cards include the card with id of the kind given.
+func reveals(cards []Revealable, id, kind string) bool {
+	return slices.ContainsFunc(cards, func(c Revealable) bool { return c.ID == id && c.Kind == kind })
+}
+
+// keepOffered drops from the link the cards the survey no longer offers as they were revealed (same id, kind and type) and reports whether it dropped any.
+func (sh *ResultShare) keepOffered(sv *surveyDoc) bool {
+	offered := sv.revealable()
+	kept := []Revealable{}
+	for _, c := range sh.revealed {
+		if slices.Contains(offered, c) {
+			kept = append(kept, c)
+		}
+	}
+	changed := len(kept) != len(sh.revealed)
+	sh.revealed, sh.RevealedElementIDs = kept, revealedIDs(kept)
+	return changed
+}
+
+// pruneReveals is keepOffered, with the cards dropped removed from the stored link too, so a card added back to the survey later under the same id is not revealed without anyone choosing it. The write applies only while the link still reveals what was read, so it never undoes a concurrent change.
+func (s *Service) pruneReveals(ctx context.Context, sh *ResultShare, sv *surveyDoc) error {
+	stored, err := json.Marshal(sh.revealed)
+	if err != nil {
+		return fmt.Errorf("encode result share revealed cards: %w", err)
+	}
+	if !sh.keepOffered(sv) {
+		return nil
+	}
+	kept, err := json.Marshal(sh.revealed)
+	if err != nil {
+		return fmt.Errorf("encode result share revealed cards: %w", err)
+	}
+	if err := s.db.WithContext(ctx).Exec(`UPDATE survey_result_shares SET revealed = ?::jsonb WHERE id = ? AND revealed = ?::jsonb`,
+		string(kept), sh.ID, string(stored)).Error; err != nil {
+		return fmt.Errorf("prune result share revealed cards: %w", err)
+	}
+	return nil
 }
 
 // revealable lists the survey's cards that show individual answers, in the summary's order: elements first, then hidden fields.
@@ -208,27 +263,41 @@ func (s *Service) ResultShares(ctx context.Context, userID, surveyID uuid.UUID) 
 	if err != nil {
 		return nil, err
 	}
+	for i := range shares {
+		if err := s.pruneReveals(ctx, &shares[i], sv); err != nil {
+			return nil, err
+		}
+	}
 	return &ResultShares{Shares: shares, Revealable: sv.revealable()}, nil
 }
 
-// checkResultShareFields trims the name and checks the name, the revealed ids and the expiry against the survey, as the field errors a binding failure reports. Revealed ids are kept in the survey's order, each once.
-func checkResultShareFields(sv *surveyDoc, name string, revealed []string, expiresAt *time.Time, now time.Time) (string, []string, error) {
+// checkResultShareFields trims the name and checks the name, the revealed ids and the expiry against the survey, as the field errors a binding failure reports. It returns the cards the ids reveal, in the survey's order.
+//
+// before is the link as it was, nil for a new one. An id among the cards it revealed stays revealed only for the very card it was granted for, and one the survey no longer offers is dropped rather than refused: the people editing the link cannot see it to take it off. Any other id must name a card the survey offers. Its expiry may be kept as it was even once it has passed, so an expired link can still be renamed.
+func checkResultShareFields(sv *surveyDoc, name string, revealed []string, before *ResultShare, expiresAt *time.Time, now time.Time) (string, []Revealable, error) {
 	name = strings.TrimSpace(name)
 	var fields []apperr.FieldError
 	if len([]rune(name)) > maxResultShareNameLength {
 		fields = append(fields, apperr.FieldError{Field: "name", Rule: "max", Param: fmt.Sprint(maxResultShareNameLength)})
 	}
-	if expiresAt != nil && !expiresAt.After(now) {
+	var stored []Revealable
+	keptExpiry := false
+	if before != nil {
+		stored = before.revealed
+		keptExpiry = expiresAt != nil && before.ExpiresAt != nil && expiresAt.Equal(*before.ExpiresAt)
+	}
+	if expiresAt != nil && !expiresAt.After(now) && !keptExpiry {
 		fields = append(fields, apperr.FieldError{Field: "expiresAt", Rule: "future"})
 	}
-	ordered := []string{}
+	storedIDs := revealedIDs(stored)
+	cards := []Revealable{}
 	for _, r := range sv.revealable() {
-		if slices.Contains(revealed, r.ID) {
-			ordered = append(ordered, r.ID)
+		if slices.Contains(revealed, r.ID) && (!slices.Contains(storedIDs, r.ID) || slices.Contains(stored, r)) {
+			cards = append(cards, r)
 		}
 	}
 	for _, id := range revealed {
-		if !slices.Contains(ordered, id) {
+		if !slices.Contains(storedIDs, id) && !slices.ContainsFunc(cards, func(c Revealable) bool { return c.ID == id }) {
 			fields = append(fields, apperr.FieldError{Field: "revealedElementIds", Rule: "oneof", Param: id})
 			break
 		}
@@ -236,7 +305,7 @@ func checkResultShareFields(sv *surveyDoc, name string, revealed []string, expir
 	if len(fields) > 0 {
 		return "", nil, apperr.Validation(fields)
 	}
-	return name, ordered, nil
+	return name, cards, nil
 }
 
 // CreateResultShare creates a results link of the survey under the filter given, which the link keeps as it is: the filter is checked against the survey now, the way the summary checks it.
@@ -257,7 +326,7 @@ func (s *Service) CreateResultShare(ctx context.Context, userID, surveyID uuid.U
 		return nil, err
 	}
 	organizationID = sv.OrganizationID.String()
-	name, revealed, err := checkResultShareFields(sv, in.Name, in.RevealedElementIDs, in.ExpiresAt, time.Now())
+	name, revealed, err := checkResultShareFields(sv, in.Name, in.RevealedElementIDs, nil, in.ExpiresAt, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +339,7 @@ func (s *Service) CreateResultShare(ctx context.Context, userID, surveyID uuid.U
 	}
 	revealedJSON, err := json.Marshal(revealed)
 	if err != nil {
-		return nil, fmt.Errorf("encode result share revealed ids: %w", err)
+		return nil, fmt.Errorf("encode result share revealed cards: %w", err)
 	}
 	key, err := secret.NewToken()
 	if err != nil {
@@ -289,8 +358,8 @@ func (s *Service) CreateResultShare(ctx context.Context, userID, surveyID uuid.U
 		if count >= maxResultShares {
 			return apperr.OperationNotAllowed(fmt.Sprintf("A survey can have at most %d results links. Revoke one you no longer need first.", maxResultShares))
 		}
-		return tx.Raw(`INSERT INTO survey_result_shares (survey_id, created_by, share_key, name, filter_criteria, revealed_element_ids, expires_at)
-			VALUES (?, ?, ?, ?, ?::jsonb, ARRAY(SELECT jsonb_array_elements_text(?::jsonb)), ?) RETURNING id`,
+		return tx.Raw(`INSERT INTO survey_result_shares (survey_id, created_by, share_key, name, filter_criteria, revealed, expires_at)
+			VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb, ?) RETURNING id`,
 			surveyID, userID, key, name, string(criteria), string(revealedJSON), in.ExpiresAt).Row().Scan(&id)
 	})
 	if err != nil {
@@ -304,6 +373,7 @@ func (s *Service) CreateResultShare(ctx context.Context, userID, surveyID uuid.U
 	if err != nil {
 		return nil, err
 	}
+	found[0].keepOffered(sv)
 	return &found[0], nil
 }
 
@@ -349,7 +419,7 @@ func (s *Service) existingResultShare(ctx context.Context, surveyID, shareID uui
 	return &found[0], nil
 }
 
-// UpdateResultShare changes a link's name, revealed cards and expiry. Its key and filter stay as they are.
+// UpdateResultShare changes a link's name, revealed cards and expiry. Its key and filter stay as they are. Cards it revealed that the survey no longer offers are dropped.
 func (s *Service) UpdateResultShare(ctx context.Context, userID, surveyID, shareID uuid.UUID, in ResultShareUpdate) (share *ResultShare, err error) {
 	var organizationID string
 	var before *ResultShare
@@ -371,19 +441,23 @@ func (s *Service) UpdateResultShare(ctx context.Context, userID, surveyID, share
 	if before, err = s.existingResultShare(ctx, surveyID, shareID); err != nil {
 		return nil, err
 	}
-	name, revealed, err := checkResultShareFields(sv, in.Name, in.RevealedElementIDs, in.ExpiresAt, time.Now())
+	name, revealed, err := checkResultShareFields(sv, in.Name, in.RevealedElementIDs, before, in.ExpiresAt, time.Now())
 	if err != nil {
 		return nil, err
 	}
 	revealedJSON, err := json.Marshal(revealed)
 	if err != nil {
-		return nil, fmt.Errorf("encode result share revealed ids: %w", err)
+		return nil, fmt.Errorf("encode result share revealed cards: %w", err)
 	}
-	if err := s.db.WithContext(ctx).Exec(`UPDATE survey_result_shares SET name = ?, revealed_element_ids = ARRAY(SELECT jsonb_array_elements_text(?::jsonb)), expires_at = ?, updated_at = now()
+	if err := s.db.WithContext(ctx).Exec(`UPDATE survey_result_shares SET name = ?, revealed = ?::jsonb, expires_at = ?, updated_at = now()
 		WHERE id = ? AND survey_id = ?`, name, string(revealedJSON), in.ExpiresAt, shareID, surveyID).Error; err != nil {
 		return nil, fmt.Errorf("update result share: %w", err)
 	}
-	return s.existingResultShare(ctx, surveyID, shareID)
+	if share, err = s.existingResultShare(ctx, surveyID, shareID); err != nil {
+		return nil, err
+	}
+	share.keepOffered(sv)
+	return share, nil
 }
 
 // auditedShare is what the audit log records of a link: everything but its key, which is a credential.
@@ -426,7 +500,7 @@ func resultShareNotFound() *apperr.Error {
 	return &apperr.Error{Status: 404, Code: CodeResultShareNotFound, Message: "This results link does not exist, has expired or was revoked."}
 }
 
-// liveResultShare is the link a key names while it has not expired, with its survey and frozen filter.
+// liveResultShare is the link a key names while it has not expired, with its survey and frozen filter, revealing only the cards the survey still offers.
 func (s *Service) liveResultShare(ctx context.Context, key string) (*ResultShare, *surveyDoc, *response.Criteria, error) {
 	if !shareKeyPattern.MatchString(key) {
 		return nil, nil, nil, resultShareNotFound()
@@ -446,6 +520,9 @@ func (s *Service) liveResultShare(ctx context.Context, key string) (*ResultShare
 	if sv == nil {
 		return nil, nil, nil, resultShareNotFound()
 	}
+	if err := s.pruneReveals(ctx, share, sv); err != nil {
+		return nil, nil, nil, err
+	}
 	var filter response.Criteria
 	if err := json.Unmarshal(share.FilterCriteria, &filter); err != nil {
 		return nil, nil, nil, fmt.Errorf("decode result share %s filter: %w", share.ID, err)
@@ -463,7 +540,7 @@ func (s *Service) SharedResults(ctx context.Context, key string) (*SharedResults
 	if err != nil {
 		return nil, err
 	}
-	withheld := redactSummary(summary, share.RevealedElementIDs)
+	withheld := redactSummary(summary, share.revealed)
 	shared, err := loadSharedSurvey(ctx, s.db, sv.ID)
 	if err != nil {
 		return nil, err
@@ -530,14 +607,14 @@ func anonymous(samples []Sample) []Sample {
 	return out
 }
 
-// redactSummary makes a summary fit for a results link, in place: no entry names a contact or a response, and the cards listing individual answers that revealed does not name keep their counts without the answers. It returns the ids of the cards withheld that way, in the summary's order.
-func redactSummary(summary *Summary, revealed []string) []string {
+// redactSummary makes a summary fit for a results link, in place: no entry names a contact or a response, and the cards listing individual answers that revealed does not include, by id and kind, keep their counts without the answers. It returns the ids of the cards withheld that way, in the summary's order.
+func redactSummary(summary *Summary, revealed []Revealable) []string {
 	withheld := []string{}
 	for i, entry := range summary.Summary {
 		switch e := entry.(type) {
 		case SamplesSummary:
 			id := elementID(e.Element)
-			if slices.Contains(revealed, id) {
+			if reveals(revealed, id, RevealKindAnswers) {
 				e.Samples = anonymous(e.Samples)
 			} else {
 				e.Samples = []Sample{}
@@ -549,7 +626,7 @@ func redactSummary(summary *Summary, revealed []string) []string {
 			withheld = append(withheld, elementID(e.Element))
 			summary.Summary[i] = e
 		case MultipleChoiceSummary:
-			show := slices.Contains(revealed, elementID(e.Element))
+			show := reveals(revealed, elementID(e.Element), RevealKindOtherValues)
 			choices := make([]ChoiceCount, len(e.Choices))
 			for j, c := range e.Choices {
 				if c.Others != nil {
@@ -568,7 +645,7 @@ func redactSummary(summary *Summary, revealed []string) []string {
 			e.Choices = choices
 			summary.Summary[i] = e
 		case HiddenFieldSummary:
-			if slices.Contains(revealed, e.ID) {
+			if reveals(revealed, e.ID, RevealKindHiddenField) {
 				e.Samples = anonymous(e.Samples)
 			} else {
 				e.Samples = []Sample{}
