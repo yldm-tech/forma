@@ -503,7 +503,7 @@ export const en: SiteContent = {
       },
       account: {
         title: "Account security",
-        body: "Two-factor authentication, organizations with teams and per-workspace roles, audit logging, and SSO on self-hosted instances.",
+        body: "Two-factor authentication that owners can require of every member, organizations with teams and per-workspace roles, audit logging, and SSO on self-hosted instances.",
       },
       policyLink: "Read the full policy on GitHub →",
     },

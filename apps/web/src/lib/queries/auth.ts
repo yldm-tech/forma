@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { forgetWorkspace } from "../storage";
+import { organizationKeys } from "./organizations";
 
 export type IdentityProvider = "email" | "sso";
 
@@ -12,6 +13,8 @@ export interface Me {
   emailVerified: boolean;
   locale: string;
   identityProvider: IdentityProvider;
+  /** Whether the account can sign in with a password, external identities or not: such an account manages its own two-factor authentication. */
+  hasPassword: boolean;
   twoFactorEnabled: boolean;
   createdAt: string;
   lastLoginAt: string | null;
@@ -189,11 +192,12 @@ export const useEnableTwoFactor = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (code: string) => api.post<{ message: string }>("/api/app/auth/two-factor/enable", { code }),
-    // Enabling signs every other session out.
+    // Enabling signs every other session out, and meets the two-factor requirement of the user's organizations, whose answers say whether it refuses them.
     onSuccess: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: authKeys.me }),
         queryClient.invalidateQueries({ queryKey: authKeys.sessions }),
+        queryClient.invalidateQueries({ queryKey: organizationKeys.all }),
       ]),
   });
 };
@@ -203,7 +207,11 @@ export const useDisableTwoFactor = () => {
   return useMutation({
     mutationFn: (input: { password: string; code?: string; backupCode?: string }) =>
       api.post<{ message: string }>("/api/app/auth/two-factor/disable", input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: authKeys.me }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: authKeys.me }),
+        queryClient.invalidateQueries({ queryKey: organizationKeys.all }),
+      ]),
   });
 };
 

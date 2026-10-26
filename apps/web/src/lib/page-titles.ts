@@ -46,6 +46,7 @@ export const PAGE_TITLES: Record<string, TitleSource> = {
   [`${ORG}/workspaces/new/survey`]: { key: "organizations.workspaces.new.survey.title" },
   [`${ORG}/workspaces/new/templates`]: { key: "workspace.xm-templates.headline" },
   [`${ORG}/workspaces/new/ai`]: { key: "workspace.surveys.ai_create.dialog_title" },
+  [`${ORG}/two-factor`]: { key: "workspace.settings.profile.two_factor_authentication" },
   [`${ORG}/settings/general`]: { key: "workspace.settings.general.organization_settings" },
   [`${ORG}/settings/teams`]: { key: "common.members_and_teams" },
   [`${ORG}/settings/api-keys`]: { key: "common.api_keys" },

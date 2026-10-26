@@ -3,6 +3,7 @@ package org
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -182,6 +183,9 @@ type updateRequest struct {
 	DisplayTimeZone          nullableString `json:"displayTimeZone"`
 	SurveySchedulingTimeZone nullableString `json:"surveySchedulingTimeZone"`
 	IsAISmartToolsEnabled    *bool          `json:"isAISmartToolsEnabled"`
+	// RequireTwoFactor turns the two-factor requirement on or off; TwoFactorGracePeriodDays, the days members have to turn it on, comes with true and only with it.
+	RequireTwoFactor         *bool `json:"requireTwoFactor"`
+	TwoFactorGracePeriodDays *int  `json:"twoFactorGracePeriodDays"`
 }
 
 func (r *updateRequest) validate() error {
@@ -198,6 +202,17 @@ func (r *updateRequest) validate() error {
 	if tz := r.SurveySchedulingTimeZone.value; tz != nil && !ValidTimeZone(*tz) {
 		return apperr.Validation([]apperr.FieldError{{Field: "surveySchedulingTimeZone", Rule: "timezone"}})
 	}
+	required := r.RequireTwoFactor != nil && *r.RequireTwoFactor
+	switch days := r.TwoFactorGracePeriodDays; {
+	case required && days == nil:
+		return apperr.Validation([]apperr.FieldError{{Field: "twoFactorGracePeriodDays", Rule: "required"}})
+	case !required && days != nil:
+		return apperr.Validation([]apperr.FieldError{{Field: "twoFactorGracePeriodDays", Rule: "excluded_unless", Param: "requireTwoFactor true"}})
+	case days != nil && *days < 0:
+		return apperr.Validation([]apperr.FieldError{{Field: "twoFactorGracePeriodDays", Rule: "min", Param: "0"}})
+	case days != nil && *days > MaxTwoFactorGracePeriodDays:
+		return apperr.Validation([]apperr.FieldError{{Field: "twoFactorGracePeriodDays", Rule: "max", Param: strconv.Itoa(MaxTwoFactorGracePeriodDays)}})
+	}
 	return nil
 }
 
@@ -211,6 +226,12 @@ func (h *Handler) update(c *gin.Context) {
 		return
 	}
 	in := UpdateInput{Name: req.Name, IsAISmartToolsEnabled: req.IsAISmartToolsEnabled}
+	if req.RequireTwoFactor != nil {
+		in.TwoFactorRequirement = &TwoFactorRequirement{Required: *req.RequireTwoFactor}
+		if req.TwoFactorGracePeriodDays != nil {
+			in.TwoFactorRequirement.GracePeriodDays = *req.TwoFactorGracePeriodDays
+		}
+	}
 	if req.DisplayTimeZone.set {
 		in.DisplayTimeZone = &TimeZone{Value: req.DisplayTimeZone.value}
 	}

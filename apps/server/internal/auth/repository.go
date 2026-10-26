@@ -64,6 +64,11 @@ func (a *account) emailIdentity() bool {
 	return a.hasPassword() && !a.HasExternalIdentity
 }
 
+// ssoOnly is an account that signs in only through an external identity provider, which then owns its second factor, so two-factor authentication is neither set up nor removed here. An account that has external identities and a password (SSO recovery keeps the password of a verified account) still signs in with the password alone, so it can turn two-factor authentication on and off like a password account; an organization's two-factor requirement applies to it too.
+func (a *account) ssoOnly() bool {
+	return a.HasExternalIdentity && !a.hasPassword()
+}
+
 // identityProvider names the account's sign-in method the way forma2's User.identityProvider did, for the SPA.
 func (a *account) identityProvider() string {
 	if a.emailIdentity() {

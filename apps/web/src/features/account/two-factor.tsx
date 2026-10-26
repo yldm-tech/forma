@@ -1,6 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { CopyIcon } from "lucide-react";
 import { type FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -24,6 +26,7 @@ import {
   useEnableTwoFactor,
   useSetupTwoFactor,
 } from "../../lib/queries/auth";
+import { organizationsQuery } from "../../lib/queries/organizations";
 import { toast } from "../../lib/toast";
 import { disableTwoFactorFactor, formatBackupCode } from "../../lib/two-factor";
 
@@ -58,7 +61,7 @@ export const AccountSecurity = ({ user }: { user: Me }) => {
 type EnableStep = "confirmPassword" | "scanQRCode" | "enterCode" | "backupCodes";
 
 /** forma2's EnableTwoFactorModal: confirm the password, scan the secret, prove it with a code, then keep the backup codes. */
-const EnableTwoFactorModal = ({ onClose }: { onClose: () => void }) => {
+export const EnableTwoFactorModal = ({ onClose }: { onClose: () => void }) => {
   const { t } = useTranslation();
   const [step, setStep] = useState<EnableStep>("confirmPassword");
   const [setup, setSetup] = useState<TwoFactorSetup | null>(null);
@@ -303,6 +306,9 @@ const DisableTwoFactorModal = ({ onClose }: { onClose: () => void }) => {
   const [useBackupCode, setUseBackupCode] = useState(false);
   const [factorError, setFactorError] = useState<string | null>(null);
   const disable = useDisableTwoFactor();
+  // The organizations that require two-factor authentication refuse the user once their grace period is over, so turning it off is a step out of them; the dialog says so first.
+  const { data: organizations } = useQuery(organizationsQuery);
+  const requiring = (organizations ?? []).filter((o) => o.twoFactorEnforcedAt !== null).map((o) => o.name);
   // Switching between the authenticator code and a backup code moves focus to the field just shown; the password, first in the form, takes it when the dialog opens.
   const [switched, setSwitched] = useState(0);
   const digits = useRef<HTMLFieldSetElement>(null);
@@ -339,6 +345,13 @@ const DisableTwoFactorModal = ({ onClose }: { onClose: () => void }) => {
       </DialogHeader>
       <form className="flex flex-col gap-y-6" onSubmit={submit} noValidate>
         <DialogBody className="space-y-6">
+          {requiring.length > 0 && (
+            <Alert variant="warning" role="status">
+              <AlertDescription>
+                {t("organizations.two_factor.disable_warning", { organizations: requiring.join(", ") })}
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="flex flex-col gap-2">
             <label htmlFor="disable-two-factor-password" className="text-sm font-medium text-slate-700">
               {t("common.password")}

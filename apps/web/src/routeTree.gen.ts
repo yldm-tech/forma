@@ -37,6 +37,7 @@ import { Route as AuthenticatedAccountSettingsProfileRouteImport } from './route
 import { Route as AuthenticatedOrganizationsOrganizationIdIndexRouteImport } from './routes/_authenticated/organizations/$organizationId/index'
 import { Route as AuthenticatedOrganizationsOrganizationIdLandingRouteImport } from './routes/_authenticated/organizations/$organizationId/landing'
 import { Route as AuthenticatedOrganizationsOrganizationIdSettingsRouteImport } from './routes/_authenticated/organizations/$organizationId/settings'
+import { Route as AuthenticatedOrganizationsOrganizationIdTwoFactorRouteImport } from './routes/_authenticated/organizations/$organizationId/two-factor'
 import { Route as AuthenticatedSetupOrganizationCreateRouteImport } from './routes/_authenticated/setup/organization/create'
 import { Route as AuthenticatedWorkspacesWorkspaceIdIndexRouteImport } from './routes/_authenticated/workspaces/$workspaceId/index'
 import { Route as AuthenticatedWorkspacesWorkspaceIdAttributesRouteImport } from './routes/_authenticated/workspaces/$workspaceId/attributes'
@@ -240,6 +241,12 @@ const AuthenticatedOrganizationsOrganizationIdSettingsRoute =
   AuthenticatedOrganizationsOrganizationIdSettingsRouteImport.update({
     id: '/organizations/$organizationId/settings',
     path: '/organizations/$organizationId/settings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedOrganizationsOrganizationIdTwoFactorRoute =
+  AuthenticatedOrganizationsOrganizationIdTwoFactorRouteImport.update({
+    id: '/organizations/$organizationId/two-factor',
+    path: '/organizations/$organizationId/two-factor',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSetupOrganizationCreateRoute =
@@ -596,6 +603,7 @@ export interface FileRoutesByFullPath {
   '/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
   '/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   '/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
+  '/organizations/$organizationId/two-factor': typeof AuthenticatedOrganizationsOrganizationIdTwoFactorRoute
   '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
   '/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
   '/workspaces/$workspaceId/segments': typeof AuthenticatedWorkspacesWorkspaceIdSegmentsRoute
@@ -673,6 +681,7 @@ export interface FileRoutesByTo {
   '/account/settings/notifications': typeof AuthenticatedAccountSettingsNotificationsRoute
   '/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
   '/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
+  '/organizations/$organizationId/two-factor': typeof AuthenticatedOrganizationsOrganizationIdTwoFactorRoute
   '/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
   '/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
   '/workspaces/$workspaceId/segments': typeof AuthenticatedWorkspacesWorkspaceIdSegmentsRoute
@@ -752,6 +761,7 @@ export interface FileRoutesById {
   '/_authenticated/account/settings/profile': typeof AuthenticatedAccountSettingsProfileRoute
   '/_authenticated/organizations/$organizationId/landing': typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   '/_authenticated/organizations/$organizationId/settings': typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
+  '/_authenticated/organizations/$organizationId/two-factor': typeof AuthenticatedOrganizationsOrganizationIdTwoFactorRoute
   '/_authenticated/setup/organization/create': typeof AuthenticatedSetupOrganizationCreateRoute
   '/_authenticated/workspaces/$workspaceId/attributes': typeof AuthenticatedWorkspacesWorkspaceIdAttributesRoute
   '/_authenticated/workspaces/$workspaceId/segments': typeof AuthenticatedWorkspacesWorkspaceIdSegmentsRoute
@@ -834,6 +844,7 @@ export interface FileRouteTypes {
     | '/account/settings/profile'
     | '/organizations/$organizationId/landing'
     | '/organizations/$organizationId/settings'
+    | '/organizations/$organizationId/two-factor'
     | '/setup/organization/create'
     | '/workspaces/$workspaceId/attributes'
     | '/workspaces/$workspaceId/segments'
@@ -911,6 +922,7 @@ export interface FileRouteTypes {
     | '/account/settings/notifications'
     | '/account/settings/profile'
     | '/organizations/$organizationId/landing'
+    | '/organizations/$organizationId/two-factor'
     | '/setup/organization/create'
     | '/workspaces/$workspaceId/attributes'
     | '/workspaces/$workspaceId/segments'
@@ -989,6 +1001,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account/settings/profile'
     | '/_authenticated/organizations/$organizationId/landing'
     | '/_authenticated/organizations/$organizationId/settings'
+    | '/_authenticated/organizations/$organizationId/two-factor'
     | '/_authenticated/setup/organization/create'
     | '/_authenticated/workspaces/$workspaceId/attributes'
     | '/_authenticated/workspaces/$workspaceId/segments'
@@ -1252,6 +1265,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations/$organizationId/settings'
       fullPath: '/organizations/$organizationId/settings'
       preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/organizations/$organizationId/two-factor': {
+      id: '/_authenticated/organizations/$organizationId/two-factor'
+      path: '/organizations/$organizationId/two-factor'
+      fullPath: '/organizations/$organizationId/two-factor'
+      preLoaderRoute: typeof AuthenticatedOrganizationsOrganizationIdTwoFactorRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/setup/organization/create': {
@@ -1879,6 +1899,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedWorkspacesWorkspaceIdRoute: typeof AuthenticatedWorkspacesWorkspaceIdRouteWithChildren
   AuthenticatedOrganizationsOrganizationIdLandingRoute: typeof AuthenticatedOrganizationsOrganizationIdLandingRoute
   AuthenticatedOrganizationsOrganizationIdSettingsRoute: typeof AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren
+  AuthenticatedOrganizationsOrganizationIdTwoFactorRoute: typeof AuthenticatedOrganizationsOrganizationIdTwoFactorRoute
   AuthenticatedSetupOrganizationCreateRoute: typeof AuthenticatedSetupOrganizationCreateRoute
   AuthenticatedOrganizationsOrganizationIdIndexRoute: typeof AuthenticatedOrganizationsOrganizationIdIndexRoute
   AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRoute: typeof AuthenticatedOrganizationsOrganizationIdWorkspacesNewRouteRouteWithChildren
@@ -1898,6 +1919,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedOrganizationsOrganizationIdLandingRoute,
   AuthenticatedOrganizationsOrganizationIdSettingsRoute:
     AuthenticatedOrganizationsOrganizationIdSettingsRouteWithChildren,
+  AuthenticatedOrganizationsOrganizationIdTwoFactorRoute:
+    AuthenticatedOrganizationsOrganizationIdTwoFactorRoute,
   AuthenticatedSetupOrganizationCreateRoute:
     AuthenticatedSetupOrganizationCreateRoute,
   AuthenticatedOrganizationsOrganizationIdIndexRoute:

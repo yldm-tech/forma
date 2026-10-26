@@ -42,6 +42,7 @@ const user = (identityProvider: Me["identityProvider"]): Me => ({
   emailVerified: true,
   locale: "en-US",
   identityProvider,
+  hasPassword: identityProvider === "email",
   twoFactorEnabled: false,
   createdAt: "2026-01-01T00:00:00Z",
   lastLoginAt: null,

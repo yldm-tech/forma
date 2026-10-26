@@ -39,6 +39,7 @@ import { toast } from "../../lib/toast";
 import { aiKeys, organizationAIQuery } from "../ai/availability";
 import { getSurveySchedulingTimeLabel } from "../survey-editor/lib/scheduling-config";
 import { organizationNameError } from "../../lib/validation";
+import { TwoFactorRequirementCard } from "./two-factor-requirement";
 import { EmailCustomizationCard } from "./whitelabel/email-customization-card";
 
 /** The GitHub page where Forma publishes its security advisories; its Watch menu subscribes to them and to the releases that ship the fixes. */
@@ -99,6 +100,7 @@ export const OrganizationGeneralPage = ({ organization }: { organization: Organi
         description={t("workspace.settings.general.ai_enabled_description")}>
         <AISettingsToggle organization={organization} />
       </SettingsCard>
+      <TwoFactorRequirementCard organization={organization} />
       <EmailCustomizationCard key={organization.updatedAt} organization={organization} />
       <SettingsCard
         width="full"

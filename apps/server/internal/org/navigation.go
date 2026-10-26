@@ -2,10 +2,10 @@ package org
 
 import (
 	"context"
+	"slices"
 
 	"github.com/google/uuid"
 
-	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/workspace"
 )
 
@@ -16,6 +16,11 @@ const (
 	createOrgPath  = "/setup/organization/create"
 )
 
+// TwoFactorPath is the SPA page that guides a member to the two-factor authentication their organization requires.
+func TwoFactorPath(organizationID uuid.UUID) string {
+	return "/organizations/" + organizationID.String() + "/two-factor"
+}
+
 // Home is where the root page sends the browser. With Path empty, the SPA opens the workspace it remembers when that is one of WorkspaceIDs, else the first of them, as forma2's ClientWorkspaceRedirect did.
 type Home struct {
 	Path         string      `json:"path,omitempty"`
@@ -24,7 +29,7 @@ type Home struct {
 	Pending bool `json:"pending"`
 }
 
-// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; an owner or manager of their first organization whose onboarding workspace has no survey yet goes through the new-workspace flow; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
+// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; a user whose first organization refuses them for want of two-factor authentication, and who can open no other workspace, is guided to turn it on; an owner or manager of their first organization whose onboarding workspace has no survey yet goes through the new-workspace flow; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
 func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	if userID == nil {
 		hasUser, err := s.repo.hasAnyUser(ctx)
@@ -55,7 +60,21 @@ func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	if err != nil {
 		return nil, err
 	}
-	if first := orgs[0]; first.Role == RoleOwner || first.Role == RoleManager {
+	// The workspaces of an organization whose two-factor requirement refuses the user are left out of ids. Its onboarding is out of reach too, and with nothing else to open, the user is guided to turn it on rather than to an empty landing page.
+	first := orgs[0]
+	manages := first.Role == RoleOwner || first.Role == RoleManager
+	firstBlocked := false
+	if len(ids) == 0 || manages {
+		blocked, err := s.authz.SecondFactorBlockedOrganizations(ctx, *userID)
+		if err != nil {
+			return nil, err
+		}
+		firstBlocked = slices.Contains(blocked, first.ID)
+	}
+	if len(ids) == 0 && firstBlocked {
+		return &Home{Path: TwoFactorPath(first.ID), WorkspaceIDs: ids, Pending: pending}, nil
+	}
+	if manages && !firstBlocked {
 		path, err := s.navigation.OnboardingRedirect(ctx, *userID, first.ID)
 		if err != nil {
 			return nil, err
@@ -76,13 +95,21 @@ type Navigation struct {
 	CanCreateWorkspace bool   `json:"canCreateWorkspace"`
 }
 
-// Navigate is forma2's /organizations/{id} route and the landing layout behind it: members only (anyone else gets a not-found), a billing member goes to the billing path, a member who can open no workspace lands on the organization's landing page, and anyone else opens their first workspace. forma2 checked for workspaces before the billing role, so billing members, who can open none, always reached the landing page; here they reach the billing path as intended.
+// Navigate is forma2's /organizations/{id} route and the landing layout behind it: members only (anyone else gets a not-found), a member the organization's two-factor requirement refuses goes to enrol, a billing member goes to the billing path, a member who can open no workspace lands on the organization's landing page, and anyone else opens their first workspace. forma2 checked for workspaces before the billing role, so billing members, who can open none, always reached the landing page; here they reach the billing path as intended.
 func (s *Service) Navigate(ctx context.Context, userID, organizationID uuid.UUID) (*Navigation, error) {
-	m, err := s.memberWith(ctx, userID, organizationID, authz.OrganizationRead)
+	m, err := s.memberDespiteSecondFactor(ctx, userID, organizationID)
 	if err != nil {
 		return nil, err
 	}
 	nav := &Navigation{CanCreateWorkspace: m.Role == RoleOwner || m.Role == RoleManager}
+	_, blocked, err := s.repo.secondFactor(ctx, userID, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	if blocked {
+		nav.Path, nav.CanCreateWorkspace = TwoFactorPath(organizationID), false
+		return nav, nil
+	}
 	if m.Role == RoleBilling {
 		nav.Path = workspace.BillingPath(organizationID, s.cfg.IsFormaCloud)
 		return nav, nil

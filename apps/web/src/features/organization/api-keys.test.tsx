@@ -119,6 +119,9 @@ const owner: OrganizationDetail = {
   whitelabel: {},
   membership: { organizationId: ORG, userId: "u1", accepted: true, role: "owner" },
   userManagementAllowed: true,
+  twoFactorEnforcedAt: null,
+  twoFactorStatus: "enabled",
+  twoFactorBlocked: false,
 };
 
 const existing: ApiKey = {

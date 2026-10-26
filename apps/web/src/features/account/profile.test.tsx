@@ -13,7 +13,7 @@ import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../lib/i18n";
 import { type AuthOptions, type Me, authKeys } from "../../lib/queries/auth";
-import { EditProfileDetailsForm } from "./profile";
+import { EditProfileDetailsForm, SecurityCard } from "./profile";
 
 // The address on the profile form: a change is confirmed from the new mailbox where the instance verifies addresses, so without SMTP it cannot be made here.
 
@@ -36,6 +36,7 @@ const user = (identityProvider: Me["identityProvider"]): Me => ({
   emailVerified: true,
   locale: "en-US",
   identityProvider,
+  hasPassword: identityProvider === "email",
   twoFactorEnabled: false,
   createdAt: "2026-01-01T00:00:00Z",
   lastLoginAt: null,
@@ -96,5 +97,61 @@ describe("EditProfileDetailsForm email address", () => {
 
     expect((await emailField()).disabled).toBe(false);
     expect(screen.queryByText(hint())).toBeNull();
+  });
+});
+
+describe("SecurityCard", () => {
+  /** The card after a marker, so a test knows the route has rendered even when the card renders nothing. */
+  const renderCard = async (me: Me) => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(authKeys.options, { passwordResetEnabled: true } as AuthOptions);
+    const rootRoute = createRootRoute({ component: Outlet });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([
+        createRoute({
+          getParentRoute: () => rootRoute,
+          path: "/",
+          component: () => (
+            <>
+              <p>rendered</p>
+              <SecurityCard user={me} />
+            </>
+          ),
+        }),
+      ]),
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </I18nextProvider>
+    );
+    await screen.findByText("rendered");
+  };
+  const twoFactorSwitch = () =>
+    screen.queryByRole("switch", { name: t("workspace.settings.profile.two_factor_authentication") });
+  const passwordChange = () => screen.queryAllByText(t("workspace.settings.profile.password_change.title"));
+
+  test("offers a password account its password and two-factor authentication", async () => {
+    await renderCard(user("email"));
+
+    expect(twoFactorSwitch()).not.toBeNull();
+    expect(passwordChange().length).toBeGreaterThan(0);
+  });
+
+  test("offers two-factor authentication to an SSO account that still has a password, which signs it in alone", async () => {
+    await renderCard({ ...user("sso"), hasPassword: true });
+
+    expect(twoFactorSwitch()).not.toBeNull();
+    expect(passwordChange()).toHaveLength(0);
+  });
+
+  test("is left out for an SSO account without a password", async () => {
+    await renderCard(user("sso"));
+
+    expect(twoFactorSwitch()).toBeNull();
+    expect(screen.queryByText(t("common.security"))).toBeNull();
   });
 });

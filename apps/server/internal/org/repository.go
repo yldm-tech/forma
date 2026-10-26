@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
 )
@@ -37,7 +38,7 @@ func (r *Repository) serializable(ctx context.Context, fn func(tx *Repository) e
 	})
 }
 
-const organizationColumns = `o.id, o.created_at, o.updated_at, o.name, o.is_ai_smart_tools_enabled, o.whitelabel, o.display_time_zone, o.survey_scheduling_time_zone,
+const organizationColumns = `o.id, o.created_at, o.updated_at, o.name, o.is_ai_smart_tools_enabled, o.whitelabel, o.display_time_zone, o.survey_scheduling_time_zone, o.two_factor_enforced_at,
 	b.organization_id IS NOT NULL AS has_billing, b.stripe_customer_id, b.limits, b.usage_cycle_anchor, b.stripe`
 
 type organizationRow struct {
@@ -49,6 +50,7 @@ type organizationRow struct {
 	Whitelabel               []byte
 	DisplayTimeZone          sql.NullString
 	SurveySchedulingTimeZone sql.NullString
+	TwoFactorEnforcedAt      sql.NullTime
 	HasBilling               bool
 	StripeCustomerID         sql.NullString
 	Limits                   []byte
@@ -68,6 +70,9 @@ func (o organizationRow) organization(isFormaCloud bool) *Organization {
 	}
 	if o.SurveySchedulingTimeZone.Valid {
 		out.SurveySchedulingTimeZone = &o.SurveySchedulingTimeZone.String
+	}
+	if o.TwoFactorEnforcedAt.Valid {
+		out.TwoFactorEnforcedAt = &o.TwoFactorEnforcedAt.Time
 	}
 	if o.HasBilling {
 		out.Billing = Billing{Limits: o.Limits, Stripe: o.Stripe}
@@ -232,9 +237,10 @@ func (r *Repository) membership(ctx context.Context, userID, organizationID uuid
 	return &rows[0], nil
 }
 
-// members lists the organization's members with their users, in the order they joined, 30 per page when a page is given.
+// members lists the organization's members with their users and two-factor status, in the order they joined, 30 per page when a page is given.
 func (r *Repository) members(ctx context.Context, organizationID uuid.UUID, page int) ([]Member, error) {
-	query := `SELECT m.user_id, u.name, u.email, m.accepted, m.role, u.is_active FROM memberships m JOIN users u ON u.id = m.user_id
+	query := `SELECT m.user_id, u.name, u.email, m.accepted, m.role, u.is_active, ` + authz.SecondFactorStatusSQL("u.id") + ` AS two_factor
+		FROM memberships m JOIN users u ON u.id = m.user_id
 		WHERE m.organization_id = ? ORDER BY m.created_at, m.user_id`
 	if page > 0 {
 		query += fmt.Sprintf(` LIMIT %d OFFSET %d`, ItemsPerPage, ItemsPerPage*(page-1))
@@ -244,6 +250,23 @@ func (r *Repository) members(ctx context.Context, organizationID uuid.UUID, page
 		return nil, fmt.Errorf("list members: %w", err)
 	}
 	return rows, nil
+}
+
+// secondFactor is the user's two-factor status, and whether the organization's requirement refuses them now: its grace period is over and they must enrol and have not. A user who does not exist reads as SSO and never refused; the callers pass the signed-in user.
+func (r *Repository) secondFactor(ctx context.Context, userID, organizationID uuid.UUID) (status string, blocked bool, err error) {
+	var rows []struct {
+		Status   string
+		Enforced bool
+	}
+	if err := r.db.WithContext(ctx).Raw(`SELECT `+authz.SecondFactorStatusSQL("u.id")+` AS status,
+		EXISTS (SELECT 1 FROM organizations o WHERE o.id = ? AND o.two_factor_enforced_at <= now()) AS enforced
+		FROM users u WHERE u.id = ?`, organizationID, userID).Scan(&rows).Error; err != nil {
+		return "", false, fmt.Errorf("load two-factor status: %w", err)
+	}
+	if len(rows) == 0 {
+		return authz.SecondFactorSSO, false, nil
+	}
+	return rows[0].Status, rows[0].Enforced && rows[0].Status == authz.SecondFactorDisabled, nil
 }
 
 // activeOwnerCount counts the organization's owners who can still sign in. A deactivated owner can never sign in again, so counting them would let a guard pass while leaving no owner who can act.

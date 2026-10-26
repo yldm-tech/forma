@@ -62,6 +62,9 @@ const organization = (role: OrganizationRole): OrganizationDetail => ({
   whitelabel: {},
   membership: { organizationId: ORG, userId: "u1", accepted: true, role },
   userManagementAllowed: role === "owner" || role === "manager",
+  twoFactorEnforcedAt: null,
+  twoFactorStatus: "enabled",
+  twoFactorBlocked: false,
 });
 
 const members: Member[] = [
@@ -158,6 +161,43 @@ const share = () => t("workspace.settings.general.share_invite_link");
 const resend = () => t("workspace.settings.general.resend_invitation_email");
 
 describe("MembersCard", () => {
+  // The server sends each member's two-factor status to owners and managers, who decide on the organization's requirement and follow it up.
+  test("shows owners each member's two-factor status, and members no such column", async () => {
+    renderMembers({
+      role: "owner",
+      access: ownerAccess,
+      smtpConfigured: true,
+      memberList: [
+        { ...members[0], twoFactor: "enabled" },
+        { ...members[1], twoFactor: "disabled" },
+        { ...members[1], userId: "u3", name: "Sam Sso", email: "sam@example.com", twoFactor: "sso" },
+      ] as Member[],
+    });
+    expect(
+      await screen.findByRole("columnheader", { name: t("organizations.two_factor.column") })
+    ).toBeTruthy();
+    expect(
+      within(await rowOf("Ada Owner")).getByText(t("organizations.two_factor.status_enabled"))
+    ).toBeTruthy();
+    expect(
+      within(await rowOf("Bob Member")).getByText(t("organizations.two_factor.status_disabled"))
+    ).toBeTruthy();
+    const sso = await rowOf("Sam Sso");
+    expect(within(sso).getByText(t("organizations.two_factor.status_sso"))).toBeTruthy();
+    expect(within(sso).getByText(t("organizations.two_factor.status_sso_hint"))).toBeTruthy();
+    // A pending invite has no account yet, so no status.
+    expect(within(await rowOf("Cy Invitee")).getByText("—")).toBeTruthy();
+    cleanup();
+
+    renderMembers({
+      role: "member",
+      access: { ...ownerAccess, canManageUsers: false },
+      smtpConfigured: true,
+    });
+    await rowOf("Bob Member");
+    expect(screen.queryByRole("columnheader", { name: t("organizations.two_factor.column") })).toBeNull();
+  });
+
   test("offers share and resend on an invite row only", async () => {
     renderMembers({ role: "owner", access: ownerAccess, smtpConfigured: true });
 

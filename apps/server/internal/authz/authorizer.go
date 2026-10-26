@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
@@ -30,29 +29,34 @@ func NewAuthorizer(cfg config.Config, db *gorm.DB, client *Client) *Authorizer {
 
 // Can reports whether actor may perform action on resource. Within a request carrying a decision memo (WithDecisionMemo), the same question is evaluated once; denials are memoized like grants, failures never.
 func (a *Authorizer) Can(ctx context.Context, actor Actor, action Action, resource Resource) (bool, error) {
-	checkIssued(ctx)
-	if memo := memoFrom(ctx); memo != nil {
-		key := fmt.Sprintf("%s:%s|%s|%s:%s", actor.Type, actor.ID, action, resource.Type, resource.ID)
-		return memo.do(key, func() (bool, error) { return a.evaluate(ctx, actor, action, resource) })
-	}
-	return a.evaluate(ctx, actor, action, resource)
+	return a.can(ctx, actor, action, resource, true)
 }
 
-// Require is Can for service methods: a denial is forma2's AuthorizationError, "Not authorized" (403).
+// can is Can; with secondFactor false the organization's two-factor requirement is set aside (CanReadOrganizationDespiteSecondFactor), and the decision is memoized apart from the one that applies it.
+func (a *Authorizer) can(ctx context.Context, actor Actor, action Action, resource Resource, secondFactor bool) (bool, error) {
+	checkIssued(ctx)
+	if memo := memoFrom(ctx); memo != nil {
+		key := fmt.Sprintf("%s:%s|%s|%s:%s|%t", actor.Type, actor.ID, action, resource.Type, resource.ID, secondFactor)
+		return memo.do(key, func() (bool, error) { return a.evaluate(ctx, actor, action, resource, secondFactor) })
+	}
+	return a.evaluate(ctx, actor, action, resource, secondFactor)
+}
+
+// Require is Can for service methods: a denial is forma2's AuthorizationError, "Not authorized" (403), or ErrTwoFactorRequired when the organization's two-factor requirement refused the user.
 func (a *Authorizer) Require(ctx context.Context, actor Actor, action Action, resource Resource) error {
 	allowed, err := a.Can(ctx, actor, action, resource)
 	if err != nil {
 		return err
 	}
 	if !allowed {
-		return apperr.Forbidden("Not authorized")
+		return a.denial(ctx, actor, resource)
 	}
 	return nil
 }
 
-func (a *Authorizer) evaluate(ctx context.Context, actor Actor, action Action, resource Resource) (bool, error) {
+func (a *Authorizer) evaluate(ctx context.Context, actor Actor, action Action, resource Resource, secondFactor bool) (bool, error) {
 	started := time.Now()
-	allowed, err := a.check(ctx, actor, action, resource)
+	allowed, err := a.check(ctx, actor, action, resource, secondFactor)
 	if err != nil {
 		err = normalize(err, "authorization")
 	}
@@ -60,8 +64,8 @@ func (a *Authorizer) evaluate(ctx context.Context, actor Actor, action Action, r
 	return allowed && err == nil, err
 }
 
-func (a *Authorizer) check(ctx context.Context, actor Actor, action Action, resource Resource) (bool, error) {
-	scope, err := resolveScope(ctx, a.db, actor, resource)
+func (a *Authorizer) check(ctx context.Context, actor Actor, action Action, resource Resource, secondFactor bool) (bool, error) {
+	scope, err := resolveScope(ctx, a.db, actor, secondFactor, resource)
 	if err != nil || scope == nil {
 		return false, err
 	}
@@ -136,7 +140,7 @@ func (a *Authorizer) observedLookup(ctx context.Context, actor Actor, resourceTy
 	return ids, nil
 }
 
-// lookup applies the same actor rules as a single check, which forma2's lists skipped: an inactive or missing user, or a missing API key, gets nothing, and an API key only ever sees resources of its own organization.
+// lookup applies the same actor rules as a single check, which forma2's lists skipped: an inactive or missing user, or a missing API key, gets nothing, an API key only ever sees resources of its own organization, and a user never sees the workspaces of an organization whose two-factor requirement refuses them.
 func (a *Authorizer) lookup(ctx context.Context, actor Actor, resourceType, permission string) ([]uuid.UUID, error) {
 	var keyOrganization uuid.UUID
 	switch actor.Type {
@@ -174,6 +178,10 @@ func (a *Authorizer) lookup(ctx context.Context, actor Actor, resourceType, perm
 	if actor.Type == ActorAPIKey {
 		return a.withinOrganization(ctx, resourceType, ids, keyOrganization)
 	}
+	// Organizations stay listed whatever their two-factor requirement, so a refused member can still find and open the guide to enrolment; their workspaces do not.
+	if resourceType == typeWorkspace {
+		return withoutSecondFactorBlocked(ctx, a.db, actor.ID, ids)
+	}
 	return ids, nil
 }
 
@@ -204,15 +212,15 @@ type scope struct {
 	actorValid     bool
 }
 
-// resolveScope reads the PostgreSQL tenant boundary. A missing resource is nil (a denial); database failures are returned.
-func resolveScope(ctx context.Context, db *gorm.DB, actor Actor, resource Resource) (*scope, error) {
+// resolveScope reads the PostgreSQL tenant boundary. A missing resource is nil (a denial); database failures are returned. With secondFactor, a user the organization's two-factor requirement refuses is not a valid actor.
+func resolveScope(ctx context.Context, db *gorm.DB, actor Actor, secondFactor bool, resource Resource) (*scope, error) {
 	s, err := resourceScope(ctx, db, resource)
 	if err != nil || s == nil {
 		return nil, err
 	}
 	switch actor.Type {
 	case ActorUser:
-		s.actorValid, err = userActive(ctx, db, actor.ID)
+		s.actorValid, err = userAllowed(ctx, db, actor.ID, s.organizationID, secondFactor)
 	case ActorAPIKey:
 		var org *uuid.UUID
 		org, err = organizationOf(ctx, db, "api_keys", actor.ID)

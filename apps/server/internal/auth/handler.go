@@ -130,12 +130,14 @@ func (h *Handler) options(c *gin.Context) {
 }
 
 type meResponse struct {
-	ID               uuid.UUID  `json:"id"`
-	Name             string     `json:"name"`
-	Email            string     `json:"email"`
-	EmailVerified    bool       `json:"emailVerified"`
-	Locale           string     `json:"locale"`
-	IdentityProvider string     `json:"identityProvider"`
+	ID               uuid.UUID `json:"id"`
+	Name             string    `json:"name"`
+	Email            string    `json:"email"`
+	EmailVerified    bool      `json:"emailVerified"`
+	Locale           string    `json:"locale"`
+	IdentityProvider string    `json:"identityProvider"`
+	// HasPassword is whether the account can sign in with a password, external identities or not: such an account manages its own two-factor authentication.
+	HasPassword      bool       `json:"hasPassword"`
 	TwoFactorEnabled bool       `json:"twoFactorEnabled"`
 	CreatedAt        time.Time  `json:"createdAt"`
 	LastLoginAt      *time.Time `json:"lastLoginAt"`
@@ -144,7 +146,7 @@ type meResponse struct {
 func newMeResponse(acc *account) meResponse {
 	res := meResponse{
 		ID: acc.ID, Name: acc.Name, Email: acc.Email, EmailVerified: acc.EmailVerified, Locale: acc.Locale,
-		IdentityProvider: acc.identityProvider(), TwoFactorEnabled: acc.TwoFactorEnabled, CreatedAt: acc.CreatedAt,
+		IdentityProvider: acc.identityProvider(), HasPassword: acc.hasPassword(), TwoFactorEnabled: acc.TwoFactorEnabled, CreatedAt: acc.CreatedAt,
 	}
 	if acc.LastLoginAt.Valid {
 		res.LastLoginAt = &acc.LastLoginAt.Time
