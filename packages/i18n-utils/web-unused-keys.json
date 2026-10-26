@@ -3,6 +3,7 @@
   "auth.oauth.scopes.offline_access",
   "auth.oauth.scopes.openid",
   "auth.oauth.scopes.profile",
+  "auth.oauth.scopes.responses_read",
   "auth.oauth.scopes.surveys_read",
   "auth.oauth.scopes.surveys_write",
   "auth.oauth.scopes.workflows_read",

@@ -28,6 +28,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/ai"
+	"github.com/yldm-tech/forma/apps/server/internal/analysis"
 	"github.com/yldm-tech/forma/apps/server/internal/apikey"
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/authz/authztest"
@@ -38,6 +39,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
@@ -175,7 +177,12 @@ func newEnv(t *testing.T, opts ...envOptions) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mcp, err := NewHandler(cfg, db, e.authz.Authorizer, keys, oauthserver.NewTokenVerifier(cfg, signingKeys), e.limiter, surveys, workflows, log)
+	enqueuer, err := jobs.NewEnqueuer(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	analyses := analysis.NewService(cfg, db, e.authz.Authorizer, enqueuer, emitter, log)
+	mcp, err := NewHandler(cfg, db, e.authz.Authorizer, keys, oauthserver.NewTokenVerifier(cfg, signingKeys), e.limiter, surveys, workflows, analyses, log)
 	if err != nil {
 		t.Fatal(err)
 	}

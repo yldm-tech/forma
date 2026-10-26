@@ -18,11 +18,12 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 )
 
-// forma2's tools in its order: surveys, workflows, then list_workspaces.
+// forma2's tools in its order: surveys, workflows, then list_workspaces; then the response tools forma2 did not have.
 var toolNames = []string{
 	"list_surveys", "get_survey", "create_survey", "validate_survey", "patch_survey", "delete_survey", "archive_survey", "restore_survey",
 	"list_workflows", "get_workflow", "list_workflow_runs", "get_workflow_run", "test_workflow", "create_workflow", "patch_workflow",
 	"duplicate_workflow", "delete_workflow", "enable_workflow", "disable_workflow", "archive_workflow", "unarchive_workflow", "list_workspaces",
+	"list_responses", "get_survey_summary",
 }
 
 // A real MCP client finds the authorization server through the 401 challenge and the protected resource metadata, registers itself, sends the user through sign-in and consent, redeems the code with PKCE and calls tools with the access token.
@@ -205,7 +206,7 @@ func TestTokenWithoutResourceScope(t *testing.T) {
 	f := e.fixture()
 	res, out := e.rpc(bearer(e.accessToken(f.owner, "offline_access")), "tools/list", map[string]any{})
 	if res.StatusCode != http.StatusForbidden || out["detail"] != "OAuth token does not include the required MCP scope" ||
-		res.Header.Get("WWW-Authenticate") != `Bearer error="insufficient_scope", scope="surveys:read surveys:write workflows:read workflows:write", resource_metadata="`+e.url("/.well-known/oauth-protected-resource/api/mcp")+`", error_description="The OAuth access token does not include the required MCP scope."` {
+		res.Header.Get("WWW-Authenticate") != `Bearer error="insufficient_scope", scope="surveys:read surveys:write workflows:read workflows:write responses:read", resource_metadata="`+e.url("/.well-known/oauth-protected-resource/api/mcp")+`", error_description="The OAuth access token does not include the required MCP scope."` {
 		t.Fatalf("%d %v %v", res.StatusCode, out, res.Header)
 	}
 }
@@ -243,7 +244,7 @@ func TestOAuthTokenChecks(t *testing.T) {
 		change(c)
 		return e.sign(c)
 	}
-	challenge := `Bearer resource_metadata="` + e.url("/.well-known/oauth-protected-resource/api/mcp") + `", scope="surveys:read surveys:write workflows:read workflows:write offline_access"`
+	challenge := `Bearer resource_metadata="` + e.url("/.well-known/oauth-protected-resource/api/mcp") + `", scope="surveys:read surveys:write workflows:read workflows:write responses:read offline_access"`
 	if res, out := e.rpc(bearer(claims(func(c map[string]any) { c["aud"] = []string{resource, issuer + "/oauth2/userinfo"} })), "tools/list", map[string]any{}); res.StatusCode != http.StatusOK || out["result"] == nil {
 		t.Fatalf("the UserInfo audience was refused: %d %v", res.StatusCode, out)
 	}
@@ -288,7 +289,7 @@ func TestRequestChecks(t *testing.T) {
 
 	res, out := e.rpc(nil, "tools/list", map[string]any{})
 	if res.StatusCode != http.StatusUnauthorized || out["detail"] != "API key or OAuth access token required" || out["instance"] != "/api/mcp" || out["code"] != "not_authenticated" ||
-		res.Header.Get("WWW-Authenticate") != `Bearer resource_metadata="`+e.url("/.well-known/oauth-protected-resource/api/mcp")+`", scope="surveys:read surveys:write workflows:read workflows:write offline_access"` {
+		res.Header.Get("WWW-Authenticate") != `Bearer resource_metadata="`+e.url("/.well-known/oauth-protected-resource/api/mcp")+`", scope="surveys:read surveys:write workflows:read workflows:write responses:read offline_access"` {
 		t.Fatalf("no credentials: %d %v %v", res.StatusCode, out, res.Header)
 	}
 	for _, param := range []string{"api_key", "Access_Token", "X-API-KEY"} {

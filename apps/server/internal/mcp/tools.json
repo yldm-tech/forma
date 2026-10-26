@@ -1847,5 +1847,121 @@
       "idempotentHint": true,
       "openWorldHint": true
     }
+  },
+  {
+    "name": "list_responses",
+    "title": "List responses",
+    "description": "List the responses to a Forma survey, newest first, with each answer keyed by question id and shown with the question's headline. Answers to questions no longer in the survey, hidden fields and embedded data are under otherData. Unless includeContact is true, each response's contact, contact attributes, IP address and verified email are withheld; answers to questions that ask for contact details, such as a contact info or address question, are returned like any other answer. Requires the responses:read scope and read access to the survey's workspace.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "surveyId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Survey ID whose responses should be listed."
+        },
+        "limit": {
+          "default": 20,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of responses to return. Defaults to 20."
+        },
+        "cursor": {
+          "description": "Opaque pagination cursor from a previous list_responses response.",
+          "type": "string",
+          "minLength": 1
+        },
+        "finished": {
+          "description": "Only finished responses (true) or only partial ones (false). Omit for both.",
+          "type": "boolean"
+        },
+        "createdFrom": {
+          "description": "Only responses created at or after this ISO 8601 date-time, with a time zone, for example 2026-01-01T00:00:00Z.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdTo": {
+          "description": "Only responses created at or before this ISO 8601 date-time, with a time zone, for example 2026-01-31T23:59:59Z.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "search": {
+          "description": "Only responses whose free-text answers contain this keyword, case-insensitively.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "includeContact": {
+          "default": false,
+          "type": "boolean",
+          "description": "Also return who answered: each response's contact (id and userId) when it has one, the contact attributes captured with it, its IP address when the survey captured one, and, on a survey that requires email verification, the verified email address under otherData.verifiedEmail. Defaults to false; leave it off unless the user needs to identify respondents."
+        }
+      },
+      "required": [
+        "surveyId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "get_survey_summary",
+    "title": "Get survey summary",
+    "description": "Summarize the responses to a Forma survey as its summary page does: impressions, starts, completions and drop-off, then per question the response count and its statistics (choice counts and percentages, rating averages, NPS score, CSAT, matrix and ranking results) and the most recent open-text answers, plus quotas and the total score when the survey has them. No contact, contact attributes, IP address or verified email is returned; the listed answers to questions that ask for contact details, such as a contact info or address question, are returned like any other answer. Requires the responses:read scope and read access to the survey's workspace.",
+    "inputSchema": {
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "surveyId": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-z]+)$",
+          "description": "Survey ID to summarize."
+        },
+        "finished": {
+          "description": "Only finished responses (true) or only partial ones (false). Omit for both.",
+          "type": "boolean"
+        },
+        "createdFrom": {
+          "description": "Only responses created at or after this ISO 8601 date-time, with a time zone, for example 2026-01-01T00:00:00Z.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdTo": {
+          "description": "Only responses created at or before this ISO 8601 date-time, with a time zone, for example 2026-01-31T23:59:59Z.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "search": {
+          "description": "Only responses whose free-text answers contain this keyword, case-insensitively.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "samplesPerQuestion": {
+          "default": 10,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50,
+          "description": "How many individual answers to keep for questions that list them (open text, Other options, hidden fields, file uploads), newest first, and how many of the most frequent values to keep in the value breakdowns of hidden fields and Other options, the rest counted together. Counts always cover every matching response. Defaults to 10."
+        }
+      },
+      "required": [
+        "surveyId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
   }
 ]

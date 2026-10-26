@@ -212,7 +212,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mcpHandler, err := mcp.NewHandler(cfg, db, authorizer, keys, oauthserver.NewTokenVerifier(cfg, signingKeys), limiter, surveyHandler, workflows, log)
+	mcpHandler, err := mcp.NewHandler(cfg, db, authorizer, keys, oauthserver.NewTokenVerifier(cfg, signingKeys), limiter, surveyHandler, workflows, nil, log)
 	if err != nil {
 		t.Fatal(err)
 	}
