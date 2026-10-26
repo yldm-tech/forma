@@ -12,6 +12,7 @@ import { ScrollToTop } from "./scroll-to-top";
 import { SummaryList } from "./summary-list";
 import { SummaryMetadata, type SummaryTab } from "./summary-metadata";
 import { QuotasSummary, SummaryDropOffs, SummaryImpressions } from "./summary-tabs";
+import { TrendsCard } from "./trends-card";
 
 const EMPTY_SUMMARY: TSurveySummary = {
   meta: {
@@ -31,7 +32,7 @@ const EMPTY_SUMMARY: TSurveySummary = {
   summary: [],
 };
 
-/** forma2's SummaryPage: the metrics row and its detail tabs, the filter bar and the element cards, all under the current filter. */
+/** forma2's SummaryPage: the metrics row and its detail tabs, the filter bar, the trend over time and the element cards, all under the current filter. */
 export const SummaryPage = ({
   survey,
   appSetupCompleted,
@@ -86,6 +87,7 @@ export const SummaryPage = ({
       <div className="flex gap-1.5">
         <CustomFilter survey={surveyWithRecall} />
       </div>
+      <TrendsCard survey={surveyWithRecall} locale={locale} />
       <ScrollToTop />
       <ElementImpressionsProvider dropOff={surveySummary.dropOff}>
         <SummaryList
