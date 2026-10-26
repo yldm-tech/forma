@@ -123,6 +123,15 @@ describe("WebsiteEmbedTab", () => {
     expect(code()).toContain(`<div data-forma-popup="${SURVEY_URL}" data-forma-open-delay="5"></div>`);
     expect(screen.queryByLabelText("Button text")).toBeNull();
 
+    const delay = screen.getByLabelText("seconds after the page loads");
+    fireEvent.change(delay, { target: { value: "12" } });
+    expect(code()).toContain(`data-forma-open-delay="12"`);
+    // An empty field is marked, and the code keeps opening on its own instead of turning back into a button.
+    fireEvent.change(delay, { target: { value: "" } });
+    expect(delay.getAttribute("aria-invalid")).toBe("true");
+    expect(code()).toContain(`<div data-forma-popup="${SURVEY_URL}" data-forma-open-delay="5"></div>`);
+    expect(code()).not.toContain("<button");
+
     fireEvent.click(screen.getByRole("button", { name: "Side tab" }));
     fireEvent.change(screen.getByLabelText("Tab label"), { target: { value: "Ideas?" } });
     fireEvent.click(screen.getByRole("button", { name: "Left" }));

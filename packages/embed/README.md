@@ -50,7 +50,7 @@ A tab on the edge of the window, created by the script; clicking it opens the su
 <script src="https://forma.example.com/js/embed.js" async></script>
 ```
 
-Popups, sliders and side tabs load the survey when they first open, and keep it when they close, so a respondent who reopens one continues where they left off. Escape closes them while focus is on the page rather than inside the survey. Popups and sliders are modal: the page behind does not scroll and focus stays in the dialog until it closes, then returns to the element that opened it.
+Popups, sliders and side tabs load the survey when they first open, and keep it when they close, so a respondent who reopens one continues where they left off. Escape closes them, whether focus is on the page or inside the survey, unless the survey uses the key itself (to close an open dropdown). Popups and sliders are modal: the page behind does not scroll and focus stays in the dialog until it closes, then returns to the element that opened it.
 
 ## Options
 
@@ -77,7 +77,7 @@ window.formaEmbed.open("https://forma.example.com/s/<survey-id>", { mode: "slide
 window.formaEmbed.close();
 ```
 
-When a survey is completed, the element that holds or opened it dispatches a `forma:survey-completed` event that bubbles, with the survey's frame URL in `event.detail.url`:
+When a survey is completed, its embed element (the one carrying `data-forma-embed`, `data-forma-popup`, `data-forma-slider` or `data-forma-side-tab`) dispatches a `forma:survey-completed` event that bubbles, with the survey's frame URL in `event.detail.url`. A survey opened with `formaEmbed.open()` has no such element; its event comes from the element the script adds to the end of `<body>` for it, and bubbles to `document` all the same:
 
 ```js
 document.addEventListener("forma:survey-completed", (event) => {
@@ -87,7 +87,7 @@ document.addEventListener("forma:survey-completed", (event) => {
 
 ## How the frame follows the survey
 
-The script adds `embed=true&autoHeight=true` to the survey's link. With both, the survey page drops its page chrome, lays the survey out at the height of its content instead of filling the frame, and posts `{ type: "forma:embed-resize", height }` to the page around it whenever that height changes. With `embed=true` alone (the share modal's plain iframe snippet) the survey keeps filling its frame and still posts its height. The script believes a message only from its own frame's window and the survey's origin. It also listens for the `"formaSurveyCompleted"` message the survey runtime has always posted when the last answer reaches the server.
+The script adds `embed=true&autoHeight=true` to the survey's link. With both, the survey page drops its page chrome, lays the survey out at the height of its content instead of filling the frame, and posts `{ type: "forma:embed-resize", height }` to the page around it whenever that height changes. The height includes an open dropdown's options, which are drawn outside the survey's own layout, so the frame grows while a dropdown is open instead of cutting its options off. With `embed=true` alone (the share modal's plain iframe snippet) the survey keeps filling its frame and still posts its height. With both parameters, the survey also posts `{ type: "forma:embed-escape" }` when the respondent presses Escape and nothing in the survey took the key; the script closes the popup, slider or side tab whose frame sent it. The script believes a message only from its own frame's window and the survey's origin. It also listens for the `"formaSurveyCompleted"` message the survey runtime has always posted when the last answer reaches the server.
 
 The names in `src/protocol.ts` (data attributes, query parameters, messages, the event) are read by pages that pasted a snippet, so they are a published contract: add to them, never rename one.
 

@@ -3,8 +3,10 @@ import { createFormaEmbed } from "./embed";
 import {
   COMPLETED_EVENT,
   COMPLETED_MESSAGE,
+  ESCAPE_MESSAGE_TYPE,
   RESIZE_MESSAGE_TYPE,
   embedFrameUrl,
+  isEscapeMessage,
   isResizeMessage,
 } from "./protocol";
 
@@ -60,6 +62,15 @@ describe("isResizeMessage", () => {
   });
 });
 
+describe("isEscapeMessage", () => {
+  test("accepts only the escape message", () => {
+    expect(isEscapeMessage({ type: ESCAPE_MESSAGE_TYPE })).toBe(true);
+    expect(isEscapeMessage({ type: RESIZE_MESSAGE_TYPE, height: 1 })).toBe(false);
+    expect(isEscapeMessage(ESCAPE_MESSAGE_TYPE)).toBe(false);
+    expect(isEscapeMessage(null)).toBe(false);
+  });
+});
+
 describe("the standard embed", () => {
   test("replaces the element's fallback with a frame that follows the survey's height", () => {
     render(
@@ -78,6 +89,13 @@ describe("the standard embed", () => {
   test("starts at the height the element asks for", () => {
     render(`<div id="host" data-forma-embed="${SURVEY}" data-forma-height="320"></div>`);
     expect((document.querySelector("#host iframe") as HTMLIFrameElement).style.height).toBe("320px");
+  });
+
+  test("has nothing to close on Escape", () => {
+    render(`<div id="host" data-forma-embed="${SURVEY}"></div>`);
+    const iframe = document.querySelector("#host iframe") as HTMLIFrameElement;
+    post(iframe, { type: ESCAPE_MESSAGE_TYPE });
+    expect(document.querySelector("#host iframe")).toBe(iframe);
   });
 
   test("believes only its own frame, from its survey's origin", () => {
@@ -162,6 +180,29 @@ describe("the popup", () => {
     trigger.click();
     expect(shadow.querySelectorAll("iframe")).toHaveLength(1);
     expect(shadow.querySelector("iframe")).toBe(iframe);
+  });
+
+  test("closes on Escape pressed inside the survey, which its frame passes on", () => {
+    render(
+      `<button id="trigger" data-forma-popup="${SURVEY}">Open</button><button id="other" data-forma-popup="${SURVEY}?lang=de">Other</button>`
+    );
+    const trigger = document.querySelector<HTMLButtonElement>("#trigger")!;
+    const isVisible = () =>
+      document
+        .querySelector<HTMLElement>('[data-forma-overlay="popup"]')
+        ?.shadowRoot?.querySelector(".root")
+        ?.classList.contains("visible");
+
+    trigger.focus();
+    trigger.click();
+    const iframe = overlayRoot("popup").querySelector("iframe")!;
+    post(iframe, { type: ESCAPE_MESSAGE_TYPE }, "https://evil.example.com");
+    expect(isVisible()).toBe(true);
+
+    post(iframe, { type: ESCAPE_MESSAGE_TYPE });
+    expect(isVisible()).toBe(false);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(trigger);
   });
 
   test("closes from its close button and its backdrop", () => {
@@ -254,6 +295,29 @@ describe("the side tab", () => {
     expect(shadow.querySelector(".root")?.classList.contains("visible")).toBe(false);
     expect(tab.getAttribute("aria-expanded")).toBe("false");
   });
+
+  test("closes on Escape pressed inside the survey and gives focus back to the tab", () => {
+    render(`<div data-forma-side-tab="${SURVEY}"></div>`);
+    const shadow = overlayRoot("side-tab");
+    const tab = shadow.querySelector<HTMLButtonElement>(".tab")!;
+    tab.focus();
+    tab.click();
+    post(shadow.querySelector("iframe")!, { type: ESCAPE_MESSAGE_TYPE });
+    expect(shadow.querySelector(".root")?.classList.contains("visible")).toBe(false);
+    expect(tab.getAttribute("aria-expanded")).toBe("false");
+    expect(shadow.activeElement).toBe(tab);
+  });
+
+  test("announces the completed survey on the page's element, not on the tab the script draws", () => {
+    render(`<section id="outer"><div id="host" data-forma-side-tab="${SURVEY}"></div></section>`);
+    const completed = vi.fn();
+    document.querySelector("#outer")?.addEventListener(COMPLETED_EVENT, completed);
+    const shadow = overlayRoot("side-tab");
+    shadow.querySelector<HTMLButtonElement>(".tab")!.click();
+    post(shadow.querySelector("iframe")!, COMPLETED_MESSAGE);
+    expect(completed).toHaveBeenCalledOnce();
+    expect((completed.mock.calls[0][0] as CustomEvent).target).toBe(document.querySelector("#host"));
+  });
 });
 
 describe("formaEmbed.open", () => {
@@ -269,6 +333,19 @@ describe("formaEmbed.open", () => {
 
     embed.open(SURVEY, { mode: "slider" });
     expect(document.querySelectorAll('[data-forma-overlay="slider"]')).toHaveLength(1);
+  });
+
+  test("announces the completed survey from its own element, up to the document", () => {
+    const embed = render("");
+    const completed = vi.fn();
+    document.addEventListener(COMPLETED_EVENT, completed);
+    embed.open(SURVEY);
+    post(overlayRoot("popup").querySelector("iframe")!, COMPLETED_MESSAGE);
+    document.removeEventListener(COMPLETED_EVENT, completed);
+    expect(completed).toHaveBeenCalledOnce();
+    expect((completed.mock.calls[0][0] as CustomEvent).target).toBe(
+      document.querySelector('[data-forma-overlay="popup"]')
+    );
   });
 
   test("closes the open survey before opening another", () => {

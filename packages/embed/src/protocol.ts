@@ -14,6 +14,13 @@ export interface ResizeMessage {
   height: number;
 }
 
+/** The message a survey page in one of the embed script's frames posts to the page around it when the respondent presses Escape and nothing in the survey (an open dropdown) took it: `{ type: ESCAPE_MESSAGE_TYPE }`. Focus is inside the survey's frame almost all the time a popup, slider or side tab is open, where the page's own keydown listener never hears the key. */
+export const ESCAPE_MESSAGE_TYPE = "forma:embed-escape";
+
+export interface EscapeMessage {
+  type: typeof ESCAPE_MESSAGE_TYPE;
+}
+
 /** The message the survey runtime posts to the page around it once the last answer has reached the server (packages/surveys, survey.tsx). A bare string, as forma2 sent it. */
 export const COMPLETED_MESSAGE = "formaSurveyCompleted";
 
@@ -62,6 +69,10 @@ export const isResizeMessage = (data: unknown): data is ResizeMessage =>
   typeof (data as { height?: unknown }).height === "number" &&
   Number.isFinite((data as { height: number }).height) &&
   (data as { height: number }).height >= 0;
+
+/** Whether a message from a survey frame is an escape message. */
+export const isEscapeMessage = (data: unknown): data is EscapeMessage =>
+  typeof data === "object" && data !== null && (data as { type?: unknown }).type === ESCAPE_MESSAGE_TYPE;
 
 /** The address of a survey link in an embed frame: embedded, taking the height of its content. Everything else the link carries (language, hidden fields, prefill) is kept. Null for anything but an http(s) link, so an attribute can never point a frame at a javascript: URL. */
 export const embedFrameUrl = (surveyUrl: string, base?: string): URL | null => {

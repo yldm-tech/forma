@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import "./index.css";
 import { SurveyPageApp } from "./app";
-import { readEmbedFrameMode, reportEmbedHeight } from "./lib/embed-frame";
+import { readEmbedFrameMode, reportEmbedEscape, reportEmbedHeight } from "./lib/embed-frame";
 import { initSurveyPageI18n } from "./lib/i18n";
 import { readSurveyPageState } from "./lib/state";
 
@@ -25,9 +25,11 @@ const bootstrap = async () => {
       </I18nextProvider>
     </StrictMode>
   );
-  // In another page's frame, the survey tells that page how tall it is; the embed script sizes the frame to it.
-  if (embedFrame.isEmbed && globalThis.parent !== globalThis.self)
+  // In another page's frame, the survey tells that page how tall it is; the embed script sizes the frame to it. In the embed script's frames, it also passes on Escape, which closes a popup, slider or side tab.
+  if (embedFrame.isEmbed && globalThis.parent !== globalThis.self) {
     reportEmbedHeight(rootElement, globalThis.parent);
+    if (embedFrame.isAutoHeight) reportEmbedEscape(globalThis, globalThis.parent);
+  }
 };
 
 void bootstrap();

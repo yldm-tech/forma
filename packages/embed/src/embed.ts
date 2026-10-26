@@ -6,6 +6,7 @@ import {
   MODE_ATTRIBUTES,
   OPTION_ATTRIBUTES,
   embedFrameUrl,
+  isEscapeMessage,
   isResizeMessage,
 } from "./protocol";
 
@@ -90,6 +91,8 @@ interface Frame {
   origin: string;
   onResize: (height: number) => void;
   onCompleted: () => void;
+  /** The respondent pressed Escape inside the survey. */
+  onEscape: () => void;
 }
 
 /** A number of seconds or pixels from an attribute: a finite, non-negative number, or nothing. */
@@ -131,12 +134,21 @@ export const createFormaEmbed = (win: Window): FormaEmbed => {
       // A survey page that has not rendered yet measures nothing; keeping the frame's height until it has avoids a frame that collapses and grows back.
       if (isResizeMessage(event.data) && event.data.height > 0) frame.onResize(Math.ceil(event.data.height));
       else if (event.data === COMPLETED_MESSAGE) frame.onCompleted();
+      else if (isEscapeMessage(event.data)) frame.onEscape();
     }
   });
 
+  // Escape while focus is on the page; while it is inside a survey's frame, the survey page posts an escape message instead (Frame.onEscape).
   doc.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key === "Escape" && openOverlay) openOverlay.close();
   });
+
+  /** The element that has focus, inside shadow roots too: the document only knows the shadow host, which is not focusable itself (a side tab's own tab lives in the overlay's shadow root). */
+  const focusedElement = (): Element | null => {
+    let active = doc.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  };
 
   const createFrame = (url: URL, title: string): HTMLIFrameElement => {
     const iframe = doc.createElement("iframe");
@@ -170,6 +182,8 @@ export const createFormaEmbed = (win: Window): FormaEmbed => {
         iframe.style.height = `${height}px`;
       },
       onCompleted: () => dispatchCompleted(host, url),
+      // Nothing to close: the survey sits in the page.
+      onEscape: () => {},
     });
   };
 
@@ -178,12 +192,17 @@ export const createFormaEmbed = (win: Window): FormaEmbed => {
     close: () => void;
   }
 
-  /** A popup, slider or side tab. Its frame is created on the first opening, so a visitor who never opens it never loads the survey (or counts as a display), and kept after closing, so reopening resumes where the respondent left off. */
+  /**
+   * A popup, slider or side tab. Its frame is created on the first opening, so a visitor who never opens it never loads the survey (or counts as a display), and kept after closing, so reopening resumes where the respondent left off.
+   *
+   * trigger is the page's element that opens it (aria-expanded follows the overlay, focus returns to it), if any. eventTarget is the page's element that announces the completed survey: the embed element for every layout, a side tab's too though the script draws the tab itself, or the overlay's own host for formaEmbed.open(), which has no element on the page.
+   */
   const createOverlay = (
     mode: OverlayMode,
     url: URL,
     options: EmbedOptions,
-    trigger: HTMLElement | null
+    trigger: HTMLElement | null,
+    eventTarget: HTMLElement | null
   ): Overlay => {
     const position = options.position ?? "right";
     const title = options.title ?? DEFAULT_TITLE;
@@ -281,12 +300,13 @@ export const createFormaEmbed = (win: Window): FormaEmbed => {
           if (mode !== "slider") frame.style.height = `${height}px`;
         },
         onCompleted: () => {
-          dispatchCompleted(trigger ?? host, url);
+          dispatchCompleted(eventTarget ?? host, url);
           if (options.autoClose !== undefined) {
             clearTimeout(autoCloseTimer);
             autoCloseTimer = setTimeout(() => overlay.close(), options.autoClose * 1000);
           }
         },
+        onEscape: () => overlay.close(),
       });
       panel = panelElement;
       iframe = frame;
@@ -299,7 +319,7 @@ export const createFormaEmbed = (win: Window): FormaEmbed => {
         if (!panel) build();
         isOpen = true;
         openOverlay = overlay;
-        returnFocus = doc.activeElement;
+        returnFocus = focusedElement();
         root.classList.add("visible");
         // Read layout once so the entry transition starts from the hidden state.
         void panel?.offsetWidth;
@@ -361,7 +381,7 @@ export const createFormaEmbed = (win: Window): FormaEmbed => {
       return;
     }
     const isTrigger = mode !== "side-tab";
-    const overlay = createOverlay(mode, url, options, isTrigger ? element : null);
+    const overlay = createOverlay(mode, url, options, isTrigger ? element : null, element);
     if (isTrigger) {
       element.setAttribute("aria-haspopup", "dialog");
       element.setAttribute("aria-expanded", "false");
@@ -388,7 +408,7 @@ export const createFormaEmbed = (win: Window): FormaEmbed => {
       const key = `${mode} ${url.toString()}`;
       let overlay = programmatic.get(key);
       if (!overlay) {
-        overlay = createOverlay(mode, url, { ...options, openDelay: undefined }, null);
+        overlay = createOverlay(mode, url, { ...options, openDelay: undefined }, null, null);
         programmatic.set(key, overlay);
       }
       overlay.open();

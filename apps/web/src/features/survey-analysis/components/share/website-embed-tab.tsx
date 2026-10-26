@@ -10,6 +10,9 @@ import { OptionsSwitch } from "../../../../components/ui/options-switch";
 import { copyText } from "../../../../lib/clipboard";
 import { CodeBlock } from "./code-block";
 
+/** The delay the share modal suggests for a popup or slider that opens on its own, and uses while the field does not hold a usable number. */
+const DEFAULT_OPEN_DELAY_SECONDS = 5;
+
 /** The ways the share modal offers to put a link survey on a website: the embed script's four layouts (/js/embed.js, packages/embed), and the plain iframe for pages that cannot load a script. */
 export const EMBED_LAYOUTS = ["standard", "popup", "slider", "side-tab", "iframe"] as const;
 export type EmbedLayout = (typeof EMBED_LAYOUTS)[number];
@@ -99,7 +102,7 @@ export const WebsiteEmbedTab = ({
   const id = useId();
   const [embedModeEnabled, setEmbedModeEnabled] = useState(false);
   const [opensAfterDelay, setOpensAfterDelay] = useState(false);
-  const [delaySeconds, setDelaySeconds] = useState("5");
+  const [delaySeconds, setDelaySeconds] = useState(String(DEFAULT_OPEN_DELAY_SECONDS));
   const [buttonText, setButtonText] = useState(() =>
     t("workspace.surveys.share.embed_on_website.button_text_default")
   );
@@ -139,9 +142,11 @@ export const WebsiteEmbedTab = ({
 
   const delay = Number(delaySeconds);
   const isDelayValid = delaySeconds.trim() !== "" && Number.isFinite(delay) && delay >= 0;
+  // While the field is empty or wrong (and marked so), the code still opens on its own as the switch says, after the default delay; it never turns back into a button whose text field is hidden.
+  const openDelay = isDelayValid ? delay : DEFAULT_OPEN_DELAY_SECONDS;
   const scriptOptions = (current: Exclude<EmbedLayout, "iframe">): ScriptEmbedOptions => ({
     layout: current,
-    openDelay: opensAfterDelay && isDelayValid ? delay : undefined,
+    openDelay: opensAfterDelay ? openDelay : undefined,
     buttonText: buttonText.trim() || t("workspace.surveys.share.embed_on_website.button_text_default"),
     tabLabel: tabLabel.trim() || t("workspace.surveys.share.embed_on_website.tab_label_default"),
     position,
