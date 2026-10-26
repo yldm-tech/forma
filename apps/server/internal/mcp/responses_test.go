@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -185,8 +186,11 @@ func TestGetSurveySummary(t *testing.T) {
 	}
 
 	// samplesPerQuestion bounds a hidden field's breakdown too, the values it drops counted in the rest.
-	e.insert(`INSERT INTO responses (survey_id, created_at, updated_at, finished, data) VALUES (?, '2026-10-04T10:00:00Z', '2026-10-04T10:00:00Z', true, '{"source":"ads"}'::jsonb) RETURNING id`, f.survey)
-	e.insert(`INSERT INTO responses (survey_id, created_at, updated_at, finished, data) VALUES (?, '2026-10-05T10:00:00Z', '2026-10-05T10:00:00Z', true, '{"source":"ads"}'::jsonb) RETURNING id`, f.survey)
+	field := e.insert(`INSERT INTO embedded_data (workspace_id, survey_id, name, source, data_type) VALUES (?, ?, 'plan', 'ingested', 'string') RETURNING id`, f.ws, f.survey)
+	e.exec(`INSERT INTO survey_embedded_data (workspace_id, survey_id, embedded_data_id, storage_key, position) VALUES (?, ?, ?, 'plan', 0)`, f.ws, f.survey, field)
+	for i, plan := range []string{"pro", "pro", "free"} {
+		e.exec(`INSERT INTO responses (survey_id, created_at, updated_at, finished, data) VALUES (?, ?, ?, true, jsonb_build_object('plan', ?::text))`, f.survey, fmt.Sprintf("2026-10-0%dT10:00:00Z", 4+i), fmt.Sprintf("2026-10-0%dT10:00:00Z", 4+i), plan)
+	}
 	hidden := func(samples int) map[string]any {
 		t.Helper()
 		failed, payload, text := e.tool(token, "get_survey_summary", map[string]any{"surveyId": f.survey.String(), "samplesPerQuestion": samples})
@@ -194,17 +198,17 @@ func TestGetSurveySummary(t *testing.T) {
 			t.Fatalf("summary, samplesPerQuestion %d: %s", samples, text)
 		}
 		for _, c := range payload["data"].(map[string]any)["summary"].([]any) {
-			if card := c.(map[string]any); card["type"] == "hiddenField" && card["id"] == "source" {
+			if card := c.(map[string]any); card["type"] == "hiddenField" && card["id"] == "plan" {
 				return card
 			}
 		}
 		t.Fatalf("no hidden field card: %s", text)
 		return nil
 	}
-	if b := mustString(hidden(10)["breakdown"]); b != `{"restCount":0,"restPercentage":0,"values":[{"count":2,"percentage":66.67,"value":"ads"},{"count":1,"percentage":33.33,"value":"newsletter"}]}` {
+	if b := mustString(hidden(10)["breakdown"]); b != `{"restCount":0,"restPercentage":0,"values":[{"count":2,"percentage":66.67,"value":"pro"},{"count":1,"percentage":33.33,"value":"free"}]}` {
 		t.Fatalf("breakdown: %s", b)
 	}
-	if b := mustString(hidden(1)["breakdown"]); b != `{"restCount":1,"restPercentage":33.33,"values":[{"count":2,"percentage":66.67,"value":"ads"}]}` {
+	if b := mustString(hidden(1)["breakdown"]); b != `{"restCount":1,"restPercentage":33.33,"values":[{"count":2,"percentage":66.67,"value":"pro"}]}` {
 		t.Fatalf("breakdown, samplesPerQuestion 1: %s", b)
 	}
 	card := hidden(0)
