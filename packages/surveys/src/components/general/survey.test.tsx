@@ -849,3 +849,124 @@ describe("Survey response delivery", () => {
     expect(rows).toHaveLength(0);
   });
 });
+
+describe("Survey scoring", () => {
+  const scoredSurvey = {
+    ...baseSurvey,
+    blocks: [
+      {
+        id: "block-1",
+        elements: [
+          {
+            id: "q1",
+            type: TSurveyElementTypeEnum.MultipleChoiceSingle,
+            headline: { default: "First" },
+            required: false,
+            choices: [
+              { id: "right", label: { default: "block-1-answer" }, score: 2 },
+              { id: "wrong", label: { default: "Wrong" }, score: 0 },
+            ],
+          },
+        ],
+        logic: [],
+      },
+      {
+        id: "block-2",
+        elements: [
+          {
+            id: "q2",
+            type: TSurveyElementTypeEnum.MultipleChoiceSingle,
+            headline: { default: "Second" },
+            required: false,
+            choices: [
+              { id: "right", label: { default: "block-2-answer" }, score: 3 },
+              { id: "wrong", label: { default: "Wrong" } },
+            ],
+          },
+        ],
+        logic: [
+          {
+            id: "logic-1",
+            conditions: {
+              id: "group-1",
+              connector: "and",
+              conditions: [
+                {
+                  id: "condition-1",
+                  leftOperand: { type: "variable", value: "scorevariable00000000000" },
+                  operator: "isGreaterThan",
+                  rightOperand: { type: "static", value: 4 },
+                },
+              ],
+            },
+            actions: [{ id: "action-1", objective: "jumpToBlock", target: "ending-2" }],
+          },
+        ],
+      },
+    ],
+    endings: [{ id: "ending-1" }, { id: "ending-2" }],
+    variables: [
+      { id: "scorevariable00000000000", name: "score", type: "number", value: 0, isScore: true },
+      { id: "othervariable00000000000", name: "other", type: "number", value: 1 },
+    ],
+    // The Embedded Data rows the server inlines: what seeds the variables and what logic reads them through.
+    embeddedFields: [
+      {
+        field: { name: "score", source: "computed", dataType: "number", defaultValue: 0, locked: false },
+        link: { storageKey: "scorevariable00000000000" },
+      },
+      {
+        field: { name: "other", source: "computed", dataType: "number", defaultValue: 1, locked: false },
+        link: { storageKey: "othervariable00000000000" },
+      },
+    ],
+  } as unknown as TJsWorkspaceStateSurvey;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    apiClientMocks.createDisplay.mockResolvedValue({ ok: true, data: { id: "display-created" } });
+    apiClientMocks.createResponse.mockResolvedValue({ ok: true, data: { id: "response-created" } });
+    apiClientMocks.updateResponse.mockResolvedValue({ ok: true, data: { quotaFull: false } });
+    window.parent.postMessage = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  test("adds the score of each picked choice to the total, before the block's logic reads it", async () => {
+    render(
+      <Survey
+        appUrl="http://localhost:3000"
+        workspaceId="ws1234567890123456789012"
+        survey={scoredSurvey}
+        styling={{} as any}
+        isBrandingEnabled={false}
+        languageCode="en"
+        isSpamProtectionEnabled={false}
+      />
+    );
+
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { q1: "block-1-answer" },
+          variables: { scorevariable00000000000: 2, othervariable00000000000: 1 },
+        })
+      )
+    );
+
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    await waitFor(() =>
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { q2: "block-2-answer" },
+          variables: { scorevariable00000000000: 5, othervariable00000000000: 1 },
+          finished: true,
+          endingId: "ending-2",
+        })
+      )
+    );
+  });
+});

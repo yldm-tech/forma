@@ -25,6 +25,7 @@ import { TUploadFileConfig } from "@forma/types/storage";
 import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
 import { TSurveyBlock, TSurveyBlockLogic } from "@forma/types/surveys/blocks";
 import { TSurveyElement } from "@forma/types/surveys/elements";
+import { applyBlockScore } from "@forma/types/surveys/scoring";
 import { BlockConditional } from "@/components/general/block-conditional";
 import { EndingCard } from "@/components/general/ending-card";
 import { ErrorComponent } from "@/components/general/error-component";
@@ -930,7 +931,15 @@ export function Survey({
     }
 
     const localResponseData = { ...responseData, ...data };
-    let calculationResults = { ...currentVariables };
+    // The block's answers add their points to the total score before its logic runs, so a condition on the score already counts them. Going back restores the variables from before the block, so a changed answer is not counted twice.
+    let calculationResults = applyBlockScore(
+      localSurvey.variables,
+      currentBlock.elements,
+      localResponseData,
+      {
+        ...currentVariables,
+      }
+    );
 
     // Process a single logic rule
     const processLogicRule = (
