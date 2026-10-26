@@ -90,18 +90,23 @@ func TestCatalogRendersEveryTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	untranslated := regexp.MustCompile(`"(templates|workspace\.xm-templates)\.[a-z0-9_]+"`)
 	for _, locale := range catalogLocales {
 		templates, err := c.Templates(locale)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(templates) != 53 || templates[0].ID != CustomTemplateID {
+		if len(templates) != 68 || templates[0].ID != CustomTemplateID {
 			t.Fatalf("%s: %d templates", locale, len(templates))
 		}
 		for _, tpl := range templates {
 			raw, _ := json.Marshal(tpl)
-			if strings.Contains(string(raw), "{{") || strings.Contains(string(raw), "tplid") || tpl.Name == "" {
+			if strings.Contains(string(raw), "{{") || strings.Contains(string(raw), "tplid") || tpl.Name == "" || tpl.Description == "" {
 				t.Fatalf("%s/%s was not rendered: %s", locale, tpl.ID, raw[:200])
+			}
+			// Every marker names a key the catalog translations have: a missing key would render as the key itself.
+			if keys := untranslated.FindAll(raw, -1); len(keys) > 0 {
+				t.Fatalf("%s/%s renders translation keys: %s", locale, tpl.ID, keys)
 			}
 		}
 	}
@@ -154,6 +159,37 @@ func TestCatalogRendersEveryTemplate(t *testing.T) {
 	}
 	if TemplateLocale("de-DE") != "de-DE" || TemplateLocale("it-IT") != "en-US" || !IsSurveyDefaultLanguage("it-IT") || IsSurveyDefaultLanguage("xx-XX") {
 		t.Fatal("template locale")
+	}
+}
+
+// A template's ending card thanks the respondent and stops there: attribution is the "Powered by" badge, which a workspace can turn off, not a button to Forma on every survey made from the catalog.
+func TestCatalogEndingsHaveNoButton(t *testing.T) {
+	c, err := LoadCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	templates, err := c.Templates(defaultLocale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tpl := range templates {
+		var preset struct {
+			Endings []map[string]any `json:"endings"`
+		}
+		if err := json.Unmarshal(tpl.Preset, &preset); err != nil {
+			t.Fatal(err)
+		}
+		if len(preset.Endings) == 0 {
+			t.Fatalf("%s has no ending", tpl.ID)
+		}
+		for _, ending := range preset.Endings {
+			if _, ok := ending["buttonLabel"]; ok {
+				t.Errorf("%s: ending %v has a button label", tpl.ID, ending["id"])
+			}
+			if _, ok := ending["buttonLink"]; ok {
+				t.Errorf("%s: ending %v has a button link", tpl.ID, ending["id"])
+			}
+		}
 	}
 }
 

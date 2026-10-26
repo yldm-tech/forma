@@ -8,6 +8,7 @@ import type {
 } from "@forma/types/surveys/types";
 import { createI18nString, extractLanguageCodes } from "../../../lib/survey/i18n";
 
+/** A new ending card: a thank-you headline and subheader and no button. Attribution stays in the "Powered by" badge, which the workspace can turn off; a default button pointing respondents to Forma would show on every customer's survey. */
 export const getDefaultEndingCard = (languages: TSurveyLanguage[], t: TFunction): TSurveyEndScreenCard => {
   const languageCodes = extractLanguageCodes(languages);
   return {
@@ -15,9 +16,6 @@ export const getDefaultEndingCard = (languages: TSurveyLanguage[], t: TFunction)
     type: "endScreen",
     headline: createI18nString(t("templates.default_ending_card_headline"), languageCodes),
     subheader: createI18nString(t("templates.default_ending_card_subheader"), languageCodes),
-    buttonLabel: createI18nString(t("templates.default_ending_card_button_label"), languageCodes),
-    buttonLink:
-      "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=default_ending_cta",
   };
 };
 
