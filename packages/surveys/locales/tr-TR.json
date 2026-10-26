@@ -116,6 +116,10 @@
       "message": "Bu yanıt zaten tamamlandı ve artık değiştirilemez. Bu pencereyi güvenle kapatabilirsin.",
       "title": "Bu yanıt zaten tamamlandı."
     },
+    "response_email_already_used": {
+      "message": "Bu anket e-posta adresi başına bir yanıt kabul ediyor ve senin adresinle zaten bir yanıt gönderildi. Bu pencereyi kapatabilirsin.",
+      "title": "Bu e-posta adresiyle zaten yanıt verildi."
+    },
     "response_sending_error_permanent": {
       "message": "Yanıtınız gönderilemedi ve yeniden denenemez. Bu sorun devam ederse lütfen anket sahibiyle iletişime geçin.",
       "title": "Yanıtınız gönderilemedi."

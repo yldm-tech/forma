@@ -6,6 +6,7 @@ interface ErrorComponentProps {
     | TResponseErrorCodesEnum.RecaptchaError
     | TResponseErrorCodesEnum.InvalidDeviceError
     | TResponseErrorCodesEnum.ResponseAlreadyCompleted
+    | TResponseErrorCodesEnum.ResponseEmailAlreadyUsed
     | TResponseErrorCodesEnum.ResponseSendingErrorPermanent;
 }
 
@@ -23,6 +24,10 @@ export function ErrorComponent({ errorType }: ErrorComponentProps) {
     [TResponseErrorCodesEnum.ResponseAlreadyCompleted]: {
       title: t("errors.response_already_completed.title"),
       message: t("errors.response_already_completed.message"),
+    },
+    [TResponseErrorCodesEnum.ResponseEmailAlreadyUsed]: {
+      title: t("errors.response_email_already_used.title"),
+      message: t("errors.response_email_already_used.message"),
     },
     [TResponseErrorCodesEnum.ResponseSendingErrorPermanent]: {
       title: t("errors.response_sending_error_permanent.title"),

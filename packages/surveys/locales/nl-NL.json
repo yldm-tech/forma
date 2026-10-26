@@ -116,6 +116,10 @@
       "message": "Deze reactie is al voltooid en kan niet meer worden gewijzigd. Je kunt dit venster veilig sluiten.",
       "title": "Deze reactie is al voltooid."
     },
+    "response_email_already_used": {
+      "message": "Deze enquête accepteert één reactie per e-mailadres, en er is er al een verzonden met het jouwe. Je kunt dit venster sluiten.",
+      "title": "Met dit e-mailadres is al gereageerd."
+    },
     "response_sending_error_permanent": {
       "message": "Je reactie kon niet worden verzonden en kan niet opnieuw worden geprobeerd. Neem contact op met de eigenaar van de enquête als dit blijft gebeuren.",
       "title": "Je reactie kon niet worden verzonden."

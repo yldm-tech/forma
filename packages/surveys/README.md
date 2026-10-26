@@ -49,6 +49,14 @@ It is on by default. The creator turns it off per survey (Settings, Response Opt
 
 The offline mode the `?offlineSupport=true` link parameter turns on keeps progress the same way, and adds what a respondent who only reloads does not need: answers wait while the browser reports it is offline, the page shows an offline banner, the ending shows while answers are still stored, and leaving a survey half answered asks for confirmation. Progress saving alone does none of these.
 
+## One response per browser or per email (link surveys)
+
+Two switches in Settings, Response Options limit duplicate submissions of a link survey (owner decision D-FG03); both are off by default.
+
+"One response per browser" (`isSingleResponsePerBrowserEnabled`) is best effort, and the editor says so. Once the final answer reaches the server, the link page (`apps/web/src/survey-page/lib/browser-response.ts`, not this runtime) remembers in the browser that it answered: in `localStorage` and in a cookie under the survey's own path `/s/{surveyId}`, each restoring the other when only one was cleared. A later visit from that browser to `/s/{surveyId}` shows "already responded" instead of the survey, the PIN gate or the email gate. A private window, clearing all site data, another browser or another device answers again, a frame on another site may be refused both kinds of storage, and on a shared device the next person cannot answer. Previews are neither limited nor remembered, and personal links (`/c/...`) already take one response per contact.
+
+"One response per email address" (`isSingleResponsePerEmailEnabled`) needs "Verify email before submission" and is enforced by the server. A new response for a verified address that already has a response to the survey, finished or not, compared without regard to letter case, is refused with 409 and `details.code` `response_email_already_used` (`RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE` in `@forma/types/errors`); the runtime shows it as `TResponseErrorCodesEnum.ResponseEmailAlreadyUsed` and does not retry. Opening a verification link whose address has finished a response shows "already responded" instead of the survey. The endpoint that mails verification links sends one to every address alike, so it does not tell anyone which addresses have responded. A respondent who reloads mid-survey goes on in the response they started (progress saving keeps its id), but one who starts in a second browser is refused there.
+
 ## Setting Up Automated Translations
 
 ### Prerequisites

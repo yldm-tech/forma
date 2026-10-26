@@ -1,7 +1,10 @@
 // @vitest-environment happy-dom
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { err, ok } from "@forma/types/error-handlers";
-import { RESPONSE_ALREADY_FINISHED_ERROR_CODE } from "@forma/types/errors";
+import {
+  RESPONSE_ALREADY_FINISHED_ERROR_CODE,
+  RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE,
+} from "@forma/types/errors";
 import { TResponseUpdate } from "@forma/types/responses";
 import { TResponseErrorCodesEnum } from "@/types/response-error-codes";
 import type { PendingResponseEntry } from "./offline-storage";
@@ -244,6 +247,28 @@ describe("ResponseQueue", () => {
     expect(config.onResponseSendingFailed).toHaveBeenCalledWith(
       responseUpdate,
       TResponseErrorCodesEnum.ResponseAlreadyCompleted
+    );
+  });
+
+  test("processQueue surfaces ResponseEmailAlreadyUsed for a create refused because the verified email already responded", async () => {
+    queue.queue.push(responseUpdate);
+    apiMock.createResponse.mockResolvedValue({
+      ok: false,
+      error: {
+        code: "conflict",
+        message: "A response was already submitted with this email address",
+        status: 409,
+        details: { code: RESPONSE_EMAIL_ALREADY_USED_ERROR_CODE },
+      },
+    });
+
+    await queue.processQueue();
+
+    expect(apiMock.createResponse).toHaveBeenCalledTimes(1); // a 409 is never retried
+    expect(queue.queue).toHaveLength(0);
+    expect(config.onResponseSendingFailed).toHaveBeenCalledWith(
+      responseUpdate,
+      TResponseErrorCodesEnum.ResponseEmailAlreadyUsed
     );
   });
 

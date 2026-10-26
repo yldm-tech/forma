@@ -116,6 +116,10 @@
       "message": "此回复已完成,无法再进行更改。你可以安全地关闭此窗口。",
       "title": "此回复已完成。"
     },
+    "response_email_already_used": {
+      "message": "此问卷每个邮箱地址只接受一份回复，你的邮箱地址已提交过一份。你可以关闭此窗口。",
+      "title": "此邮箱地址已提交过回复。"
+    },
     "response_sending_error_permanent": {
       "message": "你的回复无法提交且无法重试。如果此问题持续发生,请联系调查问卷的创建者。",
       "title": "你的回复无法提交。"

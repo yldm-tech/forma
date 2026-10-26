@@ -116,6 +116,10 @@
       "message": "This response has already been completed and can no longer be changed. You can safely close this window.",
       "title": "This response has already been completed."
     },
+    "response_email_already_used": {
+      "message": "This survey accepts one response per email address, and one has already been submitted with yours. You can close this window.",
+      "title": "This email address has already responded."
+    },
     "response_sending_error_permanent": {
       "message": "Your response could not be submitted and cannot be retried. Please contact the survey owner if this keeps happening.",
       "title": "Your response could not be submitted."

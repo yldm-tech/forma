@@ -116,6 +116,10 @@
       "message": "此回覆已經完成且無法再更改。您可以安全地關閉此視窗。",
       "title": "此回覆已經完成。"
     },
+    "response_email_already_used": {
+      "message": "此問卷每個電子郵件地址只接受一份回覆，您的地址已提交過一份。您可以關閉此視窗。",
+      "title": "此電子郵件地址已提交過回覆。"
+    },
     "response_sending_error_permanent": {
       "message": "您的回覆無法提交且無法重試。如果問題持續發生，請聯絡問卷擁有者。",
       "title": "您的回覆無法提交。"

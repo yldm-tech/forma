@@ -116,6 +116,10 @@
       "message": "Respons ini sudah selesai dan tidak dapat diubah lagi. Kamu dapat menutup jendela ini dengan aman.",
       "title": "Respons ini sudah selesai."
     },
+    "response_email_already_used": {
+      "message": "Survei ini hanya menerima satu respons per alamat email, dan respons dengan alamat email kamu sudah dikirim. Kamu dapat menutup jendela ini.",
+      "title": "Alamat email ini sudah memberikan respons."
+    },
     "response_sending_error_permanent": {
       "message": "Responsmu tidak dapat dikirim dan tidak dapat dicoba lagi. Silakan hubungi pemilik survei jika masalah ini terus berlanjut.",
       "title": "Responsmu tidak dapat dikirim."

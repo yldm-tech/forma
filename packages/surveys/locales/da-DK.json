@@ -116,6 +116,10 @@
       "message": "Dette svar er allerede gennemført og kan ikke længere ændres. Du kan trygt lukke dette vindue.",
       "title": "Dette svar er allerede gennemført."
     },
+    "response_email_already_used": {
+      "message": "Denne undersøgelse modtager ét svar pr. e-mailadresse, og der er allerede sendt et svar med din. Du kan lukke dette vindue.",
+      "title": "Denne e-mailadresse har allerede svaret."
+    },
     "response_sending_error_permanent": {
       "message": "Dit svar kunne ikke indsendes og kan ikke forsøges igen. Kontakt venligst ejeren af undersøgelsen, hvis dette fortsætter.",
       "title": "Dit svar kunne ikke indsendes."

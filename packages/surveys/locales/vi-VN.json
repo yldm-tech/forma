@@ -116,6 +116,10 @@
       "message": "Phản hồi này đã được hoàn tất và không thể thay đổi thêm. Bạn có thể đóng cửa sổ này một cách an toàn.",
       "title": "Phản hồi này đã được hoàn tất."
     },
+    "response_email_already_used": {
+      "message": "Khảo sát này chỉ nhận một phản hồi cho mỗi địa chỉ email và đã có một phản hồi được gửi bằng địa chỉ của bạn. Bạn có thể đóng cửa sổ này.",
+      "title": "Địa chỉ email này đã phản hồi rồi."
+    },
     "response_sending_error_permanent": {
       "message": "Phản hồi của bạn không thể được gửi đi và không thể thử lại. Vui lòng liên hệ với chủ sở hữu khảo sát nếu vấn đề này tiếp tục xảy ra.",
       "title": "Phản hồi của bạn không thể được gửi đi."

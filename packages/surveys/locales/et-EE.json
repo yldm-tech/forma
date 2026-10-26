@@ -116,6 +116,10 @@
       "message": "See vastus on juba lõpetatud ega saa enam muuta. Võid selle akna turvaliselt sulgeda.",
       "title": "See vastus on juba lõpetatud."
     },
+    "response_email_already_used": {
+      "message": "See küsitlus võtab vastu ühe vastuse e-posti aadressi kohta ja sinu aadressiga on vastus juba saadetud. Võid selle akna sulgeda.",
+      "title": "Selle e-posti aadressiga on juba vastatud."
+    },
     "response_sending_error_permanent": {
       "message": "Teie vastust ei saanud esitada ja seda ei saa uuesti proovida. Palun võtke küsitluse omanikuga ühendust, kui see jätkub.",
       "title": "Teie vastust ei saanud esitada."
