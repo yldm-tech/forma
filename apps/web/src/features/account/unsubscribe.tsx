@@ -89,7 +89,8 @@ export const UnsubscribePage = ({ link }: { link: UnsubscribeLink }) => {
                 {t("common.try_again")}
               </Button>
             ) : view === "unsubscribing" ? (
-              <Button loading disabled>
+              // The same look as the undo that replaces it, so the button does not fade from dark to light.
+              <Button variant="secondary" loading disabled>
                 {t("workspace.settings.notifications.unsubscribe_page.unsubscribe")}
               </Button>
             ) : view === "resubscribed" ? (
