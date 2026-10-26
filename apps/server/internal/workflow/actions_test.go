@@ -3,6 +3,7 @@ package workflow
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
@@ -258,10 +259,27 @@ func TestSealSecrets(t *testing.T) {
 	issueAt(t, issues, "nodes.1.config.webhookUrl", "Enter the incoming-webhook URL Discord gives you.")
 	issueAt(t, issues, "nodes.2.config.signingSecret", signingSecretInvalid)
 
+	// A header secret is a header value: a line break in it would be refused by every request.
+	broken := def(t, chain(httpNode("h", "https://api.example.com", map[string]any{"name": "X-Key", "secret": map[string]any{"value": "abcdefghijkl\r\nX-Evil: 1"}})))
+	issues, err = sealSecrets(c, ws, broken, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	issueAt(t, issues, "nodes.0.config.headers.0.secret", headerValueControlChars)
+
 	// A chat URL sealed for one chat does not open for another, and an emptied secret stays empty.
 	slack := def(t, chain(chatNode("s", ActionSlackMessage, map[string]any{"value": testSlackURL}, "Hi")))
 	if issues, err := sealSecrets(c, ws, slack, nil); err != nil || len(issues) > 0 {
 		t.Fatalf("%v %+v", err, issues)
+	}
+	// A sealed value sent back keeps the hint of what it seals, whatever hint comes with it.
+	wantHint := slack.Nodes[0].Chat.WebhookURL.Hint
+	if wantHint != "hooks.slack.com/…XXXX" {
+		t.Fatalf("hint %q", wantHint)
+	}
+	slack.Nodes[0].Chat.WebhookURL.Hint = "hooks.slack.com/#ceo-private"
+	if issues, err := sealSecrets(c, ws, slack, nil); err != nil || len(issues) > 0 || slack.Nodes[0].Chat.WebhookURL.Hint != wantHint {
+		t.Fatalf("a made-up hint was kept: %q %v %+v", slack.Nodes[0].Chat.WebhookURL.Hint, err, issues)
 	}
 	slack.Nodes[0].ActionType = ActionDiscordMessage
 	if issues, _ := sealSecrets(c, ws, slack, nil); len(issues) != 1 {
@@ -384,6 +402,27 @@ func TestChatPayloads(t *testing.T) {
 	if !strings.Contains(teams, `"contentType":"application/vnd.microsoft.card.adaptive"`) || !strings.Contains(teams, `"text":"Rating 9"`) {
 		t.Fatalf("teams %s", teams)
 	}
+
+	// An answer's markdown is escaped for Discord and Teams, so it cannot post a disguised link or formatting; the template's own markup stays.
+	r := &response.Response{ID: uuid.New(), SurveyID: uuid.MustParse(testSurveyID), Finished: true,
+		Data: json.RawMessage(`{"q1":"[Your account is locked](https://evil.example) **now** <@&123> # x"}`)}
+	answers, err := responsemail.Decode(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evil := responseTemplate(r, &responsemail.Survey{Name: "NPS"}, answers)
+	const escaped = `\[Your account is locked\]\(https://evil.example\) \*\*now\*\* \<@&123\> \# x`
+	discordText := chatPayload(ActionDiscordMessage, evil, "**New:** {{answers.q1}}").(map[string]any)["content"]
+	if discordText != "**New:** "+escaped {
+		t.Fatalf("discord %q", discordText)
+	}
+	card := chatPayload(ActionTeamsMessage, evil, "**New:** {{answers.q1}}").(map[string]any)["attachments"].([]any)[0].(map[string]any)["content"].(map[string]any)
+	if text := card["body"].([]any)[0].(map[string]any)["text"]; text != "**New:** "+escaped {
+		t.Fatalf("teams %q", text)
+	}
+	if got := markdownEscape(`a\b-c_d~e|f` + "`"); got != `a\\b\-c\_d\~e\|f\`+"`" {
+		t.Fatalf("escape %q", got)
+	}
 }
 
 // receiver records the requests an httptest server gets and answers each with the next status of a script, the last one repeating.
@@ -434,16 +473,18 @@ func TestDeliverRetriesOnlyTransientFailures(t *testing.T) {
 		status    string
 		requests  int
 		permanent bool
+		reason    string
 	}{
-		{"accepted", []int{http.StatusNoContent}, StepSucceeded, 1, false},
-		{"recovers after a 5xx", []int{http.StatusBadGateway, http.StatusOK}, StepSucceeded, 2, false},
-		{"recovers after a 429", []int{http.StatusTooManyRequests, http.StatusTooManyRequests, http.StatusAccepted}, StepSucceeded, 3, false},
-		{"gives up after three tries", []int{http.StatusServiceUnavailable}, StepFailed, 3, false},
-		{"a 4xx is final", []int{http.StatusNotFound, http.StatusOK}, StepFailed, 1, true},
+		{"accepted", []int{http.StatusNoContent}, StepSucceeded, 1, false, ""},
+		{"recovers after a 5xx", []int{http.StatusBadGateway, http.StatusOK}, StepSucceeded, 2, false, ""},
+		{"recovers after a 429", []int{http.StatusTooManyRequests, http.StatusTooManyRequests, http.StatusAccepted}, StepSucceeded, 3, false, ""},
+		{"gives up after three tries", []int{http.StatusServiceUnavailable}, StepFailed, 3, false, reasonStatus},
+		{"a 4xx is final", []int{http.StatusNotFound, http.StatusOK}, StepFailed, 1, true, reasonStatus},
+		{"a redirect is final", []int{http.StatusFound}, StepFailed, 1, true, reasonRedirect},
 	} {
 		rec, url := serve(t, tc.statuses...)
 		o := a.deliver(context.Background(), env, http.MethodPost, url+"/hook", http.Header{}, []byte(`{}`))
-		if o.status != tc.status || rec.count() != tc.requests || o.permanent != tc.permanent || o.output["attempts"] != tc.requests {
+		if o.status != tc.status || rec.count() != tc.requests || o.permanent != tc.permanent || o.output["attempts"] != tc.requests || o.reason != tc.reason {
 			t.Errorf("%s: %+v after %d requests", tc.name, o, rec.count())
 		}
 	}
@@ -471,7 +512,7 @@ func TestDeliverRefusesInternalTargets(t *testing.T) {
 		"http://0x7f000001" + port, "http://metadata.google.internal/", "https://internal.example/hook", "file:///etc/passwd",
 	} {
 		o := a.deliver(context.Background(), actionEnv{retry: true}, http.MethodPost, target, http.Header{}, []byte(`{}`))
-		if o.status != StepFailed || !o.permanent || !strings.HasPrefix(o.err, "URL refused: ") {
+		if o.status != StepFailed || !o.permanent || !strings.HasPrefix(o.err, "URL refused: ") || o.reason != reasonURLRefused {
 			t.Errorf("%s: %+v", target, o)
 		}
 	}
@@ -521,8 +562,19 @@ func TestHTTPRequestAction(t *testing.T) {
 
 	// The same step on another workspace cannot read its secrets and fails without sending.
 	env.workspaceID = uuid.New()
-	if o := a.perform(context.Background(), env, step); o.status != StepFailed || !o.permanent || rec.count() != 1 {
+	if o := a.perform(context.Background(), env, step); o.status != StepFailed || !o.permanent || o.reason != reasonSecret || rec.count() != 1 {
 		t.Fatalf("foreign workspace: %+v", o)
+	}
+
+	// A header value the transport would refuse, such as a secret sealed before line breaks were checked, fails the step for good without a request.
+	env.workspaceID = ws
+	sealed, err := a.cipher.Seal([]byte("abc\r\ndef"), headerSecretContext(ws, step.HTTP.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	step.HTTP.Headers[1].Secret = &SecretValue{Sealed: base64.StdEncoding.EncodeToString(sealed)}
+	if o := a.perform(context.Background(), env, step); o.status != StepFailed || !o.permanent || o.reason != reasonConfig || rec.count() != 1 {
+		t.Fatalf("control character: %+v, %d requests", o, rec.count())
 	}
 }
 

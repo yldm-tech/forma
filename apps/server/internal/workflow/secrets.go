@@ -32,6 +32,7 @@ func chatSecretContext(workspaceID uuid.UUID, actionType string) []byte {
 const (
 	secretForOtherDestination = "This secret was stored for another destination. Enter it again."
 	signingSecretInvalid      = "A signing secret is whsec_ followed by the base64 of at least 24 random bytes."
+	headerValueControlChars   = "A header value cannot contain line breaks or other control characters."
 )
 
 func chatURLInvalid(actionType string) string {
@@ -77,7 +78,10 @@ func sealSecrets(c *secret.Cipher, workspaceID uuid.UUID, d *Definition, at []an
 			}
 			*v = SecretValue{Sealed: base64.StdEncoding.EncodeToString(sealed), Hint: hint(plain)}
 		case v.Sealed != "":
-			if _, err := openSecret(c, *v, context); err != nil {
+			// The hint is derived again rather than kept as sent, so a sealed value pasted from another step cannot carry a made-up label for where it sends.
+			if plain, err := openSecret(c, *v, context); err == nil {
+				v.Hint = hint(plain)
+			} else {
 				issues = append(issues, Issue{Path: where, Message: secretForOtherDestination})
 			}
 		default:
@@ -85,7 +89,12 @@ func sealSecrets(c *secret.Cipher, workspaceID uuid.UUID, d *Definition, at []an
 		}
 		return nil
 	}
-	anything := func(string) string { return "" }
+	headerValue := func(v string) string {
+		if strings.ContainsFunc(v, isControl) {
+			return headerValueControlChars
+		}
+		return ""
+	}
 	for i := range d.Nodes {
 		n := &d.Nodes[i]
 		config := path(at, "nodes", i, "config")
@@ -93,7 +102,7 @@ func sealSecrets(c *secret.Cipher, workspaceID uuid.UUID, d *Definition, at []an
 		case n.HTTP != nil:
 			for j := range n.HTTP.Headers {
 				if s := n.HTTP.Headers[j].Secret; s != nil {
-					if err := seal(s, path(config, "headers", j, "secret"), headerSecretContext(workspaceID, n.HTTP.URL), anything, tailHint); err != nil {
+					if err := seal(s, path(config, "headers", j, "secret"), headerSecretContext(workspaceID, n.HTTP.URL), headerValue, tailHint); err != nil {
 						return nil, err
 					}
 				}

@@ -13,10 +13,11 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
-// TestSendResult is a test send's outcome: whether the receiver accepted it, the status it answered with, and the reason it failed.
+// TestSendResult is a test send's outcome: whether the receiver accepted it, the status it answered with, and why it failed, as a code the builder shows in the member's language (url_refused, timeout, unreachable, redirect, status, secret_unreadable, invalid_config) and as the English detail.
 type TestSendResult struct {
 	OK      bool   `json:"ok"`
 	Status  int    `json:"status,omitempty"`
+	Reason  string `json:"reason,omitempty"`
 	Message string `json:"message,omitempty"`
 }
 
@@ -78,7 +79,7 @@ func (s *Service) TestSend(ctx context.Context, userID, workflowID uuid.UUID, st
 	}
 	env := actionEnv{workspaceID: w.WorkspaceID, template: testTemplate(w.ID, surveyID, surveyName), messageID: "test_" + messageID.String()}
 	o := s.actions.perform(ctx, env, *step)
-	result := &TestSendResult{OK: o.status == StepSucceeded, Message: o.err}
+	result := &TestSendResult{OK: o.status == StepSucceeded, Reason: o.reason, Message: o.err}
 	if status, ok := o.output["status"].(int); ok {
 		result.Status = status
 	}

@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
@@ -32,6 +33,8 @@ const (
 	surveyField           = "definition.trigger.config.surveyId"
 	endingField           = "definition.trigger.config.endingCardIds"
 	surveyMissingReason   = "The referenced survey does not exist in this workspace."
+	tagField              = "definition.nodes.config.tagId"
+	attributeField        = "definition.nodes.config.attributeKey"
 	conflictingWriteRetry = "A conflicting workflow write happened at the same time. Please retry."
 )
 
@@ -41,7 +44,13 @@ const (
 	problemSurveyNotFound   = "survey_not_found"
 	problemEndingNotFound   = "ending_card_not_found"
 	problemRecipientBlocked = "recipient_not_allowed"
+	problemTagNotFound      = "tag_not_found"
+	problemAttributeKey     = "attribute_key_not_settable"
 )
+
+func tagReason(id string) string {
+	return fmt.Sprintf("Tag %s does not exist in this workspace.", id)
+}
 
 func invalidState(detail string) *v3api.Problem {
 	return &v3api.Problem{Status: http.StatusUnprocessableEntity, Title: "Unprocessable Content", Detail: detail, Code: "invalid_workflow_state"}
@@ -77,8 +86,25 @@ func NewService(repo *Repository, db *gorm.DB, authorizer *authz.Authorizer, cip
 	return &Service{repo: repo, db: db, authz: authorizer, cipher: cipher, actions: newActions(db, guard, cipher), log: log}
 }
 
-// httpRequestsManaged is the refusal of an http_request a caller may not author: one that sends response data anywhere with headers of its own is a workspace manager's decision.
-const httpRequestsManaged = "Only workspace managers can add or change HTTP request steps."
+// The refusals of an http_request a caller may not author: one that sends response data anywhere with headers of its own is a workspace manager's decision, and so is which survey's responses it sends, so retargeting the trigger of a workflow that has one, or copying one into a new workflow that can be retargeted, is too.
+const (
+	httpRequestsManaged         = "Only workspace managers can add or change HTTP request steps."
+	httpRequestTriggerManaged   = "Only workspace managers can change the trigger survey of a workflow with HTTP request steps."
+	httpRequestDuplicateManaged = "Only workspace managers can duplicate a workflow with HTTP request steps."
+)
+
+// hasHTTPRequests reports whether d has an http_request action.
+func hasHTTPRequests(d *Definition) bool {
+	return d != nil && slices.ContainsFunc(d.Nodes, func(n Node) bool { return n.HTTP != nil })
+}
+
+// triggerSurveyOf is d's trigger survey id, empty when it has no trigger.
+func triggerSurveyOf(d *Definition) string {
+	if d == nil || d.Trigger == nil {
+		return ""
+	}
+	return d.Trigger.Config.SurveyID
+}
 
 // changedHTTPRequests reports whether after has an http_request action that before does not have exactly as it is: a new one, or one whose method, URL, headers, body or signing secret changed. Re-entering a secret changes it too.
 func changedHTTPRequests(before, after *Definition) bool {
@@ -110,14 +136,27 @@ func (s *Service) prepareDefinition(ctx context.Context, actor authz.Actor, work
 	if len(issues) > 0 {
 		return payloadProblem(issues)
 	}
-	if changedHTTPRequests(before, after) {
-		if err := v3api.RequireWorkspace(ctx, s.authz, actor, authz.WorkspaceManage, workspaceID); err != nil {
-			var problem *v3api.Problem
-			if errors.As(err, &problem) {
-				return v3api.Forbidden(httpRequestsManaged)
-			}
-			return err
+	refusal := ""
+	switch {
+	case changedHTTPRequests(before, after):
+		refusal = httpRequestsManaged
+	case hasHTTPRequests(after) && triggerSurveyOf(before) != triggerSurveyOf(after):
+		refusal = httpRequestTriggerManaged
+	}
+	if refusal != "" {
+		return s.requireManage(ctx, actor, workspaceID, refusal)
+	}
+	return nil
+}
+
+// requireManage is nil when the caller can manage the workspace, and otherwise refuses with refusal.
+func (s *Service) requireManage(ctx context.Context, actor authz.Actor, workspaceID uuid.UUID, refusal string) error {
+	if err := v3api.RequireWorkspace(ctx, s.authz, actor, authz.WorkspaceManage, workspaceID); err != nil {
+		var problem *v3api.Problem
+		if errors.As(err, &problem) {
+			return v3api.Forbidden(refusal)
 		}
+		return err
 	}
 	return nil
 }
@@ -252,6 +291,12 @@ func (s *Service) Duplicate(ctx context.Context, actor authz.Actor, id uuid.UUID
 	if len(issues) > 0 {
 		return nil, nil, payloadProblem(issues)
 	}
+	// A stored definition that no longer parses copies nothing that can send.
+	if stored, _ := ParseDefinition(w.Definition); hasHTTPRequests(stored) {
+		if err := s.requireManage(ctx, actor, w.WorkspaceID, httpRequestDuplicateManaged); err != nil {
+			return nil, nil, err
+		}
+	}
 	copyName := w.Name + " (copy)"
 	if name != nil {
 		copyName = *name
@@ -318,11 +363,54 @@ func (s *Service) Disable(ctx context.Context, actor authz.Actor, id uuid.UUID) 
 	return w, after, err
 }
 
-// readiness is what enable and the dry run check beyond the document: the trigger's survey and endings, and the literal recipients nobody in the workspace owns.
+// readiness is what enable and the dry run check beyond the document: the trigger's survey and endings, the tags and attribute keys the steps act on, and the literal recipients nobody in the workspace owns.
 type readiness struct {
 	surveyFound       bool
 	missingEndings    []string
+	stepProblems      []TestProblem
 	blockedRecipients []string
+}
+
+// stepTargets are the problems of the tags a tag_response step adds and the attribute keys a set_contact_attribute step writes, which would otherwise fail a run for every response: a tag that is not the workspace's, a key it does not have or one unique to each contact.
+func (s *Service) stepTargets(ctx context.Context, workspaceID uuid.UUID, d *Definition) ([]TestProblem, error) {
+	var problems []TestProblem
+	var tagIDs []uuid.UUID
+	for _, n := range d.Nodes {
+		if n.Tag == nil {
+			continue
+		}
+		if id, err := uuid.Parse(n.Tag.TagID); err == nil {
+			tagIDs = append(tagIDs, id)
+		}
+	}
+	found := map[uuid.UUID]bool{}
+	if len(tagIDs) > 0 {
+		var ids []uuid.UUID
+		if err := s.db.WithContext(ctx).Raw(`SELECT id FROM tags WHERE workspace_id = ? AND id IN ?`, workspaceID, tagIDs).Scan(&ids).Error; err != nil {
+			return nil, fmt.Errorf("load workflow step tags: %w", err)
+		}
+		for _, id := range ids {
+			found[id] = true
+		}
+	}
+	for _, n := range d.Nodes {
+		switch {
+		case n.Tag != nil:
+			if id, err := uuid.Parse(n.Tag.TagID); err == nil && !found[id] {
+				problems = append(problems, TestProblem{Code: problemTagNotFound, Field: tagField, Message: tagReason(n.Tag.TagID)})
+			}
+		case n.Attribute != nil:
+			_, err := contact.SettableAttributeKey(ctx, s.db, workspaceID, n.Attribute.AttributeKey)
+			var refused *contact.AttributeError
+			switch {
+			case errors.As(err, &refused):
+				problems = append(problems, TestProblem{Code: problemAttributeKey, Field: attributeField, Message: refused.Message + "."})
+			case err != nil:
+				return nil, err
+			}
+		}
+	}
+	return problems, nil
 }
 
 func (s *Service) readiness(ctx context.Context, workspaceID uuid.UUID, d *Definition) (*readiness, error) {
@@ -342,6 +430,9 @@ func (s *Service) readiness(ctx context.Context, workspaceID uuid.UUID, d *Defin
 				out.missingEndings = append(out.missingEndings, id)
 			}
 		}
+	}
+	if out.stepProblems, err = s.stepTargets(ctx, workspaceID, d); err != nil {
+		return nil, err
 	}
 	literal := LiteralRecipients(d)
 	if len(literal) == 0 {
@@ -384,13 +475,16 @@ func (s *Service) Enable(ctx context.Context, actor authz.Actor, id uuid.UUID) (
 	if err != nil {
 		return nil, nil, err
 	}
-	if !ready.surveyFound || len(ready.missingEndings) > 0 {
+	if !ready.surveyFound || len(ready.missingEndings) > 0 || len(ready.stepProblems) > 0 {
 		var params []v3api.InvalidParam
 		if !ready.surveyFound {
 			params = append(params, v3api.InvalidParam{Name: surveyField, Reason: surveyMissingReason})
 		}
 		for _, id := range ready.missingEndings {
 			params = append(params, v3api.InvalidParam{Name: endingField, Reason: endingReason(id)})
+		}
+		for _, p := range ready.stepProblems {
+			params = append(params, v3api.InvalidParam{Name: p.Field, Reason: p.Message})
 		}
 		return nil, nil, notExecutable(notExecutableDetail, params)
 	}
@@ -446,6 +540,7 @@ func (s *Service) Test(ctx context.Context, actor authz.Actor, id uuid.UUID) (*T
 		for _, id := range ready.missingEndings {
 			problems = append(problems, TestProblem{Code: problemEndingNotFound, Field: endingField, Message: endingReason(id)})
 		}
+		problems = append(problems, ready.stepProblems...)
 		for _, email := range ready.blockedRecipients {
 			problems = append(problems, TestProblem{Code: problemRecipientBlocked, Field: recipientField, Message: recipientReason(email)})
 		}

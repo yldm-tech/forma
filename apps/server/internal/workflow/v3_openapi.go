@@ -110,7 +110,7 @@ func V3OpenAPI() openapi.Spec {
 			},
 			{
 				Method: http.MethodPost, Path: "/api/v3/workflows/{workflowId}/duplicate", ID: "duplicateWorkflow", Tag: "Workflows",
-				Summary: "Duplicate a workflow", Description: "Copies the workflow as a new draft, optionally under a new name. Needs write access to the workspace.",
+				Summary: "Duplicate a workflow", Description: "Copies the workflow as a new draft, optionally under a new name. Needs write access to the workspace, and manage access when the workflow has an HTTP request step.",
 				Parameters: []openapi.Parameter{workflowID},
 				Body:       openapi.Object("", map[string]*openapi.Schema{"name": name}), BodyOptional: true,
 				Responses: created("The copy."),

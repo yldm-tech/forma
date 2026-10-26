@@ -158,16 +158,24 @@ func TestRunActionRetriesAndPermanentFailures(t *testing.T) {
 		t.Fatalf("run %s after %d requests", e.text(`SELECT status FROM workflow_runs WHERE id = ?`, run2), rejecting.count())
 	}
 
-	// A unique attribute, or a value the key's type does not take, fails its step for good.
+	// A value the key's type does not take, or a key that became unique or was deleted after enable, fails its step for good.
 	cf := e.contactFixture(f)
-	for _, tc := range []struct{ key, value, want string }{
-		{"email", "x@example.com", `Attribute "email" is unique to each contact and cannot be set by a workflow`},
-		{"seats", "{{answers.q1}}", "Attribute 'seats' expects a number"},
-		{"missing", "x", `Attribute "missing" does not exist in this workspace`},
+	later := e.insert(`INSERT INTO contact_attribute_keys (workspace_id, key, name, type, data_type) VALUES (?, 'later', 'Later', 'custom', 'string') RETURNING id`, f.ws)
+	gone := e.insert(`INSERT INTO contact_attribute_keys (workspace_id, key, name, type, data_type) VALUES (?, 'gone', 'Gone', 'custom', 'string') RETURNING id`, f.ws)
+	for _, tc := range []struct {
+		key, value, want string
+		afterEnable      func()
+	}{
+		{"seats", "{{answers.q1}}", "Attribute 'seats' expects a number", nil},
+		{"later", "x", `Attribute "later" is unique to each contact and cannot be set by a workflow`, func() { e.exec(`UPDATE contact_attribute_keys SET is_unique = true WHERE id = ?`, later) }},
+		{"gone", "x", `Attribute "gone" does not exist in this workspace`, func() { e.exec(`DELETE FROM contact_attribute_keys WHERE id = ?`, gone) }},
 	} {
 		def = chain(attributeNode("attr", tc.key, tc.value))
 		def["trigger"].(map[string]any)["config"] = map[string]any{"surveyId": f.survey.String(), "endingCardIds": []any{}}
 		wf := e.enabled(f, "Attribute "+tc.key, def)
+		if tc.afterEnable != nil {
+			tc.afterEnable()
+		}
 		r := e.respondAs(f, &cf.contact, `{"q1":"many"}`)
 		run := e.startRun(f, wf, r)
 		if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err != nil {
@@ -179,11 +187,11 @@ func TestRunActionRetriesAndPermanentFailures(t *testing.T) {
 	}
 
 	// A tag deleted after enable fails its step for good.
-	gone := e.insert(`INSERT INTO tags (workspace_id, name) VALUES (?, 'Gone') RETURNING id`, f.ws)
-	def = chain(tagNode("tag", gone.String()))
+	goneTag := e.insert(`INSERT INTO tags (workspace_id, name) VALUES (?, 'Gone') RETURNING id`, f.ws)
+	def = chain(tagNode("tag", goneTag.String()))
 	def["trigger"].(map[string]any)["config"] = map[string]any{"surveyId": f.survey.String(), "endingCardIds": []any{}}
 	wf3 := e.enabled(f, "Deleted tag", def)
-	e.exec(`DELETE FROM tags WHERE id = ?`, gone)
+	e.exec(`DELETE FROM tags WHERE id = ?`, goneTag)
 	third := e.respondAs(f, nil, `{}`)
 	run3 := e.startRun(f, wf3, third)
 	if err := e.runner.Work(context.Background(), runJob(run3, wf3, f.ws, 1)); err != nil || e.text(`SELECT status FROM workflow_runs WHERE id = ?`, run3) != RunFailed {
@@ -286,4 +294,85 @@ func TestTestSend(t *testing.T) {
 	if e.count(`SELECT count(*) FROM workflow_runs`) != 0 {
 		t.Fatal("a test send created a run")
 	}
+
+	// A failure carries a reason code the builder shows in the member's language, besides the English detail.
+	_, missingURL := serve(t, http.StatusNotFound)
+	missing := chain(httpNode("notify", missingURL+"/hook"))
+	missing["trigger"].(map[string]any)["config"] = map[string]any{"surveyId": f.survey.String(), "endingCardIds": []any{}}
+	w = e.create(f.owner, f.ws, "Missing receiver", missing)
+	if code, out := send(f.owner, "notify"); code != http.StatusOK || out.OK || out.Status != http.StatusNotFound || out.Reason != reasonStatus || out.Message != "Status 404" {
+		t.Fatalf("failed test send %d %+v", code, out)
+	}
+}
+
+// Enable and the dry run refuse a tag that is not the workspace's and an attribute key a workflow cannot write, which would otherwise fail a run for every response.
+func TestEnableChecksStepTargets(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	e.contactFixture(f)
+	otherWS := e.insert(`INSERT INTO workspaces (organization_id, name) VALUES (?, 'Other') RETURNING id`, f.org)
+	foreignTag := e.insert(`INSERT INTO tags (workspace_id, name) VALUES (?, 'Elsewhere') RETURNING id`, otherWS)
+	ownTag := e.insert(`INSERT INTO tags (workspace_id, name) VALUES (?, 'Mine') RETURNING id`, f.ws)
+	def := chain(
+		tagNode("own", ownTag.String()),
+		tagNode("foreign", foreignTag.String()),
+		attributeNode("unique", "email", "{{answers.q1}}"),
+		attributeNode("missing", "missing", "x"),
+		attributeNode("plan", "plan", "x"),
+	)
+	def["trigger"].(map[string]any)["config"] = map[string]any{"surveyId": f.survey.String(), "endingCardIds": []any{}}
+	w := e.create(f.owner, f.ws, "Targets", def)
+
+	p := e.problem(e.lifecycle(f.owner, w.ID, "enable"), http.StatusUnprocessableEntity, "workflow_not_executable", notExecutableDetail)
+	want := []struct{ name, reason string }{
+		{tagField, tagReason(foreignTag.String())},
+		{attributeField, `Attribute "email" is unique to each contact and cannot be set by a workflow.`},
+		{attributeField, `Attribute "missing" does not exist in this workspace.`},
+	}
+	if len(p.InvalidParams) != len(want) {
+		t.Fatalf("%+v", p.InvalidParams)
+	}
+	for i, w := range want {
+		if p.InvalidParams[i].Name != w.name || p.InvalidParams[i].Reason != w.reason {
+			t.Fatalf("param %d %+v, want %+v", i, p.InvalidParams[i], w)
+		}
+	}
+	var tested envelope[TestResult]
+	e.ok(e.lifecycle(f.owner, w.ID, "test"), http.StatusOK, &tested)
+	if tested.Data.OK || len(tested.Data.Problems) != 3 || tested.Data.Problems[0].Code != problemTagNotFound || tested.Data.Problems[1].Code != problemAttributeKey || tested.Data.Problems[2].Code != problemAttributeKey {
+		t.Fatalf("test %+v", tested.Data)
+	}
+}
+
+// Which survey's responses an HTTP request sends, and copying one into a workflow that can be retargeted, are a manager's decision like the request itself.
+func TestHTTPRequestTriggerAndDuplicateNeedManage(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	writer := e.user("writer@example.com")
+	e.member(f.org, writer, "member")
+	e.grant(f.org, f.ws, writer, "readWrite")
+	_, url := serve(t, http.StatusOK)
+	def := chain(httpNode("notify", url+"/hook", map[string]any{"name": "Authorization", "secret": map[string]any{"value": "Bearer abcdefghijkl"}}))
+	def["trigger"].(map[string]any)["config"] = map[string]any{"surveyId": f.survey.String(), "endingCardIds": []any{}}
+	w := e.create(f.owner, f.ws, "With HTTP", def)
+	other := e.insert(`INSERT INTO surveys (workspace_id, name, status) VALUES (?, 'Other', 'inProgress') RETURNING id`, f.ws)
+
+	var stored map[string]any
+	if err := json.Unmarshal(w.Definition, &stored); err != nil {
+		t.Fatal(err)
+	}
+	stored["trigger"].(map[string]any)["config"].(map[string]any)["surveyId"] = other.String()
+	e.problem(e.v3(writer, http.MethodPatch, "/api/v3/workflows/"+w.ID.String(), map[string]any{"definition": stored}), http.StatusForbidden, "forbidden", httpRequestTriggerManaged)
+	e.problem(e.v3(writer, http.MethodPost, "/api/v3/workflows/"+w.ID.String()+"/duplicate", map[string]any{}), http.StatusForbidden, "forbidden", httpRequestDuplicateManaged)
+
+	e.ok(e.v3(f.owner, http.MethodPatch, "/api/v3/workflows/"+w.ID.String(), map[string]any{"definition": stored}), http.StatusOK, nil)
+	e.ok(e.v3(f.owner, http.MethodPost, "/api/v3/workflows/"+w.ID.String()+"/duplicate", map[string]any{}), http.StatusCreated, nil)
+
+	// Without an HTTP request a writer retargets and copies freely.
+	plain := chain(tagNode("t", uuid.NewString()))
+	plain["trigger"].(map[string]any)["config"] = map[string]any{"surveyId": f.survey.String(), "endingCardIds": []any{}}
+	tagOnly := e.create(writer, f.ws, "Tag only", plain)
+	plain["trigger"].(map[string]any)["config"] = map[string]any{"surveyId": other.String(), "endingCardIds": []any{}}
+	e.ok(e.v3(writer, http.MethodPatch, "/api/v3/workflows/"+tagOnly.ID.String(), map[string]any{"definition": plain}), http.StatusOK, nil)
+	e.ok(e.v3(writer, http.MethodPost, "/api/v3/workflows/"+tagOnly.ID.String()+"/duplicate", map[string]any{}), http.StatusCreated, nil)
 }

@@ -57,12 +57,30 @@ type actionEnv struct {
 	retry bool
 }
 
-// outcome is how a step ended. permanent marks a failure no retry can change (a refused URL, a 4xx, a tag that does not exist), which fails the run at once.
+// outcome is how a step ended. permanent marks a failure no retry can change (a refused URL, a 4xx, a tag that does not exist), which fails the run at once. reason classifies a failed request or chat step for the builder's test send, which shows it in the member's language.
 type outcome struct {
 	status    string
 	output    map[string]any
 	err       string
 	permanent bool
+	reason    string
+}
+
+// The reasons a request or chat step failed, TestSendResult.Reason.
+const (
+	reasonURLRefused  = "url_refused"
+	reasonTimeout     = "timeout"
+	reasonUnreachable = "unreachable"
+	reasonRedirect    = "redirect"
+	reasonStatus      = "status"
+	reasonSecret      = "secret_unreadable"
+	reasonConfig      = "invalid_config"
+)
+
+// because is o classified as reason.
+func (o outcome) because(reason string) outcome {
+	o.reason = reason
+	return o
 }
 
 func succeeded(output map[string]any) outcome { return outcome{status: StepSucceeded, output: output} }
@@ -126,11 +144,15 @@ func (a *actions) httpRequest(ctx context.Context, env actionEnv, cfg *HTTPReque
 		case h.Secret != nil:
 			plain, err := openSecret(a.cipher, *h.Secret, headerSecretContext(env.workspaceID, cfg.URL))
 			if err != nil {
-				return failed(fmt.Sprintf("The secret of header %s cannot be read; enter it again", h.Name), true, nil)
+				return failed(fmt.Sprintf("The secret of header %s cannot be read; enter it again", h.Name), true, nil).because(reasonSecret)
 			}
 			value = plain
 		case h.Value != nil:
 			value = *h.Value
+		}
+		// The transport refuses such a value on every attempt, so it fails the step for good instead of being retried as a network error.
+		if strings.ContainsFunc(value, isControl) {
+			return failed(fmt.Sprintf("The value of header %s contains a line break or another control character", h.Name), true, nil).because(reasonConfig)
 		}
 		header.Add(h.Name, value)
 	}
@@ -138,7 +160,7 @@ func (a *actions) httpRequest(ctx context.Context, env actionEnv, cfg *HTTPReque
 	if strings.TrimSpace(cfg.Body) != "" {
 		rendered, err := env.template.RenderJSON(cfg.Body)
 		if err != nil {
-			return failed("The body template is not valid JSON", true, nil)
+			return failed("The body template is not valid JSON", true, nil).because(reasonConfig)
 		}
 		body = rendered
 		header.Set("Content-Type", "application/json")
@@ -149,11 +171,11 @@ func (a *actions) httpRequest(ctx context.Context, env actionEnv, cfg *HTTPReque
 	if cfg.SigningSecret != nil {
 		key, err := openSecret(a.cipher, *cfg.SigningSecret, signingSecretContext(env.workspaceID, cfg.URL))
 		if err != nil {
-			return failed("The signing secret cannot be read; enter it again", true, nil)
+			return failed("The signing secret cannot be read; enter it again", true, nil).because(reasonSecret)
 		}
 		signature, err := webhook.Sign(key, env.messageID, now, body)
 		if err != nil {
-			return failed("The signing secret cannot sign requests; enter it again", true, nil)
+			return failed("The signing secret cannot sign requests; enter it again", true, nil).because(reasonSecret)
 		}
 		header.Set("Webhook-Signature", signature)
 	}
@@ -163,14 +185,14 @@ func (a *actions) httpRequest(ctx context.Context, env actionEnv, cfg *HTTPReque
 func (a *actions) chatMessage(ctx context.Context, env actionEnv, actionType string, cfg *ChatMessageConfig) outcome {
 	target, err := openSecret(a.cipher, cfg.WebhookURL, chatSecretContext(env.workspaceID, actionType))
 	if err != nil {
-		return failed("The webhook URL cannot be read; enter it again", true, nil)
+		return failed("The webhook URL cannot be read; enter it again", true, nil).because(reasonSecret)
 	}
 	if !ValidChatWebhookURL(actionType, target) {
-		return failed(chatURLInvalid(actionType), true, nil)
+		return failed(chatURLInvalid(actionType), true, nil).because(reasonConfig)
 	}
 	payload, err := encodeJSON(chatPayload(actionType, env.template, cfg.Message))
 	if err != nil {
-		return failed(err.Error(), true, nil)
+		return failed(err.Error(), true, nil).because(reasonConfig)
 	}
 	return a.deliver(ctx, env, http.MethodPost, target, http.Header{"Content-Type": {"application/json"}}, payload)
 }
@@ -178,19 +200,25 @@ func (a *actions) chatMessage(ctx context.Context, env actionEnv, actionType str
 // slackEscape escapes the three characters Slack's mrkdwn reads as markup in a value, so an answer cannot mention a channel or forge a link; the template's own markup is left alone.
 var slackEscape = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace
 
+// markdownEscape backslash-escapes the characters Discord's markdown and a Teams Adaptive Card's read as markup in a value: emphasis, strikethrough, code, spoilers, headings, quotes, list markers, [text](url) links, and Discord's <...> mentions, channels, emoji and timestamps. An answer then shows as typed instead of as formatting or a disguised link; the template's own markup is left alone.
+var markdownEscape = strings.NewReplacer(
+	`\`, `\\`, "*", `\*`, "_", `\_`, "~", `\~`, "`", "\\`", "|", `\|`,
+	"[", `\[`, "]", `\]`, "(", `\(`, ")", `\)`, "#", `\#`, ">", `\>`, "<", `\<`, "-", `\-`,
+).Replace
+
 // chatPayload is the message in the shape each chat's incoming webhooks take: Slack's text, Discord's content with every mention disabled so an answer cannot ping a channel, and a Teams Adaptive Card, which both connectors and Power Automate workflows accept.
 func chatPayload(actionType string, t *Template, message string) any {
 	switch actionType {
 	case ActionSlackMessage:
 		return map[string]any{"text": t.RenderText(message, slackEscape)}
 	case ActionDiscordMessage:
-		text := t.RenderText(message, func(s string) string { return s })
+		text := t.RenderText(message, markdownEscape)
 		if utf8.RuneCountInString(text) > discordMaxContent {
 			text = string([]rune(text)[:discordMaxContent-1]) + "…"
 		}
 		return map[string]any{"content": text, "allowed_mentions": map[string]any{"parse": []string{}}}
 	}
-	text := t.RenderText(message, func(s string) string { return s })
+	text := t.RenderText(message, markdownEscape)
 	return map[string]any{
 		"type": "message",
 		"attachments": []any{map[string]any{
@@ -216,7 +244,7 @@ func (a *actions) deliver(ctx context.Context, env actionEnv, method, rawURL str
 		if e, ok := apperr.As(err); ok {
 			msg = e.Message
 		}
-		return failed("URL refused: "+msg, refusedURL[msg], nil)
+		return failed("URL refused: "+msg, refusedURL[msg], nil).because(reasonURLRefused)
 	}
 	attempts := 1
 	if env.retry {
@@ -231,17 +259,17 @@ func (a *actions) deliver(ctx context.Context, env actionEnv, method, rawURL str
 		}
 		switch {
 		case errors.Is(err, ssrf.ErrTimeout):
-			last = failed(fmt.Sprintf("No answer within %d seconds", int(requestTimeout.Seconds())), false, output)
+			last = failed(fmt.Sprintf("No answer within %d seconds", int(requestTimeout.Seconds())), false, output).because(reasonTimeout)
 		case err != nil:
-			last = failed("Request failed: "+err.Error(), false, output)
+			last = failed("Request failed: "+err.Error(), false, output).because(reasonUnreachable)
 		case status >= 200 && status < 300:
 			return succeeded(output)
 		case status >= 300 && status < 400:
-			return failed(fmt.Sprintf("Redirect status %d, which is not followed", status), true, output)
+			return failed(fmt.Sprintf("Redirect status %d, which is not followed", status), true, output).because(reasonRedirect)
 		case status == http.StatusRequestTimeout || status == http.StatusTooManyRequests || status >= 500:
-			last = failed(fmt.Sprintf("Status %d", status), false, output)
+			last = failed(fmt.Sprintf("Status %d", status), false, output).because(reasonStatus)
 		default:
-			return failed(fmt.Sprintf("Status %d", status), true, output)
+			return failed(fmt.Sprintf("Status %d", status), true, output).because(reasonStatus)
 		}
 		if attempt == attempts {
 			break
