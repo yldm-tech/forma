@@ -511,7 +511,7 @@ export const en: SiteContent = {
       },
       audit: {
         title: "Audit events",
-        body: "Sign-ins, changes to members and settings, and changes to surveys and other records are written as audit events to the server's log stream, with who acted, what changed and when. Forma does not store them in its database or show them in the app: on a self-hosted instance, collect and keep them with your log pipeline, and set `AUDIT_LOG_GET_USER_IP=1` behind a trusted proxy to record client IP addresses. The events leave out answers and contact attribute values and record only which fields changed.",
+        body: "Sign-ins, changes to members and settings, and changes to surveys and other records are written as audit events to the server's log stream, with who acted, what changed and when. Forma does not store them in its database or show them in the app: on a self-hosted instance, collect and keep them with your log pipeline, and set `AUDIT_LOG_GET_USER_IP=1` behind a trusted proxy to record client IP addresses. The events record what changed, with names, email addresses, secrets and other personal fields masked; for responses and contacts they record only which answers and attributes changed, never their values.",
       },
       policyLink: "Read the full policy on GitHub →",
     },
