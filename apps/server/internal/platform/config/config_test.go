@@ -252,6 +252,23 @@ func TestLoadForMigrateNeedsOnlyTheDatabase(t *testing.T) {
 	}
 }
 
+// `forma migrate` runs the forma2 refusal before migrating, so it reads the switch that skips it, with the server's 1/0 syntax.
+func TestLoadForMigrateReadsIgnoreForma2Data(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://forma:forma@localhost:5432/forma?sslmode=disable")
+	unsetEnv(t, "FORMA_IGNORE_FORMA2_DATA")
+	if cfg, err := LoadForMigrate(); err != nil || cfg.IgnoreForma2Data {
+		t.Fatalf("unset: IgnoreForma2Data %v, err %v; want false", cfg.IgnoreForma2Data, err)
+	}
+	t.Setenv("FORMA_IGNORE_FORMA2_DATA", "1")
+	if cfg, err := LoadForMigrate(); err != nil || !cfg.IgnoreForma2Data {
+		t.Fatalf("1: IgnoreForma2Data %v, err %v; want true", cfg.IgnoreForma2Data, err)
+	}
+	t.Setenv("FORMA_IGNORE_FORMA2_DATA", "yes")
+	if _, err := LoadForMigrate(); err == nil {
+		t.Fatal("LoadForMigrate accepted FORMA_IGNORE_FORMA2_DATA=yes")
+	}
+}
+
 func TestLoadForMigratePrefersMigrateDatabaseURL(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://app@db/forma")
 	t.Setenv("MIGRATE_DATABASE_URL", " postgres://owner@db/forma ")
