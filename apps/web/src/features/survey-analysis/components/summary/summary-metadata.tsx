@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../../components/ui/tooltip";
 import { cn } from "../../../../lib/cn";
 import { formatTimeToComplete, visiblePercentage } from "../../lib/summary";
+import { useIsSharedSummary } from "./summary-parts";
 
 export type SummaryTab = "dropOffs" | "quotas" | "impressions";
 
@@ -87,6 +88,7 @@ export const SummaryMetadata = ({
   setTab: (tab: SummaryTab | undefined) => void;
 }) => {
   const { t } = useTranslation();
+  const isShared = useIsSharedSummary();
   const toggle = (value: SummaryTab) => setTab(tab === value ? undefined : value);
 
   const interactive = (
@@ -126,13 +128,21 @@ export const SummaryMetadata = ({
         "grid gap-4 sm:grid-cols-2 md:grid-cols-3 md:gap-x-2 lg:grid-cols-3 2xl:grid-cols-5",
         quotasCount > 0 && "2xl:grid-cols-6"
       )}>
-      {interactive(
-        "impressions",
-        t("workspace.surveys.summary.impressions"),
-        valueOrDash(surveySummary.displayCount),
-        null,
-        t("workspace.surveys.summary.impressions_tooltip")
-      )}
+      {/* The impressions tab lists who saw the survey, which a results link never shows. */}
+      {isShared
+        ? stat(
+            t("workspace.surveys.summary.impressions"),
+            valueOrDash(surveySummary.displayCount),
+            null,
+            t("workspace.surveys.summary.impressions_tooltip")
+          )
+        : interactive(
+            "impressions",
+            t("workspace.surveys.summary.impressions"),
+            valueOrDash(surveySummary.displayCount),
+            null,
+            t("workspace.surveys.summary.impressions_tooltip")
+          )}
       {stat(
         t("workspace.surveys.summary.starts"),
         valueOrDash(surveySummary.totalResponses),

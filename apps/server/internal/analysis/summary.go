@@ -292,6 +292,11 @@ func (s *Service) Summary(ctx context.Context, userID, surveyID uuid.UUID, filte
 	if err != nil {
 		return nil, err
 	}
+	return s.summary(ctx, sv, filter)
+}
+
+// summary is the survey's statistics over the responses matching the filter, for a caller that has authorized reading them.
+func (s *Service) summary(ctx context.Context, sv *surveyDoc, filter *response.Criteria) (*Summary, error) {
 	clause, err := response.Where(ctx, s.segments, sv.Survey, filter)
 	if err != nil {
 		return nil, err
@@ -300,13 +305,13 @@ func (s *Service) Summary(ctx context.Context, userID, surveyID uuid.UUID, filte
 	var displays int
 	var quotas []QuotaProgress
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := readSummaryResponses(ctx, tx, surveyID, clause, agg.add); err != nil {
+		if err := readSummaryResponses(ctx, tx, sv.ID, clause, agg.add); err != nil {
 			return err
 		}
-		if displays, err = displayCount(ctx, tx, surveyID, filter, clause); err != nil {
+		if displays, err = displayCount(ctx, tx, sv.ID, filter, clause); err != nil {
 			return err
 		}
-		quotas, err = quotaProgress(ctx, tx, surveyID)
+		quotas, err = quotaProgress(ctx, tx, sv.ID)
 		return err
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	if err != nil {
