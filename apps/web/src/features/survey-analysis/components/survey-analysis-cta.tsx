@@ -6,6 +6,7 @@ import {
   Eye,
   ListRestart,
   MoreHorizontalIcon,
+  PresentationIcon,
   RefreshCcwIcon,
   SparklesIcon,
   SquarePenIcon,
@@ -33,6 +34,7 @@ import { surveysApi } from "../../surveys/api";
 import { surveyKeys } from "../../surveys/list/query";
 import { analysisApi, invalidateSurveyAnalysis } from "../api";
 import { ShareSurveyModal } from "./share/share-survey-modal";
+import { ShareResultsDialog } from "./shared-results/share-results-dialog";
 import { useSingleUseId } from "./share/use-single-use-id";
 import { SuccessMessage } from "./success-message";
 import { SurveyStatusDropdown } from "./survey-status-dropdown";
@@ -152,6 +154,7 @@ export const SurveyAnalysisCTA = ({
   const search = location.search as AnalysisSearch & Record<string, unknown>;
   const isReadOnly = workspace.access.isReadOnly;
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isShareResultsOpen, setIsShareResultsOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -266,6 +269,13 @@ export const SurveyAnalysisCTA = ({
     },
     exampleResponsesAction,
     {
+      icon: PresentationIcon,
+      tooltip: t("workspace.analysis.result_shares.title"),
+      onClick: () => setIsShareResultsOpen(true),
+      // Publishing the results is a writer's decision, like publishing the survey.
+      isVisible: !isReadOnly,
+    },
+    {
       icon: SquarePenIcon,
       tooltip: t("common.edit"),
       onClick: () => {
@@ -345,6 +355,9 @@ export const SurveyAnalysisCTA = ({
         />
       )}
       <SuccessMessage survey={survey} workspace={workspace} search={search} setSearch={setSearch} />
+      {!isReadOnly && (
+        <ShareResultsDialog survey={survey} open={isShareResultsOpen} setOpen={setIsShareResultsOpen} />
+      )}
 
       {answeredCount > 0 && (
         <EditPublicSurveyAlertDialog

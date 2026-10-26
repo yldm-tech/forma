@@ -1682,6 +1682,51 @@ checksums:
     workspace/analysis/new_responses_pill: 9d45e8c6a91b67744980b06b26ac3903
     workspace/analysis/nps_formula_tooltip: 22f37aac6d65e65a0d787badcb4cf4f5
     workspace/analysis/refresh: 8dab72d1eded5437272bb02c543e4042
+    workspace/analysis/result_shares/all_responses: 70e9dc26a05c69a6842f64ed793d36ae
+    workspace/analysis/result_shares/available_until: a13172fa78296a9cb7aa69370b21726b
+    workspace/analysis/result_shares/counts_only: af505bb3e242378c4d0a7b0a539f2cdb
+    workspace/analysis/result_shares/create: 0cbb6dc593591ff291d0f39715b32880
+    workspace/analysis/result_shares/create_title: 8c0e0f2fec815f8a8b51ac2d34c6c726
+    workspace/analysis/result_shares/created: 42a6dcd88060f2909f6fab9998914216
+    workspace/analysis/result_shares/created_by: f025c53d98519808884b5fce7dcb0bf3
+    workspace/analysis/result_shares/description: 00576967941c66fb16b2d53fd3508a43
+    workspace/analysis/result_shares/edit_link: 88f99a4ec2cab4b5217f7cf9b8984f34
+    workspace/analysis/result_shares/edit_title: 88f99a4ec2cab4b5217f7cf9b8984f34
+    workspace/analysis/result_shares/expiration_description: 338736a6cc5366fe0ecc10493993cb75
+    workspace/analysis/result_shares/expiration_never_description: 404e850e4ee4154192e2242c43db7650
+    workspace/analysis/result_shares/expired_on: 1cf4b3aee3f1e8a79a4a266589d8a4f7
+    workspace/analysis/result_shares/expires_on: 67b3cd8021cffffa2e9c1804e6b0f821
+    workspace/analysis/result_shares/filter_frozen_all: 4d9e8cbb4c4ff8672a444b32d8c2bf0e
+    workspace/analysis/result_shares/filter_frozen_filtered: caa9714063e65f7bdec59a088ee5c671
+    workspace/analysis/result_shares/filter_note_all: 109347d0044936974aee603c90555db3
+    workspace/analysis/result_shares/filter_note_filtered: ac89639be20570ac8fbfe2b03e16a526
+    workspace/analysis/result_shares/filtered_responses: 7f0910c26a8213ec21b575b055219927
+    workspace/analysis/result_shares/filtered_view: efe9b41d8c72f77a1334ff9fefa63210
+    workspace/analysis/result_shares/link_address: e3b3a56d04e821f44e27f48e70e19af7
+    workspace/analysis/result_shares/link_copied: db71229faeca1d479c346c40030f4061
+    workspace/analysis/result_shares/links_title: 0735ea4c3a2d21e4c4a78c974b3e74c5
+    workspace/analysis/result_shares/name_label: 914850cd5f4d164a9b11495a025ddf65
+    workspace/analysis/result_shares/name_placeholder: 26d6a3b238f08a93873e4ad0624b9783
+    workspace/analysis/result_shares/no_expiration: 0e784880d170f8ea5a1fe439eb0bba4d
+    workspace/analysis/result_shares/no_links: adf8d24002d424f771e8e387b5cd3386
+    workspace/analysis/result_shares/reveal_description: a81b087c1833c881ecbf099973faeb29
+    workspace/analysis/result_shares/reveal_hidden_field: 510ee890094b1c2d0b2e6cae7899e114
+    workspace/analysis/result_shares/reveal_legend: adc32d0ff2ee3ed76992e53cd1a343af
+    workspace/analysis/result_shares/reveal_other_values: 6cce545e63965534398301cec371690b
+    workspace/analysis/result_shares/revealed_count: b1d214579c93e55131a2315fa9a77f0b
+    workspace/analysis/result_shares/revoke: 6f4ddc08dce2d79b044db52f554e74af
+    workspace/analysis/result_shares/revoke_body: 8e26aee4ec2cf19c07a413d52fe5f5fa
+    workspace/analysis/result_shares/revoke_link: 404ebbf8d79e05784d107b7d7e8ed741
+    workspace/analysis/result_shares/revoke_title: cb00a8d29776b6b2b624ccbe19064943
+    workspace/analysis/result_shares/revoked: d538e774261f9130891ddfab277fa14a
+    workspace/analysis/result_shares/shared_results: dfe34bd966c4308aa8d29d72a4a6aa17
+    workspace/analysis/result_shares/title: 5db5f8ec8f0897c6da369e4d5e56f2e0
+    workspace/analysis/result_shares/unavailable_description: 6422a2735feab85736a32679571d7c2a
+    workspace/analysis/result_shares/unavailable_title: a10db84cea0bc0e42329517ba9a272c5
+    workspace/analysis/result_shares/untitled_link: 718e3e8323ac3a58eb10c2f143fbe795
+    workspace/analysis/result_shares/updated: d49cf868720a361e7772edfa6def6c26
+    workspace/analysis/result_shares/withheld_card: 14b517e9be275c82307c1769005fc8f1
+    workspace/analysis/result_shares/withheld_notice: 4dc4e2fba7923cb9b3e321ec3567aad1
     workspace/analysis/search/chip: c85a01aa86d4b45d821978d2159e0f1b
     workspace/analysis/search/clear: 0ee4a80abe134b7edd90c74f03638877
     workspace/analysis/search/placeholder: 10d646cd0c34d524946bcde9c1405b6f

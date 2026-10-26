@@ -4,7 +4,7 @@ import type { TSurvey, TSurveyElementSummary, TSurveySummaryBreakdown } from "@f
 import { getTextContent } from "@forma/types/surveys/validation";
 import { Link, useParams } from "@tanstack/react-router";
 import { BarChart, BarChartHorizontal, EyeIcon, InboxIcon, SkipForwardIcon } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import { type CSSProperties, type ReactNode, createContext, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { IdBadge } from "../../../../components/ui/id-badge";
 import { ProgressBar } from "../../../../components/ui/progress-bar";
@@ -21,6 +21,12 @@ import {
 } from "../../lib/summary";
 import { RatingResponse } from "../response-values/rating-response";
 import { useElementImpressions } from "./element-impressions-context";
+
+/** Whether the summaries render in a read-only results link rather than the analysis page: there a bar filters nothing, a sample opens no response, and nobody who answered is named. */
+export const SharedSummaryContext = createContext(false);
+
+/** True inside a read-only results link. */
+export const useIsSharedSummary = () => useContext(SharedSummaryContext);
 
 /** What a click on a summary bar does: forma2's setFilter, adding or replacing the element's filter row. */
 export type SetSummaryFilter = (
@@ -128,7 +134,34 @@ export const SampleTruncationNotice = ({
   );
 };
 
-/** A bar or cell that filters the responses by what it shows. */
+/** A row or cell that filters the responses by what it shows; in a read-only results link it is shown, not offered. */
+export const FilterTarget = ({
+  children,
+  onClick,
+  className,
+  style,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  className?: string;
+  style?: CSSProperties;
+}) => {
+  const isShared = useIsSharedSummary();
+  if (isShared) {
+    return (
+      <div className={cn(className, "cursor-default hover:opacity-100")} style={style}>
+        {children}
+      </div>
+    );
+  }
+  return (
+    <button type="button" className={className} style={style} onClick={onClick}>
+      {children}
+    </button>
+  );
+};
+
+/** A bar or cell that filters the responses by what it shows, saying so in a tooltip; in a read-only results link it is shown, not offered. */
 export const ClickableBarSegment = ({
   children,
   onClick,
@@ -141,6 +174,14 @@ export const ClickableBarSegment = ({
   style?: CSSProperties;
 }) => {
   const { t } = useTranslation();
+  const isShared = useIsSharedSummary();
+  if (isShared) {
+    return (
+      <div className={cn(className, "cursor-default")} style={style}>
+        {children}
+      </div>
+    );
+  }
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>

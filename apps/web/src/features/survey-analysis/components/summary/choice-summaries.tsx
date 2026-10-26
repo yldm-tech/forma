@@ -15,15 +15,18 @@ import { Button } from "../../../../components/ui/button";
 import { IdBadge } from "../../../../components/ui/id-badge";
 import { ProgressBar } from "../../../../components/ui/progress-bar";
 import { TooltipRenderer } from "../../../../components/ui/tooltip";
+import { cn } from "../../../../lib/cn";
 import { SUMMARY_FILTER_OPERATOR, pictureFilterValue } from "../../lib/filters";
 import { getChoiceIdByValue, getContactIdentifier } from "../../lib/responses";
 import { convertFloatToNDecimal, defaultBreakdownView } from "../../lib/summary";
 import {
   BreakdownBars,
   ElementSummaryHeader,
+  FilterTarget,
   SampleTruncationNotice,
   type SetSummaryFilter,
   ViewToggle,
+  useIsSharedSummary,
 } from "./summary-parts";
 
 type ChoiceSummaryResult = TSurveyElementSummaryMultipleChoice["choices"][number];
@@ -39,6 +42,7 @@ export const MultipleChoiceSummary = ({
   setFilter: SetSummaryFilter;
 }) => {
   const { t } = useTranslation();
+  const isShared = useIsSharedSummary();
   const [visibleOtherResponses, setVisibleOtherResponses] = useState(10);
   const [otherView, setOtherView] = useState(() =>
     defaultBreakdownView(elementSummary.choices.find((choice) => choice.othersBreakdown)?.othersBreakdown)
@@ -96,14 +100,24 @@ export const MultipleChoiceSummary = ({
             return (
               <Fragment key={result.value}>
                 <div
-                  role="button"
-                  tabIndex={0}
-                  className="group w-full cursor-pointer"
-                  onClick={() => applyChoiceFilter(result)}
-                  onKeyDown={(event) => handleChoiceKeyDown(event, result)}>
+                  // A results link shows the row without offering it as a filter.
+                  {...(isShared
+                    ? { className: "group w-full" }
+                    : {
+                        role: "button",
+                        tabIndex: 0,
+                        className: "group w-full cursor-pointer",
+                        onClick: () => applyChoiceFilter(result),
+                        onKeyDown: (event: KeyboardEvent<HTMLDivElement>) =>
+                          handleChoiceKeyDown(event, result),
+                      })}>
                   <div className="text flex flex-col justify-between px-2 pb-2 sm:flex-row">
                     <div className="mr-8 flex w-full justify-between gap-x-2 sm:justify-normal">
-                      <p className="font-semibold text-slate-700 underline-offset-4 group-hover:underline">
+                      <p
+                        className={cn(
+                          "font-semibold text-slate-700 underline-offset-4",
+                          !isShared && "group-hover:underline"
+                        )}>
                         {result.value}
                       </p>
                       {choiceId && <IdBadge id={choiceId} />}
@@ -143,18 +157,21 @@ export const MultipleChoiceSummary = ({
                       <div className="col-span-1 pl-6">
                         {t("workspace.surveys.summary.other_values_found")}
                       </div>
-                      <div className="col-span-1 pl-6">{survey.type === "app" && t("common.user")}</div>
+                      <div className="col-span-1 pl-6">
+                        {survey.type === "app" && !isShared && t("common.user")}
+                      </div>
                     </div>
                     {others.slice(0, visibleOtherResponses).map((other, idx) => (
                       // Typed values repeat; the position tells the rows apart.
                       // oxlint-disable-next-line react/no-array-index-key -- see above
                       <div key={`${idx}-${String(other.value)}`} dir="auto">
-                        {survey.type === "link" && (
+                        {/* A results link names nobody, so an app survey's values are listed like a link survey's. */}
+                        {(survey.type === "link" || isShared) && (
                           <div className="ph-no-capture col-span-1 m-2 flex h-10 items-center rounded-lg pl-4 text-sm font-medium text-slate-900">
                             <span>{other.value}</span>
                           </div>
                         )}
-                        {survey.type === "app" && other.contact && (
+                        {survey.type === "app" && !isShared && other.contact && (
                           <Link
                             to="/workspaces/$workspaceId/contacts/$contactId"
                             params={{ workspaceId: survey.workspaceId, contactId: other.contact.id }}
@@ -230,8 +247,7 @@ export const PictureChoiceSummary = ({
         {elementSummary.choices.map((result, index) => {
           const choiceId = getChoiceIdByValue(result.imageUrl, elementSummary.element);
           return (
-            <button
-              type="button"
+            <FilterTarget
               className="w-full cursor-pointer hover:opacity-80"
               key={result.id}
               onClick={() =>
@@ -258,7 +274,7 @@ export const PictureChoiceSummary = ({
                 </div>
               </div>
               <ProgressBar barColor="bg-slate-700" progress={result.percentage / 100 || 0} />
-            </button>
+            </FilterTarget>
           );
         })}
       </div>
@@ -349,8 +365,7 @@ export const MatrixElementSummary = ({
                       tooltipContent={t("common.count_responses", {
                         count: Math.round((percentage / 100) * totalResponsesForRow),
                       })}>
-                      <button
-                        type="button"
+                      <FilterTarget
                         style={{ backgroundColor: `rgba(148,163,184,${getOpacityLevel(percentage)})` }}
                         className="hover:outline-ink m-1 flex h-full w-40 cursor-pointer items-center justify-center rounded-sm p-4 text-sm text-slate-950 hover:outline-solid"
                         onClick={() =>
@@ -363,7 +378,7 @@ export const MatrixElementSummary = ({
                           )
                         }>
                         {percentage}
-                      </button>
+                      </FilterTarget>
                     </TooltipRenderer>
                   </td>
                 ))}

@@ -171,7 +171,7 @@ const parseDisplay = (raw: DisplayWire): TDisplayWithContact => ({
 });
 
 /** The summary as the server sends it, its samples' updatedAt revived. */
-const parseSummary = (raw: TSurveySummary): TSurveySummary => ({
+export const parseSummary = (raw: TSurveySummary): TSurveySummary => ({
   ...raw,
   summary: raw.summary.map((entry) => {
     if ("samples" in entry) {

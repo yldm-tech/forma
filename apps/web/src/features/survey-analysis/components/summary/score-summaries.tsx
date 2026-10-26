@@ -22,6 +22,7 @@ import { RatingResponse } from "../response-values/rating-response";
 import {
   ClickableBarSegment,
   ElementSummaryHeader,
+  FilterTarget,
   RatingScaleLegend,
   SatisfactionIndicator,
   type SetSummaryFilter,
@@ -115,8 +116,7 @@ export const NPSSummary = ({
         <div className="mt-4 px-4 pt-4 pb-6 md:px-6">
           <div className="space-y-5 text-sm md:text-base">
             {NPS_GROUPS.map((group) => (
-              <button
-                type="button"
+              <FilterTarget
                 className="w-full cursor-pointer hover:opacity-80"
                 key={group}
                 onClick={() =>
@@ -144,7 +144,7 @@ export const NPSSummary = ({
                   barColor={NPS_GROUP_BAR_COLORS[group]}
                   progress={elementSummary[group].percentage / 100}
                 />
-              </button>
+              </FilterTarget>
             ))}
           </div>
         </div>
@@ -281,8 +281,7 @@ const RatingLikeSummary = ({
           <div className="space-y-5 text-sm md:text-base">
             {elementSummary.choices.map((result, index) => (
               <div key={`${result.rating}-${index}`}>
-                <button
-                  type="button"
+                <FilterTarget
                   className="w-full cursor-pointer hover:opacity-80"
                   onClick={() => filterByRating(result.rating)}>
                   <div className="text flex justify-between px-2 pb-2">
@@ -305,7 +304,7 @@ const RatingLikeSummary = ({
                     </p>
                   </div>
                   <ProgressBar barColor="bg-slate-700" progress={result.percentage / 100} />
-                </button>
+                </FilterTarget>
               </div>
             ))}
           </div>
@@ -498,9 +497,8 @@ export const SliderSummary = ({
                   </>
                 );
                 return bin.from === bin.to ? (
-                  <button
+                  <FilterTarget
                     key={label}
-                    type="button"
                     className="w-full cursor-pointer text-left hover:opacity-80"
                     onClick={() =>
                       setFilter(
@@ -512,7 +510,7 @@ export const SliderSummary = ({
                       )
                     }>
                     {row}
-                  </button>
+                  </FilterTarget>
                 ) : (
                   <div key={label}>{row}</div>
                 );
@@ -657,8 +655,7 @@ export const ConsentSummary = ({
       <ElementSummaryHeader elementSummary={elementSummary} survey={survey} />
       <div className="space-y-5 px-4 pt-4 pb-6 text-sm md:px-6 md:text-base">
         {items.map((item) => (
-          <button
-            type="button"
+          <FilterTarget
             className="group w-full cursor-pointer"
             key={item.filterValue}
             onClick={() =>
@@ -675,7 +672,7 @@ export const ConsentSummary = ({
               percentage={item.percentage}
               footer={t("common.count_responses", { count: item.count })}
             />
-          </button>
+          </FilterTarget>
         ))}
       </div>
     </div>
