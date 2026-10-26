@@ -41,12 +41,20 @@ const retention = (overrides: Partial<Retention> = {}): Retention => ({
   ...overrides,
 });
 
-/** The server: the card as given, and a PUT that answers with the windows it was sent. */
+/** The server: the card as given, a PUT that answers with the windows it was sent, and a preview that counts 7 runs and 2 impressions for whichever windows it is asked about. */
 const stubServer = (current: Retention) => {
   const fetch = vi.fn(async (path: string, init: RequestInit = {}) => {
-    if (path !== API) throw new Error(`unexpected ${path}`);
-    const body =
-      init.method === "PUT" ? { ...current, ...JSON.parse(init.body as string), lastSweep: null } : current;
+    let body: unknown;
+    if (path.startsWith(`${API}/preview?`)) {
+      const query = new URLSearchParams(path.slice(path.indexOf("?") + 1));
+      body = {
+        workflowRuns: query.has("workflowRunRetentionDays") ? 7 : null,
+        displays: query.has("displayRetentionDays") ? 2 : null,
+      };
+    } else if (path === API) {
+      body =
+        init.method === "PUT" ? { ...current, ...JSON.parse(init.body as string), lastSweep: null } : current;
+    } else throw new Error(`unexpected ${path}`);
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: { "content-type": "application/json" },
@@ -61,11 +69,11 @@ const putBody = (fetch: ReturnType<typeof stubServer>): unknown => {
   return call ? JSON.parse(call[1]?.body as string) : undefined;
 };
 
-const renderCard = () =>
+const renderCard = (isFormaCloud = false) =>
   render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <RetentionCard organizationId={ORG} />
+        <RetentionCard organizationId={ORG} isFormaCloud={isFormaCloud} />
       </QueryClientProvider>
     </I18nextProvider>
   );
@@ -92,6 +100,18 @@ describe("RetentionCard", () => {
     expect(await screen.findByText(/No sweep has run with these settings yet/)).toBeTruthy();
   });
 
+  // Saving during the dry run is not confirmed, so the banner says the settings delete without asking once deletion is on; only a self-hosting operator can turn it on, so Cloud owners are not sent to an environment variable.
+  test.each([
+    [false, "dry_run_description", true],
+    [true, "dry_run_description_cloud", false],
+  ] as const)("the dry-run banner on Forma Cloud = %s", async (isFormaCloud, key, mentionsVariable) => {
+    stubServer(retention());
+    renderCard(isFormaCloud);
+    const banner = await screen.findByText(t(`organizations.retention.${key}`));
+    expect(banner.textContent).toContain("without asking again");
+    expect(banner.textContent?.includes("RETENTION_SWEEP_DRY_RUN")).toBe(mentionsVariable);
+  });
+
   test("on an instance that deletes, setting or shortening a window asks first", async () => {
     const fetch = stubServer(retention({ dryRun: false, workflowRunRetentionDays: 365 }));
     renderCard();
@@ -99,6 +119,10 @@ describe("RetentionCard", () => {
     fireEvent.change(runsSelect(), { target: { value: "30" } });
     save();
     expect(await screen.findByText(t("organizations.retention.confirm_title"))).toBeTruthy();
+    // The dialog counts what the new windows would delete, and only for the windows that delete anything.
+    expect(await screen.findByText("Would delete 7 workflow runs")).toBeTruthy();
+    expect(screen.queryByText(/Would delete \d+ impression/)).toBeNull();
+    expect(fetch).toHaveBeenCalledWith(`${API}/preview?workflowRunRetentionDays=30`, expect.anything());
     expect(putBody(fetch)).toBeUndefined();
     fireEvent.click(screen.getByRole("button", { name: t("organizations.retention.confirm_button") }));
     await waitFor(() =>
@@ -114,6 +138,7 @@ describe("RetentionCard", () => {
         lastSweep: {
           sweptAt: "2026-10-26T00:00:00Z",
           dryRun: true,
+          stoppedEarly: false,
           workflowRunRetentionDays: 45,
           displayRetentionDays: 30,
           workflowRuns: { matched: 3, deleted: 0, cappedUnits: 0 },
@@ -125,11 +150,12 @@ describe("RetentionCard", () => {
     expect(await screen.findByText("Would delete 3 workflow runs")).toBeTruthy();
     expect(screen.getByText("Would delete 1 impression without a response")).toBeTruthy();
     expect(screen.getByText(t("organizations.retention.capped"))).toBeTruthy();
+    expect(screen.queryByText(t("organizations.retention.stopped_early"))).toBeNull();
     expect(runsSelect().value).toBe("45");
     expect(runsSelect().selectedOptions[0]?.textContent).toBe("45 days");
   });
 
-  test("a real sweep reports what it deleted", async () => {
+  test("a real sweep reports what it deleted, even when it stopped early", async () => {
     stubServer(
       retention({
         dryRun: false,
@@ -137,6 +163,7 @@ describe("RetentionCard", () => {
         lastSweep: {
           sweptAt: "2026-10-26T00:00:00Z",
           dryRun: false,
+          stoppedEarly: true,
           workflowRunRetentionDays: null,
           displayRetentionDays: 30,
           workflowRuns: { matched: 0, deleted: 0, cappedUnits: 0 },
@@ -147,6 +174,7 @@ describe("RetentionCard", () => {
     renderCard();
     expect(await screen.findByText("Deleted 12 impressions without a response")).toBeTruthy();
     expect(screen.queryByText(/Deleted \d+ workflow run/)).toBeNull();
+    expect(screen.getByText(t("organizations.retention.stopped_early"))).toBeTruthy();
   });
 });
 

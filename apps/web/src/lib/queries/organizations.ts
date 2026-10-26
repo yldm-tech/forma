@@ -93,6 +93,8 @@ export const organizationKeys = {
   navigation: (id: string) => ["organizations", id, "navigation"] as const,
   members: (id: string) => ["organizations", id, "members"] as const,
   retention: (id: string) => ["organizations", id, "retention"] as const,
+  retentionPreview: (id: string, windows: RetentionWindows) =>
+    ["organizations", id, "retention", "preview", windows] as const,
 };
 
 export const homeQuery = queryOptions({
@@ -196,6 +198,8 @@ export interface RetentionSweep extends RetentionWindows {
   sweptAt: string;
   /** The sweep only counted (each pass's matched) and deleted nothing. */
   dryRun: boolean;
+  /** A pass failed: the counts are what the sweep got through before it, and the rest waits for the next sweep. */
+  stoppedEarly: boolean;
   workflowRuns: RetentionPass;
   displays: RetentionPass;
 }
@@ -214,6 +218,30 @@ export const retentionQuery = (id: string) =>
   queryOptions({
     queryKey: organizationKeys.retention(id),
     queryFn: ({ signal }) => api.get<Retention>(`/api/app/organizations/${id}/retention`, { signal }),
+  });
+
+/** What the sweep would delete as of now under windows the organization may not have yet; null is a window that keeps forever and is not counted. */
+export interface RetentionPreview {
+  workflowRuns: number | null;
+  displays: number | null;
+}
+
+export const retentionPreviewQuery = (id: string, windows: RetentionWindows) =>
+  queryOptions({
+    queryKey: organizationKeys.retentionPreview(id, windows),
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams();
+      if (windows.workflowRunRetentionDays !== null)
+        params.set("workflowRunRetentionDays", String(windows.workflowRunRetentionDays));
+      if (windows.displayRetentionDays !== null)
+        params.set("displayRetentionDays", String(windows.displayRetentionDays));
+      return api.get<RetentionPreview>(
+        `/api/app/organizations/${id}/retention/preview?${params.toString()}`,
+        {
+          signal,
+        }
+      );
+    },
   });
 
 /** Replaces both windows; the answer is the card as it now is. */

@@ -102,7 +102,9 @@ export const OrganizationGeneralPage = ({ organization }: { organization: Organi
         <AISettingsToggle organization={organization} />
       </SettingsCard>
       <TwoFactorRequirementCard organization={organization} />
-      {isOwner && <RetentionCard organizationId={organization.id} />}
+      {isOwner && (
+        <RetentionCard organizationId={organization.id} isFormaCloud={billing?.isFormaCloud === true} />
+      )}
       <EmailCustomizationCard key={organization.updatedAt} organization={organization} />
       <SettingsCard
         width="full"
