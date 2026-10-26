@@ -131,10 +131,18 @@ export interface TWorkflowAuthoringContextWire {
   mailFrom: string;
 }
 
-/** A test send's outcome (POST /api/app/workflows/{id}/steps/{stepId}/test-send): whether the receiver accepted it, its status, and why it failed. */
+/** A test send's outcome (POST /api/app/workflows/{id}/steps/{stepId}/test-send): whether the receiver accepted it, its status, and why it failed, as a reason code the builder translates and as the server's English detail. */
 export interface TWorkflowTestSendResult {
   ok: boolean;
   status?: number;
+  reason?:
+    | "url_refused"
+    | "timeout"
+    | "unreachable"
+    | "redirect"
+    | "status"
+    | "secret_unreadable"
+    | "invalid_config";
   message?: string;
 }
 

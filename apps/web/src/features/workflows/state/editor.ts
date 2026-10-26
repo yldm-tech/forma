@@ -13,6 +13,7 @@ import {
   WORKFLOW_TRIGGERS,
   ZWorkflowExecutableDefinition,
 } from "../definition";
+import { adoptSealedSecrets } from "../lib/action-config";
 
 // The workflow builder's state, forma2's modules/workflows/state/editor.ts: one editor atom holding the loaded workflow and the editable draft, the atoms derived from it, and the writes the canvas, the inspector and the save flow make.
 
@@ -140,18 +141,31 @@ const toSavedDraft = (state: TWorkflowEditorState): TWorkflowSavedDraft => ({
   definition: state.definition,
 });
 
-// Records the persisted draft. The save flow passes the values it sent, captured before the request, so edits made while the PATCH was in flight still read as dirty.
-export const markWorkflowDraftSavedAtom = atom(null, (get, set, savedDraft: TWorkflowSavedDraft) => {
-  set(
-    workflowEditorAtom,
-    produce(get(workflowEditorAtom), (draft) => {
-      draft.lastSavedDraft = savedDraft;
-      draft.lastSavedAt = Date.now();
-      // Cleared in the same write as lastSavedAt, so the pill never shows the failure and the "saved" flash across two commits.
-      draft.saveError = null;
-    })
-  );
-});
+// Records the persisted draft. The save flow passes the values it sent, captured before the request, so edits made while the PATCH was in flight still read as dirty, and the definition the server stored: every secret the draft still holds as the value that was sent becomes the sealed form the server answered with (adoptSealedSecrets), in the draft and in the saved snapshot alike, so the draft stays clean.
+export const markWorkflowDraftSavedAtom = atom(
+  null,
+  (get, set, savedDraft: TWorkflowSavedDraft & { persistedDefinition?: TWorkflowDefinition | null }) => {
+    const { persistedDefinition, ...sentDraft } = savedDraft;
+    const state = get(workflowEditorAtom);
+    const sent = sentDraft.definition;
+    const adopt = (definition: TWorkflowDefinition | null) =>
+      definition && sent && persistedDefinition
+        ? adoptSealedSecrets(definition, sent, persistedDefinition)
+        : definition;
+    const definition = adopt(state.definition);
+    const lastSavedDraft = { ...sentDraft, definition: adopt(sent) };
+    set(
+      workflowEditorAtom,
+      produce(state, (draft) => {
+        draft.definition = definition;
+        draft.lastSavedDraft = lastSavedDraft;
+        draft.lastSavedAt = Date.now();
+        // Cleared in the same write as lastSavedAt, so the pill never shows the failure and the "saved" flash across two commits.
+        draft.saveError = null;
+      })
+    );
+  }
+);
 
 export const workflowLastSavedAtAtom = atom((get) => get(workflowEditorAtom).lastSavedAt);
 

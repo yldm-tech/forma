@@ -199,11 +199,12 @@ export const useWorkflowBuilder = ({
         setWorkflow(savedWorkflow);
         // The list shows the name; the unmount flush can land after the list has already refetched, so it is marked stale whenever a save lands.
         void queryClient.invalidateQueries({ queryKey: workflowKeys.lists() });
-        // The editor state as sent, not the parsed payload: zod's normalization would make the snapshot never equal the state it came from, leaving the editor permanently dirty.
+        // The editor state as sent, not the parsed payload: zod's normalization would make the snapshot never equal the state it came from, leaving the editor permanently dirty. The stored definition only supplies the sealed form of the secrets that were sent in plaintext.
         markDraftSaved({
           workflowName: trimmedName,
           workflowDescription: trimmedDescription ?? "",
           definition: currentDefinition,
+          persistedDefinition: savedWorkflow.definition,
         });
         if (!silent) toast.success(t("workspace.workflows.save_success"));
         return true;

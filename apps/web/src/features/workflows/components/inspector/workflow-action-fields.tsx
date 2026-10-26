@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { useAtomValue } from "jotai";
 import { CheckCircle2Icon, KeyRoundIcon, SendIcon, XCircleIcon } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
@@ -6,12 +7,13 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../../../components/ui/button";
 import { PasswordInput } from "../../../../components/ui/password-input";
 import { cn } from "../../../../lib/cn";
-import { getWorkflowApiErrorMessage, workflowsApi } from "../../api";
+import { getWorkflowApiErrorMessage, type TWorkflowTestSendResult, workflowsApi } from "../../api";
 import type { TWorkflowSecretValue } from "../../definition";
 import { resolveBoundTriggerSurvey } from "../../lib/authoring-context";
 import { buildWorkflowTemplateVariables, insertAtSelection } from "../../lib/template-variables";
 import {
   isWorkflowDirtyAtom,
+  isWorkflowReadOnlyAtom,
   isWorkflowSavingAtom,
   workflowAtom,
   workflowDefinitionAtom,
@@ -195,7 +197,30 @@ export const WorkflowTemplateTextarea = ({
   );
 };
 
-/** Sends the step once now, with the workflow's saved draft, and says how the receiver answered. Only while everything is saved, since the server sends what it stored. */
+/** Why a test send failed, in the member's language: the server's reason code, the English detail only shown beneath it. */
+const describeTestSendFailure = (res: TWorkflowTestSendResult, t: TFunction): string => {
+  const status = res.status ?? 0;
+  switch (res.reason) {
+    case "url_refused":
+      return t("workspace.workflows.test_send_failed_url_refused");
+    case "timeout":
+      return t("workspace.workflows.test_send_failed_timeout");
+    case "unreachable":
+      return t("workspace.workflows.test_send_failed_unreachable");
+    case "redirect":
+      return t("workspace.workflows.test_send_failed_redirect", { status });
+    case "status":
+      return t("workspace.workflows.test_send_failed_status", { status });
+    case "secret_unreadable":
+      return t("workspace.workflows.test_send_failed_secret_unreadable");
+    case "invalid_config":
+      return t("workspace.workflows.test_send_failed_invalid_config");
+    default:
+      return t("workspace.workflows.test_send_failed");
+  }
+};
+
+/** Sends the step once now, with the workflow's saved draft, and says how the receiver answered. Only while everything is saved, since the server sends what it stored, and never for a read-only member. */
 export const WorkflowTestSendButton = ({
   stepId,
   isConfigured,
@@ -204,14 +229,16 @@ export const WorkflowTestSendButton = ({
   const workflow = useAtomValue(workflowAtom);
   const isDirty = useAtomValue(isWorkflowDirtyAtom);
   const isSaving = useAtomValue(isWorkflowSavingAtom);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  // Sending a test needs write access to the workspace, which a read-only member does not have.
+  const isReadOnly = useAtomValue(isWorkflowReadOnlyAtom);
+  const [result, setResult] = useState<{ ok: boolean; message: string; detail?: string } | null>(null);
   const mutation = useMutation({
     mutationFn: () => workflowsApi.testSend(workflow?.id ?? "", stepId),
     onSuccess: (res) =>
       setResult(
         res.ok
           ? { ok: true, message: t("workspace.workflows.test_send_succeeded", { status: res.status ?? 200 }) }
-          : { ok: false, message: res.message ?? t("workspace.workflows.test_send_failed") }
+          : { ok: false, message: describeTestSendFailure(res, t), detail: res.message }
       ),
     onError: (error) =>
       setResult({
@@ -219,6 +246,7 @@ export const WorkflowTestSendButton = ({
         message: getWorkflowApiErrorMessage(error, t("workspace.workflows.test_send_failed")),
       }),
   });
+  if (isReadOnly) return null;
   const isUnsaved = isDirty || isSaving;
   return (
     <div className="flex flex-col gap-2 rounded-md border border-slate-200 p-3">
@@ -251,7 +279,10 @@ export const WorkflowTestSendButton = ({
           ) : (
             <XCircleIcon className="mt-px size-3.5 shrink-0" aria-hidden="true" />
           )}
-          <span>{result.message}</span>
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span>{result.message}</span>
+            {result.detail ? <span className="break-words text-slate-500">{result.detail}</span> : null}
+          </span>
         </p>
       ) : null}
     </div>

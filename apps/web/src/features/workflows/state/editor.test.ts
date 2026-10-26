@@ -598,6 +598,42 @@ describe("isWorkflowDirtyAtom + markWorkflowDraftSavedAtom", () => {
     expect(store.get(isWorkflowDirtyAtom)).toBe(false);
   });
 
+  test("a save turns the secrets it sent into their sealed form, in the draft and the snapshot alike", () => {
+    const withSecret = (secret: { value?: string; sealed?: string; hint?: string }) =>
+      ({
+        ...definition,
+        nodes: [
+          {
+            id: "http-1",
+            type: "action",
+            actionType: "http_request",
+            config: {
+              method: "POST",
+              url: "https://api.crm.example/a",
+              headers: [{ name: "Authorization", secret }],
+              body: "",
+              signingSecret: null,
+            },
+          },
+        ],
+      }) as unknown as TWorkflowDefinition;
+    const typed = withSecret({ value: "Bearer token-123456" });
+    const sealed = withSecret({ sealed: "c2VhbGVk", hint: "…3456" });
+    const store = createStore();
+    store.set(hydrateWorkflowEditorAtom, { workflow, flowNodes: [], isReadOnly: false });
+    store.set(setWorkflowDefinitionAtom, typed);
+
+    store.set(markWorkflowDraftSavedAtom, {
+      workflowName: "Hello",
+      workflowDescription: "Desc",
+      definition: typed,
+      persistedDefinition: sealed,
+    });
+
+    expect(store.get(workflowDefinitionAtom)).toEqual(sealed);
+    expect(store.get(isWorkflowDirtyAtom)).toBe(false);
+  });
+
   test("definition edits count as dirty", () => {
     const store = createStore();
     store.set(hydrateWorkflowEditorAtom, { workflow, flowNodes: [], isReadOnly: false });
