@@ -12,6 +12,7 @@ import { TSurvey, TSurveyLanguage } from "@forma/types/surveys/types";
 import { TUserLocale } from "@forma/types/user";
 import { cn } from "../../../lib/cn";
 import { createI18nString } from "../../../lib/survey/i18n";
+import { ChoiceScoreInput } from "./choice-scoring";
 import { ElementFormInput } from "./element-form-input/index";
 import { Button } from "../../../components/ui/button";
 import { TooltipRenderer } from "../../../components/ui/tooltip";
@@ -31,6 +32,8 @@ interface ChoiceProps {
   updateElement: (elementIdx: number, updatedAttributes: Partial<TSurveyElement>) => void;
   surveyLanguageCodes: string[];
   locale: TUserLocale;
+  /** Shows the choice's score field, while the element is scored. */
+  showScore?: boolean;
 }
 
 export const ElementOptionChoice = ({
@@ -47,6 +50,7 @@ export const ElementOptionChoice = ({
   surveyLanguageCodes,
   updateElement,
   locale,
+  showScore = false,
 }: ChoiceProps) => {
   const { t } = useTranslation();
   const isSpecialChoice = choice.id === "other" || choice.id === "none";
@@ -151,6 +155,13 @@ export const ElementOptionChoice = ({
         )}
       </div>
       <div className="flex gap-2">
+        {showScore && (
+          <ChoiceScoreInput
+            score={choice.score}
+            label={t("workspace.surveys.edit.scoring_choice_score", { choiceIndex: choiceIdx + 1 })}
+            onChange={(score) => updateChoice(choiceIdx, { score })}
+          />
+        )}
         {(normalChoice.length > 1 || isSpecialChoice) && (
           <TooltipRenderer tooltipContent={t("workspace.surveys.edit.delete_choice")}>
             <Button

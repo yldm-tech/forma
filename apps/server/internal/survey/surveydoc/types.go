@@ -123,6 +123,8 @@ type Choice struct {
 	ID       string     `json:"id"`
 	Label    I18nString `json:"label,omitempty"`
 	ImageURL string     `json:"imageUrl,omitempty"`
+	// Score is the points the choice adds to the survey's total score (packages/types/surveys/scoring.ts), read on single choice, multiple choice and picture selection elements only; nil when the choice has none.
+	Score *float64 `json:"score,omitempty"`
 }
 
 // CharLimit is an open-text element's length limit.
@@ -218,7 +220,7 @@ var (
 	}
 )
 
-// UnmarshalJSON reads the keys the element's type declares: a choice has a label (ZSurveyElementChoice) or, in a picture selection, an image (ZSurveyPictureChoice), never both.
+// UnmarshalJSON reads the keys the element's type declares: a choice has a label (ZSurveyElementChoice) or, in a picture selection, an image (ZSurveyPictureChoice), never both, and a score only where scoring reads one.
 func (e *Element) UnmarshalJSON(data []byte) error {
 	type plain Element
 	fields, ok := objectFields(data)
@@ -227,8 +229,11 @@ func (e *Element) UnmarshalJSON(data []byte) error {
 	}
 	typ := stringField(fields, "type")
 	choiceKeys := []string{"id", "label"}
-	if typ == ElementPictureSelection {
-		choiceKeys = []string{"id", "imageUrl"}
+	switch typ {
+	case ElementPictureSelection:
+		choiceKeys = []string{"id", "imageUrl", "score"}
+	case ElementMultipleChoiceSingle, ElementMultipleChoiceMulti:
+		choiceKeys = []string{"id", "label", "score"}
 	}
 	declaredItems(fields, "choices", choiceKeys...)
 	declaredItems(fields, "rows", "id", "label")
@@ -445,6 +450,21 @@ type Variable struct {
 	Name  string          `json:"name"`
 	Type  string          `json:"type"`
 	Value json.RawMessage `json:"value,omitempty"`
+	// IsScore marks the survey's total score, which the runtime raises by the score of every picked choice. Only a number variable holds it.
+	IsScore bool `json:"isScore,omitempty"`
+}
+
+// ScoreVariableUniqueMessage is SCORE_VARIABLE_UNIQUE_MESSAGE, the refinement on a survey's variables in packages/types/surveys/types.ts.
+const ScoreVariableUniqueMessage = "Only one variable can hold the total score"
+
+// ScoreVariable is the survey's total score variable: the first number variable marked isScore, nil when there is none (packages/types/surveys/scoring.ts getScoreVariable).
+func ScoreVariable(variables []Variable) *Variable {
+	for i := range variables {
+		if variables[i].Type == "number" && variables[i].IsScore {
+			return &variables[i]
+		}
+	}
+	return nil
 }
 
 // Language is one of a survey's languages as the rules see it: its stored code and flags.

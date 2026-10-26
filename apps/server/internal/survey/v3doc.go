@@ -43,12 +43,13 @@ var (
 	welcomeCardKeys      = keySet("enabled", "headline", "subheader", "fileUrl", "buttonLabel", "timeToFinish", "showResponseCount", "videoUrl")
 	blockKeys            = keySet("id", "name", "elements", "logic", "logicFallback", "buttonLabel", "backButtonLabel")
 	hiddenFieldKeys      = keySet("enabled", "fieldIds")
-	variableKeys         = keySet("id", "name", "type", "value")
+	variableKeys         = keySet("id", "name", "type", "value", "isScore")
 	endScreenKeys        = keySet("id", "type", "headline", "subheader", "buttonLabel", "buttonLink", "imageUrl", "videoUrl", "hideDefaultIcon")
 	redirectEndingKeys   = keySet("id", "type", "url", "label")
 	elementBaseKeys      = keySet("id", "type", "headline", "subheader", "imageUrl", "videoUrl", "required", "isDraft")
 	labelChoiceKeys      = keySet("id", "label")
-	pictureChoiceKeys    = keySet("id", "imageUrl")
+	scoredChoiceKeys     = keySet("id", "label", "score")
+	pictureChoiceKeys    = keySet("id", "imageUrl", "score")
 	toggleInputKeys      = keySet("show", "required", "placeholder")
 	charLimitKeys        = keySet("enabled", "min", "max")
 	validationKeys       = keySet("rules", "logic")
@@ -296,8 +297,11 @@ func (s *strictness) element(value any, path, defaultLanguage string) {
 		}
 	}
 	choiceKeys := labelChoiceKeys
-	if o.values["type"] == "pictureSelection" {
+	switch o.values["type"] {
+	case "pictureSelection":
 		choiceKeys = pictureChoiceKeys
+	case "multipleChoiceSingle", "multipleChoiceMulti":
+		choiceKeys = scoredChoiceKeys
 	}
 	for _, list := range []struct {
 		key  string

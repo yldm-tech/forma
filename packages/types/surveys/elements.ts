@@ -3,6 +3,7 @@ import { ZStorageUrl, isSafeLinkUrl } from "../common";
 import { ZI18nString } from "../i18n";
 import { ZAllowedFileExtension } from "../storage";
 import { TSurveyElementTypeEnum } from "./constants";
+import { CHOICE_SCORE_LIMIT } from "./scoring";
 import { getSliderScaleIssue } from "./slider";
 import { FORBIDDEN_IDS } from "./validation";
 import { ZValidationRules } from "./validation-rules";
@@ -130,9 +131,13 @@ export const ZSurveyConsentElement = ZSurveyElementBase.extend({
 export type TSurveyConsentElement = z.infer<typeof ZSurveyConsentElement>;
 
 // Multiple Choice Elements
+// The points a choice adds to the survey's total score (packages/types/surveys/scoring.ts) when it is picked. Read on single and multiple choice elements; a ranking element shares this schema and ignores it.
+export const ZSurveyChoiceScore = z.number().min(-CHOICE_SCORE_LIMIT).max(CHOICE_SCORE_LIMIT);
+
 export const ZSurveyElementChoice = z.object({
   id: z.string(),
   label: ZI18nString,
+  score: ZSurveyChoiceScore.optional(),
 });
 
 export type TSurveyElementChoice = z.infer<typeof ZSurveyElementChoice>;
@@ -245,6 +250,7 @@ export type TSurveyRatingElement = z.infer<typeof ZSurveyRatingElement>;
 export const ZSurveyPictureChoice = z.object({
   id: z.string(),
   imageUrl: ZStorageUrl,
+  score: ZSurveyChoiceScore.optional(),
 });
 
 export type TSurveyPictureChoice = z.infer<typeof ZSurveyPictureChoice>;

@@ -108,6 +108,7 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
       reservedValues,
       variableValues,
       quotas,
+      segments,
     } = filterData.data;
     return generateElementAndFilterOptions({
       survey,
@@ -118,6 +119,7 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
       hiddenFields,
       variableValues,
       quotas,
+      segments,
       t,
     });
   }, [filterData.data, survey, t]);
@@ -275,6 +277,11 @@ export const ResponseFilter = ({ survey }: { survey: TSurvey }) => {
                     </Button>
                   </div>
                 </div>
+                {row.elementType.type === OptionsType.SEGMENTS && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    {t("workspace.analysis.segment_filter.membership_hint")}
+                  </p>
+                )}
                 {i !== filterValue.filter.length - 1 && (
                   <div className="my-4 flex items-center">
                     <p className="mr-4 font-semibold text-slate-800">{t("common.and")}</p>

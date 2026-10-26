@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import { ZResponseInput, ZResponseMeta, ZResponseUpdate, pickAutoCapturedResponseMeta } from "./responses";
+import {
+  ZResponseFilterCriteria,
+  ZResponseInput,
+  ZResponseMeta,
+  ZResponseUpdate,
+  pickAutoCapturedResponseMeta,
+} from "./responses";
 
 /** Everything the renderer snapshots at display time, in one object (ENG-1841). */
 const fullAutoCapturedMeta = {
@@ -136,5 +142,22 @@ describe("pickAutoCapturedResponseMeta", () => {
     const picked = pickAutoCapturedResponseMeta({ pagePath: "/checkout" });
 
     expect(Object.keys(picked)).toStrictEqual(["pagePath"]);
+  });
+});
+
+describe("ZResponseFilterCriteria.segments", () => {
+  test("accepts a segment filter keyed by a segment's row id, a UUIDv7", () => {
+    const criteria = {
+      segments: {
+        "01a17170-3025-7c6a-a738-b4abd9af54a7": { op: "userIsIn" },
+        "01a17170-305d-7ef1-8eb8-65ca4ef17d91": [{ op: "userIsNotIn" }],
+      },
+    };
+    expect(ZResponseFilterCriteria.safeParse(criteria).success).toBe(true);
+  });
+
+  test("rejects an operator other than userIsIn and userIsNotIn", () => {
+    const criteria = { segments: { "01a17170-3025-7c6a-a738-b4abd9af54a7": { op: "equals" } } };
+    expect(ZResponseFilterCriteria.safeParse(criteria).success).toBe(false);
   });
 });

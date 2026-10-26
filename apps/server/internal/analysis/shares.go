@@ -330,7 +330,7 @@ func (s *Service) CreateResultShare(ctx context.Context, userID, surveyID uuid.U
 	if err != nil {
 		return nil, err
 	}
-	if _, err := response.Where(sv.Survey, in.FilterCriteria); err != nil {
+	if _, err := response.Where(ctx, s.segments, sv.Survey, in.FilterCriteria); err != nil {
 		return nil, err
 	}
 	criteria, err := compactCriteria(in.FilterCriteria)
