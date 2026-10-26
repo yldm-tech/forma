@@ -114,7 +114,7 @@ export const en: SiteContent = {
       },
       understand: {
         title: "Read the results where they were collected",
-        body: "Every survey has its own summary and response views. Filter responses, tag them, export to CSV or Excel, or share the results with a public link.",
+        body: "Every survey has its own summary and response views. Follow responses, completion, NPS and CSAT by day, week or month, filter responses, tag them, export to CSV or Excel, or share the results with a public link.",
       },
       act: {
         title: "Turn responses into next steps",

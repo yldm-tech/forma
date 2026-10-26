@@ -25,7 +25,7 @@ import { ResponseKeywordSearch, hasSearchableAnswers } from "../filter/response-
 import { ResponseTable } from "./response-table";
 
 /**
- * forma2's ResponsePage: the filter bar over the response table, 25 responses a page under the current filter, newest first, with how many of the matching responses are loaded. A deleted response leaves the loaded pages at once, and the pages are then read again; a tag change reads the response again. With nothing to show it says why: no response yet (share the survey) or none matching the filter (clear it).
+ * forma2's ResponsePage: the filter bar over the response table, 25 responses a page under the current filter, newest first, with how many of the matching responses are loaded. A deleted response leaves the loaded pages at once, and the pages are then read again; a tag change reads the response again, and a bulk tag change every loaded page. With nothing to show it says why: no response yet (share the survey) or none matching the filter (clear it).
  */
 export const ResponsePage = ({
   survey,
@@ -76,6 +76,12 @@ export const ResponsePage = ({
     updatePages((page) => page.map((response) => (response.id === responseId ? updated : response)));
     void queryClient.invalidateQueries({ queryKey: tagsQuery(survey.workspaceId).queryKey });
     void invalidateOtherAnalysis();
+  };
+
+  // A bulk tag change can touch every loaded row and the tag filters' counts, so everything is read again.
+  const onTagsChanged = () => {
+    void invalidateSurveyAnalysis(queryClient, survey.id);
+    void queryClient.invalidateQueries({ queryKey: tagsQuery(survey.workspaceId).queryKey });
   };
 
   // The share modal of the header opens from the ?share param, as it does after publishing.
@@ -150,8 +156,10 @@ export const ResponsePage = ({
           emptyState={emptyState}
           showQuotasColumn={(quotas.data?.length ?? 0) > 0}
           locale={locale}
+          filterCriteria={filterCriteria}
           onResponseChanged={(responseId) => void onResponseChanged(responseId)}
           onResponsesDeleted={onResponsesDeleted}
+          onTagsChanged={onTagsChanged}
         />
       </div>
     </>
