@@ -138,7 +138,12 @@ func (r *Repository) creatorRole(ctx context.Context, apiKeyID, organizationID u
 
 // ---- users ----
 
+// orgUserActive selects orgUser.IsActive from users u and memberships m.
+const orgUserActive = `(u.is_active AND m.suspended_at IS NULL) AS is_active`
+
 // orgUser is a user as forma2's v2 users API answered: its organization role and the names of its teams.
+//
+// IsActive is the user's access to this organization: their account is active and the organization has not suspended their membership. forma2 read and wrote the account's own switch, which locked a user out of every organization they belong to; here isActive belongs to the membership (owner decision D-AO01), so one organization's key suspends the user there only.
 type orgUser struct {
 	ID          uuid.UUID  `json:"id"`
 	CreatedAt   time.Time  `json:"createdAt"`
@@ -183,7 +188,7 @@ func (r *Repository) userPage(ctx context.Context, organizationID uuid.UUID, uf 
 	page, pageArgs := pageClause(f, "u.id")
 	page = strings.Replace(page, " ORDER BY "+f.orderColumn(), " ORDER BY u."+f.orderColumn(), 1)
 	out := []orgUser{}
-	if err := r.db.WithContext(ctx).Raw(`SELECT u.id, u.created_at, u.updated_at, u.email, u.name, u.last_login_at, u.is_active, m.role`+from+where+page, append(args, pageArgs...)...).Scan(&out).Error; err != nil {
+	if err := r.db.WithContext(ctx).Raw(`SELECT u.id, u.created_at, u.updated_at, u.email, u.name, u.last_login_at, `+orgUserActive+`, m.role`+from+where+page, append(args, pageArgs...)...).Scan(&out).Error; err != nil {
 		return nil, 0, fmt.Errorf("list users: %w", err)
 	}
 	for i := range out {
@@ -214,7 +219,7 @@ func (r *Repository) userTeams(ctx context.Context, userID uuid.UUID, organizati
 // orgUserByEmail is the member of the organization with the email, nil when there is none.
 func (r *Repository) orgUserByEmail(ctx context.Context, organizationID uuid.UUID, email string) (*orgUser, error) {
 	var rows []orgUser
-	if err := r.db.WithContext(ctx).Raw(`SELECT u.id, u.created_at, u.updated_at, u.email, u.name, u.last_login_at, u.is_active, m.role FROM users u JOIN memberships m ON m.user_id = u.id
+	if err := r.db.WithContext(ctx).Raw(`SELECT u.id, u.created_at, u.updated_at, u.email, u.name, u.last_login_at, `+orgUserActive+`, m.role FROM users u JOIN memberships m ON m.user_id = u.id
 		WHERE m.organization_id = ? AND u.email = ?`, organizationID, email).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load user: %w", err)
 	}
@@ -255,7 +260,7 @@ type newOrgUser struct {
 	TeamIDs  []uuid.UUID
 }
 
-// createOrgUser creates a user with an accepted membership and contributor seats on the teams, in one transaction.
+// createOrgUser creates a user with an accepted membership and contributor seats on the teams, in one transaction. isActive false suspends the new membership; the account itself is always active, as the organization's switch is the membership's.
 func (r *Repository) createOrgUser(ctx context.Context, organizationID uuid.UUID, in newOrgUser) (*orgUser, error) {
 	var id uuid.UUID
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -263,13 +268,13 @@ func (r *Repository) createOrgUser(ctx context.Context, organizationID uuid.UUID
 		if in.IsActive != nil {
 			active = *in.IsActive
 		}
-		if err := tx.Raw(`INSERT INTO users (name, email, is_active) VALUES (?, ?, ?) RETURNING id`, in.Name, in.Email, active).Row().Scan(&id); err != nil {
+		if err := tx.Raw(`INSERT INTO users (name, email) VALUES (?, ?) RETURNING id`, in.Name, in.Email).Row().Scan(&id); err != nil {
 			if isUniqueViolation(err) {
 				return errEmailTaken
 			}
 			return fmt.Errorf("create user: %w", err)
 		}
-		if err := tx.Exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, ?, true)`, id, organizationID, in.Role).Error; err != nil {
+		if err := tx.Exec(`INSERT INTO memberships (user_id, organization_id, role, accepted, suspended_at) VALUES (?, ?, ?, true, CASE WHEN ? THEN NULL ELSE now() END)`, id, organizationID, in.Role, active).Error; err != nil {
 			return fmt.Errorf("create membership: %w", err)
 		}
 		for _, teamID := range in.TeamIDs {
@@ -287,7 +292,7 @@ func (r *Repository) createOrgUser(ctx context.Context, organizationID uuid.UUID
 
 func (r *Repository) orgUserByID(ctx context.Context, organizationID, id uuid.UUID) (*orgUser, error) {
 	var rows []orgUser
-	if err := r.db.WithContext(ctx).Raw(`SELECT u.id, u.created_at, u.updated_at, u.email, u.name, u.last_login_at, u.is_active, m.role FROM users u JOIN memberships m ON m.user_id = u.id
+	if err := r.db.WithContext(ctx).Raw(`SELECT u.id, u.created_at, u.updated_at, u.email, u.name, u.last_login_at, `+orgUserActive+`, m.role FROM users u JOIN memberships m ON m.user_id = u.id
 		WHERE m.organization_id = ? AND u.id = ?`, organizationID, id).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load user: %w", err)
 	}
@@ -303,7 +308,7 @@ var (
 	errLastActiveOwner = errors.New("last active owner")
 )
 
-// errSharedAccount is a change to a user's account (name, isActive) refused because the user also belongs to another organization.
+// errSharedAccount is a change to a user's account (their name) refused because the user also belongs to another organization.
 var errSharedAccount = errors.New("account shared with another organization")
 
 // userPatch is the users API's update: nil leaves a field as it is; Teams, when set, replaces the user's teams in the organization.
@@ -318,7 +323,7 @@ type userPatch struct {
 // managesTeams is whether the organization role administers every team of the organization (owner, manager).
 func managesTeams(role string) bool { return role == "owner" || role == "manager" }
 
-// updateOrgUser applies a patch to a member of the organization. Demoting or deactivating the organization's last active owner is refused (errLastOwner, errLastActiveOwner), and so is a change to the name or isActive of a user who also belongs to another organization (errSharedAccount): both live on the user's account, which every organization of the user shares. The checks and the write run in one Serializable transaction, so two concurrent changes cannot both pass them. Demotion from owner or manager to a lower role makes the user a contributor of the organization's teams they administered, the reverse of what promotion through the app does; a plain member who is a team admin stays one when their role is sent unchanged. Demotion from owner or manager to a role below manager disables the API keys the user created in the organization, which it returns, as the app's role change does; a role that was already below manager, sent again, disables nothing. The role it compares is read again in the transaction.
+// updateOrgUser applies a patch to a member of the organization. Demoting or deactivating the organization's last active owner is refused (errLastOwner, errLastActiveOwner), and so is a change to the name of a user who also belongs to another organization (errSharedAccount): it lives on the user's account, which every organization of the user shares. isActive is the membership's: false suspends the user's access to this organization, true restores it (a deactivated account stays inactive; only the instance's operator turns it back on). The checks and the write run in one Serializable transaction, so two concurrent changes cannot both pass them. Demotion from owner or manager to a lower role makes the user a contributor of the organization's teams they administered, the reverse of what promotion through the app does; a plain member who is a team admin stays one when their role is sent unchanged. Demotion from owner or manager to a role below manager disables the API keys the user created in the organization, which it returns, as the app's role change does; a role that was already below manager, sent again, disables nothing. The role it compares is read again in the transaction.
 func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID, current *orgUser, p userPatch) ([]disable.Key, error) {
 	activeOwner := current.Role == "owner" && current.IsActive
 	demoting := activeOwner && p.Role != nil && *p.Role != "owner"
@@ -329,7 +334,7 @@ func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID
 		disabled = nil
 		if demoting || deactivating {
 			var others int64
-			if err := tx.Raw(`SELECT count(*) FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.is_active AND u.id <> ?`, organizationID, current.ID).Scan(&others).Error; err != nil {
+			if err := tx.Raw(`SELECT count(*) FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.is_active AND m.suspended_at IS NULL AND u.id <> ?`, organizationID, current.ID).Scan(&others).Error; err != nil {
 				return fmt.Errorf("count owners: %w", err)
 			}
 			if others == 0 {
@@ -339,7 +344,7 @@ func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID
 				return errLastActiveOwner
 			}
 		}
-		if p.Name != nil || p.IsActive != nil {
+		if p.Name != nil {
 			var shared bool
 			if err := tx.Raw(`SELECT EXISTS (SELECT 1 FROM memberships WHERE user_id = ? AND organization_id <> ?)`, current.ID, organizationID).Scan(&shared).Error; err != nil {
 				return fmt.Errorf("check other memberships: %w", err)
@@ -363,8 +368,14 @@ func (r *Repository) updateOrgUser(ctx context.Context, organizationID uuid.UUID
 				}
 			}
 		}
-		if err := tx.Exec(`UPDATE users SET name = COALESCE(?, name), is_active = COALESCE(?, is_active), updated_at = now() WHERE id = ?`, p.Name, p.IsActive, current.ID).Error; err != nil {
+		if err := tx.Exec(`UPDATE users SET name = COALESCE(?, name), updated_at = now() WHERE id = ?`, p.Name, current.ID).Error; err != nil {
 			return fmt.Errorf("update user: %w", err)
+		}
+		if p.IsActive != nil {
+			// A suspension already in place keeps its time.
+			if err := tx.Exec(`UPDATE memberships SET suspended_at = CASE WHEN ? THEN NULL ELSE COALESCE(suspended_at, now()) END, updated_at = now() WHERE user_id = ? AND organization_id = ?`, *p.IsActive, current.ID, organizationID).Error; err != nil {
+				return fmt.Errorf("update membership suspension: %w", err)
+			}
 		}
 		if p.Role != nil {
 			// Read under the transaction: only a role that may manage keys, replaced by one that may not, disables them.

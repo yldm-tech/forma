@@ -391,7 +391,7 @@ func (h *Handler) v2CreateUser(c *gin.Context) {
 	}
 	created, err := h.repo.createOrgUser(ctx, organizationID, newOrgUser{Name: *in.name, Email: in.email, Role: *in.role, IsActive: in.isActive, TeamIDs: teamIDs})
 	if errors.Is(err, errEmailTaken) {
-		// The same text whether the email's user is a member here or only has an account elsewhere on the instance, so the detail does not say which. The 409 itself still tells the key that the email has an account on the instance, against a 201 for an unused one; closing that needs the invite flow (decision D-AO01).
+		// The same text whether the email's user is a member here or only has an account elsewhere on the instance, so the detail does not say which. The 409 itself still tells the key that the email has an account on the instance, against a 201 for an unused one; per-membership suspension (D-AO01) does not change that. Closing it needs every email, new or not, to get the same answer, which only an invite-only POST /users gives (a 202 with no user, the account created or joined when the invitee accepts); that drops forma2's direct creation, which the v2 routes exist to keep.
 		v2Error(c, http.StatusConflict, detail("email", issueEmailUnavailable))
 		return
 	}
@@ -421,10 +421,10 @@ func containsID(ids []uuid.UUID, id uuid.UUID) bool {
 // issueEmailUnavailable is the 409 detail of a new user whose email another user has, wherever that user belongs.
 const issueEmailUnavailable = "A new user cannot be created with this email"
 
-// issueSharedAccount is the 422 detail of a change to a user's account (name, isActive) refused because the user also belongs to another organization: the account is global, and one organization's key must not rename it or lock it out of the others.
+// issueSharedAccount is the 422 detail of a change to a user's account (their name) refused because the user also belongs to another organization: the account is global, and one organization's key must not rename it for the others.
 const issueSharedAccount = "The user also belongs to another organization, so this organization cannot change it"
 
-// v2UpdateUser is forma2's PATCH /users: the member named by email, changed within what the key's creator may do to them (only an owner touches an owner), teams replaced within the organization when given; demoting or deactivating the last active owner is 409. The name and isActive belong to the user's account, not the membership: changing them for a user who also belongs to another organization is 422.
+// v2UpdateUser is forma2's PATCH /users: the member named by email, changed within what the key's creator may do to them (only an owner touches an owner), teams replaced within the organization when given; demoting or deactivating the last active owner is 409. isActive belongs to the membership: false suspends the user's access to this organization only (D-AO01), true restores it. The name belongs to the user's account: changing it for a user who also belongs to another organization is 422.
 func (h *Handler) v2UpdateUser(c *gin.Context) {
 	body, ok := v2Body(c)
 	if !ok {
@@ -478,7 +478,7 @@ func (h *Handler) v2UpdateUser(c *gin.Context) {
 		return
 	}
 	h.v2Record(c, current.ID.String(), *current, nil)
-	// Only a value that changes is written: a client that sends the user's current name or isActive back is not refused for a user shared with another organization.
+	// Only a value that changes is written: a client that sends the user's current name back is not refused for a user shared with another organization.
 	patch := userPatch{Role: in.role, SetTeams: in.hasTeams}
 	if in.name != nil && *in.name != current.Name {
 		patch.Name = in.name
@@ -508,14 +508,7 @@ func (h *Handler) v2UpdateUser(c *gin.Context) {
 			v2Error(c, http.StatusConflict, detail("isActive", "Cannot deactivate the last active owner of the organization"))
 			return
 		case errors.Is(err, errSharedAccount):
-			var details []v2Detail
-			if patch.Name != nil {
-				details = append(details, v2Detail{Field: "name", Issue: issueSharedAccount})
-			}
-			if patch.IsActive != nil {
-				details = append(details, v2Detail{Field: "isActive", Issue: issueSharedAccount})
-			}
-			v2Error(c, http.StatusUnprocessableEntity, details)
+			v2Error(c, http.StatusUnprocessableEntity, detail("name", issueSharedAccount))
 			return
 		}
 		h.v2Unexpected(c, err)

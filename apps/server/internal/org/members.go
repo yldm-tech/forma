@@ -48,6 +48,10 @@ const (
 	msgLastOwnerDelete     = "You cannot delete the last owner of the organization"
 	msgLeaveOwned          = "You cannot leave an organization you own"
 	msgLeaveOnly           = "You cannot leave the only organization you are a member of"
+	// The suspension rules are Forma's own; forma2 had no per-organization suspension.
+	msgSuspendSelf            = "You cannot suspend or restore your own access"
+	msgOnlyOwnersSuspendOwner = "Only owners can suspend or restore an owner"
+	msgLastOwnerSuspend       = "You cannot suspend the last active owner of the organization"
 )
 
 // manageUsers is the gate of the user-management surface, in forma2's order: organization.manage_access, where USER_MANAGEMENT_MINIMUM_ROLE applies, then organization.manage, then the state-mutation rate limit. The policy check is a second check beside the capability, so a manager on an owner-restricted instance cannot manage members by calling the endpoint.
@@ -115,11 +119,11 @@ func (s *Service) changeRole(ctx context.Context, userID, organizationID, target
 			return apperr.OperationNotAllowed(msgOnlyOwnersEditOwner)
 		}
 		if target.Role == RoleOwner && role != RoleOwner {
-			owners, err := tx.activeOwnerCount(ctx, organizationID)
+			owners, err := tx.otherActiveOwners(ctx, organizationID, targetUserID)
 			if err != nil {
 				return err
 			}
-			if owners <= 1 {
+			if owners == 0 {
 				return apperr.InvalidInput(apperr.CodeValidation, msgLastOwnerDemote)
 			}
 		}
@@ -193,11 +197,11 @@ func (s *Service) removeMember(ctx context.Context, userID, organizationID, targ
 			return apperr.OperationNotAllowed(msgManagerDeleteOwner)
 		}
 		if target.Role == RoleOwner {
-			owners, err := tx.activeOwnerCount(ctx, organizationID)
+			owners, err := tx.otherActiveOwners(ctx, organizationID, targetUserID)
 			if err != nil {
 				return err
 			}
-			if owners <= 1 {
+			if owners == 0 {
 				return apperr.InvalidInput(apperr.CodeValidation, msgLastOwnerDelete)
 			}
 		}
@@ -213,6 +217,73 @@ func (s *Service) removeMember(ctx context.Context, userID, organizationID, targ
 	return target, disabled, nil
 }
 
+// SetSuspension suspends a member's access to the organization (suspend true) or restores it, with the rules of a role change: under the user-management gates, nobody acts on themselves, only an owner acts on an owner, and the last owner who can still act is never suspended, checked in the same serializable transaction as the write. A suspension belongs to this membership only: the member keeps their account, their sessions and their other organizations, and authz refuses them everything here but the organization's name, their membership and leaving it. The API keys they created here stop authenticating while it lasts (apikey.Authenticator) and work again once it is restored. Suspending a suspended member, or restoring one who is not, changes nothing and succeeds.
+func (s *Service) SetSuspension(ctx context.Context, userID, organizationID, targetUserID uuid.UUID, suspend bool) (*Membership, error) {
+	old, m, err := s.setSuspension(ctx, userID, organizationID, targetUserID, suspend)
+	s.record(ctx, audit.ActionUpdated, audit.TargetMembership, Membership{UserID: targetUserID, OrganizationID: organizationID}.auditID(), organizationID.String(), err, old, m)
+	return m, err
+}
+
+func (s *Service) setSuspension(ctx context.Context, userID, organizationID, targetUserID uuid.UUID, suspend bool) (old, updated *Membership, err error) {
+	if err := s.manageUsers(ctx, userID, organizationID); err != nil {
+		return nil, nil, err
+	}
+	if targetUserID == userID {
+		return nil, nil, apperr.OperationNotAllowed(msgSuspendSelf)
+	}
+	current, err := s.repo.membership(ctx, userID, organizationID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if current == nil {
+		return nil, nil, apperr.Forbidden(msgNotAMember)
+	}
+	if old, err = s.repo.membership(ctx, targetUserID, organizationID); err != nil {
+		return nil, nil, err
+	}
+	if old == nil {
+		return nil, nil, &apperr.Error{Status: http.StatusNotFound, Code: apperr.CodeNotFound, Message: msgNotAMember}
+	}
+	if current.Role != RoleOwner && old.Role == RoleOwner {
+		return old, nil, apperr.OperationNotAllowed(msgOnlyOwnersSuspendOwner)
+	}
+	err = s.repo.serializable(ctx, func(tx *Repository) error {
+		// Re-read under the transaction: the owner guards must see the role and suspension the write replaces.
+		target, err := tx.membership(ctx, targetUserID, organizationID)
+		if err != nil {
+			return err
+		}
+		if target == nil {
+			return &apperr.Error{Status: http.StatusNotFound, Code: apperr.CodeNotFound, Message: msgNotAMember}
+		}
+		if current.Role != RoleOwner && target.Role == RoleOwner {
+			return apperr.OperationNotAllowed(msgOnlyOwnersSuspendOwner)
+		}
+		if suspend && target.Role == RoleOwner {
+			owners, err := tx.otherActiveOwners(ctx, organizationID, targetUserID)
+			if err != nil {
+				return err
+			}
+			if owners == 0 {
+				return apperr.InvalidInput(apperr.CodeValidation, msgLastOwnerSuspend)
+			}
+		}
+		found, err := tx.setSuspension(ctx, targetUserID, organizationID, suspend)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return &apperr.Error{Status: http.StatusNotFound, Code: apperr.CodeNotFound, Message: msgNotAMember}
+		}
+		updated, err = tx.membership(ctx, targetUserID, organizationID)
+		return err
+	})
+	if err != nil {
+		return old, nil, err
+	}
+	return old, updated, nil
+}
+
 // Leave is forma2's leaveOrganizationAction: any member may leave, except an owner (even when other owners exist; they must be demoted first) and a user for whom this is their only organization. The API keys the member created in the organization are disabled.
 func (s *Service) Leave(ctx context.Context, userID, organizationID uuid.UUID) error {
 	old, disabled, err := s.leave(ctx, userID, organizationID)
@@ -224,8 +295,8 @@ func (s *Service) Leave(ctx context.Context, userID, organizationID uuid.UUID) e
 }
 
 func (s *Service) leave(ctx context.Context, userID, organizationID uuid.UUID) (old *Membership, disabled []disable.Key, err error) {
-	// A member the organization's two-factor requirement refuses may still leave it rather than enrol.
-	allowed, err := s.authz.CanReadOrganizationDespiteSecondFactor(ctx, authz.User(userID), organizationID)
+	// A member the organization refuses (suspended, or held to its two-factor requirement) may still leave it.
+	allowed, err := s.authz.CanReadOrganizationDespiteRefusal(ctx, authz.User(userID), organizationID)
 	if err != nil {
 		return nil, nil, err
 	}

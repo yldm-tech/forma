@@ -140,7 +140,7 @@ type Detail struct {
 
 // Get is forma2's getOrganizationAuth: organization.read and a membership are both required, and a caller without them gets a not-found, so an organization's existence never leaks to a non-member.
 func (s *Service) Get(ctx context.Context, userID, organizationID uuid.UUID) (*Detail, error) {
-	m, err := s.memberDespiteSecondFactor(ctx, userID, organizationID)
+	m, err := s.memberDespiteRefusal(ctx, userID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -171,9 +171,9 @@ func (s *Service) memberWith(ctx context.Context, userID, organizationID uuid.UU
 	return s.membershipIf(ctx, userID, organizationID, allowed)
 }
 
-// memberDespiteSecondFactor is memberWith organization.read with the organization's two-factor requirement set aside: the organization's page and navigation, which guide a member it refuses to enrolment, use it.
-func (s *Service) memberDespiteSecondFactor(ctx context.Context, userID, organizationID uuid.UUID) (*Membership, error) {
-	allowed, err := s.authz.CanReadOrganizationDespiteSecondFactor(ctx, authz.User(userID), organizationID)
+// memberDespiteRefusal is memberWith organization.read with the organization's refusals of the member (a suspension, its two-factor requirement) set aside: the organization's page and navigation, which send a member it refuses to the suspension notice or to enrolment, use it.
+func (s *Service) memberDespiteRefusal(ctx context.Context, userID, organizationID uuid.UUID) (*Membership, error) {
+	allowed, err := s.authz.CanReadOrganizationDespiteRefusal(ctx, authz.User(userID), organizationID)
 	if err != nil {
 		return nil, err
 	}

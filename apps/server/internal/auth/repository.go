@@ -320,14 +320,14 @@ func (r *Repository) unsubscribeOrganizationAlerts(ctx context.Context, userID, 
 	return nil
 }
 
-// soleOwnedOrganizations lists the organizations the user owns with no other active owner; they cannot outlive the account. A deactivated owner can never sign in again, so an organization left to one would have nobody to administer it (the org module's activeOwnerCount rule).
+// soleOwnedOrganizations lists the organizations the user owns with no other active owner; they cannot outlive the account. A deactivated owner can never sign in again and a suspended one cannot act in the organization, so an organization left to one would have nobody to administer it (the org module's otherActiveOwners rule).
 func (r *Repository) soleOwnedOrganizations(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error) {
 	ids, err := r.scanIDs(ctx,
 		`SELECT m.organization_id FROM memberships m
 		 WHERE m.user_id = ? AND m.role = 'owner'
 		   AND NOT EXISTS (
 		     SELECT 1 FROM memberships o JOIN users u ON u.id = o.user_id
-		     WHERE o.organization_id = m.organization_id AND o.role = 'owner' AND o.user_id <> m.user_id AND u.is_active)`,
+		     WHERE o.organization_id = m.organization_id AND o.role = 'owner' AND o.user_id <> m.user_id AND u.is_active AND o.suspended_at IS NULL)`,
 		userID,
 	)
 	if err != nil {
