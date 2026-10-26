@@ -3,6 +3,7 @@ import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
 import type { TResponseData } from "@forma/types/responses";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildSurveyDocumentTitle } from "../lib/document-title";
+import { readEmbedFrameMode } from "../lib/embed-frame";
 import { getHiddenFieldsFromSearchParams, warnOnMissingIngestRows } from "../lib/hidden-fields";
 import { getPrefillValue } from "../lib/prefill";
 import type { TPublicSurvey, TSurveyProps } from "../lib/state";
@@ -30,6 +31,15 @@ type SurveyClientWrapperProps = Omit<TSurveyProps, "survey"> & {
  * How tall a card's content may grow before it scrolls inside the card, on the full link page. The rest of the viewport is the page's chrome around the card: the stacked cards peeking above it, the progress bar, the "Powered by" line, the legal footer and the page's margins. The runtime's default (60dvh) suits a widget on someone else's page, not a page of its own. It stays the floor: on a viewport under 480px tall (a phone held sideways) the chrome would leave the card less than that, and there the page scrolls a little instead.
  */
 const LINK_PAGE_CARD_MAX_HEIGHT = "max(60dvh, 100dvh - 12rem)";
+
+/** An embedded survey that takes the height of its content (the embed script's frames) never scrolls inside a card: the frame grows to the card instead. A cap on the frame's viewport would also feed back, the frame shrinking to the cap and the cap with it. */
+const AUTO_HEIGHT_CARD_MAX_HEIGHT = "none";
+
+/** The cap on a card's content: the viewport on the survey's own page; none in a frame that follows the survey's height; the runtime's own (fullSizeCards) in a frame the survey fills. */
+const getCardMaxHeight = (isEmbed: boolean, isAutoHeight: boolean): string | undefined => {
+  if (isAutoHeight) return AUTO_HEIGHT_CARD_MAX_HEIGHT;
+  return isEmbed ? undefined : LINK_PAGE_CARD_MAX_HEIGHT;
+};
 
 // The runtime hands these setters out once it renders; the preview bar's reset button calls them.
 let setBlockId = (_: string) => {};
@@ -71,6 +81,7 @@ export const SurveyClientWrapper = ({
   onFinished,
 }: SurveyClientWrapperProps) => {
   const searchParams = useMemo(() => new URLSearchParams(globalThis.location.search), []);
+  const isAutoHeight = isEmbed && readEmbedFrameMode(globalThis.location.search).isAutoHeight;
 
   // The survey's active language: the server's, then whatever the in-survey switch picks. The page's own chrome, direction and lang follow it.
   const [currentLanguageCode, setCurrentLanguageCode] = useState(languageCode);
@@ -211,6 +222,7 @@ export const SurveyClientWrapper = ({
         styling={styling}
         handleResetSurvey={handleResetSurvey}
         isEmbed={isEmbed}
+        isAutoHeight={isAutoHeight}
         publicDomain={publicDomain}
         isFormaCloud={isFormaCloud}
         imprintUrl={imprintUrl}
@@ -236,8 +248,8 @@ export const SurveyClientWrapper = ({
           getSetBlockId={getSetBlockId}
           getSetResponseData={getSetResponseData}
           startAtQuestionId={startAt && isStartAtValid ? startAt : undefined}
-          fullSizeCards={isEmbed}
-          cardMaxHeight={isEmbed ? undefined : LINK_PAGE_CARD_MAX_HEIGHT}
+          fullSizeCards={isEmbed && !isAutoHeight}
+          cardMaxHeight={getCardMaxHeight(isEmbed, isAutoHeight)}
           hiddenFieldsRecord={surveyHiddenFields}
           singleUseId={singleUseId}
           singleUseResponseId={singleUseResponseId}
