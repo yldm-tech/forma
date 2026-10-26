@@ -710,9 +710,28 @@
       "no_workspaces_warning_title": "お使いのアカウントはまだワークスペースにアクセスできません。"
     },
     "members": {
-      "inactive_tooltip": "このアカウントは管理 API で無効化されています。オーナーまたはマネージャーが PATCH /api/v2/organizations/{organizationId}/users にメールアドレス {email} と isActive: true を送信すると、アクセスを復元できます。"
+      "account_inactive_tooltip": "このアカウントはこのFormaインスタンスで無効化されているため、どこにもサインインできません。再び有効にできるのはインスタンスの管理者だけです。",
+      "creator_suspended_hint": "この組織はキーの作成者のアクセスを停止しています。アクセスが再開されるまで、このキーは使えません。",
+      "inactive_tooltip": "このアカウントは管理 API で無効化されています。オーナーまたはマネージャーが PATCH /api/v2/organizations/{organizationId}/users にメールアドレス {email} と isActive: true を送信すると、アクセスを復元できます。",
+      "restore_access": "アクセスを再開",
+      "restored_successfully": "アクセスを再開しました",
+      "suspend_access": "アクセスを停止",
+      "suspend_description": "{name}はこの組織、そのワークスペースや回答を開けなくなり、この組織で作成したAPIキーも使えなくなります。アカウントと他の組織はそのまま使えます。アクセスはいつでも再開できます。",
+      "suspend_title": "{name}のアクセスを停止しますか？",
+      "suspended": "停止中",
+      "suspended_since": "{date}にアクセスを停止",
+      "suspended_successfully": "アクセスを停止しました"
     },
     "security_tip_github": "セキュリティ修正の情報を受け取りましょう：<githubLink>GitHub の Forma セキュリティアドバイザリ</githubLink>を開き、Watch → Custom → Releases と Security alerts を選択してください。",
+    "suspended": {
+      "page_continue": "{organization}へ進む",
+      "page_description": "{organization}のオーナーまたはマネージャーがあなたのアクセスを停止しました。再開してもらうには、そのいずれかに依頼してください。あなたのアカウントと他の組織には影響ありません。",
+      "page_other_organizations": "別の組織を開く",
+      "page_restored_description": "この組織を再び開けます。",
+      "page_restored_title": "{organization}へのアクセスが再開されました",
+      "page_title": "{organization}へのアクセスは停止されています",
+      "switcher_label": "{organization}（停止中）"
+    },
     "two_factor": {
       "card_description": "パスワードでサインインできるすべてのメンバー（SSOも使うメンバーを含む）に二段階認証を必須にします。パスワードがなくSSOでのみサインインするメンバーは対象外です。サインイン方法はIDプロバイダーが決めます。",
       "card_title": "二段階認証",

@@ -710,9 +710,28 @@
       "no_workspaces_warning_title": "你的账户尚未获得任何工作区的访问权限。"
     },
     "members": {
-      "inactive_tooltip": "该账户已通过管理 API 停用。所有者或管理员可以向 PATCH /api/v2/organizations/{organizationId}/users 发送邮箱 {email} 和 isActive: true 来恢复访问权限。"
+      "account_inactive_tooltip": "该账户已在此 Forma 实例上停用，无法在任何地方登录。只有实例管理员才能重新启用它。",
+      "creator_suspended_hint": "此组织已暂停该密钥创建者的访问权限。在其访问权限恢复之前，该密钥无法使用。",
+      "inactive_tooltip": "该账户已通过管理 API 停用。所有者或管理员可以向 PATCH /api/v2/organizations/{organizationId}/users 发送邮箱 {email} 和 isActive: true 来恢复访问权限。",
+      "restore_access": "恢复访问权限",
+      "restored_successfully": "已恢复访问权限",
+      "suspend_access": "暂停访问权限",
+      "suspend_description": "{name}将无法再打开此组织、其工作区和回复，其在此组织创建的 API 密钥也会停止工作。其账户和其他组织不受影响。你可以随时恢复其访问权限。",
+      "suspend_title": "暂停{name}的访问权限？",
+      "suspended": "已暂停",
+      "suspended_since": "已于{date}暂停访问",
+      "suspended_successfully": "已暂停访问权限"
     },
     "security_tip_github": "及时了解安全修复：打开<githubLink>Forma 在 GitHub 上的安全公告</githubLink>，选择 Watch → Custom → Releases 和 Security alerts。",
+    "suspended": {
+      "page_continue": "继续前往{organization}",
+      "page_description": "{organization}的所有者或管理员暂停了你对它的访问权限。请联系其中一位为你恢复。你的账户和其他组织不受影响。",
+      "page_other_organizations": "或打开其他组织",
+      "page_restored_description": "你可以再次打开此组织。",
+      "page_restored_title": "你对{organization}的访问权限已恢复",
+      "page_title": "你对{organization}的访问权限已被暂停",
+      "switcher_label": "{organization}（已暂停）"
+    },
     "two_factor": {
       "card_description": "要求所有可以使用密码登录的成员（包括同时使用SSO的成员）启用双因素认证。没有密码、只通过SSO登录的成员不受此限制，由其身份提供商决定登录方式。",
       "card_title": "双因素认证",

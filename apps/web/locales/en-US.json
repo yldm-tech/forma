@@ -710,9 +710,28 @@
       "no_workspaces_warning_title": "Your account does not have access to any workspaces yet."
     },
     "members": {
-      "inactive_tooltip": "This account was deactivated through the management API. An owner or manager can restore access by sending PATCH /api/v2/organizations/{organizationId}/users with the email {email} and isActive: true."
+      "account_inactive_tooltip": "This account is deactivated on this Forma instance, so it cannot sign in anywhere. Only the instance's administrator can turn it back on.",
+      "creator_suspended_hint": "This organization suspended the key's creator. The key does not work until their access is restored.",
+      "inactive_tooltip": "This account was deactivated through the management API. An owner or manager can restore access by sending PATCH /api/v2/organizations/{organizationId}/users with the email {email} and isActive: true.",
+      "restore_access": "Restore access",
+      "restored_successfully": "Access restored",
+      "suspend_access": "Suspend access",
+      "suspend_description": "{name} will no longer be able to open this organization, its workspaces or its responses, and the API keys they created here stop working. They keep their account and their other organizations. You can restore their access at any time.",
+      "suspend_title": "Suspend {name}'s access?",
+      "suspended": "Suspended",
+      "suspended_since": "Access suspended on {date}",
+      "suspended_successfully": "Access suspended"
     },
     "security_tip_github": "Stay informed about security fixes: open <githubLink>Forma's security advisories on GitHub</githubLink> and choose Watch → Custom → Releases and Security alerts.",
+    "suspended": {
+      "page_continue": "Continue to {organization}",
+      "page_description": "An owner or manager of {organization} suspended your access to it. Ask one of them to restore it. Your account and your other organizations are not affected.",
+      "page_other_organizations": "Or open another organization",
+      "page_restored_description": "You can open the organization again.",
+      "page_restored_title": "Your access to {organization} is restored",
+      "page_title": "Your access to {organization} is suspended",
+      "switcher_label": "{organization} (suspended)"
+    },
     "two_factor": {
       "card_description": "Require every member who can sign in with a password to use two-factor authentication, including members who also use SSO. Members without a password, who sign in only with SSO, are exempt: their identity provider decides how they sign in.",
       "card_title": "Two-factor authentication",

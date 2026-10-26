@@ -60,31 +60,34 @@ const organization = (role: OrganizationRole): OrganizationDetail => ({
     instanceTimeZone: "Europe/Berlin",
   },
   whitelabel: {},
-  membership: { organizationId: ORG, userId: "u1", accepted: true, role },
+  membership: { organizationId: ORG, userId: "u1", accepted: true, role, suspendedAt: null },
   userManagementAllowed: role === "owner" || role === "manager",
   twoFactorEnforcedAt: null,
   twoFactorStatus: "enabled",
   twoFactorBlocked: false,
 });
 
-const members: Member[] = [
-  {
-    userId: "u1",
-    name: "Ada Owner",
-    email: "ada@example.com",
-    accepted: true,
-    role: "owner",
-    isActive: true,
-  },
-  {
-    userId: "u2",
-    name: "Bob Member",
-    email: "bob@example.com",
-    accepted: true,
-    role: "member",
-    isActive: true,
-  },
-];
+const ada: Member = {
+  userId: "u1",
+  name: "Ada Owner",
+  email: "ada@example.com",
+  accepted: true,
+  role: "owner",
+  isActive: true,
+  suspendedAt: null,
+};
+
+const bob: Member = {
+  userId: "u2",
+  name: "Bob Member",
+  email: "bob@example.com",
+  accepted: true,
+  role: "member",
+  isActive: true,
+  suspendedAt: null,
+};
+
+const members: Member[] = [ada, bob];
 
 const invites: Invite[] = [
   {
@@ -219,8 +222,8 @@ describe("MembersCard", () => {
     expect(within(invite).getByRole("button", { name: share() })).toBeTruthy();
   });
 
-  // Only the v2 management API deactivates an account, and no page can undo it; the badge tells the admin how.
-  test("explains an inactive member's badge with the management API call that restores access", async () => {
+  // An account switched off on the instance is not something an organization can undo (it suspends a member instead); the badge says who can.
+  test("explains an inactive account's badge: only the instance's administrator turns it back on", async () => {
     renderMembers({
       role: "owner",
       access: ownerAccess,
@@ -231,12 +234,8 @@ describe("MembersCard", () => {
     const row = await rowOf("Bob Member");
     // The button is named by its badge alone, so the explanation is not read twice once the tooltip describes it.
     const badge = within(row).getByRole("button", { name: t("common.inactive") });
-    const explanation = t("organizations.members.inactive_tooltip", {
-      organizationId: ORG,
-      email: "bob@example.com",
-    });
-    expect(explanation).toContain(`PATCH /api/v2/organizations/${ORG}/users`);
-    expect(explanation).toContain("bob@example.com");
+    const explanation = t("organizations.members.account_inactive_tooltip");
+    expect(explanation).toContain("administrator");
     // A screen reader reading the table finds it beside the badge; the eye gets it as a tooltip on a trigger the keyboard can reach, which describes the focused button.
     expect(within(row).getByText(explanation).closest("button")).toBeNull();
     expect(within(await rowOf("Ada Owner")).queryByText(explanation)).toBeNull();
@@ -244,6 +243,86 @@ describe("MembersCard", () => {
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip.textContent).toBe(explanation);
     expect(badge.getAttribute("aria-describedby")).toBe(tooltip.id);
+  });
+
+  test("lets an owner suspend a member after confirming, and restore a suspended one", async () => {
+    const suspendedAt = "2026-10-01T00:00:00Z";
+    const memberList: Member[] = [
+      ...members,
+      { ...bob, userId: "u3", name: "Sue Suspended", email: "sue@example.com", suspendedAt },
+    ];
+    const fetch = stubServer({
+      [`GET ${API}/members`]: { members: memberList },
+      [`GET ${API}/invites`]: invites,
+      [`GET ${API}/user-management`]: ownerAccess,
+      "GET /api/app/auth/me": { id: "u1", name: "Ada Owner" },
+      "GET /api/app/auth/options": { smtpConfigured: true },
+      [`POST ${API}/members/u2/suspension`]: {
+        organizationId: ORG,
+        userId: "u2",
+        accepted: true,
+        role: "member",
+        suspendedAt,
+      },
+      [`DELETE ${API}/members/u3/suspension`]: {
+        organizationId: ORG,
+        userId: "u3",
+        accepted: true,
+        role: "member",
+        suspendedAt: null,
+      },
+    });
+    renderInRouter(<MembersCard organization={organization("owner")} />);
+    const suspend = t("organizations.members.suspend_access");
+    const restore = t("organizations.members.restore_access");
+
+    const sue = await rowOf("Sue Suspended");
+    expect(within(sue).getByText(t("organizations.members.suspended"))).toBeTruthy();
+    expect(within(sue).queryByText(t("common.active"))).toBeNull();
+    expect(within(sue).queryByRole("button", { name: suspend })).toBeNull();
+    // Nobody suspends themselves, and an invite has no access to suspend.
+    expect(within(await rowOf("Ada Owner")).queryByRole("button", { name: suspend })).toBeNull();
+    expect(within(await rowOf("Cy Invitee")).queryByRole("button", { name: suspend })).toBeNull();
+
+    fireEvent.click(within(await rowOf("Bob Member")).getByRole("button", { name: suspend }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(t("organizations.members.suspend_title", { name: "Bob Member" }))
+    ).toBeTruthy();
+    expect(fetch.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+    fireEvent.click(within(dialog).getByRole("button", { name: suspend }));
+    await waitFor(() =>
+      expect(
+        fetch.mock.calls.some(
+          ([path, init]) => init?.method === "POST" && path === `${API}/members/u2/suspension`
+        )
+      ).toBe(true)
+    );
+
+    fireEvent.click(within(sue).getByRole("button", { name: restore }));
+    await waitFor(() =>
+      expect(
+        fetch.mock.calls.some(
+          ([path, init]) => init?.method === "DELETE" && path === `${API}/members/u3/suspension`
+        )
+      ).toBe(true)
+    );
+  });
+
+  test("does not offer a manager to suspend an owner", async () => {
+    renderMembers({
+      role: "manager",
+      access: ownerAccess,
+      smtpConfigured: true,
+      memberList: [
+        { ...ada, role: "manager" },
+        { ...ada, userId: "u4", name: "Olga Owner", email: "olga@example.com" },
+        bob,
+      ],
+    });
+    const suspend = t("organizations.members.suspend_access");
+    expect(within(await rowOf("Olga Owner")).queryByRole("button", { name: suspend })).toBeNull();
+    expect(within(await rowOf("Bob Member")).getByRole("button", { name: suspend })).toBeTruthy();
   });
 
   test("offers a team admin neither share nor resend, which the server refuses them", async () => {

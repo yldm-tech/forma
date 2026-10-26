@@ -3,7 +3,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { Building2Icon, ChevronDownIcon, ChevronRightIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { organizationSettingsPath, organizationSwitchPath, sortByName } from "../../lib/navigation";
+import {
+  organizationSettingsPath,
+  organizationSwitchPath,
+  switcherOrganizations,
+} from "../../lib/navigation";
 import { organizationsQuery } from "../../lib/queries/organizations";
 import { BreadcrumbItem } from "../ui/breadcrumb";
 import {
@@ -50,7 +54,7 @@ export const OrganizationBreadcrumb = ({
             isLoading={organizations.isLoading}
             isError={organizations.isError}
             onRetry={() => void organizations.refetch()}
-            items={sortByName(organizations.data ?? [])}
+            items={switcherOrganizations(t, organizations.data ?? [])}
             selectedId={organizationId}
             onSelect={(id) => void navigate({ href: organizationSwitchPath(id, organizationId) })}>
             <DropdownMenuCheckboxItem className="w-full justify-between" onSelect={() => setCreateOpen(true)}>

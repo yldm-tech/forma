@@ -442,3 +442,69 @@ func TestWithMigrationLockSerializesMigrators(t *testing.T) {
 		t.Fatalf("lock still held after both migrators returned (free %v, err %v)", free, err)
 	}
 }
+
+// 00022 suspends every membership of a deactivated account and leaves every account as it is: nothing tells an organization's deactivation from the operator's, so none is undone. Its Down deactivates every account with a suspended membership again, so a release without suspensions does not give their access back.
+func TestMembershipSuspensionMigration(t *testing.T) {
+	const version = 22
+	dsn := startPostgres(t)
+	ctx := context.Background()
+	provider, cleanup, err := NewMigrator(dsn, migrations.FS)
+	if err != nil {
+		t.Fatalf("NewMigrator: %v", err)
+	}
+	defer cleanup()
+	if _, err := provider.UpTo(ctx, version-1); err != nil {
+		t.Fatalf("up to %d: %v", version-1, err)
+	}
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	orgA := mustScanID(t, db, `INSERT INTO organizations (name) VALUES ('A') RETURNING id`)
+	orgB := mustScanID(t, db, `INSERT INTO organizations (name) VALUES ('B') RETURNING id`)
+	user := func(email string, active bool) string {
+		return mustScanID(t, db, `INSERT INTO users (name, email, is_active) VALUES ('U', $1, $2) RETURNING id`, email, active)
+	}
+	deactivated, orphan, active := user("deactivated@example.com", false), user("orphan@example.com", false), user("active@example.com", true)
+	for _, m := range [][2]string{{deactivated, orgA}, {deactivated, orgB}, {active, orgA}} {
+		mustExec(t, db, `INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES ($1, $2, 'member', true)`, m[0], m[1])
+	}
+
+	if _, err := provider.UpTo(ctx, version); err != nil {
+		t.Fatalf("up to %d: %v", version, err)
+	}
+	isActive := func(id string) bool {
+		t.Helper()
+		var v bool
+		if err := db.QueryRow(`SELECT is_active FROM users WHERE id = $1`, id).Scan(&v); err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	suspended := func(id string) int {
+		t.Helper()
+		var n int
+		if err := db.QueryRow(`SELECT count(*) FROM memberships WHERE user_id = $1 AND suspended_at IS NOT NULL`, id).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if isActive(deactivated) || suspended(deactivated) != 2 {
+		t.Fatalf("deactivated member: active %v, %d suspended memberships; want it still inactive with both suspended", isActive(deactivated), suspended(deactivated))
+	}
+	if isActive(orphan) || !isActive(active) || suspended(active) != 0 {
+		t.Fatal("an account without memberships was reactivated, or an active member was suspended")
+	}
+
+	// The operator turns the account back on, and one organization restores it.
+	mustExec(t, db, `UPDATE users SET is_active = true WHERE id = $1`, deactivated)
+	mustExec(t, db, `UPDATE memberships SET suspended_at = NULL WHERE user_id = $1 AND organization_id = $2`, deactivated, orgB)
+	if _, err := provider.DownTo(ctx, version-1); err != nil {
+		t.Fatalf("down to %d: %v", version-1, err)
+	}
+	if isActive(deactivated) || !isActive(active) {
+		t.Fatalf("after Down: suspended member active %v, active member active %v", isActive(deactivated), isActive(active))
+	}
+}

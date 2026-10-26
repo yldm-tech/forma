@@ -141,6 +141,9 @@ func TestTwoFactorRequirementRefusesMembersWithoutIt(t *testing.T) {
 	if !d.TwoFactorBlocked || d.TwoFactorStatus != authz.SecondFactorDisabled {
 		t.Fatalf("detail %q %v, want blocked", d.TwoFactorStatus, d.TwoFactorBlocked)
 	}
+	if !limited(d.Organization) || d.TwoFactorEnforcedAt == nil {
+		t.Fatalf("detail %+v, want the organization limited to its name and requirement", d.Organization)
+	}
 	var nav Navigation
 	e.ok(e.do(member, http.MethodGet, orgPath(c.ID, "/navigation"), nil), http.StatusOK, &nav)
 	if nav.Path != TwoFactorPath(c.ID) || nav.CanCreateWorkspace {
@@ -150,6 +153,11 @@ func TestTwoFactorRequirementRefusesMembersWithoutIt(t *testing.T) {
 	e.ok(e.do(member, http.MethodGet, "/api/app/organizations", nil), http.StatusOK, &list)
 	if len(list.Organizations) != 2 {
 		t.Fatalf("organizations %+v, want both still listed", list.Organizations)
+	}
+	for _, o := range list.Organizations {
+		if limited(o.Organization) != (o.ID == c.ID) || (o.ID == c.ID && o.TwoFactorEnforcedAt == nil) {
+			t.Fatalf("listed %s %+v: only the refusing organization is limited, its requirement kept", o.Name, o.Organization)
+		}
 	}
 	// Its workspaces are left out of the root page's; the member's own organization is unaffected.
 	var home Home

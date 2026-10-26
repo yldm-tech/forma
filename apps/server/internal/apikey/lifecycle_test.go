@@ -125,3 +125,52 @@ func TestCreateIsRefusedOnceTheCreatorLostTheRole(t *testing.T) {
 		t.Fatalf("%d keys created", n)
 	}
 }
+
+// A key whose creator the organization suspended stops authenticating while the suspension lasts, without being disabled, and works again once it is restored (owner decision D-AO01); the list says why. A suspended manager cannot create a key either.
+func TestAKeyOfASuspendedCreatorWaitsForTheRestore(t *testing.T) {
+	e := newAppEnv(t)
+	org, owner, manager := e.org(), e.user(), e.user()
+	e.member(org, owner, "owner")
+	e.member(org, manager, "manager")
+	e.exec(`UPDATE users SET name = 'Grace' WHERE id = ?`, manager)
+	ws := e.workspace(org, "Growth")
+	e.drain()
+	ownerToken, managerToken := e.session(owner), e.session(manager)
+
+	res := e.do(http.MethodPost, keysPath(org), managerToken, createBody("Manager key", readAccess, grant(ws, PermissionRead)))
+	if res.status != http.StatusCreated {
+		t.Fatalf("create = %d %s", res.status, res.body)
+	}
+	var created Created
+	res.decode(t, &created)
+	headers := map[string]string{"X-Api-Key": created.Key}
+	if e.authenticate(headers, Options{}) == nil {
+		t.Fatal("the key does not authenticate")
+	}
+
+	e.exec(`UPDATE memberships SET suspended_at = now() WHERE organization_id = ? AND user_id = ?`, org, manager)
+	for _, opts := range []Options{{}, {AllowOrganizationOnly: true}} {
+		if e.authenticate(headers, opts) != nil {
+			t.Fatal("a suspended creator's key authenticates")
+		}
+	}
+	if warned := e.logs.records(t, "An API key of a suspended member was used"); len(warned) == 0 || warned[0]["apiKeyId"] != created.ID.String() {
+		t.Fatalf("no warning names the key: %v", warned)
+	}
+	k := e.listed(org, created.ID, ownerToken)
+	if k.CreatedBy == nil || *k.CreatedBy != (Creator{ID: manager, Name: "Grace", Suspended: true}) || k.DisabledAt != nil {
+		t.Fatalf("key of a suspended creator = %+v, creator %+v", k, k.CreatedBy)
+	}
+	res = e.do(http.MethodPost, keysPath(org), managerToken, createBody("Late", readAccess))
+	if res.status != http.StatusForbidden {
+		t.Fatalf("create while suspended = %d %s", res.status, res.body)
+	}
+
+	e.exec(`UPDATE memberships SET suspended_at = NULL WHERE organization_id = ? AND user_id = ?`, org, manager)
+	if e.authenticate(headers, Options{}) == nil {
+		t.Fatal("the key does not authenticate after the restore")
+	}
+	if k := e.listed(org, created.ID, ownerToken); k.CreatedBy == nil || k.CreatedBy.Suspended {
+		t.Fatalf("creator after the restore = %+v", k.CreatedBy)
+	}
+}

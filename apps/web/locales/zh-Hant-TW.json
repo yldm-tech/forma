@@ -710,9 +710,28 @@
       "no_workspaces_warning_title": "您的帳戶尚未有任何工作區的存取權。"
     },
     "members": {
-      "inactive_tooltip": "此帳戶已透過管理 API 停用。擁有者或管理者可以向 PATCH /api/v2/organizations/{organizationId}/users 傳送電子郵件 {email} 和 isActive: true 來恢復存取權限。"
+      "account_inactive_tooltip": "此帳戶已在這個 Forma 實例上停用，無法在任何地方登入。只有實例管理員才能重新啟用。",
+      "creator_suspended_hint": "此組織已暫停這個金鑰建立者的存取權限。在其存取權限恢復之前，這個金鑰無法使用。",
+      "inactive_tooltip": "此帳戶已透過管理 API 停用。擁有者或管理者可以向 PATCH /api/v2/organizations/{organizationId}/users 傳送電子郵件 {email} 和 isActive: true 來恢復存取權限。",
+      "restore_access": "恢復存取權限",
+      "restored_successfully": "已恢復存取權限",
+      "suspend_access": "暫停存取權限",
+      "suspend_description": "{name}將無法再開啟此組織、其工作區和回應，其在此組織建立的 API 金鑰也會停止運作。其帳戶和其他組織不受影響。你可以隨時恢復其存取權限。",
+      "suspend_title": "要暫停{name}的存取權限嗎？",
+      "suspended": "已暫停",
+      "suspended_since": "已於{date}暫停存取",
+      "suspended_successfully": "已暫停存取權限"
     },
     "security_tip_github": "隨時掌握安全性修正：開啟<githubLink>Forma 在 GitHub 上的安全性公告</githubLink>，選擇 Watch → Custom → Releases 和 Security alerts。",
+    "suspended": {
+      "page_continue": "繼續前往{organization}",
+      "page_description": "{organization}的擁有者或管理者暫停了你對它的存取權限。請聯絡其中一位為你恢復。你的帳戶和其他組織不受影響。",
+      "page_other_organizations": "或開啟其他組織",
+      "page_restored_description": "你可以再次開啟此組織。",
+      "page_restored_title": "你對{organization}的存取權限已恢復",
+      "page_title": "你對{organization}的存取權限已被暫停",
+      "switcher_label": "{organization}（已暫停）"
+    },
     "two_factor": {
       "card_description": "要求所有可以使用密碼登入的成員（包括同時使用SSO的成員）啟用雙重驗證。沒有密碼、只透過SSO登入的成員不受此限制，由其身分提供者決定登入方式。",
       "card_title": "雙重驗證",

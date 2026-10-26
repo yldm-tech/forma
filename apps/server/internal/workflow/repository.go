@@ -340,13 +340,13 @@ type Member struct {
 	Email string `json:"email"`
 }
 
-// Members is forma2's getWorkspaceMembers: the active users of the workspace's organization who are its owners or managers, or who are on a team with access to the workspace.
+// Members is forma2's getWorkspaceMembers: the active, unsuspended users of the workspace's organization who are its owners or managers, or who are on a team with access to the workspace.
 func Members(ctx context.Context, db *gorm.DB, workspaceID uuid.UUID) ([]Member, error) {
 	var rows []Member
 	if err := db.WithContext(ctx).Raw(`SELECT u.name, u.email FROM memberships m
 		JOIN workspaces w ON w.organization_id = m.organization_id
 		JOIN users u ON u.id = m.user_id
-		WHERE w.id = ? AND u.is_active AND u.email <> ''
+		WHERE w.id = ? AND u.is_active AND m.suspended_at IS NULL AND u.email <> ''
 		AND (m.role IN ('owner', 'manager') OR EXISTS (
 			SELECT 1 FROM team_members tm JOIN workspace_teams wt ON wt.team_id = tm.team_id WHERE tm.user_id = u.id AND wt.workspace_id = w.id))
 		ORDER BY u.name, u.email`, workspaceID).Scan(&rows).Error; err != nil {
