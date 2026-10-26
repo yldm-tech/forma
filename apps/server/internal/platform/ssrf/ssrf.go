@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/netip"
@@ -203,9 +204,18 @@ var ErrTimeout = errors.New("request timed out")
 
 // Post sends body to the target and returns the response status; the body of the answer is never read. A redirect is returned as its 3xx status, unless DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS is set, which follows it. The request is cancelled after timeout, which is reported as ErrTimeout.
 func (g *Guard) Post(ctx context.Context, t *Target, header http.Header, body []byte, timeout time.Duration) (int, error) {
+	return g.Do(ctx, http.MethodPost, t, header, body, timeout)
+}
+
+// Do is Post with any method; a nil body sends none.
+func (g *Guard) Do(ctx context.Context, method string, t *Target, header http.Header, body []byte, timeout time.Duration) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.URL.String(), bytes.NewReader(body))
+	var reader io.Reader = http.NoBody
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, t.URL.String(), reader)
 	if err != nil {
 		return 0, fmt.Errorf("build webhook request: %w", err)
 	}

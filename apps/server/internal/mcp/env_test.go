@@ -171,7 +171,7 @@ func newEnv(t *testing.T, opts ...envOptions) *env {
 	guard := v3api.NewGuard(cfg, headerSessions{}, keys, e.limiter, log)
 	aiService := ai.NewService(ai.NewClient(cfg, log), ai.NewRepository(db), e.authz.Authorizer, log)
 	surveys := survey.NewHandler(survey.NewService(cfg, survey.NewRepository(db), e.authz.Authorizer, e.limiter, emitter, surveydoc.NewValidator(schemas), cipher, catalog, aiService, log), headerSessions{}, guard, e.limiter, log)
-	workflows := workflow.NewHandler(cfg, workflow.NewService(workflow.NewRepository(db), db, e.authz.Authorizer, log), guard, headerSessions{}, emitter, log)
+	workflows := workflow.NewHandler(cfg, workflow.NewService(workflow.NewRepository(db), db, e.authz.Authorizer, nil, nil, log), guard, headerSessions{}, emitter, log)
 	signingKeys := oauthserver.NewKeys(db, cipher)
 	oauth, err := oauthserver.NewHandler(cfg, db, signingKeys, headerSessions{}, e.limiter, log)
 	if err != nil {

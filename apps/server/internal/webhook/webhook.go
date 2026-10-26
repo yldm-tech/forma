@@ -109,6 +109,9 @@ func GenerateSecret() string {
 	return secretPrefix + base64.StdEncoding.EncodeToString(b)
 }
 
+// ValidSecret reports whether s is a secret Standard Webhooks receivers can verify with: whsec_ and the standard base64 of at least 24 bytes. Workflow HTTP requests are signed with secrets of the same shape.
+func ValidSecret(s string) bool { return validSecret(s) }
+
 // validSecret reports whether s is a secret Standard Webhooks receivers can verify with: whsec_ and the standard base64 of at least 24 bytes.
 func validSecret(s string) bool {
 	key, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(s, secretPrefix))

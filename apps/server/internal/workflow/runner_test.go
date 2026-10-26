@@ -384,7 +384,7 @@ func TestRunFailures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if msg := final(run(`{"q1":"jane@example.com"}`), NewRunner(e.cfg, e.db, unconfigured, e.log)); msg != smtpNotConfigured {
+	if msg := final(run(`{"q1":"jane@example.com"}`), NewRunner(e.cfg, e.db, unconfigured, e.guard, e.cipher, e.log)); msg != smtpNotConfigured {
 		t.Fatalf("no SMTP: %s", msg)
 	}
 	// A payload that names a response of another survey is refused before anything renders.
@@ -549,7 +549,7 @@ func TestCancelledSendIsRetried(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := NewRunner(e.cfg, e.db, m, e.log).Work(ctx, runJob(run, wf, f.ws, 1)); err == nil {
+	if err := NewRunner(e.cfg, e.db, m, e.guard, e.cipher, e.log).Work(ctx, runJob(run, wf, f.ws, 1)); err == nil {
 		t.Fatal("a cancelled attempt succeeded")
 	}
 	if s := e.text(`SELECT status FROM workflow_run_logs WHERE run_id = ?`, run); s != StepFailed {

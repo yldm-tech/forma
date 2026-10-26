@@ -21,6 +21,8 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
 )
@@ -34,16 +36,17 @@ const (
 	emailProvider         = "smtp"
 )
 
-// Runner executes workflow-run.process jobs, forma2's processWorkflowRunJob: a run moves queued → running → completed or failed, and each send_email step is claimed in its run log row before its email goes out, so a step is sent at most once however often its job is delivered.
+// Runner executes workflow-run.process jobs, forma2's processWorkflowRunJob: a run moves queued → running → completed or failed, and each step is claimed in its run log row before it acts (an email goes out, a request is sent, a tag or attribute is written), so a step acts at most once however often its job is delivered.
 type Runner struct {
-	cfg    config.Config
-	db     *gorm.DB
-	mailer *mailer.Mailer
-	log    *slog.Logger
+	cfg     config.Config
+	db      *gorm.DB
+	mailer  *mailer.Mailer
+	actions *actions
+	log     *slog.Logger
 }
 
-func NewRunner(cfg config.Config, db *gorm.DB, m *mailer.Mailer, log *slog.Logger) *Runner {
-	return &Runner{cfg: cfg, db: db, mailer: m, log: log}
+func NewRunner(cfg config.Config, db *gorm.DB, m *mailer.Mailer, guard *ssrf.Guard, cipher *secret.Cipher, log *slog.Logger) *Runner {
+	return &Runner{cfg: cfg, db: db, mailer: m, actions: newActions(db, guard, cipher), log: log}
 }
 
 // claimedRun is what executing a run reads of it.
@@ -61,10 +64,11 @@ type notExecutableError struct{ message string }
 
 func (e *notExecutableError) Error() string { return e.message }
 
-// stepFailedError fails a run whose step failed, carrying the steps executed so far.
+// stepFailedError fails a run whose step failed, carrying the steps executed so far. permanent is a failure no retry can change, which fails the run without the attempts left.
 type stepFailedError struct {
-	message string
-	data    json.RawMessage
+	message   string
+	data      json.RawMessage
+	permanent bool
 }
 
 func (e *stepFailedError) Error() string { return e.message }
@@ -79,6 +83,8 @@ type StepResult struct {
 	Error      string          `json:"error,omitempty"`
 	StartedAt  string          `json:"startedAt,omitempty"`
 	FinishedAt string          `json:"finishedAt,omitempty"`
+	// permanent marks a failure no retry can change; it is not recorded.
+	permanent bool
 }
 
 // runDataDoc is the data a run records: its trigger payload and its steps.
@@ -91,7 +97,7 @@ func isTerminal(status string) bool {
 	return status == RunCompleted || status == RunFailed || status == RunCanceled
 }
 
-// Work runs one delivery of a run's job. A run that is missing or belongs to another workspace is dropped, a terminal one is left alone. A failure is recorded on the run and retried while attempts remain; the last attempt marks the run failed.
+// Work runs one delivery of a run's job. A run that is missing or belongs to another workspace is dropped, a terminal one is left alone. A failure is recorded on the run and retried while attempts remain; the last attempt, or a step failure no retry can change, marks the run failed.
 func (r *Runner) Work(ctx context.Context, job *river.Job[RunArgs]) error {
 	args := job.Args
 	log := r.log.With("attempt", job.Attempt, "max_attempts", job.MaxAttempts, "job_id", job.ID, "workflow_id", args.WorkflowID, "workflow_run_id", args.WorkflowRunID, "workspace_id", args.WorkspaceID)
@@ -116,6 +122,7 @@ func (r *Runner) Work(ctx context.Context, job *river.Job[RunArgs]) error {
 	var stepErr *stepFailedError
 	if errors.As(err, &stepErr) {
 		data = stepErr.data
+		final = final || stepErr.permanent
 	}
 	recorded := r.recordFailure(ctx, run.ID, args.WorkspaceID, err, data, final, log)
 	if !final {
@@ -190,6 +197,8 @@ func (r *Runner) execute(ctx context.Context, job *river.Job[RunArgs], run *clai
 	if err != nil {
 		return err
 	}
+	ec.template.Fixed["workflow.id"] = job.Args.WorkflowID.String()
+	ec.template.Fixed["run.id"] = run.ID.String()
 	results, failure, bail, err := r.runSteps(ctx, run.ID, steps, ec, log)
 	if err != nil {
 		return err
@@ -200,7 +209,8 @@ func (r *Runner) execute(ctx context.Context, job *river.Job[RunArgs], run *clai
 	}
 	data := mustJSON(runDataDoc{Trigger: mustJSON(payload), Steps: results})
 	if failure != "" {
-		return &stepFailedError{message: failure, data: data}
+		permanent := len(results) > 0 && results[len(results)-1].permanent
+		return &stepFailedError{message: failure, data: data, permanent: permanent}
 	}
 	done := r.db.WithContext(ctx).Exec(`UPDATE workflow_runs SET status = 'completed', finished_at = now(), data = ?::jsonb, updated_at = now() WHERE id = ? AND workspace_id = ? AND status = 'running'`,
 		string(data), run.ID, job.Args.WorkspaceID)
@@ -245,12 +255,16 @@ func (r *Runner) recordFailure(ctx context.Context, runID, workspaceID uuid.UUID
 
 // emailContext is what every step of a run renders against, loaded once.
 type emailContext struct {
-	survey  *responsemail.Survey
-	answers *responsemail.Answers
-	logo    string
-	locale  string
+	workspaceID uuid.UUID
+	response    *response.Response
+	survey      *responsemail.Survey
+	answers     *responsemail.Answers
+	logo        string
+	locale      string
 	// allowed is the workspace's recipient allowlist, loaded only when a step has a literal recipient; empty, it refuses every literal recipient.
 	allowed map[string]bool
+	// template is what the steps after send_email render their templates against.
+	template *Template
 }
 
 // loadContext is forma2's loadRunEmailContext: the response, its survey, the organization's email logo and, when a step needs it, the recipient allowlist. The survey must belong to the run's workspace and the response to the payload's survey.
@@ -279,7 +293,7 @@ func (r *Runner) loadContext(ctx context.Context, workspaceID, surveyID, respons
 	if err != nil {
 		return nil, err
 	}
-	ec := &emailContext{survey: sv, answers: answers, allowed: map[string]bool{}}
+	ec := &emailContext{workspaceID: workspaceID, response: resp, survey: sv, answers: answers, allowed: map[string]bool{}, template: responseTemplate(resp, sv, answers)}
 	// Scanned into a struct: GORM cannot scan a NULL column into a []*string, and an organization without a whitelabel logo has one.
 	var orgs []struct{ LogoURL *string }
 	if err := r.db.WithContext(ctx).Raw(`SELECT o.whitelabel ->> 'logoUrl' AS logo_url FROM organizations o JOIN workspaces w ON w.organization_id = o.id WHERE w.id = ?`, workspaceID).Scan(&orgs).Error; err != nil {
@@ -352,8 +366,9 @@ func (r *Runner) runStep(ctx context.Context, runID uuid.UUID, sequence int, ste
 	if len(existing) > 0 {
 		l := existing[0]
 		switch l.Status {
-		case StepSucceeded:
-			res := &StepResult{StepID: l.StepID, StepType: l.StepType, Status: StepSucceeded, Input: jsonObject(l.Input), Output: jsonObject(l.Output), StartedAt: isoOrNow(l.StartedAt), FinishedAt: isoOrNow(l.FinishedAt)}
+		// A skipped step (a contact attribute with nothing to write) is done too; only the reconciler skips steps otherwise, on runs it fails.
+		case StepSucceeded, StepSkipped:
+			res := &StepResult{StepID: l.StepID, StepType: l.StepType, Status: l.Status, Input: jsonObject(l.Input), Output: jsonObject(l.Output), StartedAt: isoOrNow(l.StartedAt), FinishedAt: isoOrNow(l.FinishedAt)}
 			if l.Error != nil {
 				res.Error = *l.Error
 			}
@@ -362,7 +377,7 @@ func (r *Runner) runStep(ctx context.Context, runID uuid.UUID, sequence int, ste
 			return nil, false, nil
 		}
 	}
-	input := mustJSON(map[string]string{"to": step.Config.To, "subject": step.Config.Subject})
+	input := mustJSON(stepInput(step))
 	startedAt := time.Now()
 	var claim *gorm.DB
 	if len(existing) == 0 {
@@ -378,7 +393,7 @@ func (r *Runner) runStep(ctx context.Context, runID uuid.UUID, sequence int, ste
 	if claim.RowsAffected == 0 {
 		return nil, false, nil
 	}
-	status, output, errMsg := r.send(ctx, runID, step, ec)
+	status, output, errMsg, permanent := r.perform(ctx, runID, step, ec)
 	finishedAt := time.Now()
 	var stored *string
 	if errMsg != "" {
@@ -391,7 +406,25 @@ func (r *Runner) runStep(ctx context.Context, runID uuid.UUID, sequence int, ste
 		return nil, false, fmt.Errorf("record workflow step: %w", err)
 	}
 	return &StepResult{StepID: step.ID, StepType: step.Type, Status: status, Input: input, Output: output, Error: errMsg,
-		StartedAt: jsvalue.ISOString(startedAt), FinishedAt: jsvalue.ISOString(finishedAt)}, true, nil
+		StartedAt: jsvalue.ISOString(startedAt), FinishedAt: jsvalue.ISOString(finishedAt), permanent: permanent}, true, nil
+}
+
+// perform runs a claimed step: send_email sends its email, every other action goes through actions.perform with the run's template, its response and contact, and a message id the same on every delivery of the step.
+func (r *Runner) perform(ctx context.Context, runID uuid.UUID, step Step, ec *emailContext) (status string, output json.RawMessage, errMsg string, permanent bool) {
+	if step.Type == ActionSendEmail {
+		status, output, errMsg = r.send(ctx, runID, step, ec)
+		return status, output, errMsg, false
+	}
+	env := actionEnv{workspaceID: ec.workspaceID, responseID: ec.response.ID, template: ec.template, messageID: stepMessageID(runID, step.ID), retry: true}
+	if ec.response.Contact != nil {
+		id := ec.response.Contact.ID
+		env.contactID = &id
+	}
+	o := r.actions.perform(ctx, env, step.Node)
+	if o.output == nil {
+		o.output = map[string]any{}
+	}
+	return o.status, mustJSON(o.output), o.err, o.permanent
 }
 
 // controlChars are what an SMTP header injection smuggles into a subject.

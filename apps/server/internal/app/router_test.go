@@ -211,6 +211,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		"POST /api/v3/workflows/:workflowId/enable":                                   true,
 		"POST /api/v3/workflows/:workflowId/test":                                     true,
 		"GET /api/app/workspaces/:workspaceId/workflows/authoring-context":            true,
+		"POST /api/app/workflows/:workflowId/steps/:stepId/test-send":                 true,
 		"GET /api/app/organizations/:organizationId/billing":                          true,
 		"POST /api/app/organizations/:organizationId/billing/setup-checkout/finalize": true,
 		"POST /api/billing/stripe-webhook":                                            true,
