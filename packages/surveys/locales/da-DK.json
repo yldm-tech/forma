@@ -18,7 +18,7 @@
     "option_number": "Mulighed {number}",
     "page_x_of_y": "Side {current} af {total}",
     "people_responded": "{count, plural, one {1 person har svaret} other {{count} personer har svaret}}",
-    "please_retry_now_or_try_again_later": "Prøv igen nu eller prøv senere.",
+    "please_retry_now_or_try_again_later": "Tryk på Prøv igen, eller lad siden være åben, så prøver vi igen.",
     "powered_by": "Drevet af",
     "privacy_policy": "Privatlivspolitik",
     "protected_by_reCAPTCHA_and_the_Google": "Beskyttet af reCAPTCHA og Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {Tager 1 minut} other {Tager {count} minutter}}",
     "takes_x_plus_minutes": "Tager {count}+ minutter",
     "terms_of_service": "Vilkår for brug",
-    "the_servers_cannot_be_reached_at_the_moment": "Serverne kan ikke kontaktes lige nu.",
+    "the_servers_cannot_be_reached_at_the_moment": "Vi kunne ikke nå serveren. Dine svar er gemt på denne side.",
     "they_will_be_redirected_immediately": "De bliver straks omdirigeret",
     "time_remaining_before_the_survey_closes": "Tid tilbage før undersøgelsen lukker",
     "welcome_video": "Velkomstkortvideo",
-    "your_feedback_is_stuck": "Din feedback sidder fast :("
+    "your_feedback_is_stuck": "Dine svar er ikke sendt endnu"
   },
   "date_time": {
     "select_a_time": "Vælg et tidspunkt",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Følgende fil(er) overstiger den maksimale størrelse på {maxSizeInMB} MB og blev fjernet: {fileNames}",
       "file_size_exceeded_alert": "Filen skal være mindre end {maxSizeInMB} MB",
       "invalid_file_name": "Filnavnet indeholder ugyldige tegn. Omdøb filen, og prøv igen.",
-      "no_valid_file_types_selected": "Ingen gyldige filtyper valgt. Vælg venligst en gyldig filtype.",
       "only_one_file_can_be_uploaded_at_a_time": "Du kan kun uploade én fil ad gangen.",
       "placeholder_text": "Klik eller træk for at uploade filer",
       "upload_failed": "Upload mislykkedes! Prøv venligst igen.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Ranger mindst {min} muligheder",
     "minimum_rows_answered": "Besvar mindst {min} rækker",
     "please_enter_a_valid_email_address": "Indtast en gyldig e-mailadresse",
-    "please_enter_a_valid_phone_number": "Indtast et gyldigt telefonnummer",
     "please_enter_a_valid_url": "Indtast en gyldig URL",
     "please_fill_out_this_field": "Udfyld venligst dette felt",
     "rank_at_least_one_option": "Rangér mindst én mulighed",

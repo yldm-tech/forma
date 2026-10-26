@@ -18,7 +18,7 @@
     "option_number": "Option {number}",
     "page_x_of_y": "Seite {current} von {total}",
     "people_responded": "{count, plural, one {1 Person hat geantwortet} other {{count} Personen haben geantwortet}}",
-    "please_retry_now_or_try_again_later": "Bitte versuchen Sie es jetzt erneut oder später noch einmal.",
+    "please_retry_now_or_try_again_later": "Klicken Sie auf Wiederholen, oder lassen Sie diese Seite geöffnet, dann versuchen wir es erneut.",
     "powered_by": "Bereitgestellt von",
     "privacy_policy": "Datenschutzrichtlinie",
     "protected_by_reCAPTCHA_and_the_Google": "Geschützt durch reCAPTCHA und die Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {Dauert 1 Minute} other {Dauert {count} Minuten}}",
     "takes_x_plus_minutes": "Dauert {count}+ Minuten",
     "terms_of_service": "Nutzungsbedingungen",
-    "the_servers_cannot_be_reached_at_the_moment": "Die Server sind momentan nicht erreichbar.",
+    "the_servers_cannot_be_reached_at_the_moment": "Der Server war nicht erreichbar. Ihre Antworten bleiben auf dieser Seite erhalten.",
     "they_will_be_redirected_immediately": "Sie werden sofort weitergeleitet",
     "time_remaining_before_the_survey_closes": "Verbleibende Zeit bis zum Schließen der Umfrage",
     "welcome_video": "Willkommenskarten-Video",
-    "your_feedback_is_stuck": "Ihr Feedback steckt fest :("
+    "your_feedback_is_stuck": "Ihre Antworten wurden noch nicht gesendet"
   },
   "date_time": {
     "select_a_time": "Bitte wählen Sie eine Uhrzeit aus",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Die folgenden Dateien überschreiten die maximale Größe von {maxSizeInMB} MB und wurden entfernt: {fileNames}",
       "file_size_exceeded_alert": "Die Datei sollte kleiner als {maxSizeInMB} MB sein",
       "invalid_file_name": "Der Dateiname enthält ungültige Zeichen. Bitte benenne die Datei um und versuche es erneut.",
-      "no_valid_file_types_selected": "Keine gültigen Dateitypen ausgewählt. Bitte wählen Sie einen gültigen Dateityp.",
       "only_one_file_can_be_uploaded_at_a_time": "Es kann nur eine Datei gleichzeitig hochgeladen werden.",
       "placeholder_text": "Klicke oder ziehe Dateien hierher zum Hochladen",
       "upload_failed": "Upload fehlgeschlagen! Bitte versuchen Sie es erneut.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Bitte ordnen Sie mindestens {min} Optionen",
     "minimum_rows_answered": "Bitte beantworten Sie mindestens {min} Zeilen",
     "please_enter_a_valid_email_address": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
-    "please_enter_a_valid_phone_number": "Bitte geben Sie eine gültige Telefonnummer ein",
     "please_enter_a_valid_url": "Bitte geben Sie eine gültige URL ein",
     "please_fill_out_this_field": "Bitte füllen Sie dieses Feld aus",
     "rank_at_least_one_option": "Bitte ordnen Sie mindestens eine Option ein",

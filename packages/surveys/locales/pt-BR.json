@@ -18,7 +18,7 @@
     "option_number": "Opção {number}",
     "page_x_of_y": "Página {current} de {total}",
     "people_responded": "{count, plural, one {1 pessoa respondeu} other {{count} pessoas responderam}}",
-    "please_retry_now_or_try_again_later": "Por favor, tente novamente agora ou mais tarde.",
+    "please_retry_now_or_try_again_later": "Toque em Tentar novamente ou mantenha esta página aberta que tentaremos de novo.",
     "powered_by": "Desenvolvido por",
     "privacy_policy": "Política de privacidade",
     "protected_by_reCAPTCHA_and_the_Google": "Protegido pelo reCAPTCHA e o Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {Leva 1 minuto} other {Leva {count} minutos}}",
     "takes_x_plus_minutes": "Leva {count}+ minutos",
     "terms_of_service": "Termos de serviço",
-    "the_servers_cannot_be_reached_at_the_moment": "Os servidores não podem ser alcançados no momento.",
+    "the_servers_cannot_be_reached_at_the_moment": "Não conseguimos conectar ao servidor. Suas respostas estão guardadas nesta página.",
     "they_will_be_redirected_immediately": "Eles serão redirecionados imediatamente",
     "time_remaining_before_the_survey_closes": "Tempo restante antes da pesquisa fechar",
     "welcome_video": "Vídeo do Cartão de Boas-vindas",
-    "your_feedback_is_stuck": "Seu feedback está preso :("
+    "your_feedback_is_stuck": "Suas respostas ainda não foram enviadas"
   },
   "date_time": {
     "select_a_time": "Por favor, selecione um horário",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Os seguintes arquivos excedem o tamanho máximo de {maxSizeInMB} MB e foram removidos: {fileNames}",
       "file_size_exceeded_alert": "O arquivo deve ter menos de {maxSizeInMB} MB",
       "invalid_file_name": "O nome do ficheiro contém caracteres inválidos. Altere o nome do ficheiro e tente novamente.",
-      "no_valid_file_types_selected": "Nenhum tipo de arquivo válido selecionado. Por favor, selecione um tipo de arquivo válido.",
       "only_one_file_can_be_uploaded_at_a_time": "Apenas um arquivo pode ser carregado de cada vez.",
       "placeholder_text": "Clique ou arraste para enviar ficheiros",
       "upload_failed": "Falha no carregamento! Por favor, tente novamente.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Por favor, classifique pelo menos {min} opções",
     "minimum_rows_answered": "Por favor, responda pelo menos {min} linhas",
     "please_enter_a_valid_email_address": "Por favor, insira um endereço de email válido",
-    "please_enter_a_valid_phone_number": "Por favor, insira um número de telefone válido",
     "please_enter_a_valid_url": "Por favor, insira uma URL válida",
     "please_fill_out_this_field": "Por favor, preencha este campo",
     "rank_at_least_one_option": "Por favor, classifique pelo menos uma opção",

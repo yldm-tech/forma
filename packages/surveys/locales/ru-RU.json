@@ -18,7 +18,7 @@
     "option_number": "Вариант {number}",
     "page_x_of_y": "Страница {current} из {total}",
     "people_responded": "{count, plural, one {1 человек ответил} other {{count} человека ответили}}",
-    "please_retry_now_or_try_again_later": "Пожалуйста, повторите попытку сейчас или попробуйте позже.",
+    "please_retry_now_or_try_again_later": "Нажмите «Повторить» или оставьте страницу открытой — мы попробуем ещё раз.",
     "powered_by": "Работает на основе",
     "privacy_policy": "Политика конфиденциальности",
     "protected_by_reCAPTCHA_and_the_Google": "Защищено reCAPTCHA и Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {Займёт 1 минуту} few {Займёт {count} минуты} many {Займёт {count} минут} other {Займёт {count} минуты}}",
     "takes_x_plus_minutes": "Займёт {count}+ минут",
     "terms_of_service": "Условия использования",
-    "the_servers_cannot_be_reached_at_the_moment": "Сервера в данный момент недоступны.",
+    "the_servers_cannot_be_reached_at_the_moment": "Не удалось связаться с сервером. Ваши ответы сохранены на этой странице.",
     "they_will_be_redirected_immediately": "Они будут немедленно перенаправлены",
     "time_remaining_before_the_survey_closes": "Время до закрытия опроса",
     "welcome_video": "Видео приветственной карточки",
-    "your_feedback_is_stuck": "Ваш отзыв застрял :("
+    "your_feedback_is_stuck": "Ваши ответы ещё не отправлены"
   },
   "date_time": {
     "select_a_time": "Пожалуйста, выберите время",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Следующие файлы превышают максимальный размер {maxSizeInMB} МБ и были удалены: {fileNames}",
       "file_size_exceeded_alert": "Файл должен быть меньше {maxSizeInMB} МБ",
       "invalid_file_name": "Имя файла содержит недопустимые символы. Переименуйте файл и попробуйте снова.",
-      "no_valid_file_types_selected": "Не выбраны допустимые типы файлов. Пожалуйста, выберите допустимый тип файла.",
       "only_one_file_can_be_uploaded_at_a_time": "Можно загрузить только один файл за раз.",
       "placeholder_text": "Нажмите или перетащите файлы для загрузки",
       "upload_failed": "Ошибка загрузки! Пожалуйста, попробуйте снова.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Пожалуйста, ранжируйте не менее {min} вариантов",
     "minimum_rows_answered": "Пожалуйста, ответьте как минимум на {min} строк(и)",
     "please_enter_a_valid_email_address": "Пожалуйста, введите действительный адрес электронной почты",
-    "please_enter_a_valid_phone_number": "Пожалуйста, введите действительный номер телефона",
     "please_enter_a_valid_url": "Пожалуйста, введите действительный URL-адрес",
     "please_fill_out_this_field": "Пожалуйста, заполните это поле",
     "rank_at_least_one_option": "Пожалуйста, ранжируйте хотя бы один вариант",

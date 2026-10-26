@@ -18,7 +18,7 @@
     "option_number": "Option {number}",
     "page_x_of_y": "Page {current} sur {total}",
     "people_responded": "{count, plural, one {1 personne a répondu} other {{count} personnes ont répondu}}",
-    "please_retry_now_or_try_again_later": "Veuillez réessayer maintenant ou réessayer plus tard.",
+    "please_retry_now_or_try_again_later": "Appuyez sur Réessayer, ou gardez cette page ouverte et nous réessaierons.",
     "powered_by": "Propulsé par",
     "privacy_policy": "Politique de confidentialité",
     "protected_by_reCAPTCHA_and_the_Google": "Protégé par reCAPTCHA et Google",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {Prend 1 minute} other {Prend {count} minutes}}",
     "takes_x_plus_minutes": "Prend {count}+ minutes",
     "terms_of_service": "Conditions d'utilisation",
-    "the_servers_cannot_be_reached_at_the_moment": "Les serveurs ne sont pas accessibles pour le moment.",
+    "the_servers_cannot_be_reached_at_the_moment": "Impossible de joindre le serveur. Vos réponses sont conservées sur cette page.",
     "they_will_be_redirected_immediately": "Ils seront redirigés immédiatement",
     "time_remaining_before_the_survey_closes": "Temps restant avant la fermeture du sondage",
     "welcome_video": "Vidéo de la carte de bienvenue",
-    "your_feedback_is_stuck": "Votre feedback est bloqué :("
+    "your_feedback_is_stuck": "Vos réponses n'ont pas encore été envoyées"
   },
   "date_time": {
     "select_a_time": "Veuillez sélectionner une heure",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "Les fichiers suivants dépassent la taille maximale de {maxSizeInMB} Mo et ont été supprimés : {fileNames}",
       "file_size_exceeded_alert": "Le fichier doit être inférieur à {maxSizeInMB} Mo",
       "invalid_file_name": "Le nom du fichier contient des caractères non valides. Renommez le fichier et réessayez.",
-      "no_valid_file_types_selected": "Aucun type de fichier valide sélectionné. Veuillez sélectionner un type de fichier valide.",
       "only_one_file_can_be_uploaded_at_a_time": "Un seul fichier peut être téléchargé à la fois.",
       "placeholder_text": "Cliquez ou glissez pour télécharger des fichiers",
       "upload_failed": "Échec du téléchargement ! Veuillez réessayer.",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "Veuillez classer au moins {min} options",
     "minimum_rows_answered": "Veuillez répondre à au moins {min} lignes",
     "please_enter_a_valid_email_address": "Veuillez saisir une adresse e-mail valide",
-    "please_enter_a_valid_phone_number": "Veuillez saisir un numéro de téléphone valide",
     "please_enter_a_valid_url": "Veuillez saisir une URL valide",
     "please_fill_out_this_field": "Veuillez remplir ce champ",
     "rank_at_least_one_option": "Veuillez classer au moins une option",

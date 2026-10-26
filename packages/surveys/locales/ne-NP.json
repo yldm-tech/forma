@@ -18,7 +18,7 @@
     "option_number": "विकल्प {number}",
     "page_x_of_y": "पृष्ठ {current} को {total}",
     "people_responded": "{count, plural, one {१ जनाले प्रतिक्रिया दिनुभयो} other {{count} जनाले प्रतिक्रिया दिनुभयो}}",
-    "please_retry_now_or_try_again_later": "कृपया अहिले पुन: प्रयास गर्नुहोस् वा पछि फेरि प्रयास गर्नुहोस्।",
+    "please_retry_now_or_try_again_later": "पुन: प्रयास गर्नुहोस् थिच्नुहोस्, वा यो पृष्ठ खुला राख्नुहोस्, हामी फेरि प्रयास गर्नेछौं।",
     "powered_by": "द्वारा संचालित",
     "privacy_policy": "गोपनीयता नीति",
     "protected_by_reCAPTCHA_and_the_Google": "reCAPTCHA र Google द्वारा सुरक्षित",
@@ -52,11 +52,11 @@
     "takes_x_minutes": "{count, plural, one {१ मिनेट लाग्छ} other {{count} मिनेट लाग्छ}}",
     "takes_x_plus_minutes": "{count}+ मिनेट लाग्छ",
     "terms_of_service": "सेवा सर्तहरू",
-    "the_servers_cannot_be_reached_at_the_moment": "यस समय सर्भरहरूमा पहुँच गर्न सकिएन।",
+    "the_servers_cannot_be_reached_at_the_moment": "सर्भरमा पुग्न सकिएन। तपाईंका उत्तरहरू यही पृष्ठमा सुरक्षित छन्।",
     "they_will_be_redirected_immediately": "उनीहरूलाई तुरुन्तै पुनर्निर्देशन गरिनेछ",
     "time_remaining_before_the_survey_closes": "सर्वेक्षण बन्द हुनुअघि बाँकी समय",
     "welcome_video": "स्वागत कार्ड भिडियो",
-    "your_feedback_is_stuck": "तपाईंको प्रतिक्रिया अड्किएको छ :("
+    "your_feedback_is_stuck": "तपाईंका उत्तरहरू अझै पठाइएका छैनन्"
   },
   "date_time": {
     "select_a_time": "कृपया समय छान्नुहोस्",
@@ -75,7 +75,6 @@
       "file_size_exceeded": "निम्न फाइल(हरू) अधिकतम आकार {maxSizeInMB} MB भन्दा बढी भएकाले हटाइयो: {fileNames}",
       "file_size_exceeded_alert": "फाइल {maxSizeInMB} MB भन्दा कम हुनुपर्छ",
       "invalid_file_name": "फाइलको नाममा अमान्य वर्णहरू छन्। कृपया फाइलको नाम परिवर्तन गरेर पुनः प्रयास गर्नुहोस्।",
-      "no_valid_file_types_selected": "कुनै मान्य फाइल प्रकार चयन गरिएको छैन। कृपया मान्य फाइल प्रकार चयन गर्नुहोस्।",
       "only_one_file_can_be_uploaded_at_a_time": "एक पटकमा एउटा मात्र फाइल अपलोड गर्न सकिन्छ।",
       "placeholder_text": "फाइल अपलोड गर्न क्लिक गर्नुहोस् वा ड्र्याग गर्नुहोस्",
       "upload_failed": "अपलोड असफल भयो! कृपया पुनः प्रयास गर्नुहोस्।",
@@ -104,7 +103,6 @@
     "minimum_options_ranked": "कृपया कम्तीमा {min} विकल्पहरूलाई क्रमबद्ध गर्नुहोस्",
     "minimum_rows_answered": "कृपया कम्तिमा {min} पङ्क्तिहरूको जवाफ दिनुहोस्",
     "please_enter_a_valid_email_address": "कृपया मान्य इमेल ठेगाना प्रविष्ट गर्नुहोस्",
-    "please_enter_a_valid_phone_number": "कृपया मान्य फोन नम्बर प्रविष्ट गर्नुहोस्",
     "please_enter_a_valid_url": "कृपया मान्य URL प्रविष्ट गर्नुहोस्",
     "please_fill_out_this_field": "कृपया यो फिल्ड भर्नुहोस्",
     "rank_at_least_one_option": "कृपया कम्तीमा एउटा विकल्पलाई क्रम दिनुहोस्",
