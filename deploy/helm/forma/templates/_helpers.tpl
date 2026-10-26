@@ -338,15 +338,13 @@ Forma application image reference. A configured digest takes precedence over the
 {{- end -}}
 {{- end }}
 
-{{- define "forma.linkSurveyTokenSecret" -}}
+{{- define "forma.nextAuthSecret" -}}
 {{- $secret := (lookup "v1" "Secret" .Release.Namespace (include "forma.appSecretName" .)) }}
 {{- $secretData := dig "data" dict $secret }}
-{{- if index $secretData "LINK_SURVEY_TOKEN_SECRET" }}
-    {{- index $secretData "LINK_SURVEY_TOKEN_SECRET" | b64dec -}}
-{{- else if index $secretData "NEXTAUTH_SECRET" }}
+{{- if index $secretData "NEXTAUTH_SECRET" }}
     {{- index $secretData "NEXTAUTH_SECRET" | b64dec -}}
 {{- else if and $secret (hasKey $secret "data") }}
-    {{- fail (printf "Secret %q exists in namespace %q but has neither LINK_SURVEY_TOKEN_SECRET nor NEXTAUTH_SECRET" (include "forma.appSecretName" .) .Release.Namespace) -}}
+    {{- fail (printf "Secret %q exists in namespace %q but is missing NEXTAUTH_SECRET" (include "forma.appSecretName" .) .Release.Namespace) -}}
 {{- else }}
     {{- randAlphaNum 32 -}}
 {{- end -}}

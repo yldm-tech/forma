@@ -89,14 +89,14 @@ The following environment variables have been configured:
 {{- if .Values.forma.publicUrl }}
 - `PUBLIC_URL`: {{ .Values.forma.publicUrl }}
 {{- end }}
-- `LINK_SURVEY_TOKEN_SECRET`: A random 32-character string (auto-generated)
+- `NEXTAUTH_SECRET`: A random 32-character string (auto-generated), the link survey token secret under its former name, which the server reads behind `LINK_SURVEY_TOKEN_SECRET` (it logs a deprecation warning for it)
 - `ENCRYPTION_KEY`: A random 32-character string (auto-generated)
 - `EMAIL_VERIFICATION_DISABLED`: 1 # By Default email verification is disabled, configure SMTP settings to enable
 - `PASSWORD_RESET_DISABLED`: 1 # By Default password reset is disabled, configure SMTP settings to enable
 
 Retrieve them using:
 ```sh
-kubectl get secret --namespace {{ .Release.Namespace }} {{ include "forma.name" . }}-app-secrets -o jsonpath="{.data.LINK_SURVEY_TOKEN_SECRET}" | base64 --decode
+kubectl get secret --namespace {{ .Release.Namespace }} {{ include "forma.name" . }}-app-secrets -o jsonpath="{.data.NEXTAUTH_SECRET}" | base64 --decode
 kubectl get secret --namespace {{ .Release.Namespace }} {{ include "forma.name" . }}-app-secrets -o jsonpath="{.data.ENCRYPTION_KEY}" | base64 --decode
 ```
 
