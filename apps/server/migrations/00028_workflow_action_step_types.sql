@@ -1,6 +1,6 @@
 -- The workflow actions after send_email (decision D-FG07): an HTTP request, Slack, Discord and Microsoft Teams messages, tagging the response and setting a contact attribute. Each step of a run records its action type in workflow_run_logs.step_type, whose check named send_email alone.
 --
--- The check is replaced by one that also allows the new types. It is added NOT VALID, so adding it scans nothing, and 00028 validates it in a transaction of its own; it holds for every write from here on either way, and every existing row is a send_email step, which it allows.
+-- The check is replaced by one that also allows the new types. It is added NOT VALID, so adding it scans nothing, and 00029 validates it in a transaction of its own; it holds for every write from here on either way, and every existing row is a send_email step, which it allows.
 
 -- +goose Up
 

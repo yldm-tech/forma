@@ -1,4 +1,4 @@
--- Validates workflow_run_logs_step_type_check, which 00027 added NOT VALID: VALIDATE CONSTRAINT takes only a SHARE UPDATE EXCLUSIVE lock, so running workflows go on writing their steps while it scans, and it runs in its own transaction, as an online migration should. Every row passes: before 00027 every step was a send_email step, and the constraint has held for every write since.
+-- Validates workflow_run_logs_step_type_check, which 00028 added NOT VALID: VALIDATE CONSTRAINT takes only a SHARE UPDATE EXCLUSIVE lock, so running workflows go on writing their steps while it scans, and it runs in its own transaction, as an online migration should. Every row passes: before 00028 every step was a send_email step, and the constraint has held for every write since.
 
 -- +goose Up
 
@@ -9,4 +9,4 @@ ALTER TABLE workflow_run_logs VALIDATE CONSTRAINT workflow_run_logs_step_type_ch
 
 -- +goose Down
 
--- A validated constraint cannot be marked not valid again; 00027's Down replaces it.
+-- A validated constraint cannot be marked not valid again; 00028's Down replaces it.
