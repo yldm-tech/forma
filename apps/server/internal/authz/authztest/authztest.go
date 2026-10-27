@@ -50,6 +50,9 @@ func (e *Env) Deliver(t testing.TB) {
 	}
 }
 
+// Delivery is the projection delivery over the same SpiceDB, for the services that deliver their own writes before they answer.
+func (e *Env) Delivery() *authz.Delivery { return e.delivery }
+
 // schema reads authzed/schema.zed, the canonical schema the authz package embeds.
 func schema(t testing.TB) string {
 	t.Helper()

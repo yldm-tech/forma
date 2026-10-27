@@ -196,7 +196,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	contacts := contact.NewService(contact.NewRepository(db), authorizer, limiter, emitter, schemas, log)
 	webhooks := webhook.NewService(webhook.NewRepository(db), authorizer, limiter, emitter, ssrf.New(cfg).WithResolver(publicResolver{}), log)
 	v1 := mgmtv1.New(cfg, keys, limiter, emitter, authorizer, workspaces, log)
-	h := NewHandler(cfg, db, e.cache, v1, keys, authorizer, limiter, emitter, workspaces, headerSessions{}, surveys, responses,
+	h := NewHandler(cfg, db, e.cache, v1, keys, authorizer, e.authz.Delivery(), limiter, emitter, workspaces, headerSessions{}, surveys, responses,
 		actionclass.NewService(actionclass.NewRepository(db), authorizer, limiter, emitter), contacts, webhooks, storage.NewService(bucket), log)
 	h.now = e.clock.Now
 	web, err := webui.NewFromFS(fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}})

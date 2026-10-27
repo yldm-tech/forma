@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -82,11 +83,15 @@ func claimOutbox(ctx context.Context, db *gorm.DB, owner string, limit int) ([]o
 	return claim(ctx, db, owner, limit, nil)
 }
 
-// aggregate names one root object's events: its own row and the pair rows whose first id is that object, such as an API key and its workspace grants.
-type aggregate struct {
+// match selects the events of targetTypes whose first id, or with bySecond whose second id, is one of ids: an API key's row and its workspace grants by the key's id first, the workspace grants that name a team by the team's id second.
+type match struct {
 	targetTypes []string
-	primaryID   string
+	ids         []string
+	bySecond    bool
 }
+
+// aggregate names the events a request delivers itself, those any of its matches selects. A match without ids selects nothing.
+type aggregate []match
 
 // claimAggregate is claimOutbox narrowed to one aggregate, for a request that delivers its own write before it answers. Events another lease holds are left to that lease.
 func claimAggregate(ctx context.Context, db *gorm.DB, owner string, a aggregate) ([]outboxEvent, error) {
@@ -107,8 +112,22 @@ func claim(ctx context.Context, db *gorm.DB, owner string, limit int, scope *agg
 	// The scope is a fixed fragment with bound values; the pending set it filters is what the partial claim index holds.
 	filter, args := "", []any{}
 	if scope != nil {
-		filter = "AND target_type IN ? AND primary_id = ?"
-		args = append(args, scope.targetTypes, scope.primaryID)
+		var clauses []string
+		for _, m := range *scope {
+			if len(m.ids) == 0 || len(m.targetTypes) == 0 {
+				continue
+			}
+			column := "primary_id"
+			if m.bySecond {
+				column = "secondary_id"
+			}
+			clauses = append(clauses, "(target_type IN ? AND "+column+" IN ?)")
+			args = append(args, m.targetTypes, m.ids)
+		}
+		if len(clauses) == 0 {
+			return nil, nil
+		}
+		filter = "AND (" + strings.Join(clauses, " OR ") + ")"
 	}
 	args = append(args, limit, outboxLease.Milliseconds(), owner)
 	err := db.WithContext(ctx).Raw(`
