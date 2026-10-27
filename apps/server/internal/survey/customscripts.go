@@ -45,24 +45,34 @@ func (next customScripts) changes(stored *Survey) bool {
 }
 
 // checkCustomScripts holds a survey's custom head scripts to the rule of the workspace's (workspace.Service.update): they run unsanitized on the survey's public page, so only the organization's owners and managers may change them, and only where the instance runs them at all (config.CustomScripts). An API key needs the manage permission on the workspace, the most a key can hold; a key never holds an organization role. The check applies only when the write changes the scripts or their mode, so an editor who saves a survey a manager gave scripts, with the scripts untouched, still can; clearing them and changing the mode need the role but not the instance's consent, since neither runs anything. stored is nil for a new survey.
-func (s *Service) checkCustomScripts(ctx context.Context, caller Caller, workspaceID uuid.UUID, stored *Survey, next customScripts) error {
+//
+// apply reports whether the write may set the scripts it carries. A signed-in user without the role who saves an existing survey with different scripts keeps the stored ones instead of being refused: the editor sends the whole survey and shows the field read-only to such a user, so the difference is a manager's change made since the editor loaded, which the save must neither revert nor fail over. An API key, and any write that creates a survey, is refused instead, since there the scripts are what the caller asked for.
+func (s *Service) checkCustomScripts(ctx context.Context, caller Caller, workspaceID uuid.UUID, stored *Survey, next customScripts) (apply bool, err error) {
 	if !next.changes(stored) {
-		return nil
+		return false, nil
 	}
 	if caller.Actor.Type == authz.ActorAPIKey {
 		if err := s.authz.Require(ctx, caller.Actor, authz.WorkspaceManage, authz.Workspace(workspaceID)); err != nil {
-			return err
+			return false, err
 		}
 	} else {
 		org, err := s.repo.organizationOf(ctx, workspaceID)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if org == nil {
-			return apperr.NotFound("Organization", "")
+			return false, apperr.NotFound("Organization", "")
 		}
-		if err := s.authz.Require(ctx, caller.Actor, authz.OrganizationManage, authz.Organization(*org)); err != nil {
-			return err
+		if stored != nil {
+			allowed, err := s.authz.Can(ctx, caller.Actor, authz.OrganizationManage, authz.Organization(*org))
+			if err != nil {
+				return false, err
+			}
+			if !allowed {
+				return false, nil
+			}
+		} else if err := s.authz.Require(ctx, caller.Actor, authz.OrganizationManage, authz.Organization(*org)); err != nil {
+			return false, err
 		}
 	}
 	var storedScripts *string
@@ -70,7 +80,7 @@ func (s *Service) checkCustomScripts(ctx context.Context, caller Caller, workspa
 		storedScripts = stored.CustomHeadScripts
 	}
 	if text := scriptsText(next.Scripts); text != "" && text != scriptsText(storedScripts) && s.cfg.CustomScripts() != config.CustomScriptsAvailable {
-		return apperr.OperationNotAllowed(s.cfg.CustomScriptsRefusal())
+		return false, apperr.OperationNotAllowed(s.cfg.CustomScriptsRefusal())
 	}
-	return nil
+	return true, nil
 }

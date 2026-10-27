@@ -43,7 +43,7 @@ func (e *env) storedScripts(id string) (scripts, mode string) {
 	return e.text(`SELECT custom_head_scripts FROM surveys WHERE id = ?`, id), e.text(`SELECT custom_head_scripts_mode FROM surveys WHERE id = ?`, id)
 }
 
-// A survey's custom head scripts run unsanitized on its public page, like the workspace's, so they follow the workspace's rule: the organization's owners and managers change them, a member who may edit the survey does not, though saving the survey with them untouched still works.
+// A survey's custom head scripts run unsanitized on its public page, like the workspace's, so they follow the workspace's rule: the organization's owners and managers change them, a member who may edit the survey does not. The member's save still goes through with the stored scripts kept, since the editor sends the whole survey and a difference is a manager's change made since it loaded.
 func TestSurveyCustomScriptsAreTheManagersOnly(t *testing.T) {
 	e := newEnv(t, withSurveyDomain)
 	owner, manager, member := e.user(), e.user(), e.user()
@@ -53,15 +53,28 @@ func TestSurveyCustomScriptsAreTheManagersOnly(t *testing.T) {
 	e.grant(org, ws, member, "readWrite")
 	id := e.createLink(owner, ws)
 	script := "<script>window.survey=1</script>"
+	// memberSaves saves sv as the member, which goes through under the given name with the stored scripts kept, whatever scripts sv carries.
+	memberSaves := func(sv map[string]any, name, keeps string) {
+		t.Helper()
+		sv["name"] = name
+		var saved map[string]any
+		e.ok(e.do(member, http.MethodPut, appPath(id, ""), sv), http.StatusOK, &saved)
+		if got, _ := saved["customHeadScripts"].(string); saved["name"] != name || got != keeps {
+			t.Fatalf("the member's save returned %v with scripts %q, want %q", saved["name"], got, keeps)
+		}
+		if scripts, _ := e.storedScripts(id); scripts != keeps {
+			t.Fatalf("the member's save stored %q, want %q", scripts, keeps)
+		}
+	}
 
 	sv := e.editorSurvey(member, id)
 	sv["customHeadScripts"] = script
-	e.fails(e.do(member, http.MethodPut, appPath(id, ""), sv), http.StatusForbidden, apperr.CodeForbidden, "Not authorized")
+	memberSaves(sv, "Member 1", "")
 	sv["customHeadScripts"] = nil
 	sv["customHeadScriptsMode"] = "replace"
-	e.fails(e.do(member, http.MethodPut, appPath(id, ""), sv), http.StatusForbidden, apperr.CodeForbidden, "Not authorized")
-	if scripts, mode := e.storedScripts(id); scripts != "" || mode != "add" {
-		t.Fatalf("a refused save stored %q in %q mode", scripts, mode)
+	memberSaves(sv, "Member 2", "")
+	if _, mode := e.storedScripts(id); mode != "add" {
+		t.Fatalf("the member's save stored %q mode", mode)
 	}
 
 	sv = e.editorSurvey(manager, id)
@@ -72,28 +85,23 @@ func TestSurveyCustomScriptsAreTheManagersOnly(t *testing.T) {
 		t.Fatalf("the manager's save stored %q in %q mode", scripts, mode)
 	}
 
-	// The member edits the survey the manager gave scripts; the scripts ride along unchanged.
+	// The member edits the survey the manager gave scripts; the scripts ride along unchanged, and a change to them is not taken.
 	sv = e.editorSurvey(member, id)
-	sv["name"] = "Edited by a member"
-	var saved map[string]any
-	e.ok(e.do(member, http.MethodPut, appPath(id, ""), sv), http.StatusOK, &saved)
-	if saved["name"] != "Edited by a member" || saved["customHeadScripts"] != script {
-		t.Fatalf("saved %v %v", saved["name"], saved["customHeadScripts"])
-	}
+	memberSaves(sv, "Edited by a member", script)
 	stale := e.editorSurvey(member, id)
 	sv["customHeadScripts"] = "<script>window.other=1</script>"
-	e.fails(e.do(member, http.MethodPut, appPath(id, ""), sv), http.StatusForbidden, apperr.CodeForbidden, "Not authorized")
+	memberSaves(sv, "Member 3", script)
 	sv["customHeadScripts"] = nil
-	e.fails(e.do(member, http.MethodPut, appPath(id, ""), sv), http.StatusForbidden, apperr.CodeForbidden, "Not authorized")
+	memberSaves(sv, "Member 4", script)
+	if _, mode := e.storedScripts(id); mode != "replace" {
+		t.Fatalf("the member's save stored %q mode", mode)
+	}
 
-	// The manager clears them; the member's editor, loaded before, cannot put them back.
+	// The manager clears them; the member's editor, loaded before, saves its edits without putting them back.
 	sv = e.editorSurvey(manager, id)
 	sv["customHeadScripts"] = nil
 	e.ok(e.do(manager, http.MethodPut, appPath(id, ""), sv), http.StatusOK, nil)
-	e.fails(e.do(member, http.MethodPut, appPath(id, ""), stale), http.StatusForbidden, apperr.CodeForbidden, "Not authorized")
-	if scripts, _ := e.storedScripts(id); scripts != "" {
-		t.Fatalf("a stale save restored %q", scripts)
-	}
+	memberSaves(stale, "Saved from a stale editor", "")
 	e.ok(e.do(owner, http.MethodPut, appPath(id, ""), stale), http.StatusOK, nil)
 	if scripts, _ := e.storedScripts(id); scripts != script {
 		t.Fatalf("the owner's save stored %q", scripts)

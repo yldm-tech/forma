@@ -288,7 +288,8 @@ func (s *Service) update(ctx context.Context, caller Caller, current *Survey, in
 	if err := storedAllows(current); err != nil {
 		return nil, err
 	}
-	if err := s.checkCustomScripts(ctx, caller, current.WorkspaceID, current, in.customScripts()); err != nil {
+	applyScripts, err := s.checkCustomScripts(ctx, caller, current.WorkspaceID, current, in.customScripts())
+	if err != nil {
 		return nil, err
 	}
 	if in.Segment != nil {
@@ -372,8 +373,8 @@ func (s *Service) update(ctx context.Context, caller Caller, current *Survey, in
 			rec.IsSingleResponsePerEmailEnabled = *in.IsSingleResponsePerEmailEnabled
 		}
 		rec.Pin = in.Pin
-		// A save that leaves the custom head scripts as the request found them keeps what is stored now, so it never reverts a change made since by someone it could not have made it as (checkCustomScripts).
-		if in.customScripts().changes(current) {
+		// A save that leaves the custom head scripts as the request found them, or that may not change them, keeps what is stored now, so it never reverts a change made since by someone it could not have made it as (checkCustomScripts).
+		if applyScripts {
 			rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.CustomHeadScripts, in.CustomHeadScriptsMode
 		}
 		storedStatus := stored.Status

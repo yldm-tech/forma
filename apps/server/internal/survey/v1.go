@@ -524,7 +524,7 @@ func (s *Service) CreateV1(ctx context.Context, caller Caller, workspaceID uuid.
 	if recaptchaEnabled(body["recaptcha"]) && !s.cfg.RecaptchaConfigured() {
 		return nil, apperr.OperationNotAllowed("Spam protection is not enabled for this organization")
 	}
-	if err := s.checkCustomScripts(ctx, caller, workspaceID, nil, customScripts{Scripts: optString(body["customHeadScripts"]), Mode: optString(body["customHeadScriptsMode"])}); err != nil {
+	if _, err := s.checkCustomScripts(ctx, caller, workspaceID, nil, customScripts{Scripts: optString(body["customHeadScripts"]), Mode: optString(body["customHeadScriptsMode"])}); err != nil {
 		return nil, err
 	}
 
