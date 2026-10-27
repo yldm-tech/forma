@@ -1,13 +1,16 @@
-import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
+import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OTPInput } from "../../components/ui/otp-input";
 import { cn } from "../../lib/cn";
 import { resumeSurveyPin, validateSurveyPin } from "../lib/api";
+import { readEmbedFrameMode } from "../lib/embed-frame";
 import { type TPinError, pinErrorKind } from "../lib/pin-error";
 import { forgetPinToken, keepPinToken, readPinToken } from "../lib/pin-session";
 import type { TPublicSurvey, TSurveyProps } from "../lib/state";
 import { useAppLocale } from "../lib/use-app-locale";
+import { LinkSurveyWrapper } from "./link-survey-wrapper";
+import { StackedCardsContainer } from "./stacked-cards-container";
 import { SurveyClientWrapper } from "./survey-client-wrapper";
 
 const PIN_PATTERN = /^\d{4}$/;
@@ -18,9 +21,11 @@ const ERROR_RESET_MS = 2000;
  * forma2's PinScreen: four digit boxes. Once all four are entered the server checks them, and a correct PIN returns the survey with the token its responses must carry; until then the survey never reaches the browser.
  *
  * When the survey saves respondents' progress, the token is kept for the tab's session (pin-session.ts), and a reload opens the gate with it instead of asking for the PIN again.
+ *
+ * The gate sits in the same page as the survey behind it (LinkSurveyWrapper: background, logo, legal footer) and on the survey's card, so the respondent sees the survey's branding from the first screen.
  */
 export const PinScreen = (props: Readonly<TSurveyProps>) => {
-  const { surveyId, styling, locale, isPreview } = props;
+  const { surveyId, styling, locale, isPreview, isEmbed, workspace } = props;
   const { t } = useTranslation();
   const isLocaleReady = useAppLocale(locale);
   const [pinEntry, setPinEntry] = useState("");
@@ -34,8 +39,9 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
   // A token kept from an earlier visit in this tab is tried before the gate shows.
   const [resumeToken] = useState(() => (isPreview ? null : readPinToken(surveyId)));
   const [isResuming, setIsResuming] = useState(resumeToken !== null);
-  const isCardless = styling.cardArrangement?.linkSurveys === "cardless";
-  const linkSurveyCardMaxWidth = getLinkSurveyCardMaxWidth(styling.linkSurveyCardWidth);
+  const cardArrangement = styling.cardArrangement?.linkSurveys ?? DEFAULT_CARD_ARRANGEMENT.linkSurveys;
+  const isCardless = cardArrangement === "cardless";
+  const isAutoHeight = isEmbed && readEmbedFrameMode(globalThis.location.search).isAutoHeight;
 
   useEffect(() => {
     if (resumeToken === null) return;
@@ -107,29 +113,60 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
     // The gate is nothing but translated chrome, so it waits for its locale instead of painting in another first; and it does not show while a kept token may still open it.
     if (!isLocaleReady || isResuming) return null;
     return (
-      <main
-        className={cn(
-          "mx-auto flex h-full w-full items-center justify-center",
-          isCardless && "px-4 py-12 sm:px-6"
-        )}
-        style={{ maxWidth: linkSurveyCardMaxWidth }}>
-        <div className="flex flex-col items-center justify-center px-4 text-center">
-          <h1 className="my-4 font-semibold">{t("s.enter_pin")}</h1>
-          <div ref={boxesRef} className="w-full">
-            <OTPInput
-              disabled={rejected || loading}
-              value={pinEntry}
-              onChange={handlePinChange}
-              valueLength={4}
-              inputBoxClassName={cn({ "border-red-400": rejected })}
-            />
-          </div>
-          {/* Always rendered, so a screen reader announces the message when it appears. */}
-          <p role="status" className="mt-3 min-h-5 text-sm text-red-700">
-            {pinError ? pinErrorMessages[pinError] : null}
-          </p>
+      <LinkSurveyWrapper
+        workspace={workspace}
+        // Only the logo's link to the Look settings reads the workspace id, and that link shows in the editor's preview, never on this page; the gate has no id before the PIN is entered.
+        workspaceId=""
+        isWelcomeCardEnabled={false}
+        // Nothing to wait for: the runtime only loads behind the gate.
+        showLoadingOverlay={false}
+        surveyId={surveyId}
+        surveyType="link"
+        isPreview={isPreview}
+        isEmbed={isEmbed}
+        isAutoHeight={isAutoHeight}
+        styling={styling}
+        handleResetSurvey={resetState}
+        imprintUrl={props.imprintUrl}
+        privacyUrl={props.privacyUrl}
+        termsUrl={props.termsUrl}
+        isFormaCloud={props.isFormaCloud}
+        publicDomain={props.publicDomain}
+        isBrandingEnabled={workspace.linkSurveyBranding}>
+        <div
+          className={cn(
+            "flex w-full flex-1 flex-col items-center justify-center",
+            isCardless ? "px-4 py-12 sm:px-6" : "py-10"
+          )}>
+          <StackedCardsContainer
+            cardArrangement={cardArrangement}
+            linkSurveyCardWidth={styling.linkSurveyCardWidth}>
+            {/* The card pads its own content; only the cardless prompt needs room from the screen edge. */}
+            <div
+              className={cn("flex flex-col items-center justify-center text-center", isCardless && "px-4")}>
+              {/* Without a card the prompt sits on the survey background, where the theme's headline color is the one chosen to be read. */}
+              <h1
+                className="my-4 font-semibold"
+                style={isCardless ? { color: styling.elementHeadlineColor?.light } : undefined}>
+                {t("s.enter_pin")}
+              </h1>
+              <div ref={boxesRef} className="w-full">
+                <OTPInput
+                  disabled={rejected || loading}
+                  value={pinEntry}
+                  onChange={handlePinChange}
+                  valueLength={4}
+                  inputBoxClassName={cn({ "border-red-400": rejected })}
+                />
+              </div>
+              {/* Always rendered, so a screen reader announces the message when it appears. */}
+              <p role="status" className="mt-3 min-h-5 text-sm text-red-700">
+                {pinError ? pinErrorMessages[pinError] : null}
+              </p>
+            </div>
+          </StackedCardsContainer>
         </div>
-      </main>
+      </LinkSurveyWrapper>
     );
   }
 

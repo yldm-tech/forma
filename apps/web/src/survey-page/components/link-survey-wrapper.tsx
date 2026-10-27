@@ -1,4 +1,4 @@
-import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
+import { DEFAULT_CARD_ARRANGEMENT, getLinkSurveyCardMaxWidth } from "@forma/types/styling";
 import type { TSurveyStyling, TSurveyType } from "@forma/types/surveys/types";
 import type { TWorkspaceStyling } from "@forma/types/workspace";
 import { type JSX, useState } from "react";
@@ -18,6 +18,8 @@ interface LinkSurveyWrapperProps {
   workspace: Pick<TSurveyWorkspace, "logo" | "linkSurveyBranding">;
   workspaceId: string;
   isWelcomeCardEnabled: boolean;
+  /** The white overlay held until the runtime has rendered its first card. A gate in front of the survey (the PIN screen) has no runtime to wait for, so it turns it off. */
+  showLoadingOverlay?: boolean;
   surveyId: string;
   surveyType: TSurveyType;
   isPreview: boolean;
@@ -41,6 +43,7 @@ export const LinkSurveyWrapper = ({
   workspace,
   workspaceId,
   isWelcomeCardEnabled,
+  showLoadingOverlay = true,
   surveyType,
   surveyId,
   isPreview,
@@ -66,7 +69,9 @@ export const LinkSurveyWrapper = ({
   const explicitFooterLinkColor = styling.footerLinkColor?.light;
   const footerLinkColor = explicitFooterLinkColor ?? footerLinkStyle.textColor;
   const footerLinkBackdropColor = explicitFooterLinkColor ? undefined : footerLinkStyle.backdropColor;
-  const isCardless = styling.cardArrangement?.linkSurveys === "cardless";
+  // The arrangement the runtime renders: the stored one, else the shared default.
+  const cardArrangement = styling.cardArrangement?.linkSurveys ?? DEFAULT_CARD_ARRANGEMENT.linkSurveys;
+  const isCardless = cardArrangement === "cardless";
   const linkSurveyCardMaxWidth = getLinkSurveyCardMaxWidth(styling.linkSurveyCardWidth);
   const hasLogo = !styling.isLogoHidden && !!(workspace.logo?.url || styling.logo?.url);
   const showCardlessLogo = isCardless && hasLogo;
@@ -77,18 +82,20 @@ export const LinkSurveyWrapper = ({
   if (isEmbed) {
     return (
       <div className={cn("w-full", !isAutoHeight && "h-full overflow-auto", !isCardless && "overflow-clip")}>
-        <SurveyLoadingAnimation
-          isWelcomeCardEnabled={isWelcomeCardEnabled}
-          isBrandingEnabled={isBrandingEnabled}
-        />
+        {showLoadingOverlay && (
+          <SurveyLoadingAnimation
+            isWelcomeCardEnabled={isWelcomeCardEnabled}
+            isBrandingEnabled={isBrandingEnabled}
+          />
+        )}
         <main
           className={cn(
             "flex w-full flex-col",
             !isAutoHeight && "h-full",
             isCardless && "overflow-hidden",
             !isCardless && "mx-auto",
-            styling.cardArrangement?.linkSurveys === "straight" && "pt-6",
-            styling.cardArrangement?.linkSurveys === "casual" && "px-6 py-10"
+            cardArrangement === "straight" && "pt-6",
+            cardArrangement === "casual" && "px-6 py-10"
           )}
           style={cardMaxWidthStyle}>
           {children}
@@ -99,11 +106,13 @@ export const LinkSurveyWrapper = ({
 
   return (
     <div>
-      <SurveyLoadingAnimation
-        isWelcomeCardEnabled={isWelcomeCardEnabled}
-        isBackgroundLoaded={isBackgroundLoaded}
-        isBrandingEnabled={isBrandingEnabled}
-      />
+      {showLoadingOverlay && (
+        <SurveyLoadingAnimation
+          isWelcomeCardEnabled={isWelcomeCardEnabled}
+          isBackgroundLoaded={isBackgroundLoaded}
+          isBrandingEnabled={isBrandingEnabled}
+        />
+      )}
       <MediaBackground
         surveyType={surveyType}
         styling={styling}

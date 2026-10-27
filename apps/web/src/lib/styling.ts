@@ -1,4 +1,5 @@
 import { ensureReadable, getReadableTextColor, mixColor } from "@forma/types/colors";
+import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
 import type { TWorkspaceStyling } from "@forma/types/workspace";
 
 // forma2's styling defaults and color suggestions (apps/web/lib/styling/constants.ts), the source of the workspace theme form's defaults, its "Suggest colors" action and its reset target.
@@ -80,7 +81,8 @@ export const STYLE_DEFAULTS: TWorkspaceStyling = {
   highlightBorderColor: colors.highlightBorderColor,
   isDarkModeEnabled: false,
   roundness: 8,
-  cardArrangement: { linkSurveys: "cardless", appSurveys: "simple" },
+  // What respondents see when nothing is stored (D8): showing anything else here would change the layout the moment the form is saved.
+  cardArrangement: { ...DEFAULT_CARD_ARRANGEMENT },
   linkSurveyCardWidth: "default",
   elementHeadlineColor: colors.elementHeadlineColor,
   elementHeadlineFontSize: 16,
