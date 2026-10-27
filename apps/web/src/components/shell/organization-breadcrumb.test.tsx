@@ -7,7 +7,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { i18n as I18n } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
@@ -34,16 +34,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const renderBreadcrumb = () => {
+const json = (body: unknown) =>
+  new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+
+/** canCreate is the server's answer to whether the caller may create an organization. */
+const renderBreadcrumb = (canCreate: boolean) => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string, init: RequestInit = {}) => {
       const key = `${init.method ?? "GET"} ${path}`;
-      if (key !== "GET /api/app/organizations") throw new Error(`unexpected ${key}`);
-      return new Response(JSON.stringify({ organizations: [{ id: ORG, name: "Acme", role: "member" }] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
+      if (key === "GET /api/app/organizations") {
+        return json({ organizations: [{ id: ORG, name: "Acme", role: "member" }] });
+      }
+      if (key === "GET /api/app/organization-creation") return json({ allowed: canCreate });
+      throw new Error(`unexpected ${key}`);
     })
   );
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -72,18 +76,38 @@ const renderBreadcrumb = () => {
 };
 
 describe("OrganizationBreadcrumb", () => {
-  // forma2 offered "Create new organization" only at the foot of the organization's settings, under Delete; the switcher offers it beside the list, as the workspace switcher offers "Add new workspace", and to any role, since anyone signed in may create an organization.
+  // forma2 offered "Create new organization" only at the foot of the organization's settings, under Delete; the switcher offers it beside the list, as the workspace switcher offers "Add new workspace", whatever the caller's role here, whenever the server says they may create one.
   test("the switcher offers to create an organization, even to a member, and opens the create dialog", async () => {
-    renderBreadcrumb();
+    renderBreadcrumb(true);
     fireEvent.keyDown(await screen.findByRole("button", { name: /Acme/ }), { key: "Enter" });
     expect(await screen.findByRole("menuitemcheckbox", { name: "Acme" })).toBeTruthy();
     const dialog = document.querySelector("dialog");
     expect(dialog?.hasAttribute("open")).toBe(false);
 
     fireEvent.click(
-      screen.getByRole("menuitemcheckbox", { name: t("workspace.settings.general.create_new_organization") })
+      await screen.findByRole("menuitemcheckbox", {
+        name: t("workspace.settings.general.create_new_organization"),
+      })
     );
     expect(dialog?.hasAttribute("open")).toBe(true);
     expect(await screen.findByLabelText(t("workspace.settings.general.organization_name"))).toBeTruthy();
+  });
+
+  // On an invite-only instance only the owner of an organization may create another one; anyone else is not offered it.
+  test("the switcher does not offer to create an organization to someone who may not", async () => {
+    renderBreadcrumb(false);
+    fireEvent.keyDown(await screen.findByRole("button", { name: /Acme/ }), { key: "Enter" });
+    expect(await screen.findByRole("menuitemcheckbox", { name: "Acme" })).toBeTruthy();
+    await waitFor(() =>
+      expect(vi.mocked(fetch).mock.calls.some(([path]) => path === "/api/app/organization-creation")).toBe(
+        true
+      )
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(
+      screen.queryByRole("menuitemcheckbox", {
+        name: t("workspace.settings.general.create_new_organization"),
+      })
+    ).toBeNull();
   });
 });

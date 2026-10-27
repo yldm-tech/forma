@@ -736,6 +736,11 @@
     "product_name_label": "您的產品或公司叫什麼名字？",
     "product_name_placeholder": "例如：Acme"
   },
+  "organization_creation": {
+    "invitation_required_description": "這個 Forma 實例僅限受邀加入，只有組織擁有者才能建立新的組織。請聯絡組織擁有者邀請你，然後開啟邀請電子郵件中的連結。",
+    "invitation_required_title": "你尚未加入任何組織",
+    "landing_ask_for_access": "請聯絡組織擁有者以取得工作區存取權。"
+  },
   "organizations": {
     "landing": {
       "no_workspaces_warning_subtitle": "請聯絡組織擁有者以取得工作區存取權，或建立您自己的組織。",

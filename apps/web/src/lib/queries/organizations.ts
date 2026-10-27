@@ -91,6 +91,7 @@ export interface Home {
 
 export const organizationKeys = {
   all: ["organizations"] as const,
+  creation: ["organizations", "creation"] as const,
   detail: (id: string) => ["organizations", id] as const,
   navigation: (id: string) => ["organizations", id, "navigation"] as const,
   members: (id: string) => ["organizations", id, "members"] as const,
@@ -111,6 +112,13 @@ export const organizationsQuery = queryOptions({
     api
       .get<{ organizations: OrganizationSummary[] }>("/api/app/organizations", { signal })
       .then((res) => res.organizations),
+});
+
+/** Whether the caller may create an organization: anyone where public sign-up is open, only the owner of an organization on an invite-only instance. It sits under organizationKeys.all, so creating or leaving an organization asks again. */
+export const organizationCreationQuery = queryOptions({
+  queryKey: organizationKeys.creation,
+  queryFn: ({ signal }) =>
+    api.get<{ allowed: boolean }>("/api/app/organization-creation", { signal }).then((res) => res.allowed),
 });
 
 export const organizationQuery = (id: string) =>

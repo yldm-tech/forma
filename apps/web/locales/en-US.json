@@ -736,6 +736,11 @@
     "product_name_label": "What is your product or company called?",
     "product_name_placeholder": "e.g. Acme"
   },
+  "organization_creation": {
+    "invitation_required_description": "This Forma instance is invite-only, and only the owner of an organization can create another one. Ask an organization owner to invite you, then open the link in the invitation email.",
+    "invitation_required_title": "You are not part of an organization yet",
+    "landing_ask_for_access": "Ask your organization's owner for access to a workspace."
+  },
   "organizations": {
     "landing": {
       "no_workspaces_warning_subtitle": "Ask your organization's owner for access to a workspace, or create your own organization.",

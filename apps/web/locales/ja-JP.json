@@ -736,6 +736,11 @@
     "product_name_label": "製品名または会社名を教えてください",
     "product_name_placeholder": "例：Acme"
   },
+  "organization_creation": {
+    "invitation_required_description": "この Forma インスタンスは招待制で、組織を作成できるのは既存の組織のオーナーだけです。組織のオーナーに招待を依頼し、招待メールのリンクを開いてください。",
+    "invitation_required_title": "まだどの組織にも参加していません",
+    "landing_ask_for_access": "ワークスペースへのアクセスは組織のオーナーに依頼してください。"
+  },
   "organizations": {
     "landing": {
       "no_workspaces_warning_subtitle": "ワークスペースへのアクセスは組織のオーナーに依頼してください。自分の組織を作成することもできます。",

@@ -34,7 +34,7 @@ type Home struct {
 	Pending bool `json:"pending"`
 }
 
-// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization creates one; organizations that suspended the user are passed over, and a user whom every one of their organizations suspended is told so; a user whose first organization refuses them for want of two-factor authentication, and who can open no other workspace, is guided to turn it on; an owner or manager of their first organization whose onboarding workspace has no survey yet goes through the new-workspace flow; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
+// Home is forma2's root page: a signed-out browser goes to the setup intro on a fresh instance and to sign-in otherwise; a user without an organization goes to the page that creates one (which, when CanCreate refuses them, tells them to ask for an invitation instead); organizations that suspended the user are passed over, and a user whom every one of their organizations suspended is told so; a user whose first organization refuses them for want of two-factor authentication, and who can open no other workspace, is guided to turn it on; an owner or manager of their first organization whose onboarding workspace has no survey yet goes through the new-workspace flow; a user who can open no workspace lands on their first organization; anyone else gets the workspaces they can open, in organization order.
 func (s *Service) Home(ctx context.Context, userID *uuid.UUID) (*Home, error) {
 	if userID == nil {
 		hasUser, err := s.repo.hasAnyUser(ctx)

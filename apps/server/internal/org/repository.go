@@ -220,6 +220,17 @@ func (r *Repository) delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// ownsActiveOrganization reports whether the user is an accepted owner of an organization that has not suspended them.
+func (r *Repository) ownsActiveOrganization(ctx context.Context, userID uuid.UUID) (bool, error) {
+	var exists bool
+	if err := r.db.WithContext(ctx).Raw(
+		`SELECT EXISTS (SELECT 1 FROM memberships WHERE user_id = ? AND role = 'owner' AND accepted AND suspended_at IS NULL)`, userID,
+	).Scan(&exists).Error; err != nil {
+		return false, fmt.Errorf("check for owned organizations: %w", err)
+	}
+	return exists, nil
+}
+
 // hasAnyUser reports whether the instance has a user; without one it is a fresh instance.
 func (r *Repository) hasAnyUser(ctx context.Context) (bool, error) {
 	var exists bool

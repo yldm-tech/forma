@@ -59,7 +59,22 @@ type Created struct {
 	WorkspaceID uuid.UUID `json:"workspaceId"`
 }
 
-// Create is forma2's createOrganizationAction, the same in the setup flow and the organization switcher: the organization with its default billing, the caller as its accepted owner, the default workspace, and the caller opted out of per-response alerts for it. Any signed-in user may create organizations (multiple organizations are always enabled). Unlike forma2, the steps share one transaction, so a failure cannot leave an organization without its owner or workspace.
+// CodeOrganizationCreationRestricted refuses a new organization to a user who may not create one: on an invite-only instance, someone who owns no organization.
+const CodeOrganizationCreationRestricted = "organization_creation_restricted"
+
+func errOrganizationCreationRestricted() error {
+	return &apperr.Error{Status: http.StatusForbidden, Code: CodeOrganizationCreationRestricted, Message: "This instance is invite-only: only the owner of an organization can create another one. Ask an organization owner to invite you."}
+}
+
+// CanCreate reports whether the user may create an organization. Where public sign-up is open (Forma Cloud, end-to-end runs) anyone signed in may, as forma2's always-on multi-organization mode allowed. On an invite-only instance only an accepted owner of an organization that has not suspended them may: everyone else got in through an invite (or single sign-on) and works in the organizations they were let into, so they cannot open a tenant of their own; the operator decides who that is. The instance's first user owns the organization sign-up created for them, so they can create more.
+func (s *Service) CanCreate(ctx context.Context, userID uuid.UUID) (bool, error) {
+	if s.cfg.SignupEnabled() {
+		return true, nil
+	}
+	return s.repo.ownsActiveOrganization(ctx, userID)
+}
+
+// Create is forma2's createOrganizationAction, the same in the setup flow and the organization switcher: the organization with its default billing, the caller as its accepted owner, the default workspace, and the caller opted out of per-response alerts for it. Who may call it is CanCreate's rule. Unlike forma2, the steps share one transaction, so a failure cannot leave an organization without its owner or workspace.
 //
 // timeZone, when set, is a valid IANA zone that becomes both the organization's display zone and its survey scheduling zone, so a creator outside the instance's zone does not get surveys that open and close at the instance's midnight. Nil keeps the defaults (UTC display, the instance's scheduling zone).
 func (s *Service) Create(ctx context.Context, userID uuid.UUID, name string, timeZone *string) (*Created, error) {
@@ -74,8 +89,15 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, name string, tim
 }
 
 func (s *Service) create(ctx context.Context, userID uuid.UUID, name string, timeZone *string) (*Created, error) {
+	allowed, err := s.CanCreate(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, errOrganizationCreationRestricted()
+	}
 	var orgID, workspaceID uuid.UUID
-	err := s.repo.transaction(ctx, func(tx *Repository) error {
+	err = s.repo.transaction(ctx, func(tx *Repository) error {
 		var err error
 		if orgID, err = tx.insertOrganization(ctx, name, timeZone, s.cfg.IsFormaCloud); err != nil {
 			return err

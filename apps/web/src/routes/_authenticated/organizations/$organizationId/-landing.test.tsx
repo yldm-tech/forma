@@ -7,7 +7,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test
 import { initI18n } from "../../../../lib/i18n";
 import { routeTree } from "../../../../routeTree.gen";
 
-// The landing page of a member who can open no workspace: it names both ways forward and offers both; a phone opens it but, being read-only, offers only an organization of their own.
+// The landing page of a member who can open no workspace: it names both ways forward and offers both; a phone opens it but, being read-only, offers only an organization of their own. On an invite-only instance, where only the owner of an organization may create another one, anyone else is told to ask for access instead.
 
 let i18n: I18n;
 
@@ -37,9 +37,11 @@ const json = (status: number, body: unknown) =>
 const renderLanding = async ({
   canCreateWorkspace,
   phone,
+  canCreateOrganization = true,
 }: {
   canCreateWorkspace: boolean;
   phone: boolean;
+  canCreateOrganization?: boolean;
 }) => {
   vi.stubGlobal("matchMedia", (query: string) => ({
     matches: phone && query === "(max-width: 639px)",
@@ -53,6 +55,7 @@ const renderLanding = async ({
       if (path === "/api/app/auth/me") {
         return json(200, { id: "u1", name: "Ada", email: "ada@example.com", locale: "en-US" });
       }
+      if (path === "/api/app/organization-creation") return json(200, { allowed: canCreateOrganization });
       if (path === `/api/app/organizations/${ORG}/navigation`)
         return json(200, { path: LANDING, canCreateWorkspace });
       if (path === `/api/app/organizations/${ORG}`) {
@@ -118,5 +121,23 @@ describe("the organization landing page", () => {
     const button = await createOrganization();
     expect(button.closest("[inert]")).toBeNull();
     expect(screen.queryByRole("button", { name: i18n.t("common.create_workspace") })).toBeNull();
+  });
+
+  test("on an invite-only instance, a member who may not create an organization is told to ask for access", async () => {
+    await renderLanding({ canCreateWorkspace: false, phone: false, canCreateOrganization: false });
+    expect(await screen.findByText(i18n.t("organization_creation.landing_ask_for_access"))).toBeTruthy();
+    expect(screen.queryByText(i18n.t("organizations.landing.no_workspaces_warning_subtitle"))).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: i18n.t("workspace.settings.general.create_new_organization") })
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: i18n.t("common.create_workspace") })).toBeNull();
+  });
+
+  test("on an invite-only instance, a manager is still offered a workspace but not an organization", async () => {
+    await renderLanding({ canCreateWorkspace: true, phone: false, canCreateOrganization: false });
+    expect(await screen.findByRole("button", { name: i18n.t("common.create_workspace") })).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: i18n.t("workspace.settings.general.create_new_organization") })
+    ).toBeNull();
   });
 });

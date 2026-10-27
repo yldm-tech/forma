@@ -26,6 +26,7 @@ func NewHandler(svc *Service, sessions httpapi.SessionAuth) *Handler {
 // Register mounts the routes on the /api/app group, which already applies the error envelope and the CSRF check to every mutation.
 func (h *Handler) Register(r gin.IRouter) {
 	r.GET("/home", h.sessions.Optional(), h.home)
+	r.GET("/organization-creation", h.sessions.Require(), h.creation)
 	g := r.Group("/organizations", h.sessions.Require())
 	g.GET("", h.list)
 	g.POST("", h.create)
@@ -103,6 +104,20 @@ func (h *Handler) home(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, res)
+}
+
+// creationResponse tells the SPA whether to offer creating an organization (Service.CanCreate).
+type creationResponse struct {
+	Allowed bool `json:"allowed"`
+}
+
+func (h *Handler) creation(c *gin.Context) {
+	allowed, err := h.svc.CanCreate(c.Request.Context(), userID(c))
+	if err != nil {
+		httpapi.Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, creationResponse{Allowed: allowed})
 }
 
 type listResponse struct {
