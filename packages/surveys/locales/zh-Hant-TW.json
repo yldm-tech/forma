@@ -129,7 +129,7 @@
     "value_must_equal": "值必須等於 {value}",
     "value_must_not_contain": "值不得包含 {value}",
     "value_must_not_equal": "值不得等於 {value}",
-    "x_questions_need_an_answer": "{count, plural, other {{count}個問題需要回答}}"
+    "x_questions_need_an_answer": "{count, plural, other {{count}個問題需要處理}}"
   },
   "file_upload": {
     "allowed_hint": "{formats} · 最大 {maxSizeInMB} MB",

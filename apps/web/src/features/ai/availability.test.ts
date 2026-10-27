@@ -21,6 +21,7 @@ describe("offersEnableAI", () => {
     expect(offersEnableAI("instance_not_configured")).toBe(false);
     expect(offersEnableAI("read_only")).toBe(false);
     expect(offersEnableAI("not_in_plan")).toBe(false);
+    expect(offersEnableAI("response_reading_disabled")).toBe(false);
     expect(offersEnableAI(undefined)).toBe(false);
   });
 });
@@ -33,6 +34,9 @@ describe("getAIUnavailableMessage", () => {
       "common.ai_unavailable.instance_not_configured"
     );
     expect(getAIUnavailableMessage("read_only", t)).toBe("common.ai_unavailable.read_only");
+    expect(getAIUnavailableMessage("response_reading_disabled", t)).toBe(
+      "common.ai_unavailable.response_reading_disabled"
+    );
   });
 
   test("falls back to the generic message when the reason is unknown", () => {
@@ -50,6 +54,9 @@ describe("getAIUnavailableMessageForErrorCode", () => {
     );
     expect(getAIUnavailableMessageForErrorCode("ai_instance_not_configured", t)).toBe(
       getAIUnavailableMessage("instance_not_configured", t)
+    );
+    expect(getAIUnavailableMessageForErrorCode("ai_response_reading_disabled", t)).toBe(
+      getAIUnavailableMessage("response_reading_disabled", t)
     );
   });
 

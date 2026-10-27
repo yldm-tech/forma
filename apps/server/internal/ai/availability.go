@@ -42,13 +42,16 @@ func (s *Service) OrganizationAvailability(ctx context.Context, userID, organiza
 	return &OrganizationAvailability{OrganizationConfig: *cfg, Availability: availability(cfg)}, nil
 }
 
-// Availability is what the SPA's AI surfaces are told about an organization, for a caller that has already authorized the surface it serves (the analysis page's text summaries authorize reading the survey's responses).
-func (s *Service) Availability(ctx context.Context, organizationID uuid.UUID) (*Availability, error) {
+// ResponseReadingAvailability is what a surface that sends the organization's responses to the provider is told, for a caller that has already authorized the surface it serves (the analysis page's text summaries authorize reading the survey's responses): the organization's AI availability, and when AI is otherwise available, response_reading_disabled while the organization does not allow AI to read its responses.
+func (s *Service) ResponseReadingAvailability(ctx context.Context, organizationID uuid.UUID) (*Availability, error) {
 	cfg, err := s.OrganizationConfig(ctx, organizationID)
 	if err != nil {
 		return nil, err
 	}
 	a := availability(cfg)
+	if a.Available && !cfg.IsAIResponseReadingEnabled {
+		a = Availability{Reason: ReasonResponseReadingDisabled}
+	}
 	return &a, nil
 }
 

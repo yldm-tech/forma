@@ -38,32 +38,33 @@ func (r *Repository) serializable(ctx context.Context, fn func(tx *Repository) e
 	})
 }
 
-const organizationColumns = `o.id, o.created_at, o.updated_at, o.name, o.is_ai_smart_tools_enabled, o.whitelabel, o.display_time_zone, o.survey_scheduling_time_zone, o.two_factor_enforced_at,
+const organizationColumns = `o.id, o.created_at, o.updated_at, o.name, o.is_ai_smart_tools_enabled, o.is_ai_response_reading_enabled, o.whitelabel, o.display_time_zone, o.survey_scheduling_time_zone, o.two_factor_enforced_at,
 	b.organization_id IS NOT NULL AS has_billing, b.stripe_customer_id, b.limits, b.usage_cycle_anchor, b.stripe`
 
 type organizationRow struct {
-	ID                       uuid.UUID
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	Name                     string
-	IsAiSmartToolsEnabled    bool
-	Whitelabel               []byte
-	DisplayTimeZone          sql.NullString
-	SurveySchedulingTimeZone sql.NullString
-	TwoFactorEnforcedAt      sql.NullTime
-	HasBilling               bool
-	StripeCustomerID         sql.NullString
-	Limits                   []byte
-	UsageCycleAnchor         sql.NullTime
-	Stripe                   []byte
-	Role                     sql.NullString
-	SuspendedAt              sql.NullTime
+	ID                         uuid.UUID
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	Name                       string
+	IsAiSmartToolsEnabled      bool
+	IsAiResponseReadingEnabled bool
+	Whitelabel                 []byte
+	DisplayTimeZone            sql.NullString
+	SurveySchedulingTimeZone   sql.NullString
+	TwoFactorEnforcedAt        sql.NullTime
+	HasBilling                 bool
+	StripeCustomerID           sql.NullString
+	Limits                     []byte
+	UsageCycleAnchor           sql.NullTime
+	Stripe                     []byte
+	Role                       sql.NullString
+	SuspendedAt                sql.NullTime
 }
 
 // organization maps a row; a missing billing row reads as the defaults, as forma2's mapOrganizationBilling did.
 func (o organizationRow) organization(isFormaCloud bool) *Organization {
 	out := &Organization{
-		ID: o.ID, CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, Name: o.Name, IsAISmartToolsEnabled: o.IsAiSmartToolsEnabled, Whitelabel: o.Whitelabel,
+		ID: o.ID, CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, Name: o.Name, IsAISmartToolsEnabled: o.IsAiSmartToolsEnabled, IsAIResponseReadingEnabled: o.IsAiResponseReadingEnabled, Whitelabel: o.Whitelabel,
 		Billing: Billing{Limits: defaultLimits(isFormaCloud)},
 	}
 	if o.DisplayTimeZone.Valid {

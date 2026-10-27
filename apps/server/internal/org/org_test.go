@@ -326,6 +326,31 @@ func TestUpdateOrganizationAISmartToolsOnConfiguredInstance(t *testing.T) {
 	}
 }
 
+// The "Allow AI to read responses" switch: on for a new organization, switched by owners and managers, and independent of the AI smart tools toggle, so it can be set before AI is turned on and needs no provider.
+func TestUpdateOrganizationAIResponseReading(t *testing.T) {
+	e := newEnv(t)
+	owner, manager, member := e.user(), e.user(), e.user()
+	c := e.organization(owner, "Acme")
+	e.member(c.ID, manager, RoleManager)
+	e.member(c.ID, member, RoleMember)
+	path := orgPath(c.ID, "")
+
+	var o Organization
+	e.ok(e.do(owner, http.MethodGet, path, nil), http.StatusOK, &o)
+	if !o.IsAIResponseReadingEnabled || o.IsAISmartToolsEnabled {
+		t.Fatalf("a new organization: %+v", o)
+	}
+	e.ok(e.do(manager, http.MethodPatch, path, map[string]any{"isAIResponseReadingEnabled": false}), http.StatusOK, &o)
+	if o.IsAIResponseReadingEnabled {
+		t.Fatal("reading still on")
+	}
+	e.fails(e.do(member, http.MethodPatch, path, map[string]any{"isAIResponseReadingEnabled": true}), http.StatusForbidden, apperr.CodeForbidden, "")
+	e.ok(e.do(owner, http.MethodPatch, path, map[string]any{"isAIResponseReadingEnabled": true}), http.StatusOK, &o)
+	if !o.IsAIResponseReadingEnabled || o.IsAISmartToolsEnabled {
+		t.Fatalf("after turning reading on: %+v", o)
+	}
+}
+
 func TestDeleteOrganization(t *testing.T) {
 	e := newEnv(t)
 	owner, manager := e.user(), e.user()

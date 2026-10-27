@@ -1,8 +1,13 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 
-/** Why AI is unavailable on a surface, forma2's TAIUnavailableReason (apps/server/internal/ai/service.go). */
-export type AIUnavailableReason = "not_in_plan" | "not_enabled" | "instance_not_configured" | "read_only";
+/** Why AI is unavailable on a surface, forma2's TAIUnavailableReason (apps/server/internal/ai/service.go), plus response_reading_disabled: a surface that sends responses to the AI provider (the open-text summary) while the organization does not allow AI to read them. */
+export type AIUnavailableReason =
+  | "not_in_plan"
+  | "not_enabled"
+  | "instance_not_configured"
+  | "read_only"
+  | "response_reading_disabled";
 
 /** Whether a surface may offer AI, and if not why. */
 export interface AIAvailability {
@@ -16,6 +21,7 @@ export interface OrganizationAI extends AIAvailability {
   isAISmartToolsEnabled: boolean;
   isAISmartToolsEntitled: boolean;
   isInstanceConfigured: boolean;
+  isAIResponseReadingEnabled: boolean;
 }
 
 export const aiKeys = {
@@ -82,16 +88,19 @@ export const getAIUnavailableMessage = (reason: AIUnavailableReason | undefined,
       return t("common.ai_unavailable.instance_not_configured");
     case "read_only":
       return t("common.ai_unavailable.read_only");
+    case "response_reading_disabled":
+      return t("common.ai_unavailable.response_reading_disabled");
     default:
       return t("common.ai_unavailable.unknown");
   }
 };
 
-/** The server codes that also mean "AI is unavailable": the organization's toggle or the instance's configuration changed between page load and the request. */
+/** The server codes that also mean "AI is unavailable": the organization's switches or the instance's configuration changed between page load and the request. */
 const ERROR_CODE_REASONS = new Map<string, AIUnavailableReason>([
   ["ai_features_not_enabled", "not_in_plan"],
   ["ai_smart_tools_disabled", "not_enabled"],
   ["ai_instance_not_configured", "instance_not_configured"],
+  ["ai_response_reading_disabled", "response_reading_disabled"],
 ]);
 
 /** forma2's getAIUnavailableMessageForErrorCode: undefined for any other code, so callers keep their own handling. */
