@@ -2166,6 +2166,7 @@
         "hint_completion": "完成率：每個時間區間內開始的回應中已完成的比例。",
         "hint_nps": "NPS：每個時間區間的回答中推薦者（9 到 10）占比減去批評者（0 到 6）占比。",
         "hint_satisfied": "每個時間區間內選擇 4 或 5 的回答占比。",
+        "hint_score": "每個時間區間內已完成回應的平均總分。",
         "interval_day": "按日",
         "interval_label": "分組方式",
         "interval_month": "按月",
@@ -2184,7 +2185,8 @@
         "view_completion": "完成率",
         "view_element": "{type}：{headline}",
         "view_label": "指標",
-        "view_responses": "回應數"
+        "view_responses": "回應數",
+        "view_score": "總分：{name}"
       }
     },
     "api_keys": {

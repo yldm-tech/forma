@@ -2166,6 +2166,7 @@
         "hint_completion": "完成率：每个时间段内开始的回复中已完成的比例。",
         "hint_nps": "NPS：每个时间段的回答中推荐者（9 到 10）占比减去贬损者（0 到 6）占比。",
         "hint_satisfied": "每个时间段内选择 4 或 5 的回答占比。",
+        "hint_score": "每个时间段内已完成回复的平均总分。",
         "interval_day": "按天",
         "interval_label": "分组方式",
         "interval_month": "按月",
@@ -2184,7 +2185,8 @@
         "view_completion": "完成率",
         "view_element": "{type}：{headline}",
         "view_label": "指标",
-        "view_responses": "回复数"
+        "view_responses": "回复数",
+        "view_score": "总分：{name}"
       }
     },
     "api_keys": {

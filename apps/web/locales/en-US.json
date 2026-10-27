@@ -2166,6 +2166,7 @@
         "hint_completion": "Completion rate: completed responses out of those started in each period.",
         "hint_nps": "NPS: % promoters (9 to 10) minus % detractors (0 to 6) among the answers in each period.",
         "hint_satisfied": "Share of answers rating 4 or 5 in each period.",
+        "hint_score": "Average total score of the completed responses in each period.",
         "interval_day": "Day",
         "interval_label": "Group by",
         "interval_month": "Month",
@@ -2184,7 +2185,8 @@
         "view_completion": "Completion rate",
         "view_element": "{type}: {headline}",
         "view_label": "Metric",
-        "view_responses": "Responses"
+        "view_responses": "Responses",
+        "view_score": "Total score: {name}"
       }
     },
     "api_keys": {

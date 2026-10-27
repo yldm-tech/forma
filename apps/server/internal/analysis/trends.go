@@ -26,7 +26,7 @@ const (
 	IntervalMonth = "month"
 )
 
-// Trend metrics, what an element trend's values are: the NPS score (-100 to 100), the share of satisfied answers (4 or 5) in percent, or the average answer.
+// Trend metrics, what an element trend's values are: the NPS score (-100 to 100), the share of satisfied answers (4 or 5) in percent, or the average answer (a rating, CES or slider).
 const (
 	TrendMetricNPS       = "nps"
 	TrendMetricSatisfied = "satisfied"
@@ -52,6 +52,8 @@ type Trends struct {
 	TimeZone string         `json:"timeZone"`
 	Buckets  []TrendBucket  `json:"buckets"`
 	Elements []ElementTrend `json:"elements"`
+	// Score is the average of the survey's total score variable per bucket, null when the survey has none.
+	Score *ScoreTrend `json:"score"`
 }
 
 // TrendBucket is one interval: its first and last day (both inclusive, local dates, cut to the range at the two ends), the responses started in it and how many of them are completed, with that share.
@@ -65,13 +67,20 @@ type TrendBucket struct {
 	CompletionPercentage float64 `json:"completionPercentage"`
 }
 
-// ElementTrend is one NPS, CSAT, rating or CES element's metric per bucket; Points line up with the trend's Buckets.
+// ElementTrend is one NPS, CSAT, rating, CES or slider element's metric per bucket; Points line up with the trend's Buckets.
 type ElementTrend struct {
 	ElementID string       `json:"elementId"`
 	Type      string       `json:"type"`
 	Headline  string       `json:"headline"`
 	Metric    string       `json:"metric"`
 	Points    []TrendPoint `json:"points"`
+}
+
+// ScoreTrend is the average total score per bucket over the completed responses that carry one, as the summary's score card counts them (scoreAggregate): a response not finished holds only the points of the blocks answered so far. Points line up with the trend's Buckets, their Answered counting those responses.
+type ScoreTrend struct {
+	VariableID string       `json:"variableId"`
+	Name       string       `json:"name"`
+	Points     []TrendPoint `json:"points"`
 }
 
 // TrendPoint is an element's metric in one bucket over the responses that answered it with a number; Value is null when none did.
@@ -87,7 +96,7 @@ func trendMetric(elementType string) string {
 		return TrendMetricNPS
 	case surveydoc.ElementCSAT:
 		return TrendMetricSatisfied
-	case surveydoc.ElementRating, surveydoc.ElementCES:
+	case surveydoc.ElementRating, surveydoc.ElementCES, surveydoc.ElementSlider:
 		return TrendMetricAverage
 	}
 	return ""
@@ -149,16 +158,34 @@ func (s dayScores) value(metric string) *float64 {
 	return &v
 }
 
-// readTrendDays reads the matching responses grouped by the local day they were created in, and the numeric answers of the elements by day and element. Grouping is done by PostgreSQL in the zone's wall time; only days are returned, so the rows stay few however many responses there are.
-func readTrendDays(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, clause response.Clause, zone string, elementIDs []string) ([]dayCounts, []dayScores, error) {
-	var counts []dayCounts
+// trendDays is what readTrendDays reads: the responses per local day, the elements' numeric answers per day and element, and the total score of the completed responses per day (their ElementID empty).
+type trendDays struct {
+	counts []dayCounts
+	scores []dayScores
+	score  []dayScores
+}
+
+// readTrendDays reads the matching responses grouped by the local day they were created in, the numeric answers of the elements by day and element, and, when scoreVariableID is not empty, the numeric value of that variable in the completed responses by day. Grouping is done by PostgreSQL in the zone's wall time; only days are returned, so the rows stay few however many responses there are.
+func readTrendDays(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, clause response.Clause, zone string, elementIDs []string, scoreVariableID string) (trendDays, error) {
+	var out trendDays
 	args := append([]any{zone, surveyID}, clause.Args...)
 	if err := db.WithContext(ctx).Raw(`SELECT (r.created_at AT TIME ZONE ?)::date AS day, count(*) AS responses, count(*) FILTER (WHERE r.finished) AS completed
-		FROM responses r WHERE r.survey_id = ? AND `+clause.SQL+` GROUP BY 1 ORDER BY 1`, args...).Scan(&counts).Error; err != nil {
-		return nil, nil, fmt.Errorf("count responses by day: %w", err)
+		FROM responses r WHERE r.survey_id = ? AND `+clause.SQL+` GROUP BY 1 ORDER BY 1`, args...).Scan(&out.counts).Error; err != nil {
+		return trendDays{}, fmt.Errorf("count responses by day: %w", err)
 	}
-	if len(elementIDs) == 0 || len(counts) == 0 {
-		return counts, nil, nil
+	if len(out.counts) == 0 {
+		return out, nil
+	}
+	if scoreVariableID != "" {
+		args = append([]any{zone, scoreVariableID, surveyID, scoreVariableID}, clause.Args...)
+		if err := db.WithContext(ctx).Raw(`SELECT (r.created_at AT TIME ZONE ?)::date AS day, count(*) AS answered, sum((r.variables -> ?)::numeric)::float8 AS total
+			FROM responses r WHERE r.survey_id = ? AND r.finished AND jsonb_typeof(r.variables -> ?) = 'number' AND `+clause.SQL+`
+			GROUP BY 1 ORDER BY 1`, args...).Scan(&out.score).Error; err != nil {
+			return trendDays{}, fmt.Errorf("aggregate total score by day: %w", err)
+		}
+	}
+	if len(elementIDs) == 0 {
+		return out, nil
 	}
 	values := make([]string, len(elementIDs))
 	args = []any{zone}
@@ -167,17 +194,16 @@ func readTrendDays(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, clause 
 		args = append(args, id)
 	}
 	args = append(append(args, surveyID), clause.Args...)
-	var scores []dayScores
 	if err := db.WithContext(ctx).Raw(`SELECT s.day, s.element_id, count(*) AS answered,
 			count(*) FILTER (WHERE s.v >= 9) AS promoters, count(*) FILTER (WHERE s.v < 7) AS detractors,
 			count(*) FILTER (WHERE s.v = 4 OR s.v = 5) AS satisfied, sum(s.v)::float8 AS total
 		FROM (SELECT (r.created_at AT TIME ZONE ?)::date AS day, e.id AS element_id, (r.data -> e.id)::numeric AS v
 			FROM responses r CROSS JOIN (VALUES `+strings.Join(values, ", ")+`) AS e(id)
 			WHERE r.survey_id = ? AND `+clause.SQL+` AND jsonb_typeof(r.data -> e.id) = 'number') s
-		GROUP BY 1, 2 ORDER BY 1, 2`, args...).Scan(&scores).Error; err != nil {
-		return nil, nil, fmt.Errorf("aggregate scores by day: %w", err)
+		GROUP BY 1, 2 ORDER BY 1, 2`, args...).Scan(&out.scores).Error; err != nil {
+		return trendDays{}, fmt.Errorf("aggregate scores by day: %w", err)
 	}
-	return counts, scores, nil
+	return out, nil
 }
 
 // localDate is the calendar day of t in loc, as midnight UTC, the form the days are compared and stepped in.
@@ -316,8 +342,9 @@ func trendElements(sv *surveyDoc) []*element {
 	return out
 }
 
-// buildTrends lays the days out in buckets of the interval ("" picks one) over the range, and computes each bucket's counts and the elements' metrics.
-func buildTrends(elements []*element, counts []dayCounts, scores []dayScores, filter *response.Criteria, loc *time.Location, interval string, now time.Time) (*Trends, error) {
+// buildTrends lays the days out in buckets of the interval ("" picks one) over the range, and computes each bucket's counts, the elements' metrics and, for a survey with a total score variable (scoreVariable not nil), the average score.
+func buildTrends(elements []*element, scoreVariable *surveydoc.Variable, days trendDays, filter *response.Criteria, loc *time.Location, interval string, now time.Time) (*Trends, error) {
+	counts, scores := days.counts, days.scores
 	out := &Trends{Interval: interval, TimeZone: loc.String(), Buckets: []TrendBucket{}, Elements: []ElementTrend{}}
 	first, last, ok := trendRange(filter, counts, loc, now)
 	if ok {
@@ -386,6 +413,19 @@ func buildTrends(elements []*element, counts []dayCounts, scores []dayScores, fi
 		}
 		out.Elements = append(out.Elements, ElementTrend{ElementID: el.ID, Type: el.Type, Headline: surveydoc.TextContent(el.Headline.Default()), Metric: metric, Points: points})
 	}
+	if scoreVariable != nil {
+		buckets := make([]dayScores, len(starts))
+		for _, s := range days.score {
+			if i, found := index[bucketStart(dateOnly(s.Day), out.Interval)]; found {
+				buckets[i].add(s)
+			}
+		}
+		points := make([]TrendPoint, len(starts))
+		for i, s := range buckets {
+			points[i] = TrendPoint{Answered: s.Answered, Value: s.value(TrendMetricAverage)}
+		}
+		out.Score = &ScoreTrend{VariableID: scoreVariable.ID, Name: scoreVariable.Name, Points: points}
+	}
 	return out, nil
 }
 
@@ -401,16 +441,19 @@ func (s *Service) trends(ctx context.Context, sv *surveyDoc, filter *response.Cr
 	for i, el := range elements {
 		ids[i] = el.ID
 	}
-	var counts []dayCounts
-	var scores []dayScores
+	scoreVariableID := ""
+	if sv.ScoreVariable != nil {
+		scoreVariableID = sv.ScoreVariable.ID
+	}
+	var days trendDays
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		counts, scores, err = readTrendDays(ctx, tx, sv.ID, clause, loc.String(), ids)
+		days, err = readTrendDays(ctx, tx, sv.ID, clause, loc.String(), ids, scoreVariableID)
 		return err
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
-	return buildTrends(elements, counts, scores, filter, loc, interval, time.Now())
+	return buildTrends(elements, sv.ScoreVariable, days, filter, loc, interval, time.Now())
 }
 
 // Trends is the survey's responses over time under the filter, by the interval asked for ("" lets the server pick one).
@@ -431,12 +474,15 @@ func trendExportFileName(surveyName, interval, format string, now time.Time) str
 	return strings.ToLower(fmt.Sprintf("trends-%s-%s-%s-utc.%s", name, interval, now.UTC().Format("2006-01-02-15-04-05"), format))
 }
 
-// trendExportHeaders are the columns of the trend export: the bucket's days, whether it is partial, and its counts, then per score element its metric and how many answered, headed by the element's headline.
+// trendExportHeaders are the columns of the trend export: the bucket's days, whether it is partial, and its counts, then per score element its metric and how many answered, headed by the element's headline, and last, for a survey with a total score, its average and how many completed responses carry one.
 func trendExportHeaders(t *Trends) []string {
 	headers := []string{"Period start", "Period end", "Partial period", "Responses", "Completed", "Completion rate (%)"}
 	for _, el := range t.Elements {
 		label := map[string]string{TrendMetricNPS: "NPS", TrendMetricSatisfied: "CSAT satisfied (%)", TrendMetricAverage: "Average"}[el.Metric]
 		headers = append(headers, fmt.Sprintf("%s - %s", el.Headline, label), fmt.Sprintf("%s - Answered", el.Headline))
+	}
+	if t.Score != nil {
+		headers = append(headers, fmt.Sprintf("Total score (%s) - Average", t.Score.Name), fmt.Sprintf("Total score (%s) - Completed responses", t.Score.Name))
 	}
 	return headers
 }
@@ -475,6 +521,14 @@ func (s *Service) ExportTrends(ctx context.Context, userID, surveyID uuid.UUID, 
 		cells = []any{b.Start, b.End, partial, float64(b.Responses), float64(b.Completed), b.CompletionPercentage}
 		for _, el := range t.Elements {
 			p := el.Points[i]
+			var value any
+			if p.Value != nil {
+				value = *p.Value
+			}
+			cells = append(cells, value, float64(p.Answered))
+		}
+		if t.Score != nil {
+			p := t.Score.Points[i]
 			var value any
 			if p.Value != nil {
 				value = *p.Value
