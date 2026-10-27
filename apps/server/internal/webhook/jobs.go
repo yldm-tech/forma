@@ -54,12 +54,18 @@ func Enqueue(ctx context.Context, tx *jobs.Tx, hooks []*Webhook, event, jobKey s
 type deliverWorker struct {
 	river.WorkerDefaults[DeliverArgs]
 	deliverer *Deliverer
-	log       *slog.Logger
+	// breaker caps the process's deliveries to each webhook and holds back those to a webhook whose endpoint keeps failing.
+	breaker *breaker
+	log     *slog.Logger
+}
+
+func newDeliverWorker(deliverer *Deliverer, log *slog.Logger) *deliverWorker {
+	return &deliverWorker{deliverer: deliverer, breaker: newBreaker(), log: log}
 }
 
 // RegisterJobs adds the webhook delivery worker to `forma worker`.
 func RegisterJobs(reg *jobs.Registry, deliverer *Deliverer, log *slog.Logger) {
-	jobs.Add(reg, &deliverWorker{deliverer: deliverer, log: log})
+	jobs.Add(reg, newDeliverWorker(deliverer, log))
 }
 
 // NextRetry follows retrySchedule instead of the queue's default backoff of seconds.
@@ -73,10 +79,30 @@ func retryDelay(attempt int) time.Duration {
 }
 
 // Work delivers the event to the webhook as it is now: its current URL and secret, and only while it still exists and subscribes to the event for the survey, so a webhook deleted or narrowed during the retries stops receiving it. A response deleted during the retries, or its survey, stops it too, so its data is not sent on after an erasure, and so does a resend from the webhooks page that delivered it in the meantime. Every attempt is recorded in the webhook's delivery log; a failure to record it is logged and does not fail the job, which would deliver the event again.
+//
+// The breaker admits the delivery first. One it holds back, because the webhook already has its share of the process's deliveries running or its endpoint keeps failing, is snoozed before anything is read: the snooze frees the slot at once, is not counted as an attempt, and leaves the delivery's retries for when the endpoint recovers. A delivery queued longer ago than giveUpAfter is sent even through an open circuit, as its last attempt, and is discarded when it fails.
 func (w *deliverWorker) Work(ctx context.Context, job *river.Job[DeliverArgs]) error {
 	a := job.Args
 	log := w.log.With("job_id", job.ID, "attempt", job.Attempt, "max_attempts", job.MaxAttempts, "webhook_id", a.WebhookID, "event", a.Event,
 		"workspace_id", a.WorkspaceID, "survey_id", a.SurveyID)
+	pastDeadline := w.deliverer.now().Sub(job.CreatedAt) >= giveUpAfter
+	adm := w.breaker.enter(a.WebhookID, pastDeadline)
+	if adm.Wait > 0 {
+		log.DebugContext(ctx, "Webhook delivery held back", "circuit_open", adm.Open, "snooze", adm.Wait.String())
+		return river.JobSnooze(adm.Wait)
+	}
+	result := outcomeSkipped
+	defer func() {
+		switch w.breaker.done(a.WebhookID, adm, result) {
+		case transitionOpened:
+			log.WarnContext(ctx, "Webhook circuit opened: its endpoint keeps timing out or failing, so its deliveries wait", "threshold", breakerThreshold, "open_for", breakerOpenFor.String())
+		case transitionReopened:
+			log.InfoContext(ctx, "Webhook circuit stays open: the probe failed", "open_for", breakerOpenFor.String())
+		case transitionClosed:
+			log.InfoContext(ctx, "Webhook circuit closed: its endpoint answers again")
+		case transitionNone:
+		}
+	}()
 	exists, err := w.deliverer.repo.responseExists(ctx, a.WorkspaceID, a.SurveyID, a.ResponseID)
 	if err != nil {
 		return err
@@ -111,11 +137,12 @@ func (w *deliverWorker) Work(ctx context.Context, job *river.Job[DeliverArgs]) e
 	if err != nil {
 		return err
 	}
+	result = outcomeOf(attempt)
 	rec := deliveryRecord{
 		WebhookID: a.WebhookID, ResponseID: a.ResponseID, SurveyID: a.SurveyID, Event: a.Event, MessageID: messageID, Payload: a.Data,
 		Status: DeliverySucceeded, At: w.deliverer.now().UTC(), Attempt: attempt,
 	}
-	final := job.Attempt >= job.MaxAttempts
+	final := job.Attempt >= job.MaxAttempts || pastDeadline
 	switch {
 	case attempt.OK():
 	case final:
@@ -131,6 +158,10 @@ func (w *deliverWorker) Work(ctx context.Context, job *river.Job[DeliverArgs]) e
 	switch {
 	case err == nil:
 		return nil
+	case final && job.Attempt < job.MaxAttempts:
+		// Past its deadline with attempts left: River would retry it, so it is cancelled instead.
+		log.ErrorContext(ctx, "Webhook delivery failed; it waited past its retry schedule", "err", err)
+		return river.JobCancel(err)
 	case final:
 		log.ErrorContext(ctx, "Webhook delivery failed; retries exhausted", "err", err)
 	default:
