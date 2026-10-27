@@ -531,6 +531,75 @@ func TestUpdateResponse(t *testing.T) {
 	e.do("PUT", "/api/v2/client/"+ws.String()+"/responses/"+pid.String(), map[string]any{"finished": true}).expectError(t, 403, "forbidden", "Survey is protected by a PIN")
 }
 
+// NF-01: a link survey page sends the verification token it was opened with, and an update whose token proves another address than the one the response was created with is refused, so a second verified respondent whose page went on with the first one's progress cannot add to or finish the first one's response. An update without a token (the SDK, pages from before the token was sent) or with one that proves no address goes through as before.
+func TestUpdateResponseVerifiedEmail(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws)
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true WHERE id = ?`, sv)
+	create := func(email string) string {
+		t.Helper()
+		url := webAppURL + "/s/" + sv.String() + "?verify=" + e.emailToken(t, sv, email)
+		r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}, "meta": map[string]any{"url": url}})
+		if r.Status != 200 {
+			t.Fatalf("create: %d %s", r.Status, r.Body)
+		}
+		return r.data(t)["id"].(string)
+	}
+	put := func(version, id string, body map[string]any) result {
+		e.clock.nextWindow()
+		return e.do("PUT", "/api/"+version+"/client/"+ws.String()+"/responses/"+id, body)
+	}
+
+	id := create("a@example.com")
+	for _, v := range []string{"v1", "v2"} {
+		details := put(v, id, map[string]any{"data": map[string]any{}, "finished": true, "verifyToken": e.emailToken(t, sv, "b@example.com")}).
+			expectError(t, 403, "forbidden", "Response was verified with another email")
+		if details["surveyId"] != sv.String() {
+			t.Fatalf("details %v", details)
+		}
+	}
+	if d := e.responseData(t, id); d["verifiedEmail"] != "a@example.com" {
+		t.Fatalf("data %v", d)
+	}
+	var finished bool
+	if err := e.db.Raw(`SELECT finished FROM responses WHERE id = ?`, id).Scan(&finished).Error; err != nil || finished {
+		t.Fatalf("a refused update finished the response: %v %v", finished, err)
+	}
+	// The address's own token, in any letter case, goes through.
+	if r := put("v1", id, map[string]any{"data": map[string]any{}, "verifyToken": e.emailToken(t, sv, "A@Example.com")}); r.Status != 200 {
+		t.Fatalf("own token: %d %s", r.Status, r.Body)
+	}
+	// No token, a null one, a token of another survey or a forged one prove no address and are not checked.
+	other := e.survey(ws)
+	for name, token := range map[string]any{"absent": nil, "null": nil, "other survey": e.emailToken(t, other, "b@example.com"), "forged": "forged"} {
+		body := map[string]any{"data": map[string]any{}}
+		if name != "absent" {
+			body["verifyToken"] = token
+		}
+		if r := put("v1", id, body); r.Status != 200 {
+			t.Fatalf("%s token: %d %s", name, r.Status, r.Body)
+		}
+	}
+	put("v1", id, map[string]any{"verifyToken": 42}).expectError(t, 400, "bad_request", "Fields are missing or incorrectly formatted")
+
+	// A response created before the survey verified emails carries no address, so no token proves it.
+	plain := e.insert(`INSERT INTO responses (survey_id, data) VALUES (?, '{}'::jsonb) RETURNING id`, sv)
+	put("v1", plain.String(), map[string]any{"verifyToken": e.emailToken(t, sv, "a@example.com")}).
+		expectError(t, 403, "forbidden", "Response was verified with another email")
+
+	// Without email verification the token is ignored.
+	unverified := e.survey(ws)
+	uid := e.insert(`INSERT INTO responses (survey_id, data) VALUES (?, '{"verifiedEmail":"a@example.com"}'::jsonb) RETURNING id`, unverified)
+	if r := put("v1", uid.String(), map[string]any{"verifyToken": e.emailToken(t, unverified, "b@example.com")}); r.Status != 200 {
+		t.Fatalf("verification off: %d %s", r.Status, r.Body)
+	}
+
+	if r := put("v2", id, map[string]any{"finished": true, "verifyToken": e.emailToken(t, sv, "a@example.com")}); r.Status != 200 {
+		t.Fatalf("finish with own token: %d %s", r.Status, r.Body)
+	}
+}
+
 // An unfinished response stored before the phone check narrowed to 7 to 15 digits keeps an answer that check now refuses. Updates that send other answers still go through; sending that answer again is refused.
 func TestUpdateResponseStoredAnswers(t *testing.T) {
 	e := newEnv(t)

@@ -9,6 +9,7 @@ Each `<case>.json` file is one HTTP exchange of what the SDK (`packages/js-core`
 - `app`: in-progress app survey, one `openText` element `checkout_feedback`, ending `clendscreenappaaaaaaaaaa3`, display option `displayMultiple`, triggered by the `checkout` action class, with its private segment. It is the only survey in the environment state, because that state lists app surveys only.
 - `link`: in-progress link survey in `en-US` (default) and `de-DE`, blocks with `feedback` (required `openText`) and `score` (`rating`, number scale, range 5), hidden fields `utm_source` and `campaign`, endings `clendscreenokaaaaaaaaaaa1` and `clendscreenquotaaaaaaaaa2`, slug `contract-feedback`, and one quota: limit 1, `feedback equals "quota"`, action `endSurvey` on `clendscreenquotaaaaaaaaa2`, partial submissions counted.
 - `paused`, `archived` (archived and paused), `singleUse` (encrypted single-use links) and `upload` (a `fileUpload` element `attachment` allowing `png` and `pdf` up to 5 MB): one-element link surveys.
+- `verified`: a link survey with one `openText` element `q1` that requires email verification.
 
 The cases run in the order `replayOrder` gives (identify before a contact's displays, a display before the response that references it, the first quota response before the one that finds the quota full). Client API requests carry `Origin: https://customer.example` and a fixed desktop Chrome `User-Agent`. The rate-limit cases come last: 101 requests within a minute from one address exhaust the shared `api:client` limit (100 per minute), after which every client route including the environment state answers 429. `v1-storage-rate-limited` is the sixth storage request within a minute (`storage:upload`, 5 per minute per address). Storage uploads are presigned against a dummy S3 configuration (`S3_ENDPOINT_URL=http://localhost:9000`, bucket `forma-uploads`, access key `contractfixtureaccess`, region `us-east-1`, path style); nothing is uploaded.
 
@@ -41,7 +42,7 @@ Values that differ on every run are placeholders that keep the JSON type (always
 | Placeholder | Stands for |
 | --- | --- |
 | `<id:workspace>` | The workspace id. |
-| `<id:survey:app>`, `<id:survey:link>`, `<id:survey:paused>`, `<id:survey:archived>`, `<id:survey:singleUse>`, `<id:survey:upload>` | The survey ids described above. |
+| `<id:survey:app>`, `<id:survey:link>`, `<id:survey:paused>`, `<id:survey:archived>`, `<id:survey:singleUse>`, `<id:survey:upload>`, `<id:survey:verified>` | The survey ids described above. |
 | `<id:actionClass:checkout>` | The `checkout` code action class. |
 | `<id:language:en-US>` | The workspace's default language row. |
 | `<id:segment:app>` | The private segment of the app survey. |
@@ -49,8 +50,9 @@ Values that differ on every run are placeholders that keep the JSON type (always
 | `<id:quota>` | The link survey's quota. |
 | `<contact-token:user1>`, `<contact-token:user2>` | The opaque tokens the client API names the contacts created by identifying `contract-user-1` and `contract-user-2` by, in place of their ids (`ct1.` and base64url). A contact always gets the same token, and the display and response routes accept it as `contactId`. |
 | `<id:display:anonymous>`, `<id:display:contact>`, `<id:display:v1>`, `<id:display:anonymous-unused>` | Display ids returned by the display cases; `anonymous-unused` is a display created only to be referenced by `v2-responses-create-invalid-meta-action`. |
-| `<id:response:...>` | Response ids returned by the response cases, named after the case that created them (`partial`, `finished`, `v1`, `contact`, `quota1`, `quota2`, `quota3`, `requiredOmitted`, `ratingOutOfRange`, `singleUse`). |
+| `<id:response:...>` | Response ids returned by the response cases, named after the case that created them (`partial`, `finished`, `v1`, `contact`, `quota1`, `quota2`, `quota3`, `requiredOmitted`, `ratingOutOfRange`, `singleUse`, `verified`). |
 | `<id:singleUse>` | The canonical single-use id: the decrypted value of the link's `suId`, which the survey page hands to the runtime as `singleUseId`. |
+| `<verify-token:a>`, `<verify-token:b>` | Email verification tokens for the `verified` survey proving `a@example.com` and `b@example.com`, as the verification email's link carries them in `verify`: a JWT signed with the email verification secret whose address is encrypted under `ENCRYPTION_KEY`. |
 | `<single-use-token>` | The encrypted `suId` query value of a single-use link: base64url of the id sealed under `ENCRYPTION_KEY`, bound to its survey. |
 | `<timestamp>` | An ISO 8601 UTC timestamp, e.g. `2026-10-22T06:12:02.233Z` (`expiresAt`, `createdAt`, `updatedAt`; the policy `expiration` has no milliseconds). |
 | `<uuid>` | A random UUID (the `--fid--` suffix of an uploaded file name). |
@@ -66,5 +68,6 @@ Ids that start with `cl` and end in `aaa…` followed by a digit (for example `c
 - The identify state and the display creates never name a contact by its id, only by its token, and the state's `displays` and `responses` hold survey keys (`sdkidentity.SurveyKey`), never survey ids. The SDK writes `email` only on a verified identify (`v2-user-attributes-update` skips it with an error); the identity verification rules themselves are covered by `identity_test.go`, since the contract's workspace has no identity secret.
 - The environment state's survey `segment` reports the workspace id as both `environmentId` and `workspaceId`.
 - `v2-responses-create-required-element-omitted` and `v2-responses-create-rating-out-of-range` are accepted: only elements whose key is present in `data` are validated, and a rating is not checked against its range. `v2-responses-create-missing-required` shows the error for a required element sent empty, in the survey's default language for a response in `default`.
+- The response update takes an optional `verifyToken`, added for NF-01 (a second verified respondent going on with the first one's saved progress in a shared browser): on a survey that requires email verification, a token that proves another address than the one the response was created with is refused with 403 (`v1-responses-update-verified-email-other-address`), while an update without one is taken as before (`v1-responses-update-verified-email-no-token`).
 - `meta.action: null` is rejected on response create (`v2-responses-create-invalid-meta-action`); the key must be a string or absent.
 - `/s/{id}` (including the 404 for an unknown id) sends `frame-ancestors *` and no `X-Frame-Options`; `/p/{slug}` with an unknown slug gets the default `frame-ancestors 'self'` and `X-Frame-Options: SAMEORIGIN`. Every HTML page's `Cache-Control` ends with `no-transform`.
