@@ -27,6 +27,28 @@ const (
 	discardedRetention = 7 * 24 * time.Hour
 )
 
+// Queues. Every job kind is registered with every queue's workers, so the queue a job lands in only decides which slots it waits for. One tenant's slow webhook endpoint, a burst of responses or a long audit fills the slots of its own queue and no other: before the split all kinds shared one first-in-first-out queue, and a backlog of pipeline and webhook jobs held back the projection delivery the authorization freshness guard waits on, failing every authorization check of every organization once a revocation sat undelivered for 60 seconds.
+const (
+	// QueueDefault takes every job that names no queue: the response pipeline, emails, digests, cleanups and sweeps. It also still works any kind, so a job queued here by an earlier release is not stranded.
+	QueueDefault = river.QueueDefault
+	// QueueWebhooks takes the jobs that wait on endpoints outside forma: webhook deliveries and workflow runs.
+	QueueWebhooks = "webhooks"
+	// QueueAuthz takes the SpiceDB projection delivery and the reconciliation audit.
+	QueueAuthz = "authz"
+)
+
+// authzMaxWorkers gives each of the authz queue's two kinds a slot of its own. Both are periodic singletons, so this is never more than ran at once before; a single slot would let an audit, which may run for up to an hour, hold back the five-second delivery the freshness guard depends on.
+const authzMaxWorkers = 2
+
+// queues sizes each queue. WORKER_CONCURRENCY applies to the default and the webhooks queue each, so a worker runs up to twice that many jobs plus the authz queue's.
+func queues(concurrency int) map[string]river.QueueConfig {
+	return map[string]river.QueueConfig{
+		QueueDefault:  {MaxWorkers: concurrency},
+		QueueWebhooks: {MaxWorkers: concurrency},
+		QueueAuthz:    {MaxWorkers: authzMaxWorkers},
+	}
+}
+
 // Migrate installs or upgrades River's own tables (river_job, river_queue, ...). It runs after the goose migrations in `forma migrate`; River versions its schema itself, so these tables are not in apps/server/migrations.
 func Migrate(ctx context.Context, databaseURL string, log *slog.Logger) error {
 	pool, err := pgxpool.New(ctx, databaseURL)
@@ -124,7 +146,7 @@ func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.L
 		Logger:                      log,
 		Workers:                     reg.workers,
 		PeriodicJobs:                reg.periodic,
-		Queues:                      map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: concurrency}},
+		Queues:                      queues(concurrency),
 		MaxAttempts:                 maxAttempts,
 		RetryPolicy:                 exponentialRetry{},
 		Middleware:                  []rivertype.Middleware{&metricsMiddleware{metrics: defaultJobMetrics()}},

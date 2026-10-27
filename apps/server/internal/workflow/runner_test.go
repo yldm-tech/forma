@@ -91,6 +91,10 @@ func TestEnqueueResponseCompleted(t *testing.T) {
 	run := e.runFor(all, r.ID)
 	e.runFor(oneEnding, r.ID)
 	e.runFor(unnarrowed, r.ID)
+	// A run waits on outside endpoints, so it is queued with webhook deliveries, apart from the response pipeline and authorization.
+	if q := e.text(`SELECT queue FROM river_job WHERE kind = 'workflow-run.process' AND args ->> 'workflowRunId' = ?`, run.String()); q != jobs.QueueWebhooks {
+		t.Fatalf("run queued on %q, want %q", q, jobs.QueueWebhooks)
+	}
 	// Every new run is metered once for the organization's customer, at its own creation time.
 	var createdAt time.Time
 	if err := e.db.Raw(`SELECT created_at FROM workflow_runs WHERE id = ?`, run).Row().Scan(&createdAt); err != nil {

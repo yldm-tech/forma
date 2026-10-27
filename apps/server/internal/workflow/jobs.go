@@ -37,7 +37,8 @@ const reconcileInterval = 3 * time.Minute
 // runTimeout bounds one attempt of a run: every step sends one email, each bounded by the SMTP timeouts.
 const runTimeout = 5 * time.Minute
 
-var dispatchOpts = &river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true}}
+// dispatchOpts puts runs on the webhooks queue with webhook deliveries: their steps wait on outside endpoints (HTTP requests, chat hooks, mail servers) for up to runTimeout.
+var dispatchOpts = &river.InsertOpts{Queue: jobs.QueueWebhooks, UniqueOpts: river.UniqueOpts{ByArgs: true}}
 
 // singleton keeps one pending or running sweep, so a slow one is not stacked behind more of itself.
 var singleton = &river.InsertOpts{

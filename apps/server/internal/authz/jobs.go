@@ -58,8 +58,9 @@ func (w *auditWorker) Work(ctx context.Context, _ *river.Job[AuditArgs]) error {
 	return w.audit.Run(ctx)
 }
 
-// singleton keeps one pending or running instance of a periodic job, so a slow run is not stacked behind more of itself.
+// singleton keeps one pending or running instance of a periodic job, so a slow run is not stacked behind more of itself. Both run on the authz queue, where a backlog of responses, emails or slow webhooks cannot hold back the delivery the freshness guard waits on.
 var singleton = &river.InsertOpts{
+	Queue:       jobs.QueueAuthz,
 	MaxAttempts: 1,
 	UniqueOpts: river.UniqueOpts{ByState: []rivertype.JobState{
 		rivertype.JobStateAvailable, rivertype.JobStatePending, rivertype.JobStateRunning, rivertype.JobStateRetryable, rivertype.JobStateScheduled,

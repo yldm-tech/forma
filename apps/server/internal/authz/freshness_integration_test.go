@@ -266,4 +266,12 @@ func TestDeliveryJobRunsOnTheWorker(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	e.expect(User(user), Organization(org), map[Action]bool{OrganizationWrite: true})
+	// The delivery runs on its own queue, where a backlog of other jobs cannot hold it past the freshness window.
+	var queues []string
+	if err := e.db.Raw(`SELECT DISTINCT queue FROM river_job WHERE kind = ?`, DeliverArgs{}.Kind()).Scan(&queues).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(queues) != 1 || queues[0] != jobs.QueueAuthz {
+		t.Fatalf("delivery jobs queued on %v, want only %q", queues, jobs.QueueAuthz)
+	}
 }

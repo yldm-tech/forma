@@ -3,7 +3,17 @@ package webhook
 import (
 	"testing"
 	"time"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 )
+
+// A delivery waits on the receiver's endpoint, so it is queued apart from the response pipeline, emails and authorization, whose slots a slow endpoint must not take.
+func TestDeliveriesRunOnTheWebhooksQueue(t *testing.T) {
+	t.Parallel()
+	if q := (DeliverArgs{}).InsertOpts().Queue; q != jobs.QueueWebhooks {
+		t.Fatalf("deliveries are queued on %q, want %q", q, jobs.QueueWebhooks)
+	}
+}
 
 // A failed delivery waits seconds, then minutes, then hours before its next attempt, and gives up after about a day.
 func TestRetrySchedule(t *testing.T) {
