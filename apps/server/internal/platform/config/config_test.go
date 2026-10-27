@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"net/netip"
 	"net/url"
 	"os"
 	"slices"
@@ -139,6 +140,64 @@ func TestLoadTreatsEmptyHopCountAsUnset(t *testing.T) {
 	t.Setenv("TRUSTED_PROXY_HOP_COUNT", "0")
 	if cfg, err = Load(); err != nil || cfg.TrustedProxyHopCount != 0 {
 		t.Fatalf("explicit 0: hop count %d, err %v; want 0", cfg.TrustedProxyHopCount, err)
+	}
+}
+
+func TestLoadClientIPHeader(t *testing.T) {
+	setRequired(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.ClientIPHeader != "" || len(cfg.TrustedProxyCIDRs) != 0 {
+		t.Fatalf("header %q, CIDRs %v; want the trusted-header mode off by default", cfg.ClientIPHeader, cfg.TrustedProxyCIDRs)
+	}
+
+	t.Setenv("CLIENT_IP_HEADER", "CF-Connecting-IP")
+	t.Setenv("TRUSTED_PROXY_CIDRS", " 10.42.0.0/16, 192.0.2.7 ,2001:DB8:1::/48,::ffff:198.51.100.0/120,")
+	if cfg, err = Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	want := []string{"10.42.0.0/16", "192.0.2.7/32", "2001:db8:1::/48", "198.51.100.0/24"}
+	got := make([]string, len(cfg.TrustedProxyCIDRs))
+	for i, p := range cfg.TrustedProxyCIDRs {
+		got[i] = p.String()
+	}
+	if cfg.ClientIPHeader != "CF-Connecting-IP" || !slices.Equal(got, want) {
+		t.Fatalf("header %q, CIDRs %v; want CF-Connecting-IP, %v", cfg.ClientIPHeader, got, want)
+	}
+	for addr, inside := range map[string]bool{"10.42.7.9": true, "::ffff:10.42.0.1": true, "192.0.2.7": true, "192.0.2.8": false, "2001:db8:1:ffff::1": true, "2001:db8:2::1": false, "198.51.100.200": true, "10.43.0.1": false} {
+		if got := cfg.TrustedProxyCIDRs.Contains(netip.MustParseAddr(addr)); got != inside {
+			t.Errorf("Contains(%s) = %v, want %v", addr, got, inside)
+		}
+	}
+}
+
+func TestLoadRejectsInvalidClientIPHeader(t *testing.T) {
+	cases := map[string]struct{ header, cidrs string }{
+		"header without proxies":   {"CF-Connecting-IP", ""},
+		"proxies without header":   {"", "10.42.0.0/16"},
+		"header with a space":      {"CF Connecting IP", "10.42.0.0/16"},
+		"header with a colon":      {"CF-Connecting-IP:", "10.42.0.0/16"},
+		"forwarded-for chain":      {"x-forwarded-for", "10.42.0.0/16"},
+		"forwarded chain":          {"Forwarded", "10.42.0.0/16"},
+		"every ipv4 peer":          {"CF-Connecting-IP", "10.42.0.0/16,0.0.0.0/0"},
+		"every ipv6 peer":          {"CF-Connecting-IP", "::/0"},
+		"not a cidr":               {"CF-Connecting-IP", "10.42.0.0/33"},
+		"not an address":           {"CF-Connecting-IP", "traefik"},
+		"zoned address":            {"CF-Connecting-IP", "fe80::1%eth0"},
+		"short mapped ipv6 prefix": {"CF-Connecting-IP", "::ffff:0:0/80"},
+		"only separators":          {"CF-Connecting-IP", " , "},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv("CLIENT_IP_HEADER", tc.header)
+			t.Setenv("TRUSTED_PROXY_CIDRS", tc.cidrs)
+			if _, err := Load(); err == nil {
+				t.Fatalf("Load accepted CLIENT_IP_HEADER=%q TRUSTED_PROXY_CIDRS=%q", tc.header, tc.cidrs)
+			}
+		})
 	}
 }
 
