@@ -434,12 +434,11 @@ func TestRenderOrganizationLogo(t *testing.T) {
 // Forma's logo is drawn in a box of fixed width and height, in the aspect ratio of apps/web/public/logo-transparent.png, so no client stretches it or leaves the transparent margin of a square canvas above the card: Outlook ignores max-height and object-fit, and sizes an image only by its width and height attributes.
 func TestRenderFormaLogoSize(t *testing.T) {
 	t.Parallel()
-	f, err := os.Open(filepath.Join(repotest.Root(t), "apps/web/public/logo-transparent.png"))
+	file, err := os.ReadFile(filepath.Join(repotest.Root(t), "apps/web/public/logo-transparent.png"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
-	asset, err := png.DecodeConfig(f)
+	asset, err := png.DecodeConfig(bytes.NewReader(file))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -45,10 +45,11 @@ type Session struct {
 	ActiveCustomerLabelTypeID *string `json:"activeCustomerLabelTypeId"`
 }
 
-// session answers 404 when the chat is not configured, so the app never loads the widget.
+// session answers 204 with no body when the chat is not configured, so the app never loads the widget. A chat that is switched off is a normal state, not an error, and an error status here made the browser log a failed request on every page of an instance without Plain.
 func (h *Handler) session(c *gin.Context) {
 	if !h.cfg.Plain.Configured() {
-		httpapi.Fail(c, apperr.NotFound("Plain chat", ""))
+		c.Header("Cache-Control", "no-store")
+		c.Status(http.StatusNoContent)
 		return
 	}
 	actor, _ := httpapi.ActorFrom(c.Request.Context())
