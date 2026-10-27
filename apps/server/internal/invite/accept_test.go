@@ -103,7 +103,10 @@ func TestAcceptInvite(t *testing.T) {
 		t.Fatalf("created/membership events %v", ev)
 	}
 
-	e.drain()
+	// The membership and the team seat reach SpiceDB before the answer, with no worker running, so the invitee's first page is not refused.
+	if n := e.count(`SELECT count(*) FROM authz_projection_outbox WHERE processed_at IS NULL`); n != 0 {
+		t.Fatalf("%d events left for the worker after the acceptance", n)
+	}
 	ok, err := e.authorizer.Can(context.Background(), authz.User(grace.id), authz.WorkspaceWrite, authz.Workspace(ws))
 	if err != nil || !ok {
 		t.Fatalf("the invitee cannot write the team's workspace: %v, %v", ok, err)

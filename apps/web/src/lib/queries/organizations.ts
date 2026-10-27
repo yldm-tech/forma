@@ -9,6 +9,8 @@ export interface Organization {
   updatedAt: string;
   name: string;
   isAISmartToolsEnabled: boolean;
+  /** The "Allow AI to read responses" switch: whether features that send responses to the AI provider (the open-text summary) may run, on top of AI smart tools. */
+  isAIResponseReadingEnabled: boolean;
   /** An IANA zone; null means UTC. */
   displayTimeZone: string | null;
   /** The IANA zone the organization's scheduled surveys open and close in; null means the instance's default. */
@@ -152,6 +154,7 @@ export interface OrganizationUpdate {
   displayTimeZone?: string | null;
   surveySchedulingTimeZone?: string | null;
   isAISmartToolsEnabled?: boolean;
+  isAIResponseReadingEnabled?: boolean;
   /** Owners only. Turning it on needs twoFactorGracePeriodDays, and restarts the grace period from now. */
   requireTwoFactor?: boolean;
   twoFactorGracePeriodDays?: number;

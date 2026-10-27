@@ -2,6 +2,8 @@ package apikey
 
 import (
 	"net/http"
+	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -139,11 +141,25 @@ func TestCreateRefusesAnExpiryThatIsNotAFutureTime(t *testing.T) {
 	}
 }
 
-// The latest expiry accepted can be returned and listed even by a server whose zone is as far ahead of UTC as any, since the database driver reads times back in the local zone. TestMain runs the package in that zone.
+// farZoneEnv, when set, makes TestMain put the test binary in the zone furthest ahead of UTC before any goroutine starts.
+const farZoneEnv = "FORMA_APIKEY_TEST_FAR_ZONE"
+
+// The latest expiry accepted can be returned and listed even by a server whose zone is as far ahead of UTC as any, since the database driver reads times back in the local zone.
+//
+// The zone is time.Local, which every time.Now reads, so changing it here would race with goroutines an earlier test left behind (a closed gRPC transport still finishing). The test runs instead in a copy of the test binary whose TestMain sets the zone before anything else runs.
 func TestTheLatestExpiryIsListedInAnyZone(t *testing.T) {
-	if time.Local != testZone {
-		t.Fatalf("the tests run in %v, want %v", time.Local, testZone)
+	if os.Getenv(farZoneEnv) == "" {
+		cmd := exec.Command(os.Args[0], "-test.run=^TestTheLatestExpiryIsListedInAnyZone$", "-test.v", "-test.timeout=10m")
+		cmd.Env = append(os.Environ(), farZoneEnv+"=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("in UTC+14: %v\n%s", err, out)
+		}
+		return
 	}
+	if _, offset := time.Now().Zone(); offset != 14*60*60 {
+		t.Fatalf("local offset = %d, want UTC+14", offset)
+	}
+
 	e := newAppEnv(t)
 	org, owner := e.org(), e.user()
 	e.member(org, owner, "owner")

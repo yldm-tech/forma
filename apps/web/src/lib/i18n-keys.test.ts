@@ -124,6 +124,7 @@ const SAME_IN_EVERY_LOCALE = new Set([
   "common.powered_by_forma",
   "common.saas",
   "common.url",
+  "common.web_and_mobile_sdk",
   "common.webhook",
   "common.webhooks",
   "emails.weekly_summary_email_nps",

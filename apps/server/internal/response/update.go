@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -51,6 +52,22 @@ func CheckUpdate(sv *Survey, existing *Response) error {
 		return badRequest("Response is already finished", details("code", CodeResponseAlreadyFinished))
 	}
 	return nil
+}
+
+// CheckVerifiedEmail is the update's check of a survey that requires email verification: email is the address the update's verification token proves, and it must be the one the create stamped on the response (403 otherwise). A link survey page sends the token it was opened with, so a respondent whose page went on with another verified respondent's progress in a shared browser cannot add answers to, or finish, a response recorded under the other's address. An update that proves no address (email "": no token, from the SDK and pages that predate it, or a token that no longer verifies, such as a link that expired while its respondent was answering) is not checked, as before: the token is an optional addition to the frozen client API, and refusing a token that proves nothing would protect nothing an update without one does not get anyway.
+func CheckVerifiedEmail(sv *Survey, existing *Response, email string) error {
+	if !sv.IsVerifyEmailEnabled || email == "" {
+		return nil
+	}
+	stored, err := decodeObject(existing.Data)
+	if err != nil {
+		return err
+	}
+	// Addresses compare case-insensitively, as the one-response-per-email rule reads them (claimVerifiedEmail).
+	if recorded, _ := stored[verifiedEmailKey].(string); recorded != "" && strings.EqualFold(recorded, email) {
+		return nil
+	}
+	return forbidden("Response was verified with another email", details("surveyId", sv.ID.String()))
 }
 
 // UpdateInput is a response update as the client API validated it (ZResponseUpdateInput) and after its checks ran. A nil field leaves the stored value as it is.

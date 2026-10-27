@@ -354,7 +354,84 @@ func (d *Delivery) DeliverAPIKey(ctx context.Context, id uuid.UUID) {
 	if d == nil {
 		return
 	}
-	d.deliverAggregate(ctx, aggregate{targetTypes: []string{targetAPIKey, targetAPIKeyWorkspace}, primaryID: id.String()})
+	d.deliverAggregate(ctx, aggregate{{targetTypes: []string{targetAPIKey, targetAPIKeyWorkspace}, ids: []string{id.String()}}})
+}
+
+// The methods below are DeliverAPIKey for the writes that change people's access: they are called once the write has committed, so a revocation reaches SpiceDB before the request answers instead of waiting for the worker. An undelivered revocation older than revocationMaxAge stops every authorization check in the deployment, so leaving one to a worker whose queue is backed up turns one membership change into a 500 for every organization. A failure is handled as DeliverAPIKey's is: the events stay in the outbox for the worker and the request still succeeds. What they promise is that the relationships are written before the answer, not that the next check sees them: with AUTHZED_CONSISTENCY=minimize_latency SpiceDB answers from a revision it may have cached for up to its quantization interval (5 s by default), so a new grant can still be refused for those seconds, where it waited for the worker's backlog before.
+
+// DeliverMemberships projects the pending changes to one user's access: their organization and team memberships, in every organization (a role change, a removal, leaving, the teams they were given or lost), and their own row (a user just created).
+func (d *Delivery) DeliverMemberships(ctx context.Context, userID uuid.UUID) {
+	if d == nil {
+		return
+	}
+	d.deliverAggregate(ctx, usersAggregate(userID))
+}
+
+// DeliverTeam projects the pending changes to one team: the team itself (created, deleted), its members, and the workspace grants that name it.
+func (d *Delivery) DeliverTeam(ctx context.Context, teamID uuid.UUID) {
+	if d == nil {
+		return
+	}
+	id := []string{teamID.String()}
+	d.deliverAggregate(ctx, aggregate{{targetTypes: []string{targetTeam, targetTeamMembership}, ids: id}, {targetTypes: []string{targetWorkspaceTeam}, ids: id, bySecond: true}})
+}
+
+// DeliverWorkspace projects the pending changes to one workspace: the workspace itself (created, deleted), the team grants on it, and the API key grants on it.
+func (d *Delivery) DeliverWorkspace(ctx context.Context, workspaceID uuid.UUID) {
+	if d == nil {
+		return
+	}
+	id := []string{workspaceID.String()}
+	d.deliverAggregate(ctx, aggregate{{targetTypes: []string{targetWorkspace, targetWorkspaceTeam}, ids: id}, {targetTypes: []string{targetAPIKeyWorkspace}, ids: id, bySecond: true}})
+}
+
+// usersAggregate is the users' own rows and every organization and team membership that names them.
+func usersAggregate(userIDs ...uuid.UUID) aggregate {
+	ids := make([]string, 0, len(userIDs))
+	for _, id := range userIDs {
+		ids = append(ids, id.String())
+	}
+	return aggregate{{targetTypes: []string{targetUser}, ids: ids}, {targetTypes: []string{targetMembership, targetTeamMembership}, ids: ids, bySecond: true}}
+}
+
+// Organizations names whole organizations for DeliverOrganizations: the organizations and the teams, workspaces and API keys in them. The outbox does not say which organization an event belongs to, so these are read while the rows exist; a deletion reads them before it deletes, in its own transaction or before it.
+type Organizations struct {
+	ids, teams, workspaces, apiKeys []string
+}
+
+// ReadOrganizations reads the teams, workspaces and API keys of the organizations. db may be a transaction.
+func ReadOrganizations(ctx context.Context, db *gorm.DB, organizationIDs ...uuid.UUID) (Organizations, error) {
+	var o Organizations
+	if len(organizationIDs) == 0 {
+		return o, nil
+	}
+	for _, id := range organizationIDs {
+		o.ids = append(o.ids, id.String())
+	}
+	for _, read := range []struct {
+		table string
+		into  *[]string
+	}{{"teams", &o.teams}, {"workspaces", &o.workspaces}, {"api_keys", &o.apiKeys}} {
+		// table is one of the constants above.
+		if err := db.WithContext(ctx).Raw(`SELECT id::text FROM `+read.table+` WHERE organization_id IN ?`, organizationIDs).Scan(read.into).Error; err != nil {
+			return Organizations{}, fmt.Errorf("read the organizations' %s: %w", read.table, err)
+		}
+	}
+	return o, nil
+}
+
+// DeliverOrganizations projects the pending changes to whole organizations, created or deleted: each organization's row and memberships, its teams with their members, its workspaces with their team grants, and its API keys with their workspace grants; and, for users, what DeliverMemberships projects. Deleting an organization is the largest revocation the app makes, a row for every member, team, workspace and key, all of which would otherwise wait for the worker.
+func (d *Delivery) DeliverOrganizations(ctx context.Context, o Organizations, users ...uuid.UUID) {
+	if d == nil {
+		return
+	}
+	a := aggregate{
+		{targetTypes: []string{targetOrganization, targetMembership}, ids: o.ids},
+		{targetTypes: []string{targetTeam, targetTeamMembership}, ids: o.teams},
+		{targetTypes: []string{targetWorkspace, targetWorkspaceTeam}, ids: o.workspaces},
+		{targetTypes: []string{targetAPIKey, targetAPIKeyWorkspace}, ids: o.apiKeys},
+	}
+	d.deliverAggregate(ctx, append(a, usersAggregate(users...)...))
 }
 
 func (d *Delivery) deliverAggregate(ctx context.Context, a aggregate) {
@@ -362,15 +439,26 @@ func (d *Delivery) deliverAggregate(ctx context.Context, a aggregate) {
 	ctx = context.WithoutCancel(ctx)
 	deliverCtx, cancel := context.WithTimeout(ctx, syncDeliveryTimeout)
 	defer cancel()
+	// One settle deadline for every batch, syncSettleTimeout past the delivery's: the bookkeeping of the last batch still has its own second, and the whole call stays within the sum however many batches it takes.
+	deadline, _ := deliverCtx.Deadline()
+	settleCtx, cancelSettle := context.WithDeadline(ctx, deadline.Add(syncSettleTimeout))
+	defer cancelSettle()
 	owner := uuid.NewString()
-	events, err := claimAggregate(deliverCtx, d.db, owner, a)
-	if err == nil && len(events) > 0 {
+	var err error
+	// An aggregate can hold more than one claim: an organization's deletion is a revocation for every member. Batches continue until a claim comes back short or the delivery deadline passes; what is left goes to the worker.
+	for {
+		var events []outboxEvent
+		events, err = claimAggregate(deliverCtx, d.db, owner, a)
+		if err != nil || len(events) == 0 {
+			break
+		}
 		started := time.Now()
 		out := d.deliverAll(deliverCtx, events)
-		duration := time.Since(started)
-		settleCtx, cancelSettle := context.WithTimeout(ctx, syncSettleTimeout)
-		_, err = d.settle(settleCtx, owner, events, out, duration)
-		cancelSettle()
+		var res BatchResult
+		// A failed batch would fail the next one the same way; its events are back in the outbox for the worker.
+		if res, err = d.settle(settleCtx, owner, events, out, time.Since(started)); err != nil || res.Failed > 0 || len(events) < outboxBatchSize || deliverCtx.Err() != nil {
+			break
+		}
 	}
 	if err != nil {
 		// Only PostgreSQL fails here, the claim or the bookkeeping, and its text can carry identifiers, so only the stable code is logged. A claim cut off by its deadline leased nothing, and whatever the bookkeeping left unsettled is claimable again once its lease expires; either way the worker delivers the events.

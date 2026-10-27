@@ -23,13 +23,14 @@ import { SurveyState } from "./survey-state";
 const normalizeId = (id: string | null | undefined): string | null =>
   id === undefined || id === "" ? null : id;
 
-type TRespondentIds = Pick<SerializedSurveyState, "singleUseId" | "contactId" | "userId">;
+type TRespondentIds = Pick<SerializedSurveyState, "singleUseId" | "contactId" | "userId" | "verifyTokenHash">;
 
-/** Whether two sets of ids name the same respondent: the same single-use link, personal (contact) link and user id. */
+/** Whether two sets of ids name the same respondent: the same single-use link, personal (contact) link, user id and email verification link. A snapshot stored before the verification link was recorded counts as one without a link, so it still matches every page without one and no page with one. */
 export const isSameRespondent = (a: TRespondentIds, b: TRespondentIds): boolean =>
   normalizeId(a.singleUseId) === normalizeId(b.singleUseId) &&
   normalizeId(a.contactId) === normalizeId(b.contactId) &&
-  normalizeId(a.userId) === normalizeId(b.userId);
+  normalizeId(a.userId) === normalizeId(b.userId) &&
+  normalizeId(a.verifyTokenHash) === normalizeId(b.verifyTokenHash);
 
 // Two ids that are both known must be equal; an id not known yet on one side (the display or response was still being created when the row was stored) does not tell the sessions apart.
 const isSameIfBothKnown = (a: string | null | undefined, b: string | null | undefined): boolean => {
@@ -129,6 +130,7 @@ export class ResponseQueue {
       singleUseId: this.surveyState.singleUseId,
       userId: this.surveyState.userId,
       contactId: this.surveyState.contactId,
+      verifyTokenHash: this.surveyState.verifyTokenHash,
       responseAcc: { ...this.surveyState.responseAcc },
     };
   }
@@ -646,12 +648,13 @@ export class ResponseQueue {
     );
   }
 
-  // One state per stored session (respondent and display), so a session whose first row creates the response sends its later rows as updates of it.
+  // One state per stored session (respondent and display), so a session whose first row creates the response sends its later rows as updates of it. The state carries no verification token: this page has only its own, which proves another address, so a stored row goes out as from a page without one.
   private detachedStateFor(snapshot: SerializedSurveyState, states: Map<string, SurveyState>): SurveyState {
     const key = JSON.stringify([
       normalizeId(snapshot.singleUseId),
       normalizeId(snapshot.contactId),
       normalizeId(snapshot.userId),
+      normalizeId(snapshot.verifyTokenHash),
       normalizeId(snapshot.displayId),
     ]);
     let state = states.get(key);
@@ -900,6 +903,7 @@ export class ResponseQueue {
           ...responseUpdate,
           responseId: state.responseId,
           pinAuthToken: state.pinAuthToken || null,
+          verifyToken: state.verifyToken ?? undefined,
         });
 
         if (!response.ok) {

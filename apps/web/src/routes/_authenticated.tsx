@@ -35,7 +35,7 @@ function AuthenticatedLayout() {
     if (isLocale(me.locale) && i18n.language !== me.locale) void changeLocale(i18n, me.locale);
   }, [me.locale, i18n]);
 
-  // forma2's app layout covered every signed-in page on a phone-sized screen. Here only the pages that build and manage are covered: the survey list, a survey's summary and responses, the contacts and a contact open on a phone, read-only, and so does the email unsubscribe page (/account/unsubscribe), which flips the one notification switch its link names (PHONE_READY). Under the overlay the app stays mounted, inert, so nothing behind it takes focus or reaches a screen reader, and clipped to the screen, so a page wider than the phone cannot widen the layout viewport and push the overlay's text off its edge.
+  // forma2's app layout covered every signed-in page on a phone-sized screen. Here only the pages that build and manage are covered: the survey list, a survey's summary and responses, the contacts and a contact open on a phone, read-only, and so do the email unsubscribe page (/account/unsubscribe), which flips the one notification switch its link names, and the landing page of a member who can open no workspace (PHONE_READY). Under the overlay the app stays mounted, inert, so nothing behind it takes focus or reaches a screen reader, and clipped to the screen, so a page wider than the phone cannot widen the layout viewport and push the overlay's text off its edge.
   const isPhone = useIsPhone();
   const isPhoneReadyPage = useIsPhoneReadyPage();
   const isCovered = isPhone && !isPhoneReadyPage;

@@ -130,7 +130,7 @@ type TextQuote struct {
 	Text       string    `json:"text"`
 }
 
-// TextSummaries summarizes the free-text answers of a survey's questions with the organization's AI. Reading a summary needs what reading the answers needs (survey.response_read); generating one needs what every other AI tool needs, write access to the survey's workspace (survey.write) and AI available to the organization, and is rate limited per member and per organization. Summaries are cached in Valkey by survey, question, target, language and filter, together with a fingerprint of the answers they were made from and of the question, so a new or changed answer, or an edited question, makes the cached one stale.
+// TextSummaries summarizes the free-text answers of a survey's questions with the organization's AI. Reading a summary needs what reading the answers needs (survey.response_read); generating one needs what every other AI tool needs, write access to the survey's workspace (survey.write) and AI available to the organization, and on top the organization's "Allow AI to read responses" switch, since the answers go to the provider; it is rate limited per member and per organization. Summaries are cached in Valkey by survey, question, target, language and filter, together with a fingerprint of the answers they were made from and of the question, so a new or changed answer, or an edited question, makes the cached one stale.
 type TextSummaries struct {
 	svc     *Service
 	ai      *ai.Service
@@ -162,13 +162,13 @@ type cachedTextSummary struct {
 	raw         []byte
 }
 
-// Lookup answers the summary card: AI availability, and the cached summary when it is still current. It never calls the AI provider. A member who cannot generate a summary (no write access) is told read_only, and still sees the current one.
+// Lookup answers the summary card: AI availability (response_reading_disabled while the organization does not allow AI to read its responses, and then no summary either), and the cached summary when it is still current. It never calls the AI provider. A member who cannot generate a summary (no write access) is told read_only, and still sees the current one.
 func (x *TextSummaries) Lookup(ctx context.Context, userID, surveyID uuid.UUID, in TextSummaryInput) (*TextSummaryState, error) {
 	scope, err := x.scope(ctx, userID, surveyID, in)
 	if err != nil {
 		return nil, err
 	}
-	a, err := x.ai.Availability(ctx, scope.sv.OrganizationID)
+	a, err := x.ai.ResponseReadingAvailability(ctx, scope.sv.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func (x *TextSummaries) Generate(ctx context.Context, userID, surveyID uuid.UUID
 		return nil, err
 	}
 	organizationID := scope.sv.OrganizationID
-	if _, err := x.ai.Assert(ctx, organizationID); err != nil {
+	if _, err := x.ai.AssertResponseReading(ctx, organizationID); err != nil {
 		return nil, err
 	}
 	answers, readLimited, fingerprint, err := readTextAnswers(ctx, x.svc.db, scope)
