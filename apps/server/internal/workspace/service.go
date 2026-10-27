@@ -25,14 +25,15 @@ import (
 
 // Service holds the workspace rules. Every method takes the acting user and authorizes through authz before it reads or writes anything a caller could not already see.
 type Service struct {
-	cfg     config.Config
-	repo    *Repository
-	authz   *authz.Authorizer
-	limiter *ratelimit.Limiter
-	audit   *audit.Emitter
-	schemas *jsonschema.Validator
-	files   FileStore
-	log     *slog.Logger
+	cfg      config.Config
+	repo     *Repository
+	authz    *authz.Authorizer
+	delivery *authz.Delivery
+	limiter  *ratelimit.Limiter
+	audit    *audit.Emitter
+	schemas  *jsonschema.Validator
+	files    FileStore
+	log      *slog.Logger
 }
 
 // FileStore holds the files uploaded to workspaces. The storage module implements it; it cannot be imported here, because it resolves the workspace ids in its URLs through this package.
@@ -41,8 +42,8 @@ type FileStore interface {
 	DeleteWorkspaceFiles(ctx context.Context, ids ...string) error
 }
 
-func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, schemas *jsonschema.Validator, files FileStore, log *slog.Logger) *Service {
-	return &Service{cfg: cfg, repo: repo, authz: authorizer, limiter: limiter, audit: emitter, schemas: schemas, files: files, log: log}
+func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorizer, delivery *authz.Delivery, limiter *ratelimit.Limiter, emitter *audit.Emitter, schemas *jsonschema.Validator, files FileStore, log *slog.Logger) *Service {
+	return &Service{cfg: cfg, repo: repo, authz: authorizer, delivery: delivery, limiter: limiter, audit: emitter, schemas: schemas, files: files, log: log}
 }
 
 // record emits forma2's audit event for a workspace mutation, a failure included, as withAuditLogging did for every error its handler threw.
@@ -78,6 +79,8 @@ func (s *Service) create(ctx context.Context, userID, organizationID uuid.UUID, 
 	if err != nil {
 		return nil, err
 	}
+	// The workspace's organization and team grants reach SpiceDB before the answer instead of waiting for the worker (see authz.Delivery.DeliverMemberships on what that promises under minimize_latency).
+	s.delivery.DeliverWorkspace(ctx, id)
 	ws, err := s.repo.byID(ctx, id)
 	if err == nil && ws != nil {
 		analytics.WorkspaceCreated(userID.String(), organizationID.String(), ws.ID.String(), ws.Name)
@@ -526,6 +529,7 @@ func (s *Service) delete(ctx context.Context, userID, workspaceID uuid.UUID, con
 	if err != nil {
 		return nil, org.String(), err
 	}
+	s.delivery.DeliverWorkspace(ctx, workspaceID)
 	// The workspace's files, stored under its id, go with it. A failure leaves orphaned objects behind but does not undo the deletion.
 	if err := s.files.DeleteWorkspaceFiles(ctx, workspaceID.String()); err != nil {
 		s.log.ErrorContext(ctx, "Error deleting S3 files", "err", err, "workspaceId", workspaceID.String())

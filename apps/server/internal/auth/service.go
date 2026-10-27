@@ -13,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/billing"
 	"github.com/yldm-tech/forma/apps/server/internal/brevo"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
@@ -67,13 +68,15 @@ type Service struct {
 	turnstile *turnstileVerifier
 	failures  *failureThrottle
 	billing   *billing.Lifecycle
-	jobs      *jobs.Enqueuer
-	contacts  *brevo.Contacts
-	log       *slog.Logger
-	now       func() time.Time
+	// delivery projects the access an account gains or loses into SpiceDB before the request answers; nil with AuthZed disabled.
+	delivery *authz.Delivery
+	jobs     *jobs.Enqueuer
+	contacts *brevo.Contacts
+	log      *slog.Logger
+	now      func() time.Time
 }
 
-func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites InviteRedeemer, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, rdb *redis.Client, lifecycle *billing.Lifecycle, enqueuer *jobs.Enqueuer, contacts *brevo.Contacts, log *slog.Logger) *Service {
+func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites InviteRedeemer, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, rdb *redis.Client, lifecycle *billing.Lifecycle, delivery *authz.Delivery, enqueuer *jobs.Enqueuer, contacts *brevo.Contacts, log *slog.Logger) *Service {
 	client := &http.Client{}
 	return &Service{
 		cfg:       cfg,
@@ -87,6 +90,7 @@ func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites
 		turnstile: &turnstileVerifier{client: client, verifyURL: turnstileURL, secret: cfg.TurnstileSecretKey},
 		failures:  &failureThrottle{rdb: rdb, log: log, now: time.Now},
 		billing:   lifecycle,
+		delivery:  delivery,
 		jobs:      enqueuer,
 		contacts:  contacts,
 		log:       log,
