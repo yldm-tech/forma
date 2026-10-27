@@ -1,4 +1,14 @@
 {
+  "account": {
+    "unsubscribe_page": {
+      "confirm_alert": "Stop emails about new responses to {survey}?",
+      "confirm_auto_subscribe": "Stop response emails from new surveys in {organization}?",
+      "confirm_weekly_summary": "Stop the weekly summary of {organization}?",
+      "invalid_link": "This unsubscribe link isn't valid",
+      "invalid_link_description": "Copy the whole link from the email, or sign in to change your notification settings.",
+      "link_no_longer_applies_description": "The survey or organization it names is no longer in your notification settings."
+    }
+  },
   "auth": {
     "continue_with_azure": "Continue with Microsoft",
     "continue_with_email": "Continue with Email",

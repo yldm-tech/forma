@@ -1,4 +1,14 @@
 {
+  "account": {
+    "unsubscribe_page": {
+      "confirm_alert": "不再接收{survey}的新回复邮件？",
+      "confirm_auto_subscribe": "{organization}中的新问卷不再自动向你发送回复邮件？",
+      "confirm_weekly_summary": "不再接收{organization}的每周摘要？",
+      "invalid_link": "此退订链接无效",
+      "invalid_link_description": "请从邮件中复制完整链接，或登录后更改通知设置。",
+      "link_no_longer_applies_description": "链接中的问卷或组织已不在你的通知设置中。"
+    }
+  },
   "auth": {
     "continue_with_azure": "使用 Microsoft 继续",
     "continue_with_email": "使用邮箱继续",

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"net"
+	"net/mail"
 	"strings"
 	"testing"
 	"time"
@@ -82,5 +83,32 @@ func TestMessageIDHeader(t *testing.T) {
 	}
 	if a, b := header(base), header(base); a == b || !strings.HasPrefix(a, "<") {
 		t.Fatalf("random Message-IDs %q and %q", a, b)
+	}
+}
+
+// A notification carries RFC 8058's one-click pair, the URL whole however long the token (folded onto its own line, never split), so mail clients offer their own unsubscribe button; extra headers never replace the message's own fields.
+func TestOneClickUnsubscribeHeaders(t *testing.T) {
+	url := "https://app.example.com/api/unsubscribe?token=" + strings.Repeat("a", 300)
+	headers := OneClickUnsubscribe(url)
+	headers["Subject"] = "spoofed"
+	m, err := newMsg(Message{From: "noreply@example.com", To: "user@example.com", Subject: "s", HTML: "<p>h</p>", Headers: headers})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if _, err := m.WriteTo(&buf); err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := mail.ReadMessage(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{"List-Unsubscribe": "<" + url + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click", "Subject": "s"} {
+		if got := parsed.Header[name]; len(got) != 1 || got[0] != want {
+			t.Errorf("%s: %q, want %q", name, got, want)
+		}
+	}
+	if OneClickUnsubscribe("") != nil {
+		t.Error("headers without a URL")
 	}
 }
