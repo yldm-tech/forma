@@ -83,3 +83,33 @@ func TestEnqueueCommitsAndRollsBackWithTheTransaction(t *testing.T) {
 		t.Fatalf("job args note %q, want kept", note)
 	}
 }
+
+func TestEnqueueUniqueReportsADuplicate(t *testing.T) {
+	db, err := gorm.Open(postgres.Open(pgtest.DSN(t)), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, _ := db.DB()
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	enq, err := jobs.NewEnqueuer(discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	unique := &river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true}}
+	for i, want := range []bool{true, false} {
+		err := enq.Transaction(ctx, db, func(tx *jobs.Tx) error {
+			inserted, err := tx.EnqueueUnique(ctx, recordArgs{Note: "once"}, unique)
+			if err == nil && inserted != want {
+				t.Errorf("enqueue %d: inserted %t, want %t", i, inserted, want)
+			}
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := countJobs(t, db, "test.record"); n != 1 {
+		t.Fatalf("%d jobs, want 1", n)
+	}
+}
