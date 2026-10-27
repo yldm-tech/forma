@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Repository reads what the AI service decides on: an organization's AI smart tools toggle, and the organization a workspace or survey belongs to.
+// Repository reads what the AI service decides on: an organization's AI switches, and the organization a workspace or survey belongs to.
 type Repository struct {
 	db *gorm.DB
 }
@@ -17,15 +17,22 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) smartToolsEnabled(ctx context.Context, organizationID uuid.UUID) (enabled, found bool, err error) {
-	var rows []bool
-	if err := r.db.WithContext(ctx).Raw(`SELECT is_ai_smart_tools_enabled FROM organizations WHERE id = ?`, organizationID).Scan(&rows).Error; err != nil {
-		return false, false, fmt.Errorf("read organization AI toggle: %w", err)
+// organizationSwitches are an organization's two AI switches: AI smart tools, and whether AI may read the organization's responses.
+type organizationSwitches struct {
+	IsAiSmartToolsEnabled      bool
+	IsAiResponseReadingEnabled bool
+}
+
+// switches returns nil when the organization does not exist.
+func (r *Repository) switches(ctx context.Context, organizationID uuid.UUID) (*organizationSwitches, error) {
+	var rows []organizationSwitches
+	if err := r.db.WithContext(ctx).Raw(`SELECT is_ai_smart_tools_enabled, is_ai_response_reading_enabled FROM organizations WHERE id = ?`, organizationID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("read organization AI switches: %w", err)
 	}
 	if len(rows) == 0 {
-		return false, false, nil
+		return nil, nil
 	}
-	return rows[0], true, nil
+	return &rows[0], nil
 }
 
 // workspaceOrganization is the organization of a workspace; uuid.Nil when the workspace does not exist.
