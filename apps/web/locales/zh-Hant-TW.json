@@ -2192,6 +2192,7 @@
       "api_key_updated": "API 金鑰已更新",
       "api_reference": "API 參考文件",
       "check_key_hint": "要查看金鑰能存取的範圍，請先把金鑰存入環境變數 FORMA_API_KEY，再執行下面的指令。回傳結果會列出金鑰所屬的組織和可用的工作區。",
+      "creator_deactivated_hint": "此金鑰建立者的帳戶已在這個 Forma 實例上停用。在實例管理員重新啟用該帳戶之前，這個金鑰無法使用。",
       "delete_api_key_confirmation": "使用此金鑰的任何應用程式將無法再存取您的 Forma 資料。",
       "disabled_description": "此金鑰已於 {date} 停用，且無法重新啟用。請為使用它的整合建立新金鑰，然後刪除此金鑰。",
       "disabled_reason_creator_deleted": "建立者已刪除帳號。",

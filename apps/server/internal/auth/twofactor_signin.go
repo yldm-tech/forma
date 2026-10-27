@@ -2,11 +2,14 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"time"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
@@ -42,9 +45,9 @@ func (f secondFactor) refused() error {
 	return &apperr.Error{Status: http.StatusUnauthorized, Code: CodeInvalidCode, Message: "Invalid code"}
 }
 
-// verifySignIn is the second step of a password sign-in: token is the forma.two_factor cookie the password step set. A code from the authenticator app, or a backup code (spent by its use), completes the sign-in with a session.
+// verifySignIn is the second step of a sign-in (grantSignIn): token is the forma.two_factor cookie the first step set. A code from the authenticator app, or a backup code (spent by its use), completes the sign-in with a session, and links the external identity the sign-in carries (SSO recovery's) in the same transaction.
 //
-// The order and limits are Better Auth's verify-totp and verify-backup-code as forma2 ran them: the per-address limit, then a live pending sign-in, an enabled second factor, the account lockout, and the pending sign-in's budget of five refused codes, before the code is checked. A refused code counts against both the budget and the lockout; a correct one clears the lockout count. A value that cannot be decrypted fails the request without charging an attempt.
+// The order and limits are Better Auth's verify-totp and verify-backup-code as forma2 ran them: the per-address limit, then a live pending sign-in, an enabled second factor, the account lockout, the pending sign-in's budget of five refused codes, and, for a sign-in that links an identity, that the identity is still free for the account, before the code is checked. A refused code counts against both the budget and the lockout; a correct one clears the lockout count. A value that cannot be decrypted fails the request without charging an attempt.
 func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secondFactor, code string, meta clientMeta) (issuedToken, error) {
 	if err := t.limit(ctx, factor.limitBucket()); err != nil {
 		return issuedToken{}, err
@@ -63,6 +66,8 @@ func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secon
 	}
 
 	var sess issuedToken
+	var then pendingSignInPayload
+	var email string
 	// refusal is an outcome whose bookkeeping (a counted failure, a spent sign-in) must be committed before it is returned.
 	var refusal error
 	err = t.svc.repo.transaction(ctx, func(tx *Repository) error {
@@ -81,6 +86,10 @@ func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secon
 		if p == nil || p.UserID != acc.ID {
 			return errInvalidTwoFactorCookie()
 		}
+		if err := json.Unmarshal(p.Payload, &then); err != nil {
+			return fmt.Errorf("decode pending sign-in: %w", err)
+		}
+		email = normalizeEmail(acc.Email)
 		row, err := tx.lockTOTP(ctx, acc.ID)
 		if err != nil {
 			return err
@@ -98,6 +107,15 @@ func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secon
 		}
 		if p.Attempts >= pendingSignInMaxAttempts {
 			refusal = errTooManyTwoFactorAttempts()
+			return tx.consumePendingSignIn(ctx, p.ID, now)
+		}
+		// An identity linked to another account since the recovery link was redeemed spends the sign-in before the code is checked, so the refusal costs no backup code and counts no failure.
+		linkable, err := tx.identityLinkable(ctx, acc.ID, then.Link)
+		if err != nil {
+			return err
+		}
+		if !linkable {
+			refusal = errAccountNotLinked()
 			return tx.consumePendingSignIn(ctx, p.ID, now)
 		}
 		ok, err := t.checkSecondFactor(ctx, tx, factor, row, code, now)
@@ -120,6 +138,14 @@ func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secon
 		if !acc.IsActive {
 			return errAccountInactive()
 		}
+		// Linked to another account between the check above and here: the sign-in is spent all the same.
+		if err := tx.linkIdentity(ctx, acc.ID, then.Link); err != nil {
+			if e, ok := apperr.As(err); ok && e.Code == CodeAccountNotLinked {
+				refusal = err
+				return nil
+			}
+			return err
+		}
 		sess, err = t.svc.sessions.create(ctx, tx.db, acc.ID, meta)
 		return err
 	})
@@ -129,7 +155,15 @@ func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secon
 	if refusal != nil {
 		return issuedToken{}, refusal
 	}
-	t.svc.finalizeSignIn(ctx, pending.UserID.UUID, signInMethodPassword)
+	userID := pending.UserID.UUID
+	if then.Link != nil {
+		t.svc.log.InfoContext(ctx, "SSO recovery completed", "userId", userID.String(), "provider", then.Link.Provider)
+		t.svc.logEvent(ctx, audit.Event{
+			Action: audit.ActionSSORecoveryCompleted, TargetType: audit.TargetUser, TargetID: userID.String(), ActorID: userID.String(), Status: audit.StatusSuccess,
+			NewObject: map[string]any{"email": email, "provider": then.Link.Provider, "secondFactor": true},
+		})
+	}
+	t.svc.finalizeSignIn(ctx, userID, then.method())
 	return sess, nil
 }
 

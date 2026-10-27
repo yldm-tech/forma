@@ -2192,6 +2192,7 @@
       "api_key_updated": "APIキーを更新しました",
       "api_reference": "APIリファレンス",
       "check_key_hint": "キーでアクセスできる範囲を確認するには、キーを環境変数 FORMA_API_KEY に設定してから、下のコマンドを実行してください。キーの組織と、使えるワークスペースが返されます。",
+      "creator_deactivated_hint": "このキーの作成者のアカウントはこのFormaインスタンスで無効化されています。インスタンスの管理者がアカウントを再び有効にするまで、このキーは使えません。",
       "delete_api_key_confirmation": "このキーを使用しているアプリケーションは、Formaデータにアクセスできなくなります。",
       "disabled_description": "このキーは {date} に無効になり、再び有効にすることはできません。このキーを使っていた連携用に新しいキーを作成してから、このキーを削除してください。",
       "disabled_reason_creator_deleted": "作成者がアカウントを削除しました。",

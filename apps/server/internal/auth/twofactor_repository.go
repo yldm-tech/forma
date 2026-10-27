@@ -115,13 +115,15 @@ type pendingSignIn struct {
 	ID       uuid.UUID
 	UserID   uuid.UUID
 	Attempts int
+	// Payload is the pendingSignInPayload the first step wrote.
+	Payload []byte
 }
 
 // lockPendingSignIn reads a live pending sign-in for update, or nil when the token is unknown, used or expired. Holding the row serializes concurrent attempts against one sign-in, so the attempt budget cannot be overrun by sending codes in parallel.
 func (r *Repository) lockPendingSignIn(ctx context.Context, tokenHash []byte, now time.Time) (*pendingSignIn, error) {
 	var rows []pendingSignIn
 	err := r.db.WithContext(ctx).Raw(
-		`SELECT id, user_id, COALESCE((payload ->> 'attempts')::int, 0) AS attempts FROM verifications
+		`SELECT id, user_id, COALESCE((payload ->> 'attempts')::int, 0) AS attempts, payload FROM verifications
 		 WHERE token_hash = ? AND purpose = ? AND consumed_at IS NULL AND expires_at > ? AND user_id IS NOT NULL
 		 FOR UPDATE`,
 		tokenHash, purposeTwoFactor, now,
