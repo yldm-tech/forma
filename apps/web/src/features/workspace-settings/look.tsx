@@ -1,4 +1,8 @@
-import type { TAppSurveyCardArrangementOptions, TCardArrangementOptions } from "@forma/types/styling";
+import {
+  DEFAULT_CARD_ARRANGEMENT,
+  type TAppSurveyCardArrangementOptions,
+  type TCardArrangementOptions,
+} from "@forma/types/styling";
 import type { TWorkspaceStyling } from "@forma/types/workspace";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, RotateCcwIcon, SparklesIcon } from "lucide-react";
@@ -545,14 +549,14 @@ const ThemeStyling = ({ workspace }: { workspace: Workspace }) => {
     ...(isApp ? [] : [{ value: "cardless" as const, label: t("workspace.surveys.edit.cardless") }]),
   ];
   const activeArrangement = isApp
-    ? (styling.cardArrangement?.appSurveys ?? "straight")
-    : (styling.cardArrangement?.linkSurveys ?? "straight");
+    ? (styling.cardArrangement?.appSurveys ?? DEFAULT_CARD_ARRANGEMENT.appSurveys)
+    : (styling.cardArrangement?.linkSurveys ?? DEFAULT_CARD_ARRANGEMENT.linkSurveys);
   const setArrangement = (value: TCardArrangementOptions) =>
     setStyling((current) => ({
       ...current,
       cardArrangement: {
-        linkSurveys: current.cardArrangement?.linkSurveys ?? "straight",
-        appSurveys: current.cardArrangement?.appSurveys ?? "straight",
+        linkSurveys: current.cardArrangement?.linkSurveys ?? DEFAULT_CARD_ARRANGEMENT.linkSurveys,
+        appSurveys: current.cardArrangement?.appSurveys ?? DEFAULT_CARD_ARRANGEMENT.appSurveys,
         ...(isApp ? { appSurveys: value as TAppSurveyCardArrangementOptions } : { linkSurveys: value }),
       },
     }));

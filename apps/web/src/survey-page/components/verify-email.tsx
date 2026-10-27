@@ -1,3 +1,4 @@
+import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
 import type { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { ArrowLeft, MailIcon } from "lucide-react";
@@ -49,7 +50,9 @@ export const VerifyEmail = ({
   const localSurvey = useMemo(() => replaceHeadlineRecall(survey as unknown as TSurvey, "default"), [survey]);
   const questions = useMemo(() => getElementsFromSurveyBlocks(localSurvey.blocks), [localSurvey.blocks]);
   const cardArrangement =
-    localSurvey.styling?.cardArrangement?.linkSurveys ?? styling.cardArrangement?.linkSurveys ?? "straight";
+    localSurvey.styling?.cardArrangement?.linkSurveys ??
+    styling.cardArrangement?.linkSurveys ??
+    DEFAULT_CARD_ARRANGEMENT.linkSurveys;
   const isCardless = cardArrangement === "cardless";
   const linkSurveyCardWidth =
     localSurvey.styling?.linkSurveyCardWidth ?? styling.linkSurveyCardWidth ?? "default";

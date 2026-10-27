@@ -1,10 +1,9 @@
 import { useCallback, useState } from "preact/hooks";
+import { useTranslation } from "react-i18next";
+import { ElementHeader } from "@forma/survey-ui";
 import { type TResponseData, type TResponseTtc } from "@forma/types/responses";
 import type { TSurveyCalElement } from "@forma/types/surveys/elements";
 import { CalEmbed } from "@/components/general/cal-embed";
-import { ElementMedia } from "@/components/general/element-media";
-import { Headline } from "@/components/general/headline";
-import { Subheader } from "@/components/general/subheader";
 import { getLocalizedValue } from "@/lib/i18n";
 import { getUpdatedTtc, useTtc } from "@/lib/ttc";
 
@@ -30,7 +29,7 @@ export function CalElement({
   errorMessage,
 }: Readonly<CalElementProps>) {
   const [startTime, setStartTime] = useState(performance.now());
-  const isMediaAvailable = element.imageUrl || element.videoUrl;
+  const { t } = useTranslation();
   useTtc(element.id, ttc, setTtc, startTime, setStartTime, element.id === currentElementId);
 
   const onSuccessfulBooking = useCallback(() => {
@@ -51,10 +50,16 @@ export function CalElement({
         onChange({ [element.id]: value });
       }}
       className="w-full">
-      <div>
-        {isMediaAvailable ? <ElementMedia imgUrl={element.imageUrl} videoUrl={element.videoUrl} /> : null}
-        <Headline headline={getLocalizedValue(element.headline, languageCode)} required={element.required} />
-        <Subheader subheader={element.subheader ? getLocalizedValue(element.subheader, languageCode) : ""} />
+      <div className="space-y-4">
+        {/* The same header as every other question (survey-ui), so the prompt takes the theme's headline font, size and weight instead of the old bold one. */}
+        <ElementHeader
+          headline={getLocalizedValue(element.headline, languageCode)}
+          description={element.subheader ? getLocalizedValue(element.subheader, languageCode) : undefined}
+          required={element.required}
+          requiredLabel={t("common.required")}
+          imageUrl={element.imageUrl}
+          videoUrl={element.videoUrl}
+        />
         <CalEmbed key={element.id} element={element} onSuccessfulBooking={onSuccessfulBooking} />
         {errorMessage ? (
           <span className="text-red-500" role="alert" aria-live="assertive" aria-atomic="true">

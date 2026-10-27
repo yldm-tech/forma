@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
 import { hashVerifyToken } from "@/lib/verify-token";
 import { Survey } from "./survey";
@@ -74,10 +75,14 @@ vi.mock("@/components/general/block-conditional", () => ({
 }));
 
 vi.mock("@/components/wrappers/stacked-cards-container", () => ({
-  StackedCardsContainer: ({ currentBlockId, getCardContent, survey }: any) => {
+  StackedCardsContainer: ({ currentBlockId, getCardContent, survey, cardArrangement }: any) => {
     const blockIndex =
       currentBlockId === "start" ? -1 : survey.blocks.findIndex((block: any) => block.id === currentBlockId);
-    return <div data-testid="survey-root">{getCardContent(blockIndex, 0)}</div>;
+    return (
+      <div data-testid="survey-root" data-card-arrangement={cardArrangement}>
+        {getCardContent(blockIndex, 0)}
+      </div>
+    );
   },
 }));
 
@@ -1124,5 +1129,47 @@ describe("Survey scoring", () => {
     const finalUpdate = sent().find(([update]) => update.finished === true)![0];
     expect(finalUpdate.variables).toEqual({ scorevariable00000000000: 5, othervariable00000000000: 1 });
     expect(sent().map(([update]) => update.variables?.scorevariable00000000000)).not.toContain(7);
+  });
+});
+
+describe("Survey card arrangement", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    apiClientMocks.createDisplay.mockResolvedValue({ ok: true, data: { id: "display-created" } });
+    window.parent.postMessage = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  const renderWith = (type: "link" | "app", styling: Record<string, unknown>) =>
+    render(
+      <Survey
+        survey={{ ...baseSurvey, type } as TJsWorkspaceStateSurvey}
+        styling={styling as any}
+        isBrandingEnabled={false}
+        languageCode="en"
+        isSpamProtectionEnabled={false}
+      />
+    );
+
+  // The admin forms start from the same constant (apps/web/src/lib/styling.test.ts), so a form saved without touching the arrangement keeps what respondents already see.
+  test.each(["link", "app"] as const)(
+    "a %s survey without a stored arrangement renders the shared default",
+    async (type) => {
+      renderWith(type, {});
+      const root = await screen.findByTestId("survey-root");
+      const expected =
+        type === "link" ? DEFAULT_CARD_ARRANGEMENT.linkSurveys : DEFAULT_CARD_ARRANGEMENT.appSurveys;
+      expect(root.getAttribute("data-card-arrangement")).toBe(expected);
+      expect(root.getAttribute("data-card-arrangement")).toBe("straight");
+    }
+  );
+
+  test("a stored arrangement wins over the default", async () => {
+    renderWith("link", { cardArrangement: { linkSurveys: "cardless", appSurveys: "simple" } });
+    const root = await screen.findByTestId("survey-root");
+    expect(root.getAttribute("data-card-arrangement")).toBe("cardless");
   });
 });

@@ -3,6 +3,7 @@ import { CheckIcon } from "lucide-react";
 import React from "react";
 import { UseFormReturn, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
 import { TSurveyStyling, TSurveyType } from "@forma/types/surveys/types";
 import { TWorkspaceStyling } from "@forma/types/workspace";
 import { cn } from "../../lib/cn";
@@ -36,9 +37,11 @@ export const CardStylingSettings = ({
   const surveyTypeDerived = isAppSurvey ? "App" : "Link";
 
   const linkCardArrangement =
-    useWatch({ control: form.control, name: "cardArrangement.linkSurveys" }) ?? "straight";
+    useWatch({ control: form.control, name: "cardArrangement.linkSurveys" }) ??
+    DEFAULT_CARD_ARRANGEMENT.linkSurveys;
   const appCardArrangement =
-    useWatch({ control: form.control, name: "cardArrangement.appSurveys" }) ?? "straight";
+    useWatch({ control: form.control, name: "cardArrangement.appSurveys" }) ??
+    DEFAULT_CARD_ARRANGEMENT.appSurveys;
   const linkSurveyCardWidth = useWatch({ control: form.control, name: "linkSurveyCardWidth" }) ?? "default";
   const hideProgressBar = useWatch({ control: form.control, name: "hideProgressBar" });
 
