@@ -45,19 +45,23 @@ var (
 	settingsWindow = totpWindow{past: 1, future: 0}
 )
 
-// checkTOTP reports whether code is the key's code for a step inside the window around now. Every step is computed and compared in constant time, so the response time does not tell which step matched.
-func checkTOTP(key []byte, code string, now time.Time, w totpWindow) (bool, error) {
+// checkTOTP reports whether code is the key's code for a step inside the window around now, and which step it is; when two steps of the window share the code, the later one. Every step is computed and compared in constant time, so the response time does not tell which step matched.
+func checkTOTP(key []byte, code string, now time.Time, w totpWindow) (step int64, ok bool, err error) {
 	encoded := base32NoPadding.EncodeToString(key)
 	current := now.Unix() / totpPeriod
 	matched := 0
-	for step := current - int64(w.past); step <= current+int64(w.future); step++ {
-		want, err := hotp.GenerateCodeCustom(encoded, uint64(step), hotp.ValidateOpts{Digits: otp.DigitsSix, Algorithm: otp.AlgorithmSHA1}) //nolint:gosec // steps count from the Unix epoch and the clock is never before it
+	for s := current - int64(w.past); s <= current+int64(w.future); s++ {
+		want, err := hotp.GenerateCodeCustom(encoded, uint64(s), hotp.ValidateOpts{Digits: otp.DigitsSix, Algorithm: otp.AlgorithmSHA1}) //nolint:gosec // steps count from the Unix epoch and the clock is never before it
 		if err != nil {
-			return false, fmt.Errorf("compute totp: %w", err)
+			return 0, false, fmt.Errorf("compute totp: %w", err)
 		}
-		matched |= subtle.ConstantTimeCompare([]byte(want), []byte(code))
+		eq := subtle.ConstantTimeCompare([]byte(want), []byte(code))
+		matched |= eq
+		// All ones when this step matched, zero otherwise: the matching step is kept without a branch.
+		mask := -int64(eq)
+		step = s&mask | step&^mask
 	}
-	return matched == 1, nil
+	return step, matched == 1, nil
 }
 
 // newBackupCodes is forma2's crypto.randomBytes(5).toString("hex"), ten times.

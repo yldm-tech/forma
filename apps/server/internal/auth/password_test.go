@@ -286,3 +286,65 @@ func TestRequestResetLink(t *testing.T) {
 	ob.signIn("ada@example.com", strongPassword)
 	expectStatus(t, ob.post("/auth/password/reset-link", nil), http.StatusForbidden, apperr.CodeOperationNotAllowed)
 }
+
+// A successful reset or change retires every other reset link of the account: a link captured before the owner recovered it cannot take the account back, and redeeming it would also sign the owner out everywhere.
+func TestPasswordChangeRetiresOtherResetLinks(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	e.seedUser("ada@example.com", strongPassword, userOpts{})
+	e.seedUser("bob@example.com", strongPassword, userOpts{})
+	for range 2 {
+		expectStatus(t, forgot(e.browser(), "ada@example.com"), http.StatusOK, "")
+	}
+	expectStatus(t, forgot(e.browser(), "bob@example.com"), http.StatusOK, "")
+	links := e.tokens("ada@example.com", subjectReset)
+	if len(links) != 2 {
+		t.Fatalf("%d reset links", len(links))
+	}
+	reset := func(token, password string) response {
+		return e.browser().post("/auth/password/reset", map[string]string{"token": token, "password": password})
+	}
+	expectStatus(t, reset(links[1], newPassword), http.StatusOK, "")
+	expectStatus(t, reset(links[0], "Captured-Pass-11"), http.StatusBadRequest, CodeInvalidPasswordResetToken)
+	e.browser().signIn("ada@example.com", newPassword)
+	// Another account's links are not touched.
+	expectStatus(t, reset(e.lastToken("bob@example.com", subjectReset), "Bobs-New-Pass-12"), http.StatusOK, "")
+
+	// A change made while signed in retires the outstanding links the same way.
+	expectStatus(t, forgot(e.browser(), "ada@example.com"), http.StatusOK, "")
+	pending := e.lastToken("ada@example.com", subjectReset)
+	b := e.browser()
+	b.signIn("ada@example.com", newPassword)
+	expectStatus(t, b.post("/auth/password/change", map[string]string{"currentPassword": newPassword, "newPassword": "Changed-Pass-13"}), http.StatusNoContent, "")
+	expectStatus(t, reset(pending, "Captured-Pass-11"), http.StatusBadRequest, CodeInvalidPasswordResetToken)
+	e.browser().signIn("ada@example.com", "Changed-Pass-13")
+}
+
+// auth:forgot:account: past three requests an hour for one address, whichever client addresses send them, the request still answers success and sends no mail; another address is not affected.
+func TestForgotPasswordAccountLimit(t *testing.T) {
+	e := newEnv(t)
+	e.seedUser("ada@example.com", strongPassword, userOpts{})
+	e.seedUser("bob@example.com", strongPassword, userOpts{})
+	e.enableRateLimits()
+	for i, ip := range []string{"198.51.100.1", "198.51.100.2", "198.51.100.3", "198.51.100.4", "198.51.100.5"} {
+		b := e.browser()
+		b.ip = ip
+		r := forgot(b, "ADA@example.com")
+		expectStatus(t, r, http.StatusOK, "")
+		if r.Body.String() != `{"success":true}` {
+			t.Fatalf("request %d: %s", i+1, r.Body.String())
+		}
+	}
+	if n := len(e.sent("ada@example.com")); n != 3 {
+		t.Fatalf("%d reset mails to one address, want 3", n)
+	}
+	b := e.browser()
+	b.ip = "198.51.100.5"
+	expectStatus(t, forgot(b, "bob@example.com"), http.StatusOK, "")
+	if len(e.sent("bob@example.com")) != 1 {
+		t.Fatal("another address was limited too")
+	}
+	// The links already sent still work: the limit holds the owner's mail back, never their recovery.
+	links := e.tokens("ada@example.com", subjectReset)
+	expectStatus(t, e.browser().post("/auth/password/reset", map[string]string{"token": links[0], "password": newPassword}), http.StatusOK, "")
+}

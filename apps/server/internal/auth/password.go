@@ -14,7 +14,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
-// forgotPassword mails a reset link when the address belongs to an account that can reset its password, and answers the same whether or not it does. The audit trail records a reset only when a link was actually sent.
+// forgotPassword mails a reset link when the address belongs to an account that can reset its password, and answers the same whether or not it does. The audit trail records a reset only when a link was actually sent. Requests are limited per client address and, silently, per address asked for (ratelimit.AuthForgotPasswordAccount).
 func (s *Service) forgotPassword(ctx context.Context, email string) error {
 	if err := s.requestReset(ctx, email); err != nil {
 		s.logFailure(ctx, audit.ActionPasswordReset, "")
@@ -30,6 +30,14 @@ func (s *Service) requestReset(ctx context.Context, email string) error {
 	}
 	if s.cfg.PasswordResetDisabled {
 		return errPasswordResetDisabled()
+	}
+	// Past the per-account limit the request answers as usual and sends nothing, the same for an unknown address, so the answer tells nothing about the account.
+	res, err := s.limiter.Check(ctx, ratelimit.AuthForgotPasswordAccount, accountIdentifier(email), 1)
+	if err != nil {
+		return err
+	}
+	if !res.Allowed {
+		return nil
 	}
 	acc, err := s.repo.accountByEmail(ctx, email)
 	if err != nil {
@@ -74,7 +82,7 @@ func (s *Service) sendResetLink(ctx context.Context, acc *account) error {
 	return nil
 }
 
-// resetPassword redeems a reset token. A breached password is refused before the token is touched, so the user can retry with the same link. Success signs every session out and invalidates outstanding email change links and pending second-factor sign-ins, which were authorized by the old password.
+// resetPassword redeems a reset token. A breached password is refused before the token is touched, so the user can retry with the same link. Success signs every session and OAuth grant out and invalidates outstanding email change links, pending second-factor sign-ins and the other reset links, which were authorized by the old password or issued before it changed.
 func (s *Service) resetPassword(ctx context.Context, token, password string) error {
 	if s.cfg.PasswordResetDisabled {
 		return errPasswordResetDisabled()
@@ -117,15 +125,15 @@ func (s *Service) resetPassword(ctx context.Context, token, password string) err
 	return nil
 }
 
-// replacePassword stores a new hash and ends everything the old password authorized: every session but keepSession, outstanding email change links and pending second-factor sign-ins.
+// replacePassword stores a new hash and ends everything the old password authorized: every session but keepSession, every OAuth grant, outstanding email change links, pending second-factor sign-ins, and every other password reset link, so a link captured before the owner recovered the account cannot take it back.
 func (s *Service) replacePassword(ctx context.Context, tx *Repository, userID uuid.UUID, hash string, keepSession uuid.UUID) error {
 	if err := tx.setPassword(ctx, userID, hash, s.now()); err != nil {
 		return err
 	}
-	if _, err := s.sessions.RevokeAll(ctx, tx.db, userID, keepSession); err != nil {
+	if _, err := s.sessions.endOtherAccess(ctx, tx.db, userID, keepSession); err != nil {
 		return err
 	}
-	return tx.deleteVerifications(ctx, userID, purposeEmailChange, purposeTwoFactor)
+	return tx.deleteVerifications(ctx, userID, purposeEmailChange, purposeTwoFactor, purposePasswordReset)
 }
 
 // notifyPasswordChanged sends the security notice. It is best-effort: the password has already changed.
@@ -139,7 +147,7 @@ func (s *Service) notifyPasswordChanged(ctx context.Context, acc *account) {
 	}
 }
 
-// changePassword replaces the signed-in user's password after checking the current one. It applies the sign-up password policy and breach check, keeps the current session and signs every other one out.
+// changePassword replaces the signed-in user's password after checking the current one. It applies the sign-up password policy and breach check, keeps the current session and signs every other one and every OAuth grant out (replacePassword).
 func (s *Service) changePassword(ctx context.Context, actor httpapi.Actor, current, next string) error {
 	if err := s.limiter.ApplyIP(ctx, ratelimit.BAChangePassword); err != nil {
 		return err

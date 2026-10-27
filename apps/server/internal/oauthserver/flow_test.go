@@ -13,6 +13,8 @@ import (
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/google/uuid"
+
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
 )
 
 // The whole flow an MCP client drives: registration, authorization with PKCE, the consent page, the code exchange, then the access token's claims as /api/mcp reads them.
@@ -224,6 +226,38 @@ func TestRevocation(t *testing.T) {
 	// The next authorization asks again.
 	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read"), user); next.Path != consentPagePath {
 		t.Fatalf("went to %s", next)
+	}
+}
+
+// auth.RevokeOAuthGrants, which a password reset or change, signing out other sessions, a two-factor change and deactivation run: the user's refresh tokens stop working at the token endpoint and their access tokens at introspection, another user's keep working, and the consent stays, so the client is back after one sign-in without the consent page.
+func TestRevokingAUsersGrants(t *testing.T) {
+	e := newEnv(t)
+	user, other := e.user("ada@example.com"), e.user("bob@example.com")
+	clientID := e.publicClient()
+	first := e.tokens(clientID, user, "offline_access surveys:read")
+	second := e.tokens(clientID, user, "offline_access surveys:read")
+	bobs := e.tokens(clientID, other, "offline_access surveys:read")
+
+	revoked, err := auth.RevokeOAuthGrants(t.Context(), e.db, user)
+	if err != nil || revoked != 2 {
+		t.Fatalf("revoked %d, %v; want 2", revoked, err)
+	}
+	refresh := func(token string) (int, map[string]any) {
+		return e.token(url.Values{"grant_type": {"refresh_token"}, "refresh_token": {token}, "client_id": {clientID}})
+	}
+	for _, tokens := range []map[string]any{first, second} {
+		if status, out := refresh(tokens["refresh_token"].(string)); status != http.StatusBadRequest || out["error"] != "invalid_grant" {
+			t.Fatalf("refresh after revocation: %d %v", status, out)
+		}
+	}
+	if n := e.count(`SELECT count(*) FROM oauth_access_tokens WHERE revoked_at IS NULL AND user_id = '` + user.String() + `'`); n != 0 {
+		t.Fatalf("%d access tokens still live", n)
+	}
+	if status, out := refresh(bobs["refresh_token"].(string)); status != http.StatusOK {
+		t.Fatalf("another user's refresh: %d %v", status, out)
+	}
+	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read"), user); next.Path == consentPagePath {
+		t.Fatal("the consent was dropped with the tokens")
 	}
 }
 
