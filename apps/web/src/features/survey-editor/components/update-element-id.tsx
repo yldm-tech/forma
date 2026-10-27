@@ -73,6 +73,7 @@ export const UpdateElementId = ({
           onChange={(e) => {
             setCurrentValue(e.target.value);
           }}
+          aria-describedby="elementId-help"
           dir="auto"
           disabled={localSurvey.status !== "draft" && !element.isDraft}
           className={`h-10 ${isInputInvalid ? "border-red-300 focus:border-red-300" : ""}`}
@@ -81,6 +82,9 @@ export const UpdateElementId = ({
           {t("common.save")}
         </Button>
       </div>
+      <p id="elementId-help" className="mt-1 text-xs text-slate-500">
+        {t("workspace.surveys.edit.question_id_help")}
+      </p>
     </div>
   );
 };

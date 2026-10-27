@@ -3897,6 +3897,7 @@
         "question": "質問",
         "question_deleted": "質問を削除しました。",
         "question_duplicated": "質問を複製しました。",
+        "question_id_help": "WebhookとAPIでは、この質問の回答をこのIDで識別します。各Webhookのfieldsにも質問文と一緒に含まれます。アンケートを公開した後は変更できません。",
         "question_id_updated": "質問IDを更新しました",
         "question_number": "質問 {number}",
         "question_used_in_logic_warning_text": "このブロックの要素はロジックルールで使用されていますが、本当に削除しますか？",
