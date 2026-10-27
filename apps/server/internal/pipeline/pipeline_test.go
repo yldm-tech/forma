@@ -143,6 +143,53 @@ func TestWebhookPayload(t *testing.T) {
 	}
 }
 
+// Next to the unchanged data, fields lists every answer with what it answers, so an automation maps headlines instead of ids: the elements in order with their default-language headline as text (recall shown as its fallback, the same for every response), then the variables and the hidden fields under their names, each with the value the response holds (file URLs absolute, numbers as stored) or null.
+func TestWebhookPayloadFields(t *testing.T) {
+	e := newEnv(t, Handoffs{})
+	f := e.fixture()
+	e.exec(`UPDATE surveys SET blocks = ?::jsonb WHERE id = ?`, `[{"id":"b1","name":"Block","elements":[
+		{"id":"q1","type":"openText","headline":{"default":"Your email?","ja":"メール?"},"required":false,"inputType":"email"},
+		{"id":"q2","type":"fileUpload","headline":{"default":"<p>Upload <b>files</b></p>"},"required":false},
+		{"id":"q3","type":"rating","headline":{"default":"How was #recall:q1/fallback:your visit#?"},"required":false,"scale":"number","range":5}
+	]}]`, f.survey)
+	e.embedded(f, "score", "Score", "computed", "number")
+	e.embedded(f, "utm", "utm", "ingested", "string")
+	r := e.respond(f, true, `{"q1":"a@example.com","q2":["/storage/ws1/public/c.png"],"utm":"mail","verifiedEmail":"x@example.com"}`)
+	e.exec(`UPDATE responses SET variables = '{"score": 12.50}'::jsonb WHERE id = ?`, r.ID)
+	r2, _ := response.Load(context.Background(), e.db, r.ID)
+	sv, err := e.worker.loadSurvey(context.Background(), f.survey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := webhookPayloadData(e.cfg, *r2, sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `"fields":[` +
+		`{"id":"q1","type":"openText","headline":"Your email?","value":"a@example.com"},` +
+		`{"id":"q2","type":"fileUpload","headline":"Upload files","value":["https://surveys.example.com/storage/ws1/public/c.png"]},` +
+		`{"id":"q3","type":"rating","headline":"How was your visit?","value":null},` +
+		`{"id":"score","type":"variable","headline":"Score","value":12.50},` +
+		`{"id":"utm","type":"hiddenField","headline":"utm","value":"mail"}],`
+	if !strings.Contains(string(data), want) {
+		t.Errorf("data lacks %s:\n%s", want, data)
+	}
+	// data itself is unchanged, every stored key kept.
+	if !strings.Contains(string(data), `"data":{"q1":"a@example.com","q2":["https://surveys.example.com/storage/ws1/public/c.png"],"utm":"mail","verifiedEmail":"x@example.com"},"fields":[`) {
+		t.Errorf("data changed:\n%s", data)
+	}
+
+	// A response with no answers yet still lists every field, each null.
+	empty := e.respond(f, false, `{}`)
+	data, err = webhookPayloadData(e.cfg, empty, sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `{"id":"q1","type":"openText","headline":"Your email?","value":null}`) || !strings.Contains(string(data), `{"id":"utm","type":"hiddenField","headline":"utm","value":null}]`) {
+		t.Errorf("empty response's fields:\n%s", data)
+	}
+}
+
 // A failing webhook is retried by a delivery job of its own: the healthy webhook gets the event once, the finished response's side effects run on the pipeline's first attempt, a pipeline job that runs again queues no delivery twice, and the failing one is retried on its own schedule of minutes and hours with the same webhook-id until its attempts run out.
 func TestWebhookFailureIsIsolated(t *testing.T) {
 	e := newEnv(t, Handoffs{})

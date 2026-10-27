@@ -3907,6 +3907,7 @@
         "question": "Question",
         "question_deleted": "Question deleted.",
         "question_duplicated": "Question duplicated.",
+        "question_id_help": "Webhooks and the API identify this question's answer by this ID; each webhook also lists it under fields with the question's text. Once the survey is published and this question is saved, it can't be changed.",
         "question_id_updated": "Question ID updated",
         "question_number": "Question {number}",
         "question_used_in_logic_warning_text": "Elements from this block are used in a logic rule, are you sure you want to delete it?",
