@@ -60,6 +60,10 @@ func (e *env) display(survey uuid.UUID, age time.Duration) uuid.UUID {
 	return e.id(`INSERT INTO displays (survey_id, created_at) VALUES (?, ?)`, survey, e.now.Add(-age))
 }
 
+func (e *env) contactDisplay(survey, contact uuid.UUID, age time.Duration) uuid.UUID {
+	return e.id(`INSERT INTO displays (survey_id, contact_id, created_at) VALUES (?, ?, ?)`, survey, contact, e.now.Add(-age))
+}
+
 func (e *env) count(query string, args ...any) int64 {
 	e.t.Helper()
 	var n int64
@@ -365,5 +369,50 @@ func TestSweepStopsWhenItsContextEnds(t *testing.T) {
 	}
 	if r == nil || !r.DryRun || r.StoppedEarly || !r.SweptAt.Equal(e.now) || r.WorkflowRuns != (PassResult{Matched: 1}) {
 		t.Fatalf("report = %+v, want the earlier dry run kept", r)
+	}
+}
+
+// TestSweepKeepsIdentifiedUsersAppSurveyDisplays: an app survey's impression of an identified user (a display linked to a contact) is the targeting history the SDK reads for show once, display limits and waiting periods (clientapi userState), so it is kept whatever its age, by the dry run, the preview and a deleting sweep alike. Anonymous impressions, and a link survey's impressions even when linked to a contact, still go.
+func TestSweepKeepsIdentifiedUsersAppSurveyDisplays(t *testing.T) {
+	e := newEnv(t)
+	org := e.org(nil, days(7))
+	ws := e.workspace(org)
+	contact := e.id(`INSERT INTO contacts (workspace_id) VALUES (?)`, ws)
+	app := e.id(`INSERT INTO surveys (workspace_id, name, type) VALUES (?, 'App', 'app')`, ws)
+	link := e.id(`INSERT INTO surveys (workspace_id, name, type) VALUES (?, 'Link', 'link')`, ws)
+	identified := e.contactDisplay(app, contact, 400*day)
+	e.display(app, 8*day)
+	e.contactDisplay(link, contact, 8*day)
+	e.display(link, 8*day)
+	recent := e.contactDisplay(app, contact, day)
+
+	preview, err := PreviewWindows(t.Context(), e.db, org, e.now, nil, days(7))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.Displays == nil || *preview.Displays != 3 {
+		t.Fatalf("preview = %v, want the 3 impressions that are not an identified user's app survey impression", preview.Displays)
+	}
+	s := NewSweeper(e.db, slog.New(slog.DiscardHandler))
+	dry, err := s.Sweep(t.Context(), e.now, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dry.Displays != (PassResult{Matched: 3}) {
+		t.Fatalf("dry run = %+v, want 3 impressions matched", dry.Displays)
+	}
+	real, err := s.Sweep(t.Context(), e.now, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if real.Displays != (PassResult{Deleted: 3}) {
+		t.Fatalf("sweep = %+v, want 3 impressions deleted", real.Displays)
+	}
+	var left []uuid.UUID
+	if err := e.db.Raw(`SELECT id FROM displays ORDER BY created_at`).Scan(&left).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(left) != 2 || left[0] != identified || left[1] != recent {
+		t.Errorf("displays left = %v, want the identified user's two app survey impressions %v and %v", left, identified, recent)
 	}
 }
