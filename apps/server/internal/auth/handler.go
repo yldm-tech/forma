@@ -100,6 +100,8 @@ type optionsResponse struct {
 	PrivacyURL string `json:"privacyUrl,omitempty"`
 	// IsFormaCloud makes the sign-up form offer the product update emails instead of the security ones.
 	IsFormaCloud bool `json:"isFormaCloud"`
+	// SpamProtectionAvailable is whether reCAPTCHA keys are configured, so the survey editor offers spam protection: without them the server refuses a survey that turns it on.
+	SpamProtectionAvailable bool `json:"spamProtectionAvailable"`
 }
 
 // options tells the sign-in and sign-up pages what this instance offers.
@@ -119,6 +121,7 @@ func (h *Handler) options(c *gin.Context) {
 		TermsURL:                  h.cfg.TermsURL,
 		PrivacyURL:                h.cfg.PrivacyURL,
 		IsFormaCloud:              h.cfg.IsFormaCloud,
+		SpamProtectionAvailable:   h.cfg.RecaptchaConfigured(),
 	}
 	if h.cfg.SSO.OIDCEnabled() {
 		res.OIDCDisplayName = h.cfg.SSO.OIDCDisplayName

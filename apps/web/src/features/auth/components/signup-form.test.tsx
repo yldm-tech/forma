@@ -40,6 +40,7 @@ const OPTIONS: AuthOptions = {
   smtpConfigured: true,
   ssoProviders: [],
   isFormaCloud: false,
+  spamProtectionAvailable: false,
 };
 
 /** POST /api/app/auth/signup answering success; the bodies are recorded. */
