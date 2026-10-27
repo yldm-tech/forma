@@ -210,13 +210,12 @@ func (h *Handler) tokenUsable(ctx context.Context, userID uuid.UUID, jti string)
 	if !h.verifier.IssuedHere() {
 		return h.userActive(ctx, userID)
 	}
-	tokenID, err := uuid.Parse(jti)
-	if err != nil {
-		return false, nil
-	}
+	// A token without a well-formed jti has no row, so it is not usable.
 	var usable []bool
-	if err := h.db.WithContext(ctx).Raw(`SELECT u.is_active AND t.revoked_at IS NULL FROM oauth_access_tokens t JOIN users u ON u.id = t.user_id WHERE t.id = ? AND t.user_id = ?`, tokenID, userID).Scan(&usable).Error; err != nil {
-		return false, fmt.Errorf("load access token: %w", err)
+	if tokenID, parseErr := uuid.Parse(jti); parseErr == nil {
+		if err := h.db.WithContext(ctx).Raw(`SELECT u.is_active AND t.revoked_at IS NULL FROM oauth_access_tokens t JOIN users u ON u.id = t.user_id WHERE t.id = ? AND t.user_id = ?`, tokenID, userID).Scan(&usable).Error; err != nil {
+			return false, fmt.Errorf("load access token: %w", err)
+		}
 	}
 	return len(usable) == 1 && usable[0], nil
 }
