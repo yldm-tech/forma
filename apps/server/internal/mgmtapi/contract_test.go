@@ -144,7 +144,7 @@ var replayOrder = []string{
 	"v2-webhooks-create-invalid-body", "v2-webhooks-create-private-url", "v2-webhooks-create-read-key", "v2-webhooks-create-write-key", "v2-webhooks-create-survey-other-workspace",
 	"v2-webhooks-list", "v2-webhooks-list-other-workspace-key", "v2-webhooks-list-by-survey",
 	"v2-webhooks-get", "v2-webhooks-get-other-workspace-key", "v2-webhooks-get-unknown",
-	"v2-webhooks-update", "v2-webhooks-update-invalid-body", "v2-webhooks-update-read-key", "v2-webhooks-update-write-key", "v2-webhooks-update-write-key-same-target", "v2-webhooks-update-survey-other-workspace", "v2-webhooks-update-unknown",
+	"v2-webhooks-update", "v2-webhooks-update-invalid-body", "v2-webhooks-update-read-key", "v2-webhooks-update-write-key", "v2-webhooks-update-write-key-same-target", "v2-webhooks-update-write-key-source", "v2-webhooks-update-survey-other-workspace", "v2-webhooks-update-unknown",
 	"v2-webhooks-delete-write-key", "v2-webhooks-delete", "v2-webhooks-delete-unknown",
 
 	"v2-teams-list-empty", "v2-teams-create", "v2-teams-create-duplicate", "v2-teams-create-invalid-body", "v2-teams-create-other-organization",

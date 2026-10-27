@@ -32,7 +32,7 @@ func (s *Service) CreateManaged(ctx context.Context, workspaceID uuid.UUID, in I
 	return s.createV1(ctx, workspaceID, in)
 }
 
-// ReplaceManaged is forma2's v2 updateWebhook by a caller who may write to the webhook's workspace: every field of the webhook replaced, its source included, after the URL's SSRF check. A replacement that changes its URL, its triggers or its surveys also needs workspace.manage, as on the settings page (403 forbidden otherwise). A webhook that disappeared meanwhile is 404 webhook.
+// ReplaceManaged is forma2's v2 updateWebhook by a caller who may write to the webhook's workspace: every field of the webhook replaced, its source included, after the URL's SSRF check. A replacement that changes its URL, its triggers or its surveys also needs workspace.manage, as on the settings page (403 forbidden otherwise), and so does one that changes its source: a third-party source locks the webhook against secret regeneration and against editing on the settings page, which pins the source. A webhook that disappeared meanwhile is 404 webhook.
 func (s *Service) ReplaceManaged(ctx context.Context, actor authz.Actor, id uuid.UUID, in Input) (*Webhook, error) {
 	current, err := s.repo.ByID(ctx, id)
 	if err != nil {
@@ -45,7 +45,7 @@ func (s *Service) ReplaceManaged(ctx context.Context, actor authz.Actor, id uuid
 	if err != nil {
 		return nil, err
 	}
-	if retargets(current, f) {
+	if retargets(current, f) || f.Source != current.Source {
 		allowed, err := s.authz.Can(ctx, actor, authz.WorkspaceManage, authz.Workspace(current.WorkspaceID))
 		if err != nil {
 			return nil, err
