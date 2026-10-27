@@ -65,9 +65,9 @@ type Config struct {
 	GatewayRateLimiting bool `env:"GATEWAY_RATE_LIMITING" envDefault:"0"`
 	// TrustedProxyHopCount is how many reverse proxies in front of the server append to X-Forwarded-For; the client address is the entry that many places from the right. 0 means no proxy: the address is the TCP peer. Setting it higher than the real chain lets a caller choose their own address by prepending entries.
 	TrustedProxyHopCount int `env:"TRUSTED_PROXY_HOP_COUNT" envDefault:"1"`
-	// ClientIPHeader names a request header that carries the client address, set by a proxy that overwrites whatever the caller sent (Cloudflare's CF-Connecting-IP, for example), for proxy chains where the client address never reaches X-Forwarded-For. It is read only when the TCP peer is inside TrustedProxyCIDRs; every other request, and every request without the header, is resolved from TrustedProxyHopCount as before. Unset, the default, no header is read. It must be set together with TrustedProxyCIDRs.
+	// ClientIPHeader names a request header that carries the client address, set by a proxy that overwrites whatever the caller sent (Cloudflare's CF-Connecting-IP, for example), for proxy chains where the client address never reaches X-Forwarded-For. It is read only when the address TrustedProxyHopCount selects (the TCP peer with 0, otherwise the X-Forwarded-For entry that many places from the right: the party that connected to the outermost trusted proxy) is inside TrustedProxyCIDRs; every other request, and every request without the header, keeps that address as before. Unset, the default, no header is read. It must be set together with TrustedProxyCIDRs.
 	ClientIPHeader string `env:"CLIENT_IP_HEADER"`
-	// TrustedProxyCIDRs are the networks, as comma-separated CIDRs or single addresses, of the proxies that connect to the server and may set ClientIPHeader. Keep it to the proxy that dials the server (the ingress pods' network, say): anything else inside the range can choose its own client address.
+	// TrustedProxyCIDRs are the addresses, as comma-separated CIDRs or single addresses, of the proxies that set ClientIPHeader, as they appear where TrustedProxyHopCount looks: behind an ingress that appends to X-Forwarded-For, the address the ingress records for that proxy (cloudflared's, for Cloudflare Tunnel), not the ingress's own. Keep it to those addresses alone: anything else that can reach the server or the ingress from inside the range can choose its own client address.
 	TrustedProxyCIDRs ProxyCIDRs `env:"TRUSTED_PROXY_CIDRS"`
 
 	// SMTP delivery. Mail is sent only when both SMTPHost and SMTPPort are set; otherwise sends are skipped and reported as not sent.
@@ -732,7 +732,7 @@ var headerName = regexp.MustCompile("^[A-Za-z0-9!#$%&'*+.^_`|~-]+$")
 // validateClientIPHeader checks the trusted-header mode: the header and the proxies allowed to set it come together, the header is a single-address header, and no range trusts every peer.
 func (c Config) validateClientIPHeader() error {
 	if (c.ClientIPHeader == "") != (len(c.TrustedProxyCIDRs) == 0) {
-		return errors.New("CLIENT_IP_HEADER and TRUSTED_PROXY_CIDRS must be set together: the header is read only from a TCP peer inside TRUSTED_PROXY_CIDRS")
+		return errors.New("CLIENT_IP_HEADER and TRUSTED_PROXY_CIDRS must be set together: the header is read only when the address TRUSTED_PROXY_HOP_COUNT selects is inside TRUSTED_PROXY_CIDRS")
 	}
 	if c.ClientIPHeader == "" {
 		return nil
