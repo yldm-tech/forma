@@ -276,6 +276,48 @@ func TestRunWithoutWhitelabelLogo(t *testing.T) {
 	}
 }
 
+// A send_email subject fills its placeholders like the other steps' templates, and a choice answer's choiceId and default label are the same in every language the survey was answered in.
+func TestRunRendersSubjectAndChoiceIDs(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	e.exec(`UPDATE surveys SET blocks = ?::jsonb WHERE id = ?`, `[{"id":"b1","name":"Block","elements":[
+		{"id":"q1","type":"openText","headline":{"default":"Your email?"},"required":false,"inputType":"email"},
+		{"id":"pmf","type":"multipleChoiceSingle","headline":{"default":"How disappointed?","ja":"どのくらい残念?"},"required":false,"choices":[
+			{"id":"very","label":{"default":"Very disappointed","ja":"とても残念"}},{"id":"not","label":{"default":"Not disappointed","ja":"残念ではない"}}]}
+	]}]`, f.survey)
+	en := e.insert(`INSERT INTO languages (workspace_id, code) VALUES (?, 'en') RETURNING id`, f.ws)
+	ja := e.insert(`INSERT INTO languages (workspace_id, code) VALUES (?, 'ja') RETURNING id`, f.ws)
+	e.exec(`INSERT INTO survey_languages (survey_id, language_id, is_default) VALUES (?, ?, true), (?, ?, false)`, f.survey, en, f.survey, ja)
+	rec, url := serve(t, http.StatusOK)
+	def := definition(f.survey, "owner@example.com")
+	email := def["nodes"].([]any)[0].(map[string]any)
+	email["config"].(map[string]any)["subject"] = "NPS {{answers.nps}}: {{answers.pmf.default}} ({{answers.q1}})"
+	notify := httpNode("notify", url+"/hook")
+	notify["config"].(map[string]any)["body"] = `{"choice":"{{answers.pmf.choiceId}}","label":"{{answers.pmf.default}}"}`
+	def["nodes"] = append(def["nodes"].([]any), notify)
+	def["edges"] = append(def["edges"].([]any), map[string]any{"id": "e-notify", "source": "send-email", "target": "notify"})
+	wf := e.enabled(f, "Choices", def)
+
+	for i, tc := range []struct{ language, data string }{
+		{"en", `{"q1":"jane@example.com\r\nBcc: x@evil.example","nps":3,"pmf":"Very disappointed"}`},
+		{"ja", `{"q1":"jane@example.com\r\nBcc: x@evil.example","nps":3,"pmf":"とても残念"}`},
+	} {
+		r := e.respond(f.survey, true, tc.data, nil)
+		e.exec(`UPDATE responses SET language = ? WHERE id = ?`, tc.language, r.ID)
+		run := e.startRun(f, wf, r.ID)
+		if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err != nil {
+			t.Fatalf("%s: %v\n%s", tc.language, err, e.errorLogs())
+		}
+		mails := e.mails("owner@example.com")
+		if len(mails) != i+1 || mails[i].Subject != "NPS 3: Very disappointed (jane@example.com  Bcc: x@evil.example)" {
+			t.Fatalf("%s: mails %+v", tc.language, mails)
+		}
+		if rec.count() != i+1 || rec.bodies[i] != `{"choice":"very","label":"Very disappointed"}` {
+			t.Fatalf("%s: request %v", tc.language, rec.bodies)
+		}
+	}
+}
+
 func TestRunRecipientAllowlistAndRetries(t *testing.T) {
 	e := newEnv(t)
 	f := e.fixture()
@@ -308,6 +350,10 @@ func TestRunRecipientAllowlistAndRetries(t *testing.T) {
 	}
 	if s, _ := status(); s != RunFailed || e.count(`SELECT count(*) FROM workflow_runs WHERE id = ? AND finished_at IS NOT NULL`, run) != 1 {
 		t.Fatalf("after the final attempt: %s", s)
+	}
+	// The run records the delivery that finished it, though the retry found it already running.
+	if got := e.count(`SELECT attempt FROM workflow_runs WHERE id = ?`, run); got != 3 {
+		t.Fatalf("attempt %d after the third delivery", got)
 	}
 	if len(e.mails("jane@example.com")) != 1 || len(e.mails("member@example.com")) != 0 {
 		t.Fatalf("sent %+v", e.mail.Messages())

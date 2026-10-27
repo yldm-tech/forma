@@ -209,6 +209,12 @@ func (g *Guard) Post(ctx context.Context, t *Target, header http.Header, body []
 
 // Do is Post with any method; a nil body sends none.
 func (g *Guard) Do(ctx context.Context, method string, t *Target, header http.Header, body []byte, timeout time.Duration) (int, error) {
+	status, _, err := g.Exchange(ctx, method, t, header, body, timeout, 0)
+	return status, err
+}
+
+// Exchange is Do that also returns the first limit bytes of the answer's body, for a caller that records why a receiver refused a request; a limit of 0 reads none. The excerpt is what arrived before the timeout, cut anywhere, even inside a character.
+func (g *Guard) Exchange(ctx context.Context, method string, t *Target, header http.Header, body []byte, timeout time.Duration, limit int64) (int, []byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var reader io.Reader = http.NoBody
@@ -217,7 +223,7 @@ func (g *Guard) Do(ctx context.Context, method string, t *Target, header http.He
 	}
 	req, err := http.NewRequestWithContext(ctx, method, t.URL.String(), reader)
 	if err != nil {
-		return 0, fmt.Errorf("build webhook request: %w", err)
+		return 0, nil, fmt.Errorf("build webhook request: %w", err)
 	}
 	for k, v := range header {
 		req.Header[k] = v
@@ -238,17 +244,22 @@ func (g *Guard) Do(ctx context.Context, method string, t *Target, header http.He
 	res, err := client.Do(req)
 	if err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return 0, ErrTimeout
+			return 0, nil, ErrTimeout
 		}
 		// The client's error names the URL, whose path and query may carry the receiver's token.
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) {
-			return 0, urlErr.Err
+			return 0, nil, urlErr.Err
 		}
-		return 0, err
+		return 0, nil, err
+	}
+	var excerpt []byte
+	if limit > 0 {
+		// A body cut short by the timeout or the connection still says what arrived.
+		excerpt, _ = io.ReadAll(io.LimitReader(res.Body, limit))
 	}
 	_ = res.Body.Close()
-	return res.StatusCode, nil
+	return res.StatusCode, excerpt, nil
 }
 
 // pinnedDial connects a request for the target's host to the address Validate checked, whatever the name resolves to now. Other hosts, reached only through a redirect the internal-URL switch allows, are dialled as named.
