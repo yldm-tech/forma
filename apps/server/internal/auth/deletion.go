@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/yldm-tech/forma/apps/server/internal/apikey/disable"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
@@ -123,9 +124,11 @@ type removedAccount struct {
 	stripeCustomers []string
 	// disabledKeys are the API keys the user had created in the organizations that remain.
 	disabledKeys []disable.Key
+	// organizations are the organizations deleted with the account, read before they were, for the projection's delivery.
+	organizations authz.Organizations
 }
 
-// removeAccount deletes the user together with every organization they are the only active owner of, as forma2 did with multiple organizations enabled (always, since its licence checks were removed), and disables the API keys they created in every other organization: created_by is set to null with the user, so they are disabled first, while the creator can still be matched. It must run in a Serializable transaction (Service.serializableJobTransaction): the organization module's owner guards are serializable, and only a serializable deletion conflicts with them, so a co-owner's concurrent demotion, removal or own deletion aborts one side instead of leaving the organization without an owner. SpiceDB relationships follow through the projection outbox triggers on the deleted rows.
+// removeAccount deletes the user together with every organization they are the only active owner of, as forma2 did with multiple organizations enabled (always, since its licence checks were removed), and disables the API keys they created in every other organization: created_by is set to null with the user, so they are disabled first, while the creator can still be matched. It must run in a Serializable transaction (Service.serializableJobTransaction): the organization module's owner guards are serializable, and only a serializable deletion conflicts with them, so a co-owner's concurrent demotion, removal or own deletion aborts one side instead of leaving the organization without an owner. SpiceDB relationships follow through the projection outbox triggers on the deleted rows, delivered by accountDeleted once the transaction has committed.
 func (s *Service) removeAccount(ctx context.Context, tx *Repository, jtx *jobs.Tx, acc *account) (removedAccount, error) {
 	soleOwned, err := tx.soleOwnedOrganizations(ctx, acc.ID)
 	if err != nil {
@@ -141,15 +144,20 @@ func (s *Service) removeAccount(ctx context.Context, tx *Repository, jtx *jobs.T
 	}
 	// Keys of the organizations deleted with the account go with them; only those that stay listed are reported.
 	keys = slices.DeleteFunc(keys, func(k disable.Key) bool { return slices.Contains(soleOwned, k.OrganizationID) })
+	organizations, err := authz.ReadOrganizations(ctx, tx.db, soleOwned...)
+	if err != nil {
+		return removedAccount{}, err
+	}
 	if err := tx.deleteAccount(ctx, acc.ID, soleOwned); err != nil {
 		return removedAccount{}, err
 	}
 	// forma2 deleted the Brevo contact, by address, with the user.
-	return removedAccount{stripeCustomers: customers, disabledKeys: keys}, s.contacts.Deleted(ctx, jtx, acc.Email)
+	return removedAccount{stripeCustomers: customers, disabledKeys: keys, organizations: organizations}, s.contacts.Deleted(ctx, jtx, acc.Email)
 }
 
-// accountDeleted records the deletion and the API keys it disabled and, as forma2's deleteOrganization did for each organization that went with the account, cancels their Stripe subscriptions.
+// accountDeleted delivers the revocations of the deletion to SpiceDB, records the deletion and the API keys it disabled and, as forma2's deleteOrganization did for each organization that went with the account, cancels their Stripe subscriptions. The revocations go first and before the answer: a user's and their organizations' revocations left to a worker that may be minutes behind would pass the freshness window and stop every authorization check in the deployment.
 func (s *Service) accountDeleted(ctx context.Context, acc *account, removed removedAccount) {
+	s.delivery.DeliverOrganizations(ctx, removed.organizations, acc.ID)
 	for _, customer := range removed.stripeCustomers {
 		s.billing.OrganizationDeleted(ctx, &customer)
 	}

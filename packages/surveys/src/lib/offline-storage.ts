@@ -14,6 +14,10 @@ export interface SerializedSurveyState {
   singleUseId: string | null;
   userId: string | null;
   contactId: string | null;
+  /**
+   * hashVerifyToken of the email verification token (`?verify=`) of the page that stored the snapshot, null when that page had none. It is part of who the respondent is (isSameRespondent): a respondent who opens their own verification link in a browser where another verified respondent left progress starts afresh, instead of seeing the other's answers and finishing a response recorded under the other's address. Absent from snapshots stored before it existed, which count as left by a page without a token.
+   */
+  verifyTokenHash?: string | null;
   responseAcc: TResponseUpdate;
 }
 

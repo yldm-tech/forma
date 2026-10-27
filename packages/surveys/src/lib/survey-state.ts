@@ -10,6 +10,10 @@ export class SurveyState {
   responseAcc: TResponseUpdate = { finished: false, data: {}, ttc: {}, variables: {} };
   singleUseId: string | null;
   pinAuthToken: string | null;
+  /** The email verification token of the link survey page (`?verify=`), sent with every update of this response so the server refuses to add the answers to a response verified with another address. Never stored. */
+  verifyToken: string | null = null;
+  /** hashVerifyToken of verifyToken, set once the page has computed it: what the progress and the answers this page stores record of the respondent (SerializedSurveyState.verifyTokenHash). */
+  verifyTokenHash: string | null = null;
 
   constructor(
     surveyId: string,

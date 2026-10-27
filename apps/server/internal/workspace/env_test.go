@@ -119,7 +119,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	}
 	e.repo = NewRepository(db, log)
 	e.files = &recordedFiles{}
-	e.svc = NewService(cfg, e.repo, e.authz.Authorizer, ratelimit.New(cfg, nil, log), audit.New(cfg, log), schemas, e.files, log)
+	e.svc = NewService(cfg, e.repo, e.authz.Authorizer, e.authz.Delivery(), ratelimit.New(cfg, nil, log), audit.New(cfg, log), schemas, e.files, log)
 	e.engine = gin.New()
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())
 	NewHandler(e.svc, headerSessions{}).Register(group)

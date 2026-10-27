@@ -333,4 +333,13 @@ func TestUpdateAndDeleteStayInsideThePathsOrganization(t *testing.T) {
 	if res := e.do(http.MethodDelete, keysPath(orgB)+"/not-a-uuid", token, nil); res.status != http.StatusBadRequest {
 		t.Fatalf("malformed id = %d %s", res.status, res.body)
 	}
+
+	// Under its own organization the key is deleted, and its revocations reach SpiceDB before the answer, with no worker running.
+	e.drain()
+	if res := e.do(http.MethodDelete, keyPath(orgB, keyB), token, nil); res.status != http.StatusOK && res.status != http.StatusNoContent {
+		t.Fatalf("delete = %d %s", res.status, res.body)
+	}
+	if n := e.count(`SELECT count(*) FROM authz_projection_outbox WHERE processed_at IS NULL`); n != 0 {
+		t.Fatalf("%d events left for the worker after deleting the key", n)
+	}
 }

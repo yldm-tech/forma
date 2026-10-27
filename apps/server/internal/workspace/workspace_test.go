@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
@@ -381,5 +382,39 @@ func TestResolveClientID(t *testing.T) {
 		if got == nil || got.ID != want || got.OrganizationID != org {
 			t.Errorf("ResolveClientID(%.40q) = %+v, want workspace %s of %s", raw, got, want, org)
 		}
+	}
+}
+
+// Creating and deleting a workspace reach SpiceDB before the request answers, with no worker running: the creator opens the new workspace at once, and the deleted one's grants leave no revocation for a worker that may be minutes behind.
+func TestWorkspaceWritesAreProjectedBeforeTheyAnswer(t *testing.T) {
+	e := newEnv(t)
+	owner, member := e.user(), e.user()
+	org, _ := e.organization(owner)
+	e.member(org, member, "member")
+	team := e.insert(`INSERT INTO teams (organization_id, name) VALUES (?, 'Team') RETURNING id`, org)
+	e.exec(`INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'contributor')`, team, member)
+	pending := func() int {
+		return e.count(`SELECT count(*) FROM authz_projection_outbox WHERE processed_at IS NULL`)
+	}
+	can := func(user uuid.UUID, action authz.Action, ws uuid.UUID) bool {
+		ok, err := e.authz.Authorizer.Can(t.Context(), authz.User(user), action, authz.Workspace(ws))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ok
+	}
+
+	var ws Workspace
+	e.ok(e.do(owner, http.MethodPost, orgWorkspaces(org, ""), map[string]any{"name": "Second", "teamIds": []uuid.UUID{team}}), http.StatusCreated, &ws)
+	if n := pending(); n != 0 {
+		t.Fatalf("%d events left for the worker after creating the workspace", n)
+	}
+	if !can(owner, authz.WorkspaceManage, ws.ID) || !can(member, authz.WorkspaceRead, ws.ID) {
+		t.Fatal("the new workspace was not projected before the answer")
+	}
+
+	e.ok(e.do(owner, http.MethodPost, wsPath(ws.ID, "/delete"), map[string]string{"confirmationName": "Second"}), http.StatusOK, nil)
+	if n := pending(); n != 0 {
+		t.Fatalf("%d events left for the worker after deleting the workspace", n)
 	}
 }

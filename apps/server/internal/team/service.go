@@ -1,4 +1,4 @@
-// Package team is teams and the access they carry: team CRUD, team members with their team roles (admin or contributor), and the workspaces a team may read, write or manage, with forma2's rules (apps/web/modules/teams). SpiceDB follows the rows through the projection outbox; this package never writes it.
+// Package team is teams and the access they carry: team CRUD, team members with their team roles (admin or contributor), and the workspaces a team may read, write or manage, with forma2's rules (apps/web/modules/teams). SpiceDB follows the rows through the projection outbox; this package never writes it, but delivers a team's pending events itself once its write has committed (authz.Delivery.DeliverTeam).
 package team
 
 import (
@@ -47,15 +47,16 @@ type Teams struct {
 }
 
 type Service struct {
-	repo  *Repository
-	authz *authz.Authorizer
-	audit *audit.Emitter
-	log   *slog.Logger
-	now   func() time.Time
+	repo     *Repository
+	authz    *authz.Authorizer
+	delivery *authz.Delivery
+	audit    *audit.Emitter
+	log      *slog.Logger
+	now      func() time.Time
 }
 
-func NewService(repo *Repository, authorizer *authz.Authorizer, emitter *audit.Emitter, log *slog.Logger) *Service {
-	return &Service{repo: repo, authz: authorizer, audit: emitter, log: log, now: time.Now}
+func NewService(repo *Repository, authorizer *authz.Authorizer, delivery *authz.Delivery, emitter *audit.Emitter, log *slog.Logger) *Service {
+	return &Service{repo: repo, authz: authorizer, delivery: delivery, audit: emitter, log: log, now: time.Now}
 }
 
 // record emits an audited operation's event, a failure when err is set, as forma2's withAuditLogging did for every outcome of the actions it wrapped.
@@ -111,6 +112,8 @@ func (s *Service) Create(ctx context.Context, userID, organizationID uuid.UUID, 
 	if !created {
 		return uuid.Nil, errNameTakenInput()
 	}
+	// The team's organization reaches SpiceDB before the answer instead of waiting for the worker (see authz.Delivery.DeliverMemberships on what that promises under minimize_latency).
+	s.delivery.DeliverTeam(ctx, id)
 	ev.TargetID = id.String()
 	details, err := s.repo.details(ctx, id, false)
 	if err != nil {
@@ -199,6 +202,7 @@ func (s *Service) Update(ctx context.Context, userID, teamID uuid.UUID, in Updat
 	if err != nil {
 		return nil, err
 	}
+	s.delivery.DeliverTeam(ctx, teamID)
 	updated, err = s.repo.details(ctx, teamID, false)
 	if err != nil {
 		return nil, err
@@ -263,6 +267,7 @@ func (s *Service) Delete(ctx context.Context, userID, teamID uuid.UUID) (err err
 	if !deleted {
 		return apperr.NotFound("Team", teamID.String())
 	}
+	s.delivery.DeliverTeam(ctx, teamID)
 	return nil
 }
 
