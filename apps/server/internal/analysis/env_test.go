@@ -63,6 +63,8 @@ type env struct {
 	authz  *authztest.Env
 	svc    *Service
 	engine *gin.Engine
+	// texts is the AI text summaries of newTextEnv, nil in any other env.
+	texts *TextSummaries
 }
 
 func newEnv(t *testing.T) *env {
