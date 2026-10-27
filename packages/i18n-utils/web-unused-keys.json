@@ -118,6 +118,8 @@
   "workspace.surveys.edit.follow_ups_modal_created_successfull_toast",
   "workspace.surveys.edit.follow_ups_new",
   "workspace.surveys.edit.progress_saved",
+  "workspace.surveys.edit.spam_protection_note",
+  "workspace.surveys.edit.spam_protection_threshold_description",
   "workspace.surveys.featured_templates.churn_description",
   "workspace.surveys.featured_templates.churn_title",
   "workspace.surveys.featured_templates.csat_description",

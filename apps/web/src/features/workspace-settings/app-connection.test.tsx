@@ -234,3 +234,15 @@ test("someone who does not manage the workspace sees the settings but cannot cha
   expect(required.hasAttribute("disabled")).toBe(true);
   expect(screen.getByText(t("workspace.sdk_identity.read_only"))).toBeDefined();
 });
+
+// A workspace ID has no test mode: the page points at a second workspace for staging and at Copy to... to bring a finished survey here.
+test("the workspace details recommend a separate staging workspace and Copy to...", async () => {
+  renderPage();
+  await methodButton("website");
+  const note = screen.getByRole("note");
+  expect(within(note).getByText(t("workspace.app-connection.staging_workspace_title"))).toBeDefined();
+  expect(note.textContent).toContain(t("workspace.app-connection.staging_workspace_description"));
+  expect(t("workspace.app-connection.staging_workspace_description")).toContain(
+    t("workspace.surveys.copy_to")
+  );
+});

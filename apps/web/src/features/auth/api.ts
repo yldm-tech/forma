@@ -20,6 +20,8 @@ export interface AuthOptions {
   privacyUrl?: string;
   /** Forma Cloud offers the product update emails at sign-up instead of the security ones. */
   isFormaCloud: boolean;
+  /** Whether reCAPTCHA keys are configured, so the survey editor offers spam protection. */
+  spamProtectionAvailable: boolean;
 }
 
 /** GET /api/app/auth/me. */
