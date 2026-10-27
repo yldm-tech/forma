@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/slack-go/slack"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/mrkdwn"
 )
 
 // slackScope is what the Slack integration asks for, fixed by the Slack app registration.
@@ -82,10 +85,10 @@ func (p *providers) slackChannels(ctx context.Context, token string) ([]Item, er
 	}
 }
 
-// writeSlack is forma2's writeDataToSlack: one message to the channel, the survey's name over a divider, then each label in bold over its value, the value truncated to Slack's section limit. Nothing is escaped, as forma2 escaped nothing.
+// writeSlack is forma2's writeDataToSlack: one message to the channel, the survey's name over a divider, then each label in bold over its value, each cut to Slack's section limit. Unlike forma2, the name, the labels (whose recall can bring in answers) and the values are escaped with mrkdwn.Escape, so a respondent cannot notify the channel, mention anyone, post a disguised link or format the message under the Forma bot.
 func (p *providers) writeSlack(ctx context.Context, token, channelID, surveyName string, values, labels []string) error {
 	blocks := []slack.Block{
-		slack.NewSectionBlock(slack.NewTextBlockObject(slack.MarkdownType, surveyName+"\n", false, false), nil, nil),
+		slack.NewSectionBlock(slack.NewTextBlockObject(slack.MarkdownType, slackText(surveyName)+"\n", false, false), nil, nil),
 		slack.NewDividerBlock(),
 	}
 	for i, v := range values {
@@ -94,8 +97,8 @@ func (p *providers) writeSlack(ctx context.Context, token, channelID, surveyName
 			label = labels[i]
 		}
 		blocks = append(blocks,
-			slack.NewSectionBlock(slack.NewTextBlockObject(slack.MarkdownType, "*"+label+"*", false, false), nil, nil),
-			slack.NewSectionBlock(slack.NewTextBlockObject(slack.MarkdownType, truncate(v, slackMessageLimit)+"\n", false, false), nil, nil),
+			slack.NewSectionBlock(slack.NewTextBlockObject(slack.MarkdownType, "*"+slackText(label)+"*", false, false), nil, nil),
+			slack.NewSectionBlock(slack.NewTextBlockObject(slack.MarkdownType, slackText(v)+"\n", false, false), nil, nil),
 		)
 	}
 	if _, _, err := p.slackClient(token).PostMessageContext(ctx, channelID, slack.MsgOptionBlocks(blocks...)); err != nil {
@@ -103,3 +106,26 @@ func (p *providers) writeSlack(ctx context.Context, token, channelID, surveyName
 	}
 	return nil
 }
+
+// slackText is text as a section of the Slack message carries it: escaped with mrkdwn.Escape and, as truncate cuts, at most slackMessageLimit UTF-16 code units followed by "..." when cut. The cut is made before escaping and moved earlier until the escaped text fits, so escaping cannot push a section past what Slack accepts and no escape is split.
+func slackText(text string) string {
+	escaped := mrkdwn.Escape(text)
+	if utf16Len(escaped) <= slackMessageLimit {
+		return escaped
+	}
+	units := utf16.Encode([]rune(text))
+	prefix := func(n int) string { return mrkdwn.Escape(string(utf16.Decode(units[:n]))) }
+	// The longest prefix whose escaped text fits; a longer prefix escapes to a longer text, give or take a fence the next letter makes unnecessary.
+	lo, hi := 0, min(len(units), slackMessageLimit)
+	for lo < hi {
+		mid := (lo + hi + 1) / 2
+		if utf16Len(prefix(mid)) <= slackMessageLimit {
+			lo = mid
+		} else {
+			hi = mid - 1
+		}
+	}
+	return prefix(lo) + "..."
+}
+
+func utf16Len(s string) int { return len(utf16.Encode([]rune(s))) }
