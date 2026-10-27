@@ -15,7 +15,7 @@ beforeAll(async () => {
 
 afterEach(cleanup);
 
-const renderField = (status: TSurvey["status"]) => {
+const renderField = (status: TSurvey["status"], isDraft?: boolean) => {
   const element = {
     id: "deuz2df62r9uzoqxzqgf3bpg",
     type: "openText",
@@ -23,6 +23,7 @@ const renderField = (status: TSurvey["status"]) => {
     required: false,
     inputType: "email",
     charLimit: { enabled: false },
+    ...(isDraft === undefined ? {} : { isDraft }),
   } as TSurveyElement;
   const survey = {
     status,
@@ -44,7 +45,7 @@ const renderField = (status: TSurvey["status"]) => {
 test("the question ID explains that webhooks and the API key answers by it and that it locks once published", () => {
   const { input, description } = renderField("draft");
   expect(description).toBe(
-    "Webhooks and the API identify this question's answer by this ID; each webhook also lists it under fields with the question's text. It can't be changed after the survey is published."
+    "Webhooks and the API identify this question's answer by this ID; each webhook also lists it under fields with the question's text. Once the survey is published and this question is saved, it can't be changed."
   );
   expect(input.disabled).toBe(false);
 });
@@ -52,5 +53,16 @@ test("the question ID explains that webhooks and the API key answers by it and t
 test("a published survey's question ID is read-only and still explains why", () => {
   const { input, description } = renderField("inProgress");
   expect(input.disabled).toBe(true);
-  expect(description).toMatch(/can't be changed after the survey is published/);
+  expect(description).toMatch(
+    /Once the survey is published and this question is saved, it can't be changed\./
+  );
+});
+
+// A question added to a published survey stays editable until the survey is saved (isDraft is stripped on save), so the copy must not claim it is already locked.
+test("a question just added to a published survey keeps an editable ID and the copy says it locks once saved", () => {
+  const { input, description } = renderField("inProgress", true);
+  expect(input.disabled).toBe(false);
+  expect(description).toMatch(
+    /Once the survey is published and this question is saved, it can't be changed\./
+  );
 });
