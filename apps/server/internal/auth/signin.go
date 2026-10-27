@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 
 	"github.com/google/uuid"
 
@@ -79,6 +81,13 @@ func (s *Service) checkCredentials(ctx context.Context, email, password string, 
 	if s.cfg.EmailAuthDisabled {
 		return signInResult{}, errEmailPasswordDisabled()
 	}
+	// The per-account limits are checked before the password costs a bcrypt comparison, and charged below only when it is wrong. An unknown address is limited the same way, so a 429 does not tell that an account exists.
+	guesser := accountIdentifier(email) + ":" + ratelimit.IPIdentifier(ctx)
+	for _, rule := range signInFailureRules {
+		if err := s.limiter.AssertAvailable(ctx, rule, guesser); err != nil {
+			return signInResult{}, err
+		}
+	}
 	acc, err := s.repo.accountByEmail(ctx, email)
 	if err != nil {
 		return signInResult{}, err
@@ -93,6 +102,11 @@ func (s *Service) checkCredentials(ctx context.Context, email, password string, 
 		return signInResult{}, err
 	}
 	if acc == nil || !ok {
+		for _, rule := range signInFailureRules {
+			if _, err := s.limiter.Check(ctx, rule, guesser, 1); err != nil {
+				return signInResult{}, err
+			}
+		}
 		return signInResult{}, errInvalidCredentials()
 	}
 	// Only a caller who knows the password learns that the address is unverified; the fresh link replaces one that may have expired.
@@ -111,6 +125,15 @@ func (s *Service) checkCredentials(ctx context.Context, email, password string, 
 		s.finalizeSignIn(ctx, acc.ID, signInMethodPassword)
 	}
 	return res, nil
+}
+
+// signInFailureRules count rejected passwords per account and client address (ratelimit.AuthSignInAccountIP): a short window that forgives a few typos and a daily cap on one source's guesses at one account.
+var signInFailureRules = []ratelimit.Rule{ratelimit.AuthSignInAccountIP, ratelimit.AuthSignInAccountIPDaily}
+
+// accountIdentifier keys a per-account limit: the SHA-256 hex digest of the normalized address, so addresses never appear in Valkey keys or logs.
+func accountIdentifier(email string) string {
+	sum := sha256.Sum256([]byte(normalizeEmail(email)))
+	return hex.EncodeToString(sum[:])
 }
 
 // currentAccount is the signed-in user.

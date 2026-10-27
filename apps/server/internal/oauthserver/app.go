@@ -166,7 +166,7 @@ func (h *AppHandler) consents(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
-// revoke deletes one of the user's consents and the client's tokens. An access token already handed out stays usable at /api/mcp until it expires, within 15 minutes, as in forma2.
+// revoke deletes one of the user's consents and revokes the client's tokens; /api/mcp refuses a revoked access token at once, where forma2 honoured it until it expired.
 func (h *AppHandler) revoke(c *gin.Context) {
 	id, err := httpapi.ParamUUID(c, "consentId")
 	if err != nil {

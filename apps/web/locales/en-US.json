@@ -2405,6 +2405,11 @@
       "upload_contacts_success": "Contacts uploaded successfully",
       "upload_csv": "Upload CSV"
     },
+    "custom_scripts_access": {
+      "managers_only": "Only organization owners and managers can change custom scripts.",
+      "requires_public_url": "Custom scripts are turned off on this instance because its survey pages are served on the admin domain, where a script could act as anyone who is signed in. Your administrator can turn them on by setting PUBLIC_URL to a separate domain for surveys.",
+      "unavailable_cloud": "Custom scripts are not available on Forma Cloud."
+    },
     "forma_logo": "Forma Logo",
     "general": {
       "cannot_delete_only_workspace": "This is your only workspace, it cannot be deleted. Create a new workspace first.",
@@ -2621,6 +2626,7 @@
         "endpoint_pinged": "Yay! We are able to ping the webhook!",
         "endpoint_pinged_error": "Unable to ping the webhook!",
         "endpoint_service_unavailable_error": "Service Unavailable (503): Service is temporarily down",
+        "managers_only": "Only those who manage this workspace can add webhooks or change where they send responses.",
         "no_triggers": "No Triggers",
         "please_check_console": "Please check the console for more details",
         "please_enter_a_url": "Please enter a URL",

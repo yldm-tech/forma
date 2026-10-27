@@ -2,6 +2,7 @@ package auth
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 )
 
 func credentials(email, password string) map[string]string {
@@ -295,4 +297,56 @@ func TestPasswordResetCancelsPendingSecondFactor(t *testing.T) {
 	token := e.lastToken("ada@example.com", subjectReset)
 	expectStatus(t, e.browser().post("/auth/password/reset", map[string]string{"token": token, "password": "New-Password-77"}), http.StatusOK, "")
 	expectStatus(t, b.post("/auth/two-factor/verify-totp", map[string]string{"code": e.totpCode(id, 0)}), http.StatusUnauthorized, CodeInvalidTwoFactorCookie)
+}
+
+// auth:sign-in:account-ip and its daily cap: rejected passwords are counted per account and client address, on top of the per-address minute limit, and successful sign-ins are not counted. The guessing address is refused for that account, a correct password included, while the owner signing in from elsewhere and the same address naming another account are not; an unknown address is limited like a known one.
+func TestSignInAccountLimits(t *testing.T) {
+	e := newEnv(t)
+	e.seedUser("ada@example.com", strongPassword, userOpts{})
+	e.seedUser("bob@example.com", strongPassword, userOpts{})
+	advance := e.enableRateLimitsWithClock()
+	const guesserIP = "198.51.100.66"
+	guesser, owner := e.browser(), e.browser()
+	guesser.ip, owner.ip = guesserIP, "203.0.113.7"
+	guess := func(email string) func() response {
+		return func() response { return guesser.post("/auth/sign-in", credentials(email, "Wrong-Password-1")) }
+	}
+	// charge spends n units of the guesser's budget for an account directly, standing in for that many rejected passwords (each costs a bcrypt comparison, which the race detector makes slow). The identifier is the one checkCredentials builds: ratelimit.IPIdentifier hashes the canonical client address.
+	charge := func(rule ratelimit.Rule, email string, n int) {
+		t.Helper()
+		ip := sha256.Sum256([]byte(guesserIP))
+		if err := e.svc.limiter.ApplyN(t.Context(), rule, accountIdentifier(email)+":"+hex.EncodeToString(ip[:]), n); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Ten rejected passwords spend the fifteen-minute budget; BASignIn allows five requests a minute, and the sign-ins that succeed in between are not counted.
+	for minute := range 2 {
+		if err := repeat(4, guess("Ada@example.com"), http.StatusUnauthorized, CodeInvalidEmailOrPassword); err != nil {
+			t.Fatalf("minute %d: %v", minute, err)
+		}
+		guesser.signIn("ada@example.com", strongPassword)
+		advance(time.Minute)
+	}
+	if err := repeat(2, guess("ada@example.com"), http.StatusUnauthorized, CodeInvalidEmailOrPassword); err != nil {
+		t.Fatal(err)
+	}
+	expectStatus(t, guesser.post("/auth/sign-in", credentials("ada@example.com", strongPassword)), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
+	owner.signIn("ada@example.com", strongPassword)
+	expectStatus(t, guess("bob@example.com")(), http.StatusUnauthorized, CodeInvalidEmailOrPassword)
+
+	// The next fifteen minutes start a new budget, but the day caps one address at fifty rejected passwords for one account: ten above, thirty-nine charged here, one more below.
+	charge(ratelimit.AuthSignInAccountIPDaily, "ada@example.com", 39)
+	advance(15 * time.Minute)
+	expectStatus(t, guess("ada@example.com")(), http.StatusUnauthorized, CodeInvalidEmailOrPassword)
+	advance(time.Minute)
+	expectStatus(t, guess("ada@example.com")(), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
+	owner.signIn("ada@example.com", strongPassword)
+
+	// An address nobody has is counted the same way, so a 429 tells nothing about the account.
+	charge(ratelimit.AuthSignInAccountIP, "nobody@example.com", 9)
+	advance(time.Minute)
+	expectStatus(t, guess("nobody@example.com")(), http.StatusUnauthorized, CodeInvalidEmailOrPassword)
+	advance(time.Minute)
+	expectStatus(t, guess("nobody@example.com")(), http.StatusTooManyRequests, apperr.CodeTooManyRequests)
 }

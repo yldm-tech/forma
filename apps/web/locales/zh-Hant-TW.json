@@ -2405,6 +2405,11 @@
       "upload_contacts_success": "聯絡人已成功上傳",
       "upload_csv": "上傳 CSV"
     },
+    "custom_scripts_access": {
+      "managers_only": "只有組織的擁有者和管理員可以變更自訂腳本。",
+      "requires_public_url": "此執行個體已關閉自訂腳本：問卷頁面與管理後台使用同一網域，腳本可能以任何已登入使用者的身分執行操作。管理員可以將 PUBLIC_URL 設定為獨立的問卷網域來開啟此功能。",
+      "unavailable_cloud": "Forma Cloud 不提供自訂腳本。"
+    },
     "forma_logo": "Forma 標誌",
     "general": {
       "cannot_delete_only_workspace": "這是您唯一的工作區，無法刪除。請先建立新的工作區。",
@@ -2621,6 +2626,7 @@
         "endpoint_pinged": "耶！我們能夠 ping Webhook！",
         "endpoint_pinged_error": "無法 ping Webhook！",
         "endpoint_service_unavailable_error": "服務無法使用 (503)：服務暫時無法使用",
+        "managers_only": "只有管理此工作區的成員才能新增 Webhook 或變更其傳送回應的目標。",
         "no_triggers": "無觸發條件",
         "please_check_console": "請檢查主控台以取得更多詳細資料",
         "please_enter_a_url": "請輸入網址",

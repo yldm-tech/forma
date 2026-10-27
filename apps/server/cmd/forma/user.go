@@ -8,8 +8,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/apps/server/internal/auth"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/database"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/logger"
@@ -19,7 +21,7 @@ const userUsage = `usage: forma user <command> <email>
 
 commands:
   activate    turn the account with the email back on: it signs in again and keeps the organizations that have not suspended it
-  deactivate  turn the account off on the whole instance: it signs in nowhere, its sessions stop working on their next request, and the API keys it created stop authenticating until it is activated again
+  deactivate  turn the account off on the whole instance: it signs in nowhere, its sessions stop working on their next request, its MCP clients' OAuth grants are revoked, and the API keys it created stop authenticating until it is activated again
 
 An organization's owners and managers suspend and restore a member's access to their own organization; turning an account off or on is the instance operator's alone, and this is the operator's tool for it.
 `
@@ -61,7 +63,7 @@ func runUser(ctx context.Context, args []string, stdout io.Writer) error {
 	return setAccountActive(ctx, db, stdout, email, active)
 }
 
-// setAccountActive turns the account with the email on or off and reports what it did; an account already in that state is left alone. Turned on, it names the organizations that still suspend the account, which their owners and managers restore.
+// setAccountActive turns the account with the email on or off and reports what it did; an account already in that state is left alone. Turned off, the account's OAuth grants are revoked in the same transaction. Turned on, it names the organizations that still suspend the account, which their owners and managers restore.
 func setAccountActive(ctx context.Context, db *gorm.DB, stdout io.Writer, email string, active bool) error {
 	var rows []struct {
 		ID       string
@@ -80,13 +82,33 @@ func setAccountActive(ctx context.Context, db *gorm.DB, stdout io.Writer, email 
 		_, err := fmt.Fprintf(stdout, "%s is already %s\n", u.Email, state)
 		return err
 	}
-	if err := db.WithContext(ctx).Exec(`UPDATE users SET is_active = ?, updated_at = now() WHERE id = ?`, active, u.ID).Error; err != nil {
-		return fmt.Errorf("update user: %w", err)
+	var grants int64
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`UPDATE users SET is_active = ?, updated_at = now() WHERE id = ?`, active, u.ID).Error; err != nil {
+			return fmt.Errorf("update user: %w", err)
+		}
+		if active {
+			return nil
+		}
+		// The OAuth grants go with the switch: an inactive user's tokens are refused anyway, but a refresh token left standing would work again the day the account is turned back on.
+		id, err := uuid.Parse(u.ID)
+		if err != nil {
+			return fmt.Errorf("parse user id: %w", err)
+		}
+		grants, err = auth.RevokeOAuthGrants(ctx, tx, id)
+		return err
+	})
+	if err != nil {
+		return err
 	}
 	if _, err := fmt.Fprintf(stdout, "%s is now %s\n", u.Email, state); err != nil {
 		return err
 	}
 	if !active {
+		if grants > 0 {
+			_, err := fmt.Fprintf(stdout, "Revoked %d OAuth refresh token(s): its MCP clients must be authorized again.\n", grants)
+			return err
+		}
 		return nil
 	}
 	var suspending []string

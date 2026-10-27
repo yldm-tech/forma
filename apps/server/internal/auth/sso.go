@@ -642,8 +642,8 @@ func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMet
 				return err
 			}
 			reclaimed = &outcome
-			// Whoever held the account before its address was proven is signed out with it.
-			if sessionsRevoked, err = s.svc.sessions.RevokeAll(ctx, tx.db, acc.ID, uuid.Nil); err != nil {
+			// Whoever held the account before its address was proven is signed out with it, MCP clients included.
+			if sessionsRevoked, err = s.svc.sessions.endOtherAccess(ctx, tx.db, acc.ID, uuid.Nil); err != nil {
 				return err
 			}
 			// The reclaim removed two-factor authentication with everything else the registrant set.

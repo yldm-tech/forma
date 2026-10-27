@@ -811,8 +811,9 @@ func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
 	expectStatus(t, squatter.post("/test/protected", nil), http.StatusOK, "")
 	e.insertID(`INSERT INTO verifications (purpose, user_id, email, token_hash, expires_at) VALUES ('email_change', ?, 'squatter@evil.example', '\x01', now() + interval '1 day') RETURNING id`, id)
 	e.exec(`INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, '\x02', now() + interval '1 day')`, id)
-	// The registrant also signed up through an identity provider that never vouched for the address; that identity must not outlive the recovery.
+	// The registrant also signed up through an identity provider that never vouched for the address; that identity must not outlive the recovery, and neither must the MCP client they authorized.
 	e.exec(`INSERT INTO user_identities (user_id, provider, subject) VALUES (?, 'github', 'squatter-1')`, id)
+	e.seedOAuthGrant(id)
 
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
 	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/auth/verification-requested?purpose=sso_recovery")
@@ -841,6 +842,9 @@ func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
 	}
 	if e.count(`SELECT count(*) FROM sessions WHERE user_id = ?`, id) != 1 {
 		t.Fatal("other sessions survived")
+	}
+	if n := e.liveOAuthTokens(id); n != 0 {
+		t.Fatalf("%d of the registrant's OAuth tokens survived", n)
 	}
 	expectStatus(t, squatter.post("/test/protected", nil), http.StatusUnauthorized, "not_authenticated")
 	expectStatus(t, owner.post("/test/protected", nil), http.StatusOK, "")
