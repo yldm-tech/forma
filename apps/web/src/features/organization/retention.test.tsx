@@ -100,6 +100,15 @@ describe("RetentionCard", () => {
     expect(await screen.findByText(/No sweep has run with these settings yet/)).toBeTruthy();
   });
 
+  // The sweep keeps impressions of identified users whatever the window (they decide show once, display limits, waiting periods and segment membership), and the impressions window says so.
+  test("the impressions window says identified users' impressions are kept", async () => {
+    stubServer(retention());
+    renderCard();
+    expect(
+      await screen.findByText(/Impressions of identified users are also kept, however old/)
+    ).toBeTruthy();
+  });
+
   // Saving during the dry run is not confirmed, so the banner says the settings delete without asking once deletion is on; only a self-hosting operator can turn it on, so Cloud owners are not sent to an environment variable.
   test.each([
     [false, "dry_run_description", true],
