@@ -21,13 +21,15 @@ const ItemsPerPage = 30
 
 // Organization is forma2's TOrganization as the SPA reads it.
 type Organization struct {
-	ID                    uuid.UUID       `json:"id"`
-	CreatedAt             time.Time       `json:"createdAt"`
-	UpdatedAt             time.Time       `json:"updatedAt"`
-	Name                  string          `json:"name"`
-	Billing               Billing         `json:"billing"`
-	IsAISmartToolsEnabled bool            `json:"isAISmartToolsEnabled"`
-	Whitelabel            json.RawMessage `json:"whitelabel"`
+	ID                    uuid.UUID `json:"id"`
+	CreatedAt             time.Time `json:"createdAt"`
+	UpdatedAt             time.Time `json:"updatedAt"`
+	Name                  string    `json:"name"`
+	Billing               Billing   `json:"billing"`
+	IsAISmartToolsEnabled bool      `json:"isAISmartToolsEnabled"`
+	// IsAIResponseReadingEnabled is the "Allow AI to read responses" switch: whether features that send the organization's responses to the AI provider (the open-text summary) may run, on top of IsAISmartToolsEnabled. New organizations start with it on; organizations that had AI smart tools on before the switch existed start with it off.
+	IsAIResponseReadingEnabled bool            `json:"isAIResponseReadingEnabled"`
+	Whitelabel                 json.RawMessage `json:"whitelabel"`
 	// DisplayTimeZone is an IANA zone; nil means UTC.
 	DisplayTimeZone *string `json:"displayTimeZone"`
 	// SurveySchedulingTimeZone is the IANA zone the organization's scheduled surveys open and close in; nil means the instance's SURVEY_SCHEDULING_TIME_ZONE.

@@ -24,7 +24,9 @@ export type TInactiveStatus =
   // One response per verified email: the verification link's address already finished a response (the server decides).
   | "email responded"
   // One response per browser: this browser already finished a response (the page decides, lib/browser-response.ts).
-  | "browser responded";
+  | "browser responded"
+  // A single-use link of a survey that verifies emails whose unfinished response was started under another address than the verification link proves (the server decides).
+  | "link in use";
 
 /** The workspace's branding switch; null is no workspace, which shows Forma's branding. */
 export type TBranding = { linkSurveyBranding: boolean } | null;

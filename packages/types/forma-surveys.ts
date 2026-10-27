@@ -86,6 +86,10 @@ export interface SurveyContainerProps extends Omit<SurveyBaseProps, "onFileUploa
   singleUseId?: string;
   singleUseResponseId?: string;
   pinAuthToken?: string;
+  /**
+   * The email verification token the link survey page was opened with (`?verify=`), which the page passes once the server has verified it. Saved progress is resumed only by a page opened from the same verification link, and every update of the response carries the token, so a second verified respondent in the same browser neither sees nor finishes the first one's response.
+   */
+  verifyToken?: string;
   isWebEnvironment?: boolean;
   isSpamProtectionEnabled?: boolean;
   recaptchaSiteKey?: string;

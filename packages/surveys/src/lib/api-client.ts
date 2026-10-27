@@ -98,6 +98,7 @@ export class ApiClient {
     variables,
     language,
     pinAuthToken,
+    verifyToken,
   }: TResponseUpdateInput & { responseId: string }): Promise<
     Result<TResponseUpdateResponse, ApiErrorResponse>
   > {
@@ -109,6 +110,8 @@ export class ApiClient {
       variables,
       language,
       pinAuthToken,
+      // Left out rather than sent as null when there is none, so an update from any other page is the body it always was.
+      verifyToken: verifyToken ?? undefined,
     });
   }
 
