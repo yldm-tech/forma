@@ -10,9 +10,11 @@ import (
 	"log/slog"
 	"net"
 	"net/mail"
+	"net/netip"
 	"net/url"
 	"os"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -63,6 +65,10 @@ type Config struct {
 	GatewayRateLimiting bool `env:"GATEWAY_RATE_LIMITING" envDefault:"0"`
 	// TrustedProxyHopCount is how many reverse proxies in front of the server append to X-Forwarded-For; the client address is the entry that many places from the right. 0 means no proxy: the address is the TCP peer. Setting it higher than the real chain lets a caller choose their own address by prepending entries.
 	TrustedProxyHopCount int `env:"TRUSTED_PROXY_HOP_COUNT" envDefault:"1"`
+	// ClientIPHeader names a request header that carries the client address, set by a proxy that overwrites whatever the caller sent (Cloudflare's CF-Connecting-IP, for example), for proxy chains where the client address never reaches X-Forwarded-For. It is read only when the address TrustedProxyHopCount selects (the TCP peer with 0, otherwise the X-Forwarded-For entry that many places from the right: the party that connected to the outermost trusted proxy) is inside TrustedProxyCIDRs; every other request, and every request without the header, keeps that address as before. Unset, the default, no header is read. It must be set together with TrustedProxyCIDRs.
+	ClientIPHeader string `env:"CLIENT_IP_HEADER"`
+	// TrustedProxyCIDRs are the addresses, as comma-separated CIDRs or single addresses, of the proxies that set ClientIPHeader, as they appear where TrustedProxyHopCount looks: behind an ingress that appends to X-Forwarded-For, the address the ingress records for that proxy (cloudflared's, for Cloudflare Tunnel), not the ingress's own. Keep it to those addresses alone: anything else that can reach the server or the ingress from inside the range can choose its own client address.
+	TrustedProxyCIDRs ProxyCIDRs `env:"TRUSTED_PROXY_CIDRS"`
 
 	// SMTP delivery. Mail is sent only when both SMTPHost and SMTPPort are set; otherwise sends are skipped and reported as not sent.
 	SMTPHost string `env:"SMTP_HOST"`
@@ -636,6 +642,9 @@ func (c Config) validate() error {
 	if c.TrustedProxyHopCount < 0 || c.TrustedProxyHopCount > 10 {
 		return fmt.Errorf("TRUSTED_PROXY_HOP_COUNT must be between 0 and 10, got %d", c.TrustedProxyHopCount)
 	}
+	if err := c.validateClientIPHeader(); err != nil {
+		return err
+	}
 	if c.WorkerConcurrency < 0 {
 		return fmt.Errorf("WORKER_CONCURRENCY must not be negative, got %d", c.WorkerConcurrency)
 	}
@@ -715,6 +724,79 @@ func (c Config) validate() error {
 		}
 	}
 	return nil
+}
+
+// headerName is an HTTP header field name (RFC 9110 token characters).
+var headerName = regexp.MustCompile("^[A-Za-z0-9!#$%&'*+.^_`|~-]+$")
+
+// validateClientIPHeader checks the trusted-header mode: the header and the proxies allowed to set it come together, the header is a single-address header, and no range trusts every peer.
+func (c Config) validateClientIPHeader() error {
+	if (c.ClientIPHeader == "") != (len(c.TrustedProxyCIDRs) == 0) {
+		return errors.New("CLIENT_IP_HEADER and TRUSTED_PROXY_CIDRS must be set together: the header is read only when the address TRUSTED_PROXY_HOP_COUNT selects is inside TRUSTED_PROXY_CIDRS")
+	}
+	if c.ClientIPHeader == "" {
+		return nil
+	}
+	if !headerName.MatchString(c.ClientIPHeader) {
+		return fmt.Errorf("CLIENT_IP_HEADER must be a header name such as CF-Connecting-IP, got %q", c.ClientIPHeader)
+	}
+	if strings.EqualFold(c.ClientIPHeader, "X-Forwarded-For") || strings.EqualFold(c.ClientIPHeader, "Forwarded") {
+		return fmt.Errorf("CLIENT_IP_HEADER must name a header that carries one address; %s is a chain, which TRUSTED_PROXY_HOP_COUNT reads", c.ClientIPHeader)
+	}
+	for _, p := range c.TrustedProxyCIDRs {
+		if p.Bits() == 0 {
+			return fmt.Errorf("TRUSTED_PROXY_CIDRS must not contain %s: it trusts every peer, so any caller could set CLIENT_IP_HEADER to an address of its choice", p)
+		}
+	}
+	return nil
+}
+
+// ProxyCIDRs are the networks of trusted proxies, read from comma-separated CIDRs or single addresses.
+type ProxyCIDRs []netip.Prefix
+
+// UnmarshalText reads "10.42.0.0/16, 192.0.2.7, 2001:db8::/48": a bare address is a network of that one address. IPv4-mapped IPv6 forms are stored as IPv4, the form a peer address is compared in.
+func (p *ProxyCIDRs) UnmarshalText(text []byte) error {
+	var out ProxyCIDRs
+	for entry := range strings.SplitSeq(string(text), ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		var prefix netip.Prefix
+		if strings.Contains(entry, "/") {
+			parsed, err := netip.ParsePrefix(entry)
+			if err != nil {
+				return fmt.Errorf("%q is not a CIDR such as 10.42.0.0/16", entry)
+			}
+			prefix = parsed
+		} else {
+			addr, err := netip.ParseAddr(entry)
+			if err != nil || addr.Zone() != "" {
+				return fmt.Errorf("%q is not an IP address or a CIDR such as 10.42.0.0/16", entry)
+			}
+			prefix = netip.PrefixFrom(addr, addr.BitLen())
+		}
+		if addr := prefix.Addr(); addr.Is4In6() {
+			if prefix.Bits() < 96 {
+				return fmt.Errorf("%q mixes IPv4-mapped and plain IPv6 addresses; write the IPv4 network instead", entry)
+			}
+			prefix = netip.PrefixFrom(addr.Unmap(), prefix.Bits()-96)
+		}
+		out = append(out, prefix.Masked())
+	}
+	*p = out
+	return nil
+}
+
+// Contains reports whether addr is inside one of the networks. An IPv4-mapped IPv6 address is compared as IPv4.
+func (p ProxyCIDRs) Contains(addr netip.Addr) bool {
+	addr = addr.Unmap()
+	for _, prefix := range p {
+		if prefix.Contains(addr) {
+			return true
+		}
+	}
+	return false
 }
 
 func (a AuthzConfig) validate() error {

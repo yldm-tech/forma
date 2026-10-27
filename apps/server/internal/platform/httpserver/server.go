@@ -33,7 +33,7 @@ type Server struct {
 func NewEngine(cfg config.Config, log *slog.Logger, outer ...gin.HandlerFunc) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	// gin's own ClientIP is never consulted: httpapi.ClientIPResolver derives the address from TRUSTED_PROXY_HOP_COUNT, and trusting no proxy here keeps the two from disagreeing.
+	// gin's own ClientIP is never consulted: httpapi.ClientIPResolver derives the address from TRUSTED_PROXY_HOP_COUNT (and CLIENT_IP_HEADER with TRUSTED_PROXY_CIDRS), and trusting no proxy here keeps the two from disagreeing.
 	if err := r.SetTrustedProxies(nil); err != nil {
 		panic(fmt.Sprintf("disable trusted proxies: %v", err))
 	}
