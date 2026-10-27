@@ -51,15 +51,15 @@ func ComparePeriods(ctx context.Context, db *gorm.DB, surveyID uuid.UUID, loc *t
 		ids[i] = el.ID
 	}
 	clause := response.Clause{SQL: "r.created_at >= ? AND r.created_at < ?", Args: []any{previousStart, end}}
-	var counts []dayCounts
-	var scores []dayScores
+	var days trendDays
 	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		counts, scores, err = readTrendDays(ctx, tx, sv.ID, clause, loc.String(), ids)
+		days, err = readTrendDays(ctx, tx, sv.ID, clause, loc.String(), ids, "")
 		return err
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	if err != nil {
 		return nil, nil, err
 	}
+	counts, scores := days.counts, days.scores
 	// The rows are local days; a day before the current period's first belongs to the previous period.
 	boundary := localDate(start, loc)
 	current, previous = periodStats(elements), periodStats(elements)

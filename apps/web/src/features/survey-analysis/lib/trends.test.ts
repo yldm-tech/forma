@@ -8,6 +8,8 @@ import {
   labelledBuckets,
   metricScale,
   niceCeil,
+  scoreScale,
+  sliderScale,
   tooltipPosition,
   trendData,
 } from "./trends";
@@ -47,6 +49,14 @@ const trends: SurveyTrends = {
       ],
     },
   ],
+  score: {
+    variableId: "total",
+    name: "score",
+    points: [
+      { answered: 1, value: 7.5 },
+      { answered: 0, value: null },
+    ],
+  },
 };
 
 describe("trendData", () => {
@@ -71,6 +81,14 @@ describe("trendData", () => {
   test("an element the trend lacks has no values", () => {
     expect(trendData(trends, "element:gone").map((d) => d.value)).toEqual([null, null]);
   });
+
+  test("draws the average total score with how many completed responses carry one", () => {
+    expect(trendData(trends, "score").map((d) => [d.value, d.answered])).toEqual([
+      [7.5, 1],
+      [null, 0],
+    ]);
+    expect(trendData({ ...trends, score: null }, "score").map((d) => d.value)).toEqual([null, null]);
+  });
 });
 
 describe("scales", () => {
@@ -91,6 +109,20 @@ describe("scales", () => {
     // Without a range the largest value sets the top.
     expect(metricScale("average", undefined, [null, 8.4])).toMatchObject({ min: 1, max: 9 });
   });
+
+  test("a slider's scale is its own, widened to a value off it", () => {
+    expect(sliderScale(0, 100, [70, null])).toEqual({ min: 0, max: 100, ticks: [0, 50, 100] });
+    expect(sliderScale(-5, 5, [8])).toEqual({ min: -5, max: 8, ticks: [-5, 1.5, 8] });
+    // A scale without a span still has one to draw on.
+    expect(sliderScale(3, 3, [])).toEqual({ min: 3, max: 4, ticks: [3, 3.5, 4] });
+  });
+
+  test("a score scale starts at zero, or below it for a negative score", () => {
+    expect(scoreScale([7.5, null])).toEqual({ min: 0, max: 10, ticks: [0, 5, 10] });
+    expect(scoreScale([])).toEqual({ min: 0, max: 1, ticks: [0, 0.5, 1] });
+    expect(scoreScale([-3, 12])).toEqual({ min: -5, max: 20, ticks: [-5, 0, 20] });
+    expect(scoreScale([-3])).toEqual({ min: -5, max: 0, ticks: [-5, -2.5, 0] });
+  });
 });
 
 describe("labels", () => {
@@ -110,6 +142,18 @@ describe("labels", () => {
     expect(formatTrendValue(1200, "count", "en-US")).toBe("1,200");
     expect(formatTrendValue(5.5, "tick", "en-US")).toBe("5.5");
     expect(formatTrendValue(3, "tick", "en-US")).toBe("3");
+  });
+
+  test("an axis tick is written exactly, however small the scale's step", () => {
+    const ticks = (scale: { ticks: number[] }) =>
+      scale.ticks.map((tick) => formatTrendValue(tick, "tick", "en-US"));
+    expect(scoreScale([0.4])).toEqual({ min: 0, max: 0.5, ticks: [0, 0.25, 0.5] });
+    expect(ticks(scoreScale([0.4]))).toEqual(["0", "0.25", "0.5"]);
+    expect(ticks(scoreScale([0.04]))).toEqual(["0", "0.025", "0.05"]);
+    expect(ticks(sliderScale(0, 0.5, []))).toEqual(["0", "0.25", "0.5"]);
+    expect(ticks(sliderScale(0, 1.5, [0.7]))).toEqual(["0", "0.75", "1.5"]);
+    // Floating-point noise is not written out as more decimals.
+    expect(formatTrendValue(0.1 + 0.2, "tick", "en-US")).toBe("0.3");
   });
 
   test("the x axis labels at most the given number of buckets", () => {
