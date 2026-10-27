@@ -164,8 +164,8 @@ func TestSurveyPageRendersTheSurvey(t *testing.T) {
 	if fields, ok := sv["embeddedFields"].([]any); !ok || fields == nil {
 		t.Fatalf("embedded fields %v", sv["embeddedFields"])
 	}
-	// The runtime's script is in the document, so it loads alongside the page bundle, by a URL pinned to the build so browsers and the CDN keep it until a deploy changes it.
-	if !strings.Contains(p.Body, `<link rel="preload" href="`+testRuntimeSrc+`" as="script" fetchpriority="high"><script async src="`+testRuntimeSrc+`"></script>`) {
+	// The runtime's script is in the document, so it loads alongside the page bundle, by a URL pinned to the build so browsers and the CDN keep it until a deploy changes it, marked as this page's so it may set zod jitless for the page.
+	if !strings.Contains(p.Body, `<link rel="preload" href="`+testRuntimeSrc+`" as="script" fetchpriority="high"><script async src="`+testRuntimeSrc+`" data-forma-survey-page></script>`) {
 		t.Fatal("the survey runtime is not in the document")
 	}
 	// An English survey needs none of the runtime's translation files.

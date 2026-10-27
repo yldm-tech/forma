@@ -148,7 +148,8 @@ func (h *Handler) writePage(c *gin.Context, p page, err error, viewport string) 
 	if p.State.View == viewSurvey {
 		// forma2 rendered the runtime's script tag into the document, so the browser fetches and runs it alongside the page bundle instead of after it.
 		src := html.EscapeString(p.State.Survey.PublicDomain + h.scriptPath)
-		extra = `<link rel="preload" href="` + src + `" as="script" fetchpriority="high"><script async src="` + src + `"></script>`
+		// data-forma-survey-page tells the runtime it runs on this page, the one document where it may set zod jitless for the whole page (packages/surveys/src/lib/zod-jitless.ts): the runtime can run before the page bundle that sets it, and the policy here refuses the eval probe zod would otherwise make.
+		extra = `<link rel="preload" href="` + src + `" as="script" fetchpriority="high"><script async src="` + src + `" data-forma-survey-page></script>`
 		// The runtime carries only English and fetches the survey's language once it runs; fetching it alongside the runtime saves that round trip. crossorigin matches the runtime's fetch, a CORS request with same-origin credentials, so the browser reuses this response.
 		if locale, ok := runtimeLocalePath(h.localePaths, p.RuntimeLanguage); ok {
 			extra += `<link rel="preload" href="` + html.EscapeString(p.State.Survey.PublicDomain+locale) + `" as="fetch" crossorigin="anonymous">`

@@ -152,7 +152,7 @@ describe("renderSurvey with a language that is still being fetched", () => {
   });
 });
 
-// Loading the runtime turns off zod's eval probe, which a Content-Security-Policy without 'unsafe-eval' reports as a violation on every page that renders a survey.
-test("the runtime runs zod without compiling schemas", () => {
-  expect(zodConfig().jitless).toBe(true);
+// zod keeps its config on globalThis, shared with every zod copy on the page. Loaded outside Forma's survey page (here, as on a customer's site the SDK appends it to), the runtime must leave it as the page had it; lib/zod-jitless.test.ts covers the survey page.
+test("loading the runtime leaves zod's page-wide config alone", () => {
+  expect(zodConfig().jitless).toBeUndefined();
 });
