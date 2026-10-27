@@ -144,18 +144,22 @@ func (h *Handler) writePage(c *gin.Context, p page, err error, viewport string) 
 		h.log.ErrorContext(c.Request.Context(), "render survey page", "request_id", httpserver.RequestID(c), "route", c.FullPath(), "err", err)
 		p = page{Status: http.StatusInternalServerError, Head: head{Title: rootTitle, Viewport: viewport, Metas: []metaTag{{Name: "description", Content: rootDescription}}}, State: pageState{View: viewError, Locale: localeOf(c)}}
 	}
-	extra := ""
+	extra, firstPaint := "", ""
 	if p.State.View == viewSurvey {
 		// forma2 rendered the runtime's script tag into the document, so the browser fetches and runs it alongside the page bundle instead of after it.
 		src := html.EscapeString(p.State.Survey.PublicDomain + h.scriptPath)
 		// data-forma-survey-page tells the runtime it runs on this page, the one document where it may set zod jitless for the whole page (packages/surveys/src/lib/zod-jitless.ts): the runtime can run before the page bundle that sets it, and the policy here refuses the eval probe zod would otherwise make.
-		extra = `<link rel="preload" href="` + src + `" as="script" fetchpriority="high"><script async src="` + src + `" data-forma-survey-page></script>`
+		extra += `<link rel="preload" href="` + src + `" as="script" fetchpriority="high"><script async src="` + src + `" data-forma-survey-page></script>`
 		// The runtime carries only English and fetches the survey's language once it runs; fetching it alongside the runtime saves that round trip. crossorigin matches the runtime's fetch, a CORS request with same-origin credentials, so the browser reuses this response.
 		if locale, ok := runtimeLocalePath(h.localePaths, p.RuntimeLanguage); ok {
 			extra += `<link rel="preload" href="` + html.EscapeString(p.State.Survey.PublicDomain+locale) + `" as="fetch" crossorigin="anonymous">`
 		}
+		// The survey's title, painted before either bundle has run (firstpaint.go).
+		if firstPaint = firstPaintHTML(p.FirstPaintTitle); firstPaint != "" {
+			extra += firstPaintStyle
+		}
 	}
-	doc, err := h.shell.render(p.State.Locale, p.Head.render()+extra, p.State)
+	doc, err := h.shell.render(p.State.Locale, p.Head.render()+extra, firstPaint, p.State)
 	if err != nil {
 		h.log.ErrorContext(c.Request.Context(), "encode survey page state", "err", err)
 		c.Status(http.StatusInternalServerError)

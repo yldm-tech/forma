@@ -59,7 +59,7 @@ func TestBuildTrendsFillsGapsAndCutsTheEnds(t *testing.T) {
 		{Day: day("2026-10-21"), ElementID: "n", Answered: 2, Promoters: 2},
 		{Day: day("2026-10-23"), ElementID: "n", Answered: 1, Detractors: 1},
 	}
-	got, err := buildTrends([]*element{nps}, counts, scores, nil, time.UTC, IntervalWeek, day("2026-12-01"))
+	got, err := buildTrends([]*element{nps}, nil, trendDays{counts: counts, scores: scores}, nil, time.UTC, IntervalWeek, day("2026-12-01"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestBuildTrendsCoversTheFilterWindowInTheZone(t *testing.T) {
 	// The window's instants, a browser's local midnight in UTC+9, are days in the organization's zone; its end is cut to today.
 	from, to := time.Date(2026, 3, 1, 0, 0, 0, 0, tokyo), time.Date(2026, 3, 31, 23, 59, 59, 0, tokyo)
 	filter := &response.Criteria{CreatedAt: &response.Range{Min: &from, Max: &to}}
-	got, err := buildTrends(nil, nil, nil, filter, tokyo, "", time.Date(2026, 3, 5, 1, 0, 0, 0, time.UTC))
+	got, err := buildTrends(nil, nil, trendDays{}, filter, tokyo, "", time.Date(2026, 3, 5, 1, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestBuildTrendsCoversTheFilterWindowInTheZone(t *testing.T) {
 		t.Errorf("trend %+v", got)
 	}
 	// Without a window or responses there is nothing to cover.
-	if got, err := buildTrends(nil, nil, nil, nil, time.UTC, "", time.Now()); err != nil || got.Interval != IntervalDay || len(got.Buckets) != 0 || got.Elements == nil {
+	if got, err := buildTrends(nil, nil, trendDays{}, nil, time.UTC, "", time.Now()); err != nil || got.Interval != IntervalDay || len(got.Buckets) != 0 || got.Elements == nil {
 		t.Errorf("empty trend %+v, %v", got, err)
 	}
 }
@@ -104,15 +104,15 @@ func TestBuildTrendsRefusesTooManyBuckets(t *testing.T) {
 	filter := &response.Criteria{CreatedAt: &response.Range{Min: &from, Max: &to}}
 	// Responses spread over six years are more days than the buckets hold: by day, the interval the client asked for, they are refused.
 	counts := []dayCounts{{Day: day("2020-01-01"), Responses: 1}, {Day: day("2025-12-31"), Responses: 1}}
-	_, err := buildTrends(nil, counts, nil, filter, time.UTC, IntervalDay, to)
+	_, err := buildTrends(nil, nil, trendDays{counts: counts}, filter, time.UTC, IntervalDay, to)
 	if e, ok := apperr.As(err); !ok || e.Code != CodeTrendTooManyBuckets || e.Status != http.StatusBadRequest || !strings.HasSuffix(e.Message, "choose a longer interval") {
 		t.Errorf("by day: %v", err)
 	}
-	if got, err := buildTrends(nil, counts, nil, filter, time.UTC, IntervalMonth, to); err != nil || len(got.Buckets) != 73 {
+	if got, err := buildTrends(nil, nil, trendDays{counts: counts}, filter, time.UTC, IntervalMonth, to); err != nil || len(got.Buckets) != 73 {
 		t.Errorf("by month: %v, %v", got, err)
 	}
 	// Without responses there is nothing to lay out beyond the limit: the trend is empty, not refused.
-	if got, err := buildTrends(nil, nil, nil, filter, time.UTC, IntervalDay, to); err != nil || len(got.Buckets) != 0 {
+	if got, err := buildTrends(nil, nil, trendDays{}, filter, time.UTC, IntervalDay, to); err != nil || len(got.Buckets) != 0 {
 		t.Errorf("empty by day: %v, %v", got, err)
 	}
 }
@@ -124,7 +124,7 @@ func TestBuildTrendsCutsAFarOffWindowToTheResponses(t *testing.T) {
 	counts := []dayCounts{{Day: day("2026-10-20"), Responses: 2, Completed: 1}, {Day: day("2026-10-25"), Responses: 1, Completed: 1}}
 	now := time.Date(2026, 10, 26, 12, 0, 0, 0, time.UTC)
 	for _, interval := range []string{"", IntervalDay, IntervalWeek, IntervalMonth} {
-		got, err := buildTrends(nil, counts, nil, filter, time.UTC, interval, now)
+		got, err := buildTrends(nil, nil, trendDays{counts: counts}, filter, time.UTC, interval, now)
 		if err != nil {
 			t.Errorf("by %q: %v", interval, err)
 			continue
@@ -134,18 +134,18 @@ func TestBuildTrendsCutsAFarOffWindowToTheResponses(t *testing.T) {
 		}
 	}
 	// The server's pick shows days for the six days with responses, not months back to 1900.
-	if got, _ := buildTrends(nil, counts, nil, filter, time.UTC, "", now); got.Interval != IntervalDay || len(got.Buckets) != 7 {
+	if got, _ := buildTrends(nil, nil, trendDays{counts: counts}, filter, time.UTC, "", now); got.Interval != IntervalDay || len(got.Buckets) != 7 {
 		t.Errorf("auto: %s, %d buckets", got.Interval, len(got.Buckets))
 	}
 	// A window that fits keeps its empty lead-in: it follows the filter.
 	recent := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	fits := &response.Criteria{CreatedAt: &response.Range{Min: &recent, Max: &to}}
-	if got, _ := buildTrends(nil, counts, nil, fits, time.UTC, "", now); got.Buckets[0].Start != "2026-10-01" {
+	if got, _ := buildTrends(nil, nil, trendDays{counts: counts}, fits, time.UTC, "", now); got.Buckets[0].Start != "2026-10-01" {
 		t.Errorf("fitting window: %+v", got.Buckets[0])
 	}
 	// Responses dated over more than 1000 months apart, which the management API can set, still give the server's pick a trend: the latest 1000 months.
 	spread := []dayCounts{{Day: day("1900-01-05"), Responses: 1}, {Day: day("2026-10-20"), Responses: 1}}
-	got, err := buildTrends(nil, spread, nil, filter, time.UTC, "", now)
+	got, err := buildTrends(nil, nil, trendDays{counts: spread}, filter, time.UTC, "", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestBuildTrendsCutsAFarOffWindowToTheResponses(t *testing.T) {
 		t.Errorf("spread auto: %s %d %+v", got.Interval, len(got.Buckets), got.Buckets[0])
 	}
 	// The client's own month is refused, with advice that does not point at a longer interval.
-	if _, err := buildTrends(nil, spread, nil, filter, time.UTC, IntervalMonth, now); err == nil || !strings.HasSuffix(err.Error(), "choose a shorter date range") {
+	if _, err := buildTrends(nil, nil, trendDays{counts: spread}, filter, time.UTC, IntervalMonth, now); err == nil || !strings.HasSuffix(err.Error(), "choose a shorter date range") {
 		t.Errorf("spread by month: %v", err)
 	}
 }
@@ -172,13 +172,13 @@ func TestBuildTrendsMarksPartialBuckets(t *testing.T) {
 	}
 
 	// After the 26th the window's first day is cut by its start, its last by its end.
-	got, err := buildTrends(nil, counts, nil, filter, time.UTC, IntervalDay, day("2026-11-01"))
+	got, err := buildTrends(nil, nil, trendDays{counts: counts}, filter, time.UTC, IntervalDay, day("2026-11-01"))
 	if want := []bool{true, false, false, false, false, false, false, true}; err != nil || !reflect.DeepEqual(partial(got), want) {
 		t.Errorf("by day: %v %v, want %v", err, partial(got), want)
 	}
 	// On the 26th itself, today is partial too, as is the week it is in; the week of the 19th is cut by the window's start.
 	now := time.Date(2026, 10, 26, 3, 0, 0, 0, time.UTC)
-	if got, _ := buildTrends(nil, counts, nil, filter, time.UTC, IntervalWeek, now); !reflect.DeepEqual(partial(got), []bool{true, true}) {
+	if got, _ := buildTrends(nil, nil, trendDays{counts: counts}, filter, time.UTC, IntervalWeek, now); !reflect.DeepEqual(partial(got), []bool{true, true}) {
 		t.Errorf("by week: %v", partial(got))
 	}
 
@@ -190,7 +190,7 @@ func TestBuildTrendsMarksPartialBuckets(t *testing.T) {
 	for _, end := range []time.Time{time.Date(2026, 10, 25, 23, 59, 59, 999e6, tokyo), time.Date(2026, 10, 25, 23, 59, 59, 0, tokyo)} {
 		start := time.Date(2026, 10, 19, 0, 0, 0, 0, tokyo)
 		whole := &response.Criteria{CreatedAt: &response.Range{Min: &start, Max: &end}}
-		got, _ := buildTrends(nil, counts, nil, whole, tokyo, IntervalDay, day("2026-11-01"))
+		got, _ := buildTrends(nil, nil, trendDays{counts: counts}, whole, tokyo, IntervalDay, day("2026-11-01"))
 		for _, b := range got.Buckets {
 			if b.Partial {
 				t.Errorf("window ending %s: %+v is partial", end, b)
@@ -199,10 +199,10 @@ func TestBuildTrendsMarksPartialBuckets(t *testing.T) {
 	}
 
 	// Without a filter only the interval that has not ended is partial.
-	if got, _ := buildTrends(nil, counts, nil, nil, time.UTC, IntervalMonth, time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)); !reflect.DeepEqual(partial(got), []bool{true}) {
+	if got, _ := buildTrends(nil, nil, trendDays{counts: counts}, nil, time.UTC, IntervalMonth, time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)); !reflect.DeepEqual(partial(got), []bool{true}) {
 		t.Errorf("this month: %v", partial(got))
 	}
-	if got, _ := buildTrends(nil, counts, nil, nil, time.UTC, IntervalMonth, day("2026-11-01")); !reflect.DeepEqual(partial(got), []bool{false}) {
+	if got, _ := buildTrends(nil, nil, trendDays{counts: counts}, nil, time.UTC, IntervalMonth, day("2026-11-01")); !reflect.DeepEqual(partial(got), []bool{false}) {
 		t.Errorf("last month: %v", partial(got))
 	}
 }
@@ -341,5 +341,84 @@ func TestTrendsExportWritesARowPerBucket(t *testing.T) {
 	}
 	if rec := e.request(owner, http.MethodPost, "/api/app/surveys/"+sv.String()+"/trends/export", map[string]any{"format": "pdf"}); rec.Code != http.StatusBadRequest {
 		t.Errorf("unknown format: %d", rec.Code)
+	}
+}
+
+const sliderScoreBlocks = `[
+	{"id":"b1","name":"B1","elements":[
+		{"id":"temp","type":"slider","headline":{"default":"How warm?"},"required":false,"min":0,"max":10,"step":1},
+		{"id":"stars","type":"rating","headline":{"default":"Stars"},"required":false,"scale":"star","range":5}
+	]}
+]`
+
+func TestTrendsAverageASliderAndTheTotalScoreOfCompletedResponses(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner, nil)
+	sv := e.survey(ws, surveyOpts{name: "Quiz", blocks: sliderScoreBlocks})
+	path := "/api/app/surveys/" + sv.String() + "/trends"
+
+	// Without a total score variable there is no score trend.
+	e.response(sv, row{at: time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC), finished: true, data: `{"temp":6}`, variables: `{"total":4}`})
+	var got Trends
+	decode(t, e.request(owner, http.MethodPost, path, map[string]any{}), &got)
+	if got.Score != nil {
+		t.Errorf("score without a score variable: %+v", got.Score)
+	}
+
+	e.exec(`UPDATE surveys SET variables = ?::jsonb WHERE id = ?`, `[{"id": "bonus", "name": "bonus", "type": "number", "value": 0}, {"id": "total", "name": "score", "type": "number", "value": 0, "isScore": true}]`, sv)
+	e.field(ws, sv, "total", "score", "computed", "number")
+	e.response(sv, row{at: time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC), finished: true, data: `{"temp":8,"stars":4}`, variables: `{"total":2,"bonus":100}`})
+	// Not finished: the slider answer counts, as in the slider summary, but the partial score is left out, as in the score summary.
+	e.response(sv, row{at: time.Date(2026, 3, 1, 11, 0, 0, 0, time.UTC), data: `{"temp":1}`, variables: `{"total":1}`})
+	// A slider answer that is not a number and a completed response without a score count in neither.
+	e.response(sv, row{at: time.Date(2026, 3, 2, 10, 0, 0, 0, time.UTC), finished: true, data: `{"temp":"warm"}`, variables: `{"bonus":3}`})
+	e.response(sv, row{at: time.Date(2026, 3, 3, 10, 0, 0, 0, time.UTC), finished: true, data: `{"temp":10}`, variables: `{"total":"10"}`})
+	e.response(sv, row{at: time.Date(2026, 3, 3, 11, 0, 0, 0, time.UTC), finished: true, variables: `{"total":10}`})
+
+	decode(t, e.request(owner, http.MethodPost, path, map[string]any{}), &got)
+	if len(got.Buckets) != 3 {
+		t.Fatalf("buckets %+v", got.Buckets)
+	}
+	wantElements := []ElementTrend{
+		{ElementID: "temp", Type: "slider", Headline: "How warm?", Metric: TrendMetricAverage, Points: []TrendPoint{{3, ptr(5.0)}, {}, {1, ptr(10.0)}}},
+		{ElementID: "stars", Type: "rating", Headline: "Stars", Metric: TrendMetricAverage, Points: []TrendPoint{{1, ptr(4.0)}, {}, {}}},
+	}
+	if !reflect.DeepEqual(got.Elements, wantElements) {
+		t.Errorf("elements %+v, want %+v", got.Elements, wantElements)
+	}
+	wantScore := &ScoreTrend{VariableID: "total", Name: "score", Points: []TrendPoint{{2, ptr(3.0)}, {}, {1, ptr(10.0)}}}
+	if !reflect.DeepEqual(got.Score, wantScore) {
+		t.Errorf("score %+v, want %+v", got.Score, wantScore)
+	}
+
+	// The current filter applies to the score too: only the scores above 3 remain.
+	decode(t, e.request(owner, http.MethodPost, path, map[string]any{"filterCriteria": map[string]any{"variables": map[string]any{"total": map[string]any{"op": "greaterThan", "value": 3}}}}), &got)
+	if want := []TrendPoint{{1, ptr(4.0)}, {}, {1, ptr(10.0)}}; got.Score == nil || !reflect.DeepEqual(got.Score.Points, want) {
+		t.Errorf("filtered score %+v, want points %+v", got.Score, want)
+	}
+
+	// By month the completed scores 4, 2 and 10 are one bucket.
+	decode(t, e.request(owner, http.MethodPost, path, map[string]any{"interval": "month"}), &got)
+	if want := []TrendPoint{{3, ptr(5.33)}}; got.Score == nil || !reflect.DeepEqual(got.Score.Points, want) {
+		t.Errorf("monthly score %+v, want points %+v", got.Score, want)
+	}
+
+	rec := e.request(owner, http.MethodPost, path+"/export", map[string]any{"format": "csv"})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("export: %d %s", rec.Code, rec.Body)
+	}
+	rows, err := csv.NewReader(bytes.NewReader(bytes.TrimPrefix(rec.Body.Bytes(), []byte("\xef\xbb\xbf")))).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := [][]string{
+		{"Period start", "Period end", "Partial period", "Responses", "Completed", "Completion rate (%)", "How warm? - Average", "How warm? - Answered", "Stars - Average", "Stars - Answered", "Total score (score) - Average", "Total score (score) - Responses with a score"},
+		{"2026-03-01", "2026-03-01", "No", "3", "2", "66.67", "5", "3", "4", "1", "3", "2"},
+		{"2026-03-02", "2026-03-02", "No", "1", "1", "100", "", "0", "", "0", "", "0"},
+		{"2026-03-03", "2026-03-03", "No", "2", "2", "100", "10", "1", "", "0", "10", "1"},
+	}
+	if !reflect.DeepEqual(rows, want) {
+		t.Errorf("csv %q, want %q", rows, want)
 	}
 }

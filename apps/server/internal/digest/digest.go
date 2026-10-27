@@ -18,6 +18,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/analysis"
 	"github.com/yldm-tech/forma/apps/server/internal/auth"
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/notification"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
@@ -232,9 +233,13 @@ func (d *Digest) Content(ctx context.Context, orgID uuid.UUID, r Recipient, week
 	if err != nil || len(surveys) == 0 {
 		return nil, err
 	}
+	unsubscribe, err := notification.NewUnsubscribeLinks(d.cfg, r.UserID, notification.KindWeeklySummary, orgID)
+	if err != nil {
+		return nil, err
+	}
 	c := &mailer.WeeklySummary{
 		OrganizationName: org.Name, PeriodStart: p.FirstDay, PeriodEnd: p.LastDay, TimeZone: loc.String(),
-		SettingsURL: d.cfg.AppPageURL("/account/settings/notifications").String() + "?" + url.Values{"type": {auth.NotificationWeeklySummary}, "elementId": {orgID.String()}}.Encode(),
+		SettingsURL: unsubscribe.Page,
 	}
 	if org.LogoURL != nil && *org.LogoURL != "" {
 		c.LogoURL = responsemail.ResolveStorageURL(responsemail.PublicBase(d.cfg), *org.LogoURL)
@@ -296,7 +301,7 @@ func (d *Digest) summaryURL(s surveyActivity, p Period) string {
 	return d.cfg.AppPageURL("/workspaces/"+s.WorkspaceID.String()+"/surveys/"+s.ID.String()+"/summary").String() + "?" + q.Encode()
 }
 
-// Send builds the recipient's summary and mails it in their locale. It sends nothing, and reports false, when they no longer qualify, there is nothing to summarize, or mail is not configured. A message for the same organization, member and week always carries the same Message-ID.
+// Send builds the recipient's summary and mails it in their locale. It sends nothing, and reports false, when they no longer qualify, there is nothing to summarize, or mail is not configured. A message for the same organization, member and week always carries the same Message-ID. Its turn-off link (SettingsURL) and its List-Unsubscribe header are signed for the member (notification.NewUnsubscribeLinks), so they work without a session.
 func (d *Digest) Send(ctx context.Context, orgID, userID uuid.UUID, week string) (bool, error) {
 	recipients, err := d.Recipients(ctx, orgID, &userID)
 	if err != nil || len(recipients) == 0 {
@@ -311,7 +316,11 @@ func (d *Digest) Send(ctx context.Context, orgID, userID uuid.UUID, week string)
 	if err != nil {
 		return false, err
 	}
-	return d.mailer.Send(ctx, mailer.Message{To: r.Email, Subject: subject, HTML: html, MessageID: d.messageID(orgID, userID, week)})
+	unsubscribe, err := notification.NewUnsubscribeLinks(d.cfg, userID, notification.KindWeeklySummary, orgID)
+	if err != nil {
+		return false, err
+	}
+	return d.mailer.Send(ctx, mailer.Message{To: r.Email, Subject: subject, HTML: html, MessageID: d.messageID(orgID, userID, week), Headers: mailer.OneClickUnsubscribe(unsubscribe.OneClick)})
 }
 
 // messageID is the email's stable Message-ID, on MAIL_FROM's domain.

@@ -13,6 +13,7 @@ import (
 	"github.com/riverqueue/river"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/apps/server/internal/notification"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
@@ -270,8 +271,13 @@ func TestContentComparesTheWeekWithTheOneBefore(t *testing.T) {
 	if c.OrganizationName != "Acme" || c.PeriodStart != "2026-10-19" || c.PeriodEnd != "2026-10-25" || c.TimeZone != "Asia/Tokyo" || c.Responses != 3 || c.PreviousResponses != 2 || c.MoreSurveys != 0 {
 		t.Errorf("content %+v", c)
 	}
-	if want := "https://app.example.com/app/account/settings/notifications?elementId=" + f.org.String() + "&type=unsubscribedWeeklySummaryOrganizationIds"; c.SettingsURL != want {
-		t.Errorf("settings URL %s, want %s", c.SettingsURL, want)
+	// The turn-off link opens the public unsubscribe page with a token signed for the recipient's weekly summary of this organization, which works without a session.
+	settings, err := url.Parse(c.SettingsURL)
+	if err != nil || settings.Scheme+"://"+settings.Host+settings.Path != "https://app.example.com/app/unsubscribe" {
+		t.Fatalf("settings URL %s", c.SettingsURL)
+	}
+	if u, err := notification.VerifyUnsubscribeToken(f.digest.cfg, settings.Query().Get("token")); err != nil || u != (notification.Unsubscribe{UserID: f.owner, Type: notification.KindWeeklySummary, ElementID: f.org}) {
+		t.Errorf("settings token %+v, %v", u, err)
 	}
 	if len(c.Surveys) != 2 || c.Surveys[0].Name != "Customer Feedback" || c.Surveys[1].Name != "Exit poll" {
 		t.Fatalf("surveys %+v", c.Surveys)
@@ -323,6 +329,11 @@ func TestSendMailsTheRecipientOnce(t *testing.T) {
 	}
 	if id := msgs[0].MessageID; !strings.HasPrefix(id, "<") || !strings.HasSuffix(id, "@mail.example.com>") || id != f.digest.messageID(f.org, f.owner, week) {
 		t.Errorf("message id %s", id)
+	}
+	// Mail clients get RFC 8058's one-click unsubscribe for the same switch.
+	links, err := notification.NewUnsubscribeLinks(f.digest.cfg, f.owner, notification.KindWeeklySummary, f.org)
+	if err != nil || msgs[0].Headers["List-Unsubscribe"] != "<"+links.OneClick+">" || msgs[0].Headers["List-Unsubscribe-Post"] != "List-Unsubscribe=One-Click" || !strings.Contains(msgs[0].HTML, strings.ReplaceAll(links.Page, "&", "&amp;")) {
+		t.Errorf("unsubscribe headers %v, %v", msgs[0].Headers, err)
 	}
 	// Someone who turned the summary off, whom the two-factor requirement refuses, or who is not a member, gets nothing; an SSO-only member, whom the requirement exempts, gets it.
 	for _, user := range []uuid.UUID{f.optedOut, f.unenrolled, uuid.New()} {

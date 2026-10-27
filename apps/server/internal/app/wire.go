@@ -335,6 +335,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		billingSet,
 		unsplashSet,
 		notification.NewHandler,
+		wire.Bind(new(notification.Switches), new(*auth.Service)),
 		contactSurveySet,
 		emailEmbedSet,
 		plain.NewHandler,

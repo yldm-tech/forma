@@ -1,4 +1,14 @@
 {
+  "account": {
+    "unsubscribe_page": {
+      "confirm_alert": "{survey}の新しい回答メールの配信を停止しますか？",
+      "confirm_auto_subscribe": "{organization}の新しいフォームから回答メールが自動で届かないようにしますか？",
+      "confirm_weekly_summary": "{organization}の週間サマリーの配信を停止しますか？",
+      "invalid_link": "この配信停止リンクは無効です",
+      "invalid_link_description": "メールのリンクを最後までコピーするか、ログインして通知設定を変更してください。",
+      "link_no_longer_applies_description": "リンク先のフォームまたは組織は、通知設定にもうありません。"
+    }
+  },
   "auth": {
     "continue_with_azure": "Microsoftで続行",
     "continue_with_email": "メールアドレスで続行",
@@ -2166,6 +2176,7 @@
         "hint_completion": "完了率：各期間に開始された回答のうち、完了した回答の割合です。",
         "hint_nps": "NPS：各期間の回答に占める推奨者（9〜10）の割合から批判者（0〜6）の割合を引いた値です。",
         "hint_satisfied": "各期間の回答のうち、4または5を選んだ割合です。",
+        "hint_score": "各期間に完了し、スコアのある回答の合計スコアの平均値です。",
         "interval_day": "日",
         "interval_label": "集計単位",
         "interval_month": "月",
@@ -2177,6 +2188,8 @@
         "partial_tooltip": "一部の期間：この期間の一部しか範囲に含まれていないため、ほかの期間とは比較できません。",
         "period": "期間",
         "responses_count": "{count, plural, other {{count} 件の回答}}",
+        "scored": "スコア付き回答",
+        "scored_count": "{count, plural, other {{count} 件のスコア付き回答}}",
         "title": "トレンド",
         "too_many_buckets_day": "回答の期間が長く、日ごとでは一度に表示できません。週または月で集計してください。",
         "too_many_buckets_month": "回答の期間が長く、月ごとでも一度に表示できません。日付の範囲を短くしてください。",
@@ -2184,7 +2197,8 @@
         "view_completion": "完了率",
         "view_element": "{type}：{headline}",
         "view_label": "指標",
-        "view_responses": "回答数"
+        "view_responses": "回答数",
+        "view_score": "合計スコア：{name}"
       }
     },
     "api_keys": {
@@ -3899,6 +3913,7 @@
         "question": "質問",
         "question_deleted": "質問を削除しました。",
         "question_duplicated": "質問を複製しました。",
+        "question_id_help": "WebhookとAPIでは、この質問の回答をこのIDで識別します。各Webhookのfieldsにも質問文と一緒に含まれます。アンケートを公開し、この質問を保存した後は変更できません。",
         "question_id_updated": "質問IDを更新しました",
         "question_number": "質問 {number}",
         "question_used_in_logic_warning_text": "このブロックの要素はロジックルールで使用されていますが、本当に削除しますか？",

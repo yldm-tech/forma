@@ -1,4 +1,14 @@
 {
+  "account": {
+    "unsubscribe_page": {
+      "confirm_alert": "不再接收{survey}的新回應郵件？",
+      "confirm_auto_subscribe": "{organization}中的新問卷不再自動寄送回應郵件給您？",
+      "confirm_weekly_summary": "不再接收{organization}的每週摘要？",
+      "invalid_link": "此取消訂閱連結無效",
+      "invalid_link_description": "請從郵件中複製完整連結，或登入後變更通知設定。",
+      "link_no_longer_applies_description": "連結中的問卷或組織已不在您的通知設定中。"
+    }
+  },
   "auth": {
     "continue_with_azure": "繼續使用 Microsoft",
     "continue_with_email": "使用電子郵件繼續",
@@ -2166,6 +2176,7 @@
         "hint_completion": "完成率：每個時間區間內開始的回應中已完成的比例。",
         "hint_nps": "NPS：每個時間區間的回答中推薦者（9 到 10）占比減去批評者（0 到 6）占比。",
         "hint_satisfied": "每個時間區間內選擇 4 或 5 的回答占比。",
+        "hint_score": "每個時間區間內已完成且有分數的回應的平均總分。",
         "interval_day": "按日",
         "interval_label": "分組方式",
         "interval_month": "按月",
@@ -2177,6 +2188,8 @@
         "partial_tooltip": "不完整時間區間：只有部分時間在所選範圍內，因此無法與完整時間區間直接比較。",
         "period": "時間區間",
         "responses_count": "{count, plural, other {{count} 筆回應}}",
+        "scored": "有分數的回應",
+        "scored_count": "{count, plural, other {{count} 筆有分數的回應}}",
         "title": "趨勢",
         "too_many_buckets_day": "這些回應跨越的天數過多，無法一次顯示。請按週或按月分組。",
         "too_many_buckets_month": "這些回應跨越的月數過多，無法一次顯示。請縮短日期範圍。",
@@ -2184,7 +2197,8 @@
         "view_completion": "完成率",
         "view_element": "{type}：{headline}",
         "view_label": "指標",
-        "view_responses": "回應數"
+        "view_responses": "回應數",
+        "view_score": "總分：{name}"
       }
     },
     "api_keys": {
@@ -3899,6 +3913,7 @@
         "question": "問題",
         "question_deleted": "問題已刪除。",
         "question_duplicated": "問題已複製。",
+        "question_id_help": "Webhook和API以此ID識別這道題的回答，每次Webhook的fields中也會附上題目文字。問卷發佈且這道題儲存後無法修改。",
         "question_id_updated": "問題 ID 已更新",
         "question_number": "第 {number} 題",
         "question_used_in_logic_warning_text": "此區塊中的元素已用於邏輯規則，確定要刪除嗎？",

@@ -1,4 +1,14 @@
 {
+  "account": {
+    "unsubscribe_page": {
+      "confirm_alert": "Stop emails about new responses to {survey}?",
+      "confirm_auto_subscribe": "Stop response emails from new surveys in {organization}?",
+      "confirm_weekly_summary": "Stop the weekly summary of {organization}?",
+      "invalid_link": "This unsubscribe link isn't valid",
+      "invalid_link_description": "Copy the whole link from the email, or sign in to change your notification settings.",
+      "link_no_longer_applies_description": "The survey or organization it names is no longer in your notification settings."
+    }
+  },
   "auth": {
     "continue_with_azure": "Continue with Microsoft",
     "continue_with_email": "Continue with Email",
@@ -2166,6 +2176,7 @@
         "hint_completion": "Completion rate: completed responses out of those started in each period.",
         "hint_nps": "NPS: % promoters (9 to 10) minus % detractors (0 to 6) among the answers in each period.",
         "hint_satisfied": "Share of answers rating 4 or 5 in each period.",
+        "hint_score": "Average total score in each period, over the completed responses that have a score.",
         "interval_day": "Day",
         "interval_label": "Group by",
         "interval_month": "Month",
@@ -2177,6 +2188,8 @@
         "partial_tooltip": "Partial period: only part of it is in the range, so it is not comparable with whole periods.",
         "period": "Period",
         "responses_count": "{count, plural, one {{count} response} other {{count} responses}}",
+        "scored": "Scored responses",
+        "scored_count": "{count, plural, one {{count} scored response} other {{count} scored responses}}",
         "title": "Trends",
         "too_many_buckets_day": "These responses span too many days to show at once. Group by week or month.",
         "too_many_buckets_month": "These responses span too many months to show at once. Choose a shorter date range.",
@@ -2184,7 +2197,8 @@
         "view_completion": "Completion rate",
         "view_element": "{type}: {headline}",
         "view_label": "Metric",
-        "view_responses": "Responses"
+        "view_responses": "Responses",
+        "view_score": "Total score: {name}"
       }
     },
     "api_keys": {
@@ -3899,6 +3913,7 @@
         "question": "Question",
         "question_deleted": "Question deleted.",
         "question_duplicated": "Question duplicated.",
+        "question_id_help": "Webhooks and the API identify this question's answer by this ID; each webhook also lists it under fields with the question's text. Once the survey is published and this question is saved, it can't be changed.",
         "question_id_updated": "Question ID updated",
         "question_number": "Question {number}",
         "question_used_in_logic_warning_text": "Elements from this block are used in a logic rule, are you sure you want to delete it?",

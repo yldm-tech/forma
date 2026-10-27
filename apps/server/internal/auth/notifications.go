@@ -11,7 +11,6 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
 // Kinds of notification setting, named as forma2's notification page and the unsubscribe links in its emails named them (the ?type= of /account/settings/notifications).
@@ -100,12 +99,12 @@ func (s *notificationSettings) marshal() ([]byte, error) {
 }
 
 // notifications is forma2's notifications page: the organizations the user belongs to in a role other than billing, each with the surveys of the workspaces the user can open there (all of them for an owner or manager, those granted to one of their teams otherwise). A member who can open no workspace in an organization does not see it, as forma2's query left it out.
-func (s *Service) notifications(ctx context.Context, actor httpapi.Actor) ([]NotificationOrganization, error) {
-	rows, err := s.repo.notificationRows(ctx, actor.UserID)
+func (s *Service) notifications(ctx context.Context, userID uuid.UUID) ([]NotificationOrganization, error) {
+	rows, err := s.repo.notificationRows(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	raw, err := s.repo.notificationSettings(ctx, actor.UserID)
+	raw, err := s.repo.notificationSettings(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -137,17 +136,73 @@ func (s *Service) notifications(ctx context.Context, actor httpapi.Actor) ([]Not
 	return out, nil
 }
 
-// setNotification switches one setting: a survey's per-response alert, whether new surveys of an organization alert the user, or whether the user gets an organization's weekly summary. Unlike forma2, which stored whatever document the browser sent, the survey or organization must be one the page shows this user.
-func (s *Service) setNotification(ctx context.Context, actor httpapi.Actor, kind string, id uuid.UUID, enabled bool) error {
-	err := s.changeNotification(ctx, actor, kind, id, enabled)
+// NotificationSwitch is one setting as the notifications page shows it: its kind, the survey or organization it is for, that one's name, and whether it is on.
+type NotificationSwitch struct {
+	Type    string    `json:"type"`
+	ID      uuid.UUID `json:"id"`
+	Name    string    `json:"name"`
+	Enabled bool      `json:"enabled"`
+}
+
+// NotificationSwitchOf is the user's setting of kind for the survey or organization id, read without a session for an email's signed unsubscribe link, which names the user. It is not found when the notifications page does not list it for the user: the survey or organization is gone, or out of their reach now.
+func (s *Service) NotificationSwitchOf(ctx context.Context, userID uuid.UUID, kind string, id uuid.UUID) (NotificationSwitch, error) {
+	if !isNotificationKind(kind) {
+		return NotificationSwitch{}, errUnknownNotification
+	}
+	orgs, err := s.notifications(ctx, userID)
 	if err != nil {
-		s.logFailure(ctx, audit.ActionUpdated, actor.UserID.String())
+		return NotificationSwitch{}, err
+	}
+	for _, o := range orgs {
+		switch kind {
+		case notificationAlert:
+			for _, sv := range o.Surveys {
+				if sv.ID == id {
+					return NotificationSwitch{Type: kind, ID: id, Name: sv.Name, Enabled: sv.Alert}, nil
+				}
+			}
+		case notificationOrganizationAutoAlert:
+			if o.ID == id {
+				return NotificationSwitch{Type: kind, ID: id, Name: o.Name, Enabled: o.AutoSubscribe}, nil
+			}
+		case NotificationWeeklySummary:
+			if o.ID == id {
+				return NotificationSwitch{Type: kind, ID: id, Name: o.Name, Enabled: o.WeeklySummary}, nil
+			}
+		}
+	}
+	if kind == notificationAlert {
+		return NotificationSwitch{}, apperr.NotFound("Survey", "")
+	}
+	return NotificationSwitch{}, apperr.NotFound("Organization", "")
+}
+
+// SetNotificationSwitch switches the user's setting as the notifications page does, under the same rule that the page must show it to them, for an email's signed unsubscribe link: the link names the user, so there is no session, and the audit event records the user as the actor.
+func (s *Service) SetNotificationSwitch(ctx context.Context, userID uuid.UUID, kind string, id uuid.UUID, enabled bool) error {
+	if !isNotificationKind(kind) {
+		return errUnknownNotification
+	}
+	return s.setNotification(ctx, userID, kind, id, enabled)
+}
+
+// errUnknownNotification refuses a kind of setting the notifications page does not have; the session API's binding refuses it before the service.
+var errUnknownNotification = apperr.BadRequest("Unknown notification setting")
+
+func isNotificationKind(kind string) bool {
+	return kind == notificationAlert || kind == notificationOrganizationAutoAlert || kind == NotificationWeeklySummary
+}
+
+// setNotification switches one setting: a survey's per-response alert, whether new surveys of an organization alert the user, or whether the user gets an organization's weekly summary. Unlike forma2, which stored whatever document the browser sent, the survey or organization must be one the page shows this user.
+func (s *Service) setNotification(ctx context.Context, userID uuid.UUID, kind string, id uuid.UUID, enabled bool) error {
+	err := s.changeNotification(ctx, userID, kind, id, enabled)
+	if err != nil {
+		s.logEvent(ctx, audit.Event{Action: audit.ActionUpdated, TargetType: audit.TargetUser, TargetID: userID.String(), ActorID: userID.String(), Status: audit.StatusFailure})
 	}
 	return err
 }
 
-func (s *Service) changeNotification(ctx context.Context, actor httpapi.Actor, kind string, id uuid.UUID, enabled bool) error {
-	rows, err := s.repo.notificationRows(ctx, actor.UserID)
+func (s *Service) changeNotification(ctx context.Context, userID uuid.UUID, kind string, id uuid.UUID, enabled bool) error {
+	rows, err := s.repo.notificationRows(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -165,7 +220,7 @@ func (s *Service) changeNotification(ctx context.Context, actor httpapi.Actor, k
 	}
 	var oldDoc, newDoc []byte
 	err = s.repo.transaction(ctx, func(tx *Repository) error {
-		if oldDoc, err = tx.lockNotificationSettings(ctx, actor.UserID); err != nil {
+		if oldDoc, err = tx.lockNotificationSettings(ctx, userID); err != nil {
 			return err
 		}
 		settings, err := parseNotificationSettings(oldDoc)
@@ -184,13 +239,13 @@ func (s *Service) changeNotification(ctx context.Context, actor httpapi.Actor, k
 		if newDoc, err = settings.marshal(); err != nil {
 			return err
 		}
-		return tx.writeNotificationSettings(ctx, actor.UserID, newDoc)
+		return tx.writeNotificationSettings(ctx, userID, newDoc)
 	})
 	if err != nil {
 		return err
 	}
 	s.logEvent(ctx, audit.Event{
-		Action: audit.ActionUpdated, TargetType: audit.TargetUser, TargetID: actor.UserID.String(), Status: audit.StatusSuccess,
+		Action: audit.ActionUpdated, TargetType: audit.TargetUser, TargetID: userID.String(), ActorID: userID.String(), Status: audit.StatusSuccess,
 		OldObject: map[string]any{"notificationSettings": json.RawMessage(oldDoc)}, NewObject: map[string]any{"notificationSettings": json.RawMessage(newDoc)},
 	})
 	return nil
