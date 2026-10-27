@@ -404,6 +404,42 @@ func (c Config) SignupEnabled() bool {
 	return c.IsFormaCloud || c.E2ETesting
 }
 
+// CustomScripts says whether the public survey pages of this instance may carry custom head scripts, and why not.
+type CustomScripts string
+
+const (
+	// CustomScriptsAvailable: a self-hosted instance whose survey pages have an origin of their own.
+	CustomScriptsAvailable CustomScripts = "available"
+	// CustomScriptsFormaCloud: the hosted service never runs them.
+	CustomScriptsFormaCloud CustomScripts = "forma_cloud"
+	// CustomScriptsNeedPublicURL: PUBLIC_URL is unset or names WEBAPP_URL's host, so the survey pages are served on the admin origin.
+	CustomScriptsNeedPublicURL CustomScripts = "requires_public_url"
+)
+
+// CustomScripts is whether workspaces and surveys may set custom head scripts, which run unsanitized on the public survey pages. Forma Cloud never allows them. A self-hosted instance allows them only when PUBLIC_URL names a host other than WEBAPP_URL's: otherwise the survey pages share the admin origin, where a script runs with the session of every signed-in user who opens the survey (the session cookie is SameSite=Lax, and the /api/app CSRF check accepts any same-origin request), so anyone who may write one could act as the instance's owners. With a separate PUBLIC_URL the admin host refuses the survey pages (httpserver.PublicDomainGate), and the admin API answers no cross-origin request.
+func (c Config) CustomScripts() CustomScripts {
+	switch {
+	case c.IsFormaCloud:
+		return CustomScriptsFormaCloud
+	case c.PublicURL == nil || c.WebAppURL == nil || strings.EqualFold(c.PublicURL.Host, c.WebAppURL.Host):
+		return CustomScriptsNeedPublicURL
+	default:
+		return CustomScriptsAvailable
+	}
+}
+
+// CustomScriptsRefusal is the message a write that sets custom head scripts gets on an instance that does not allow them, for the operator as much as for the user; empty when they are allowed.
+func (c Config) CustomScriptsRefusal() string {
+	switch c.CustomScripts() {
+	case CustomScriptsFormaCloud:
+		return "Custom head scripts are not available on Forma Cloud"
+	case CustomScriptsNeedPublicURL:
+		return "Custom head scripts are turned off on this instance: its survey pages are served on the admin domain, where a script could act as any signed-in user who opens the survey. The operator can turn them on by setting PUBLIC_URL to a separate domain for surveys."
+	default:
+		return ""
+	}
+}
+
 // RecaptchaConfigured reports whether surveys may turn on reCAPTCHA spam protection.
 func (c Config) RecaptchaConfigured() bool {
 	return c.RecaptchaSiteKey != "" && c.RecaptchaSecretKey != ""

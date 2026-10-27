@@ -521,8 +521,18 @@ func (s *Service) CreateV1(ctx context.Context, caller Caller, workspaceID uuid.
 	if len(docIssues) > 0 {
 		return nil, &V1Invalid{Issues: docIssues}
 	}
+	recipientIssues, err := s.recipientIssues(ctx, workspaceID, nil, followUps)
+	if err != nil {
+		return nil, err
+	}
+	if len(recipientIssues) > 0 {
+		return nil, &V1Invalid{Issues: recipientIssues}
+	}
 	if recaptchaEnabled(body["recaptcha"]) && !s.cfg.RecaptchaConfigured() {
 		return nil, apperr.OperationNotAllowed("Spam protection is not enabled for this organization")
+	}
+	if _, err := s.checkCustomScripts(ctx, caller, workspaceID, nil, customScripts{Scripts: optString(body["customHeadScripts"]), Mode: optString(body["customHeadScriptsMode"])}); err != nil {
+		return nil, err
 	}
 
 	org, err := s.repo.organizationOf(ctx, workspaceID)
@@ -650,7 +660,7 @@ func (s *Service) UpdateV1(ctx context.Context, caller Caller, current *Survey, 
 	if err := s.authz.Require(ctx, caller.Actor, authz.SurveyWrite, authz.Survey(current.ID)); err != nil {
 		return nil, err
 	}
-	updated, err := s.update(ctx, current, &in, false)
+	updated, err := s.update(ctx, caller, current, &in, false)
 	if err == nil {
 		updated, err = s.v1Slug(ctx, updated, merged)
 	}

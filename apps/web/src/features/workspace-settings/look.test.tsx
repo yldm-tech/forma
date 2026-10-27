@@ -110,7 +110,8 @@ const stubServer = (instance: Promise<InstanceInfo>) => {
   return calls;
 };
 
-const storage = (storageConfigured: boolean) => Promise.resolve({ storageConfigured, version: "0.2.10" });
+const storage = (storageConfigured: boolean) =>
+  Promise.resolve({ storageConfigured, customScripts: "requires_public_url" as const, version: "0.2.10" });
 
 /** The page on a route without a workspace parameter, so an upload reaches the workspace only if the page names it. */
 const renderPage = (detail: WorkspaceDetail) => {
@@ -162,7 +163,7 @@ describe("WorkspaceLookPage storage warning", () => {
     await waitFor(() => expect(calls.map((call) => call.key)).toContain("GET /api/app/instance"));
     expect(screen.queryByText(t("common.storage_not_configured"))).toBeNull();
 
-    answer({ storageConfigured: false, version: "0.2.10" });
+    answer({ storageConfigured: false, customScripts: "requires_public_url", version: "0.2.10" });
     expect(await screen.findByText(t("common.storage_not_configured"))).toBeTruthy();
   });
 });

@@ -2404,6 +2404,11 @@
       "upload_contacts_success": "連絡先のアップロードに成功しました",
       "upload_csv": "CSVをアップロード"
     },
+    "custom_scripts_access": {
+      "managers_only": "カスタムスクリプトを変更できるのは、組織のオーナーと管理者のみです。",
+      "requires_public_url": "このインスタンスではカスタムスクリプトが無効です。アンケートページが管理画面と同じドメインで配信されているため、スクリプトがログイン中のユーザーとして操作できてしまいます。管理者が PUBLIC_URL にアンケート用の別ドメインを設定すると有効になります。",
+      "unavailable_cloud": "Forma Cloud ではカスタムスクリプトを利用できません。"
+    },
     "forma_logo": "Formaのロゴ",
     "general": {
       "cannot_delete_only_workspace": "これは唯一のワークスペースのため、削除できません。まず新しいワークスペースを作成してください。",
@@ -2620,6 +2625,7 @@
         "endpoint_pinged": "成功！Webhook に ping できました。",
         "endpoint_pinged_error": "Webhook への ping に失敗しました。",
         "endpoint_service_unavailable_error": "サービス利用不可 (503): サービスは一時的に停止しています",
+        "managers_only": "Webhook の追加や、回答の送信先の変更ができるのは、このワークスペースを管理するユーザーだけです。",
         "no_triggers": "トリガーなし",
         "please_check_console": "詳細はコンソールを確認してください",
         "please_enter_a_url": "URL を入力してください",

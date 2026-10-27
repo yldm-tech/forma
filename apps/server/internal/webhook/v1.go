@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/apikey"
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/mgmtapi/mgmtv1"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
@@ -159,14 +160,14 @@ func (h *V1Handler) delete(c *gin.Context) {
 	v1api.Success(c, h.bestEffort(c, w, false))
 }
 
-// create is forma2's POST: the body read with its 2 MiB limit, the workspace resolved from workspaceId or environmentId and authorized for workspace.write, the input validated, the URL's SSRF check, then the webhook with a new secret. The answer is the only one that carries the secret.
+// create is forma2's POST: the body read with its 2 MiB limit, the workspace resolved from workspaceId or environmentId and authorized for workspace.manage (forma2 asked for workspace.write; sending the workspace's responses to a URL is a manager's decision, as on the settings page), the input validated, the URL's SSRF check, then the webhook with a new secret. The answer is the only one that carries the secret.
 func (h *V1Handler) create(c *gin.Context) {
 	ctx := c.Request.Context()
 	body, ok := mgmtv1.ReadBody(c)
 	if !ok {
 		return
 	}
-	ws, ok := h.v1.ResolveWorkspace(c, body, http.MethodPost)
+	ws, ok := h.v1.ResolveWorkspaceFor(c, body, authz.WorkspaceManage)
 	if !ok {
 		return
 	}
