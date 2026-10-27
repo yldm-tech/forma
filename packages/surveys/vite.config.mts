@@ -104,6 +104,15 @@ const surveyLocaleFiles = ({ ship }: { ship: boolean }): Plugin => {
   };
 };
 
+// ANALYZE=true writes a treemap of the bundle, with gzip and brotli sizes, to packages/surveys/stats.html.
+const analyzeBundle = () =>
+  visualizer({
+    filename: resolve(__dirname, "stats.html"),
+    open: false,
+    gzipSize: true,
+    brotliSize: true,
+  });
+
 const config = ({ mode }: ConfigEnv) => {
   const env = loadEnv(mode, process.cwd(), "");
 
@@ -155,6 +164,8 @@ const config = ({ mode }: ConfigEnv) => {
           // so the app loads `surveys.umd.js` while embeds keep the `.cjs` name they hardcode.
           duplicateSuffixes: { ".umd.cjs": ".umd.js" },
         }),
+        // The UMD bundle is the file respondents download (/js/surveys.umd.cjs), so its treemap is the one that answers "what grew": it runs after the ESM build and writes over that build's stats.html.
+        process.env.ANALYZE === "true" && analyzeBundle(),
       ]),
     });
   }
@@ -229,13 +240,7 @@ const config = ({ mode }: ConfigEnv) => {
         // so the app loads `surveys.umd.js` while embeds keep the `.cjs` name they hardcode.
         duplicateSuffixes: { ".umd.cjs": ".umd.js" },
       }),
-      process.env.ANALYZE === "true" &&
-        visualizer({
-          filename: resolve(__dirname, "stats.html"),
-          open: false,
-          gzipSize: true,
-          brotliSize: true,
-        }),
+      process.env.ANALYZE === "true" && analyzeBundle(),
     ]),
   });
 };

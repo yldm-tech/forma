@@ -1,24 +1,10 @@
 import { z } from "zod";
+import { USER_LOCALES } from "./user-locale";
 
-export const ZUserLocale = z.enum([
-  "de-DE",
-  "en-US",
-  "es-ES",
-  "fr-FR",
-  "hu-HU",
-  "ja-JP",
-  "nl-NL",
-  "pt-BR",
-  "pt-PT",
-  "ro-RO",
-  "ru-RU",
-  "sv-SE",
-  "tr-TR",
-  "zh-Hans-CN",
-  "zh-Hant-TW",
-]);
+// The list lives in user-locale.ts, free of zod, so the public survey page reads it without the schema library.
+export { type TUserLocale } from "./user-locale";
 
-export type TUserLocale = z.infer<typeof ZUserLocale>;
+export const ZUserLocale = z.enum(USER_LOCALES);
 
 export const ZUserNotificationSettings = z.object({
   alert: z.record(z.string(), z.boolean()),

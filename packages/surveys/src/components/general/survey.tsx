@@ -22,7 +22,7 @@ import type {
   TResponseVariables,
 } from "@forma/types/responses";
 import { TUploadFileConfig } from "@forma/types/storage";
-import { DEFAULT_CARD_ARRANGEMENT, getLinkSurveyCardMaxWidth } from "@forma/types/styling";
+import { DEFAULT_CARD_ARRANGEMENT, getLinkSurveyCardMaxWidth } from "@forma/types/card-layout";
 import { TSurveyBlock, TSurveyBlockLogic } from "@forma/types/surveys/blocks";
 import { TSurveyElement } from "@forma/types/surveys/elements";
 import { applyBlockScore } from "@forma/types/surveys/scoring";
