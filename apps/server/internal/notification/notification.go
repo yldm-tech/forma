@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
@@ -39,12 +40,12 @@ func NewNotifier(cfg config.Config, db *gorm.DB, m *mailer.Mailer, log *slog.Log
 	return &Notifier{db: db, cfg: cfg, mailer: m, log: log}
 }
 
-// Recipients is forma2's getUsersWithNotifications: active users with a membership in the organization that owns the workspace, not suspended, who are owners or managers there, or are on a team with access to the workspace, and whose alert for the survey is on. A deactivated account or a suspended member is refused the responses in the app, so their answers are not mailed to them either. Whether the user turned off auto-subscription for the organization does not matter here, and neither does whether the membership was accepted.
+// Recipients is forma2's getUsersWithNotifications: active users with a membership in the organization that owns the workspace, that the organization does not refuse, who are owners or managers there, or are on a team with access to the workspace, and whose alert for the survey is on. A deactivated account, a suspended member and a member the organization's two-factor requirement refuses (authz.MemberNotRefusedSQL) are refused the responses in the app, so their answers are not mailed to them either. Whether the user turned off auto-subscription for the organization does not matter here, and neither does whether the membership was accepted.
 func (n *Notifier) Recipients(ctx context.Context, workspaceID, surveyID uuid.UUID) ([]Recipient, error) {
 	var rows []Recipient
 	err := n.db.WithContext(ctx).Raw(`SELECT u.email, u.locale FROM users u
 		WHERE u.is_active
-		AND EXISTS (SELECT 1 FROM memberships m JOIN workspaces w ON w.organization_id = m.organization_id WHERE m.user_id = u.id AND w.id = ? AND m.suspended_at IS NULL)
+		AND EXISTS (SELECT 1 FROM memberships m JOIN workspaces w ON w.organization_id = m.organization_id WHERE m.user_id = u.id AND w.id = ? AND `+authz.MemberNotRefusedSQL("m")+`)
 		AND (
 			EXISTS (SELECT 1 FROM memberships m JOIN workspaces w ON w.organization_id = m.organization_id WHERE m.user_id = u.id AND w.id = ? AND m.role IN ('owner', 'manager'))
 			OR EXISTS (SELECT 1 FROM team_members tm JOIN workspace_teams wt ON wt.team_id = tm.team_id WHERE tm.user_id = u.id AND wt.workspace_id = ?)
