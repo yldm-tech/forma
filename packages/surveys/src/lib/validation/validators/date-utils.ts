@@ -1,9 +1,6 @@
 import type { TSurveyElement } from "@forma/types/surveys/elements";
-import {
-  MAX_RELATIVE_DATE_AMOUNT,
-  type TRelativeDateBound,
-  type TValidationRule,
-} from "@forma/types/surveys/validation-rules";
+import { MAX_RELATIVE_DATE_AMOUNT } from "@forma/types/surveys/relative-date";
+import type { TRelativeDateBound, TValidationRule } from "@forma/types/surveys/validation-rules";
 
 /**
  * Format a Date as YYYY-MM-DD using its local calendar fields.

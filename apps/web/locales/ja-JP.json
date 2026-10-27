@@ -1,4 +1,14 @@
 {
+  "account": {
+    "unsubscribe_page": {
+      "confirm_alert": "{survey}の新しい回答メールの配信を停止しますか？",
+      "confirm_auto_subscribe": "{organization}の新しいフォームから回答メールが自動で届かないようにしますか？",
+      "confirm_weekly_summary": "{organization}の週間サマリーの配信を停止しますか？",
+      "invalid_link": "この配信停止リンクは無効です",
+      "invalid_link_description": "メールのリンクを最後までコピーするか、ログインして通知設定を変更してください。",
+      "link_no_longer_applies_description": "リンク先のフォームまたは組織は、通知設定にもうありません。"
+    }
+  },
   "auth": {
     "continue_with_azure": "Microsoftで続行",
     "continue_with_email": "メールアドレスで続行",
@@ -3901,6 +3911,7 @@
         "question": "質問",
         "question_deleted": "質問を削除しました。",
         "question_duplicated": "質問を複製しました。",
+        "question_id_help": "WebhookとAPIでは、この質問の回答をこのIDで識別します。各Webhookのfieldsにも質問文と一緒に含まれます。アンケートを公開し、この質問を保存した後は変更できません。",
         "question_id_updated": "質問IDを更新しました",
         "question_number": "質問 {number}",
         "question_used_in_logic_warning_text": "このブロックの要素はロジックルールで使用されていますが、本当に削除しますか？",

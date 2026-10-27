@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_RELATIVE_DATE_AMOUNT } from "./relative-date";
 
 // Field types for field-specific validation (address and contact info elements)
 export const ZAddressField = z.enum(["addressLine1", "addressLine2", "city", "state", "zip", "country"]);
@@ -127,13 +128,8 @@ export type TRelativeDateUnit = z.infer<typeof ZRelativeDateUnit>;
 export const ZRelativeDateDirection = z.enum(["before", "after"]);
 export type TRelativeDateDirection = z.infer<typeof ZRelativeDateDirection>;
 
-/**
- * Ten years. addWorkingDays steps one day at a time and these validators run on the server for
- * every response, so an unbounded amount from a typo or an API-created survey would block the
- * event loop. Exported so the editor's input caps at the same number the schema enforces, and so
- * the resolver can clamp params saved by paths that skip this schema (draft saves).
- */
-export const MAX_RELATIVE_DATE_AMOUNT = 3650;
+// The limit lives in relative-date.ts, free of zod, so the survey runtime reads it without the schema library.
+export { MAX_RELATIVE_DATE_AMOUNT };
 
 export const ZRelativeDateBound = z.object({
   amount: z.number().int().min(0).max(MAX_RELATIVE_DATE_AMOUNT),

@@ -145,6 +145,14 @@ func (e *env) fixture() fixture {
 	return fixture{org: org, ws: ws, survey: sv}
 }
 
+// embedded links a survey-local Embedded Data field to the fixture's survey, after the ones it has.
+func (e *env) embedded(f fixture, key, name, source, dataType string) {
+	e.t.Helper()
+	def := e.insert(`INSERT INTO embedded_data (workspace_id, survey_id, name, source, data_type) VALUES (?, ?, ?, ?, ?) RETURNING id`, f.ws, f.survey, name, source, dataType)
+	position := e.count(`SELECT count(*) FROM survey_embedded_data WHERE survey_id = ?`, f.survey)
+	e.exec(`INSERT INTO survey_embedded_data (workspace_id, survey_id, embedded_data_id, storage_key, position) VALUES (?, ?, ?, ?, ?)`, f.ws, f.survey, def, key, position)
+}
+
 func (e *env) member(org, user uuid.UUID, role string) {
 	e.exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, ?, true)`, user, org, role)
 }

@@ -1,4 +1,4 @@
-import { DEFAULT_CARD_ARRANGEMENT, getLinkSurveyCardMaxWidth } from "@forma/types/styling";
+import { DEFAULT_CARD_ARRANGEMENT, getLinkSurveyCardMaxWidth } from "@forma/types/card-layout";
 import type { TSurveyStyling, TSurveyType } from "@forma/types/surveys/types";
 import type { TWorkspaceStyling } from "@forma/types/workspace";
 import { type JSX, useState } from "react";

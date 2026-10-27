@@ -1,4 +1,4 @@
-import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
+import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/card-layout";
 import type { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { ArrowLeft, MailIcon } from "lucide-react";
