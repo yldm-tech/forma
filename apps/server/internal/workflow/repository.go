@@ -72,13 +72,15 @@ type Run struct {
 	Attempt           int
 	NextAttemptAt     *time.Time
 	LastErrorAt       *time.Time
-	TriggerPayload    json.RawMessage
-	Data              json.RawMessage
-	Error             *string
-	DispatchedAt      *time.Time
-	StartedAt         *time.Time
-	FinishedAt        *time.Time
-	Logs              []RunLog `gorm:"-"`
+	// ContinuedFailureCount is how many failed steps a completed run went on past, its steps being set to continue on failure; 0 for a run that did not complete.
+	ContinuedFailureCount int
+	TriggerPayload        json.RawMessage
+	Data                  json.RawMessage
+	Error                 *string
+	DispatchedAt          *time.Time
+	StartedAt             *time.Time
+	FinishedAt            *time.Time
+	Logs                  []RunLog `gorm:"-"`
 }
 
 // RunLog is a workflow_run_logs row: one step of a run.
@@ -112,7 +114,8 @@ func isUniqueViolation(err error) bool {
 
 const workflowColumns = `w.id, w.created_at, w.updated_at, w.workspace_id, w.created_by, u.name AS creator_name, w.name, w.description, w.status, w.definition`
 
-const runSummaryColumns = `r.id, r.created_at, r.updated_at, r.workflow_id, r.workspace_id, r.workflow_version_id, r.response_id, r.survey_id, r.status, r.trigger_type, r.is_dry_run, r.idempotency_key, r.attempt, r.next_attempt_at, r.last_error_at, r.error, r.dispatched_at, r.started_at, r.finished_at`
+const runSummaryColumns = `r.id, r.created_at, r.updated_at, r.workflow_id, r.workspace_id, r.workflow_version_id, r.response_id, r.survey_id, r.status, r.trigger_type, r.is_dry_run, r.idempotency_key, r.attempt, r.next_attempt_at, r.last_error_at, r.error, r.dispatched_at, r.started_at, r.finished_at,
+	CASE WHEN r.status = 'completed' THEN (SELECT count(*) FROM workflow_run_logs l WHERE l.run_id = r.id AND l.status = 'failed') ELSE 0 END AS continued_failure_count`
 
 // byID loads a workflow with its newest run and run count; nil when there is none.
 func (r *Repository) byID(ctx context.Context, id uuid.UUID) (*Workflow, error) {

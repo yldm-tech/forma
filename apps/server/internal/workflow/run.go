@@ -85,7 +85,7 @@ type StepResult struct {
 	Error      string          `json:"error,omitempty"`
 	StartedAt  string          `json:"startedAt,omitempty"`
 	FinishedAt string          `json:"finishedAt,omitempty"`
-	// permanent marks a failure no retry can change; it is not recorded.
+	// permanent marks a failure no retry can change; the step log records it as permanent_failure, so a retry resumes the step as failed instead of performing it again.
 	permanent bool
 	// continued marks a failure the run went on past, its step being set to continue on failure; the step's input records the setting.
 	continued bool
@@ -228,8 +228,11 @@ func (r *Runner) execute(ctx context.Context, job *river.Job[RunArgs], run *clai
 	if len(continued) > 0 && job.Attempt < job.MaxAttempts && slices.ContainsFunc(continued, func(s StepResult) bool { return !s.permanent }) {
 		return &stepFailedError{message: continuedMessage(continued), data: data}
 	}
-	completion := `UPDATE workflow_runs SET status = 'completed', finished_at = now(), data = ?::jsonb, updated_at = now() WHERE id = ? AND workspace_id = ? AND status = 'running'`
-	args := []any{string(data), run.ID, job.Args.WorkspaceID}
+	// A run whose steps all succeeded in the end drops the error an earlier attempt recorded for continued failures, which would say a step failed when none did. Any other error an earlier attempt recorded stays, as it did before continue on failure.
+	completion := `UPDATE workflow_runs SET status = 'completed', finished_at = now(), data = ?::jsonb,
+		error = CASE WHEN starts_with(error, ?) THEN NULL ELSE error END, last_error_at = CASE WHEN starts_with(error, ?) THEN NULL ELSE last_error_at END,
+		updated_at = now() WHERE id = ? AND workspace_id = ? AND status = 'running'`
+	args := []any{string(data), continuedAfterFailure, continuedAfterFailure, run.ID, job.Args.WorkspaceID}
 	if len(continued) > 0 {
 		completion = `UPDATE workflow_runs SET status = 'completed', finished_at = now(), data = ?::jsonb, error = ?, last_error_at = now(), updated_at = now() WHERE id = ? AND workspace_id = ? AND status = 'running'`
 		args = []any{string(data), continuedMessage(continued), run.ID, job.Args.WorkspaceID}
@@ -344,6 +347,8 @@ type stepLog struct {
 	Error      *string
 	StartedAt  *time.Time
 	FinishedAt *time.Time
+	// PermanentFailure marks a failed step no retry can change, which a retry resumes as failed without performing it again.
+	PermanentFailure bool
 }
 
 // runSteps runs the steps in order. bail means another delivery owns a step, and the run is left for it to finish; failure is the error of the first failed step that is not set to continue on failure, which stops the run there. A failed step set to continue is marked continued and the next step runs.
@@ -406,23 +411,23 @@ func isoOrNow(t *time.Time) string {
 	return jsvalue.ISOString(*t)
 }
 
-// runStep is forma2's runStep: a succeeded step is resumed without sending, a running one belongs to another delivery, and anything else is claimed (a new row, or a failed or pending one taken over) and sent. owned is false when the step is not this delivery's to send.
+// runStep is forma2's runStep: a succeeded or skipped step, or one that failed for good, is resumed without sending, a running one belongs to another delivery, and anything else is claimed (a new row, or a failed or pending one taken over) and sent. owned is false when the step is not this delivery's to send.
 func (r *Runner) runStep(ctx context.Context, runID uuid.UUID, sequence int, step Step, ec *emailContext) (*StepResult, bool, error) {
 	var existing []stepLog
-	if err := r.db.WithContext(ctx).Raw(`SELECT step_id, step_type, status, input, output, error, started_at, finished_at FROM workflow_run_logs WHERE run_id = ? AND step_id = ?`, runID, step.ID).Scan(&existing).Error; err != nil {
+	if err := r.db.WithContext(ctx).Raw(`SELECT step_id, step_type, status, input, output, error, started_at, finished_at, permanent_failure FROM workflow_run_logs WHERE run_id = ? AND step_id = ?`, runID, step.ID).Scan(&existing).Error; err != nil {
 		return nil, false, fmt.Errorf("load workflow step: %w", err)
 	}
 	if len(existing) > 0 {
 		l := existing[0]
-		switch l.Status {
-		// A skipped step (a contact attribute with nothing to write) is done too; only the reconciler skips steps otherwise, on runs it fails.
-		case StepSucceeded, StepSkipped:
-			res := &StepResult{StepID: l.StepID, StepType: l.StepType, Status: l.Status, Input: jsonObject(l.Input), Output: jsonObject(l.Output), StartedAt: isoOrNow(l.StartedAt), FinishedAt: isoOrNow(l.FinishedAt)}
+		// A skipped step (a contact attribute with nothing to write) is done too; only the reconciler skips steps otherwise, on runs it fails. A step that failed for good is done as well: a run goes on past one only when it is set to continue on failure, and a retry of that run, for another step that failed transiently, must not perform it again.
+		if l.Status == StepSucceeded || l.Status == StepSkipped || (l.Status == StepFailed && l.PermanentFailure) {
+			res := &StepResult{StepID: l.StepID, StepType: l.StepType, Status: l.Status, Input: jsonObject(l.Input), Output: jsonObject(l.Output), StartedAt: isoOrNow(l.StartedAt), FinishedAt: isoOrNow(l.FinishedAt), permanent: l.PermanentFailure}
 			if l.Error != nil {
 				res.Error = *l.Error
 			}
 			return res, true, nil
-		case StepRunning:
+		}
+		if l.Status == StepRunning {
 			return nil, false, nil
 		}
 	}
@@ -450,8 +455,8 @@ func (r *Runner) runStep(ctx context.Context, runID uuid.UUID, sequence int, ste
 	}
 	rctx, cancel := detached(ctx)
 	defer cancel()
-	if err := r.db.WithContext(rctx).Exec(`UPDATE workflow_run_logs SET status = ?, output = ?::jsonb, error = ?, finished_at = ? WHERE run_id = ? AND step_id = ?`,
-		status, string(output), stored, finishedAt, runID, step.ID).Error; err != nil {
+	if err := r.db.WithContext(rctx).Exec(`UPDATE workflow_run_logs SET status = ?, output = ?::jsonb, error = ?, finished_at = ?, permanent_failure = ? WHERE run_id = ? AND step_id = ?`,
+		status, string(output), stored, finishedAt, status == StepFailed && permanent, runID, step.ID).Error; err != nil {
 		return nil, false, fmt.Errorf("record workflow step: %w", err)
 	}
 	return &StepResult{StepID: step.ID, StepType: step.Type, Status: status, Input: input, Output: output, Error: errMsg,
