@@ -12,8 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/apps/server/internal/authz"
-	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/recipient"
 )
 
 // Workflow statuses, forma2's ZWorkflowStatus.
@@ -336,42 +335,21 @@ func (r *Repository) surveyEndings(ctx context.Context, surveyID, workspaceID uu
 }
 
 // Member is someone who can access a workspace, as the send_email recipient picker lists them.
-type Member struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
+type Member = recipient.Member
 
-// Members is forma2's getWorkspaceMembers: the active users of the workspace's organization that it does not refuse (neither suspended nor refused by its two-factor requirement, authz.MemberNotRefusedSQL) who are its owners or managers, or who are on a team with access to the workspace. It is also the send_email allowlist, so a refused member is not mailed the responses the app refuses them.
+// Members is the workspace's members, recipient.Members.
 func Members(ctx context.Context, db *gorm.DB, workspaceID uuid.UUID) ([]Member, error) {
-	var rows []Member
-	if err := db.WithContext(ctx).Raw(`SELECT u.name, u.email FROM memberships m
-		JOIN workspaces w ON w.organization_id = m.organization_id
-		JOIN users u ON u.id = m.user_id
-		WHERE w.id = ? AND u.is_active AND `+authz.MemberNotRefusedSQL("m")+` AND u.email <> ''
-		AND (m.role IN ('owner', 'manager') OR EXISTS (
-			SELECT 1 FROM team_members tm JOIN workspace_teams wt ON wt.team_id = tm.team_id WHERE tm.user_id = u.id AND wt.workspace_id = w.id))
-		ORDER BY u.name, u.email`, workspaceID).Scan(&rows).Error; err != nil {
-		return nil, fmt.Errorf("load workspace members: %w", err)
-	}
-	return rows, nil
+	return recipient.Members(ctx, db, workspaceID)
 }
 
 // normalizeEmail is forma2's normalizeEmailForComparison.
 func normalizeEmail(email string) string {
-	return strings.ToLower(jsvalue.Trim(email))
+	return recipient.Normalize(email)
 }
 
-// MemberEmails is forma2's getWorkspaceMemberEmails: the recipient allowlist of send_email, normalized for comparison.
+// MemberEmails is the recipient allowlist of send_email, recipient.Allowlist.
 func MemberEmails(ctx context.Context, db *gorm.DB, workspaceID uuid.UUID) (map[string]bool, error) {
-	members, err := Members(ctx, db, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[string]bool, len(members))
-	for _, m := range members {
-		out[normalizeEmail(m.Email)] = true
-	}
-	return out, nil
+	return recipient.Allowlist(ctx, db, workspaceID)
 }
 
 // organizationOf is the workspace's organization, for audit events.

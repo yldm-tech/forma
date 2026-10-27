@@ -115,7 +115,7 @@ func mustJSON(v any) string {
 }
 
 func TestSurveyPageRendersTheSurvey(t *testing.T) {
-	e := newEnv(t, func(c *config.Config) {
+	e := newEnv(t, withSurveyDomain, func(c *config.Config) {
 		c.RecaptchaSiteKey, c.RecaptchaSecretKey = "site-key", "secret-key"
 		c.ImprintURL, c.PrivacyURL, c.TermsURL = "https://example.com/imprint", "https://example.com/privacy", "https://example.com/terms"
 	})
@@ -140,7 +140,7 @@ func TestSurveyPageRendersTheSurvey(t *testing.T) {
 	if s["recaptchaSiteKey"] != "site-key" || s["isSpamProtectionEnabled"] != true || s["isFormaCloud"] != false {
 		t.Fatalf("recaptcha %v", s)
 	}
-	if s["imprintUrl"] != "https://example.com/imprint" || s["privacyUrl"] != "https://example.com/privacy" || s["termsUrl"] != "https://example.com/terms" || s["publicDomain"] != "http://localhost:3999" {
+	if s["imprintUrl"] != "https://example.com/imprint" || s["privacyUrl"] != "https://example.com/privacy" || s["termsUrl"] != "https://example.com/terms" || s["publicDomain"] != "http://surveys.localhost:3999" {
 		t.Fatalf("legal %v", s)
 	}
 	if s["responseCount"] != float64(2) {
@@ -165,7 +165,8 @@ func TestSurveyPageRendersTheSurvey(t *testing.T) {
 		t.Fatalf("embedded fields %v", sv["embeddedFields"])
 	}
 	// The runtime's script is in the document, so it loads alongside the page bundle, by a URL pinned to the build so browsers and the CDN keep it until a deploy changes it, marked as this page's so it may set zod jitless for the page.
-	if !strings.Contains(p.Body, `<link rel="preload" href="`+testRuntimeSrc+`" as="script" fetchpriority="high"><script async src="`+testRuntimeSrc+`" data-forma-survey-page></script>`) {
+	runtimeSrc := strings.Replace(testRuntimeSrc, "http://localhost:3999", "http://surveys.localhost:3999", 1)
+	if !strings.Contains(p.Body, `<link rel="preload" href="`+runtimeSrc+`" as="script" fetchpriority="high"><script async src="`+runtimeSrc+`" data-forma-survey-page></script>`) {
 		t.Fatal("the survey runtime is not in the document")
 	}
 	// An English survey needs none of the runtime's translation files.
@@ -262,6 +263,45 @@ func TestSurveyPageMetadata(t *testing.T) {
 	// The welcome card's headline as text, recall tokens shown as their labels.
 	if got := e.page("/s/" + welcome.String()).Title; got != "Hello @What do you think? and @utm_source and @Utm Source | Forma" {
 		t.Fatalf("welcome title %q", got)
+	}
+}
+
+// withSurveyDomain gives the instance a PUBLIC_URL of its own, without which the pages carry no custom head scripts.
+func withSurveyDomain(c *config.Config) {
+	c.PublicURL, _ = url.Parse("http://surveys.localhost:3999")
+}
+
+// Where the survey pages share the admin origin (no PUBLIC_URL, or one on the admin host), or on Forma Cloud, neither the workspace's nor the survey's custom head scripts reach the page, nor the survey a correct PIN unlocks: a script there would run with the session of every signed-in user who opens the link.
+func TestSurveyPageLeavesOutCustomScriptsWithoutASurveyDomain(t *testing.T) {
+	for name, configure := range map[string]func(*config.Config){
+		"no PUBLIC_URL":                func(*config.Config) {},
+		"PUBLIC_URL on the admin host": func(c *config.Config) { c.PublicURL, _ = url.Parse("http://LOCALHOST:3999/") },
+		"Forma Cloud":                  func(c *config.Config) { withSurveyDomain(c); c.IsFormaCloud = true },
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, configure)
+			ws := e.workspace("custom_head_scripts", "<script>window.ws=1</script>")
+			id := e.survey(ws, "custom_head_scripts", "<script>window.survey=1</script>", "custom_head_scripts_mode", "replace")
+			p := e.page("/s/" + id.String())
+			if p.Status != http.StatusOK || p.view() != viewSurvey {
+				t.Fatalf("status %d view %q", p.Status, p.view())
+			}
+			if w := p.sub("survey", "workspace"); w["customHeadScripts"] != nil {
+				t.Fatalf("workspace scripts reached the page: %v", w)
+			}
+			if sv := p.sub("survey", "survey"); sv["customHeadScripts"] != nil {
+				t.Fatalf("survey scripts reached the page: %v", sv)
+			}
+			if strings.Contains(p.Body, "window.ws=1") || strings.Contains(p.Body, "window.survey=1") {
+				t.Fatalf("a script reached the page: %s", p.Body)
+			}
+
+			gated := e.survey(ws, "pin", "1234", "custom_head_scripts", "<script>window.survey=1</script>")
+			rec := e.request(http.MethodPost, "/s/"+gated.String()+"/pin", map[string]any{"pin": "1234"})
+			if rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), "window.survey=1") {
+				t.Fatalf("PIN unlock: %d %s", rec.Code, rec.Body)
+			}
+		})
 	}
 }
 

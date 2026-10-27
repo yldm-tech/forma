@@ -212,7 +212,7 @@ func (s *Service) integrationOf(ctx context.Context, userID, workspaceID uuid.UU
 	return in, nil
 }
 
-// SaveLinks is forma2's createOrUpdateIntegrationAction: the integration-mutation limit per user before anything is read, workspace.write, then the integration's links replaced by config. Credentials never come from this path: forma2 replaced a client-sent config.key with the stored one, and here the input has no place for one, so an integration that was never connected through its OAuth flow is 404. Every link must name a survey of the workspace. Only the integration's id is returned.
+// SaveLinks is forma2's createOrUpdateIntegrationAction: the integration-mutation limit per user before anything is read, workspace.manage (forma2 asked for workspace.write; which surveys' responses go to the connected account is a manager's decision, as a webhook's surveys are), then the integration's links replaced by config. Credentials never come from this path: forma2 replaced a client-sent config.key with the stored one, and here the input has no place for one, so an integration that was never connected through its OAuth flow is 404. Every link must name a survey of the workspace. Only the integration's id is returned.
 func (s *Service) SaveLinks(ctx context.Context, userID, workspaceID uuid.UUID, typ string, config json.RawMessage, surveyIDs []string) (uuid.UUID, error) {
 	var org *uuid.UUID
 	var saved *Integration
@@ -224,7 +224,7 @@ func (s *Service) SaveLinks(ctx context.Context, userID, workspaceID uuid.UUID, 
 		if org, err = s.repo.organizationOf(ctx, workspaceID); err != nil {
 			return err
 		}
-		in, err := s.integrationOf(ctx, userID, workspaceID, typ, authz.WorkspaceWrite)
+		in, err := s.integrationOf(ctx, userID, workspaceID, typ, authz.WorkspaceManage)
 		if err != nil {
 			return err
 		}
