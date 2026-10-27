@@ -16,12 +16,13 @@ export interface PlainSession {
   activeCustomerLabelTypeId: string | null;
 }
 
-/** The session, or null when Plain is not configured (the server answers 404), in which case nothing is loaded. */
+/** The session, or null when Plain is not configured, in which case nothing is loaded. The server answers 204 then; one from before that change answered 404, which still reads as null. */
 export const plainSessionQuery = queryOptions({
   queryKey: ["plain", "session"] as const,
   queryFn: async ({ signal }): Promise<PlainSession | null> => {
     try {
-      return await api.get<PlainSession>("/api/app/plain/session", { signal });
+      // api.get resolves a 204 to undefined, which a query must not return.
+      return (await api.get<PlainSession | undefined>("/api/app/plain/session", { signal })) ?? null;
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;

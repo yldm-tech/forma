@@ -283,8 +283,14 @@ const responseMeta = `{"url":"http://example.com","source":"web","userAgent":{"b
 // respond stores a finished response to sv created at 2024-01-01T12:00:00Z and returns the pipeline event for it.
 func (e *env) respond(ws, sv uuid.UUID, contactAttributes string) *pipeline.Event {
 	e.t.Helper()
+	return e.respondWith(ws, sv, responseData, contactAttributes)
+}
+
+// respondWith is respond with the given answers.
+func (e *env) respondWith(ws, sv uuid.UUID, data, contactAttributes string) *pipeline.Event {
+	e.t.Helper()
 	id := e.insert(`INSERT INTO responses (survey_id, finished, data, variables, meta, contact_attributes, created_at) VALUES (?, true, ?::jsonb, '{"var1":"Variable Value"}'::jsonb, ?::jsonb, ?::jsonb, '2024-01-01T12:00:00Z') RETURNING id`,
-		sv, responseData, responseMeta, contactAttributes)
+		sv, data, responseMeta, contactAttributes)
 	r, err := response.Load(context.Background(), e.db, id)
 	if err != nil || r == nil {
 		e.t.Fatalf("load response: %v", err)

@@ -582,6 +582,55 @@ func (r *Repository) linkSurveys(ctx context.Context, segmentID, workspaceID uui
 	return nil
 }
 
+// segmentUsers lists, sorted, the workspace's segments whose members are computed through the segment: the segment itself, the segments whose filters name it, and so on up, however deep (a segment nests only its own workspace's segments). A segment whose filters cannot be read names none.
+func (r *Repository) segmentUsers(ctx context.Context, workspaceID, segmentID uuid.UUID) ([]string, error) {
+	var rows []struct {
+		ID      uuid.UUID
+		Filters json.RawMessage
+	}
+	if err := r.db.WithContext(ctx).Raw(`SELECT id, filters FROM segments WHERE workspace_id = ?`, workspaceID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("read segment filters: %w", err)
+	}
+	namedBy := map[string][]string{}
+	for _, row := range rows {
+		var tree Filters
+		if json.Unmarshal(row.Filters, &tree) != nil {
+			continue
+		}
+		walkLeaves(tree, func(f *Filter) {
+			if f.Root.Type == filterRootSegment {
+				namedBy[f.Root.SegmentID] = append(namedBy[f.Root.SegmentID], row.ID.String())
+			}
+		})
+	}
+	users := []string{segmentID.String()}
+	seen := map[string]bool{segmentID.String(): true}
+	for i := 0; i < len(users); i++ {
+		for _, user := range namedBy[users[i]] {
+			if !seen[user] {
+				seen[user] = true
+				users = append(users, user)
+			}
+		}
+	}
+	slices.Sort(users)
+	return users, nil
+}
+
+// segmentResultShares lists the workspace's results links whose frozen filter names one of the segments, by survey name and then newest first.
+func (r *Repository) segmentResultShares(ctx context.Context, workspaceID uuid.UUID, segmentIDs []string) ([]SegmentResultShare, error) {
+	out := []SegmentResultShare{}
+	if err := r.db.WithContext(ctx).Raw(`SELECT rs.id, rs.name, s.id AS survey_id, s.name AS survey_name
+		FROM survey_result_shares rs JOIN surveys s ON s.id = rs.survey_id
+		WHERE s.workspace_id = ? AND EXISTS (
+			SELECT 1 FROM jsonb_object_keys(CASE WHEN jsonb_typeof(rs.filter_criteria -> 'segments') = 'object' THEN rs.filter_criteria -> 'segments' ELSE '{}'::jsonb END) AS k(id)
+			WHERE k.id IN ?)
+		ORDER BY s.name, rs.created_at DESC, rs.id`, workspaceID, segmentIDs).Scan(&out).Error; err != nil {
+		return nil, fmt.Errorf("read segment result shares: %w", err)
+	}
+	return out, nil
+}
+
 func (r *Repository) deleteSegment(ctx context.Context, id uuid.UUID) error {
 	if err := r.db.WithContext(ctx).Exec(`DELETE FROM segments WHERE id = ?`, id).Error; err != nil {
 		return fmt.Errorf("delete segment: %w", err)

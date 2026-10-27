@@ -34,6 +34,8 @@ interface LoginSearch extends CallbackSearch {
   verified?: string;
   /** Prefills the email field, as the invite page's sign-in link does. */
   email?: string;
+  /** "1" when an SSO sign-in or recovery left a pending sign-in in this browser that the account's second factor completes. */
+  twoFactor?: string;
 }
 
 export const Route = createFileRoute("/auth/login")({
@@ -42,6 +44,7 @@ export const Route = createFileRoute("/auth/login")({
     error: stringParam(search.error),
     verified: stringParam(search.verified),
     email: stringParam(search.email),
+    twoFactor: stringParam(search.twoFactor),
   }),
   beforeLoad: redirectIfSignedIn,
   loader: ({ context }) => context.queryClient.ensureQueryData(authOptionsQuery),
@@ -81,7 +84,8 @@ function LoginPage() {
       options.emailAuthEnabled &&
       (options.ssoProviders.length === 0 || search.email !== undefined || lastUsed === "Email")
   );
-  const [step, setStep] = useState<Step>("credentials");
+  // An SSO sign-in of an account with two-factor authentication lands here with its pending sign-in, straight at the code.
+  const [step, setStep] = useState<Step>(() => (search.twoFactor === "1" ? "totp" : "credentials"));
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string>();
   const [verifyingCode, setVerifyingCode] = useState(false);

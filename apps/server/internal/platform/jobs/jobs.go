@@ -27,6 +27,12 @@ const (
 	discardedRetention = 7 * 24 * time.Hour
 )
 
+// QueueAI takes the jobs that wait on the AI provider, the open-text summaries: a generation can take minutes, so it gets slots of its own and never holds back the response pipeline, emails or authorization behind it.
+const QueueAI = "ai"
+
+// aiMaxWorkers is how many AI generations one worker runs at once. Each one sends up to five requests to the provider, so a burst of summaries waits in its queue rather than spending the organization's provider quota all at once.
+const aiMaxWorkers = 2
+
 // Migrate installs or upgrades River's own tables (river_job, river_queue, ...). It runs after the goose migrations in `forma migrate`; River versions its schema itself, so these tables are not in apps/server/migrations.
 func Migrate(ctx context.Context, databaseURL string, log *slog.Logger) error {
 	pool, err := pgxpool.New(ctx, databaseURL)
@@ -124,7 +130,7 @@ func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.L
 		Logger:                      log,
 		Workers:                     reg.workers,
 		PeriodicJobs:                reg.periodic,
-		Queues:                      map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: concurrency}},
+		Queues:                      map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: concurrency}, QueueAI: {MaxWorkers: aiMaxWorkers}},
 		MaxAttempts:                 maxAttempts,
 		RetryPolicy:                 exponentialRetry{},
 		Middleware:                  []rivertype.Middleware{&metricsMiddleware{metrics: defaultJobMetrics()}},

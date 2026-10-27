@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -810,8 +811,9 @@ func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
 	expectStatus(t, squatter.post("/test/protected", nil), http.StatusOK, "")
 	e.insertID(`INSERT INTO verifications (purpose, user_id, email, token_hash, expires_at) VALUES ('email_change', ?, 'squatter@evil.example', '\x01', now() + interval '1 day') RETURNING id`, id)
 	e.exec(`INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, '\x02', now() + interval '1 day')`, id)
-	// The registrant also signed up through an identity provider that never vouched for the address; that identity must not outlive the recovery.
+	// The registrant also signed up through an identity provider that never vouched for the address; that identity must not outlive the recovery, and neither must the MCP client they authorized.
 	e.exec(`INSERT INTO user_identities (user_id, provider, subject) VALUES (?, 'github', 'squatter-1')`, id)
+	e.seedOAuthGrant(id)
 
 	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
 	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/auth/verification-requested?purpose=sso_recovery")
@@ -840,6 +842,9 @@ func TestSSORecoveryReclaimsUnprovenAccount(t *testing.T) {
 	}
 	if e.count(`SELECT count(*) FROM sessions WHERE user_id = ?`, id) != 1 {
 		t.Fatal("other sessions survived")
+	}
+	if n := e.liveOAuthTokens(id); n != 0 {
+		t.Fatalf("%d of the registrant's OAuth tokens survived", n)
 	}
 	expectStatus(t, squatter.post("/test/protected", nil), http.StatusUnauthorized, "not_authenticated")
 	expectStatus(t, owner.post("/test/protected", nil), http.StatusOK, "")
@@ -968,4 +973,184 @@ func TestSSOStatePayload(t *testing.T) {
 	if err := json.Unmarshal(raw, &st); err != nil || st.Provider != "google" || st.CallbackURL != webApp+"/x" || st.CodeVerifier == "" || st.Nonce == "" {
 		t.Fatalf("payload %s: %v", raw, err)
 	}
+}
+
+// twoFactorStep is where an SSO sign-in of an account with two-factor authentication sends the browser: the sign-in page's code step, heading for callbackURL.
+func twoFactorStep(callbackURL string) string {
+	return appBase + "/auth/login?" + url.Values{"callbackUrl": {callbackURL}, "twoFactor": {"1"}}.Encode()
+}
+
+// An identity provider is one factor, like a password: a linked identity of an account with two-factor authentication gets the pending sign-in a password would, and only the code completes it (AUTH-03).
+func TestSSOSignInLinkedRequiresTheSecondFactor(t *testing.T) {
+	t.Parallel()
+	e, fake := ssoEnv(t, providerGoogle)
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{sso: true, twoFactor: true})
+	fake.set(func(f *fakeIdP) { f.profile = googleProfile("google-"+id.String(), "ada@example.com") })
+
+	b := e.browser()
+	r := b.ssoSignIn(fake, "google", "/surveys")
+	expectRedirect(t, r, twoFactorStep(webApp+"/surveys"))
+	if b.has(sessionCookieName) || r.cookie(sessionCookieName) != nil {
+		t.Fatal("a session was set before the second factor")
+	}
+	if !b.has(twoFactorCookieName) {
+		t.Fatal("no pending sign-in was set")
+	}
+	if e.count(`SELECT count(*) FROM sessions WHERE user_id = ?`, id) != 0 {
+		t.Fatal("a session was created before the second factor")
+	}
+	if len(e.auditEvents(audit.ActionSignedIn)) != 0 {
+		t.Fatal("the sign-in was recorded before the second factor")
+	}
+	expectStatus(t, b.get("/auth/me"), http.StatusUnauthorized, "not_authenticated")
+
+	expectStatus(t, verifyTOTP(b, "000000"), http.StatusUnauthorized, CodeInvalidCode)
+	expectStatus(t, verifyTOTP(b, e.totpCode(id, 0)), http.StatusOK, "")
+	if me := b.get("/auth/me"); me.json()["id"] != id.String() {
+		t.Fatalf("me %s", me.Body.String())
+	}
+	signedIn := e.auditEvents(audit.ActionSignedIn)
+	if len(signedIn) != 1 || field(signedIn[0], "changes", "authMethod") != signInMethodSSO {
+		t.Fatalf("signed-in events %v", signedIn)
+	}
+
+	t.Run("an account without two-factor authentication is signed in directly", func(t *testing.T) {
+		e.exec(`DELETE FROM user_totp WHERE user_id = ?`, id)
+		b := e.browser()
+		expectRedirect(t, b.ssoSignIn(fake, "google", ""), appBase+"/")
+		if !b.has(sessionCookieName) {
+			t.Fatal("no session")
+		}
+	})
+}
+
+// Mailbox control is one factor: redeeming a recovery link for an account with two-factor authentication links nothing and signs nobody in until the code is accepted, and then does both (AUTH-03).
+func TestSSORecoveryRequiresTheSecondFactor(t *testing.T) {
+	t.Parallel()
+	e, fake := ssoEnv(t, providerGoogle)
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
+	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
+	linked := func() int64 {
+		return e.count(`SELECT count(*) FROM user_identities WHERE provider = 'google' AND subject = 'g-1'`)
+	}
+
+	expectRedirect(t, e.browser().ssoSignIn(fake, "google", "/surveys"), appBase+"/auth/verification-requested?purpose=sso_recovery")
+	clicker := e.browser()
+	done := clicker.post("/auth/sso/recovery/complete", map[string]string{"token": e.recoveryToken("ada@example.com")})
+	expectStatus(t, done, http.StatusOK, "")
+	if done.json()["status"] != "two_factor_required" || done.json()["redirectUrl"] != webApp+"/surveys" {
+		t.Fatalf("completion %s", done.Body.String())
+	}
+	if done.cookie(sessionCookieName) != nil || clicker.has(sessionCookieName) || !clicker.has(twoFactorCookieName) {
+		t.Fatalf("cookies after the link: %v", clicker.cookies)
+	}
+	if linked() != 0 {
+		t.Fatal("the identity was linked before the second factor")
+	}
+	if e.count(`SELECT count(*) FROM sessions WHERE user_id = ?`, id) != 0 {
+		t.Fatal("a session was created before the second factor")
+	}
+	if len(e.auditEvents(audit.ActionSSORecoveryCompleted)) != 0 {
+		t.Fatal("the recovery was recorded as completed before the second factor")
+	}
+
+	// Without the code the identity stays unlinked, so it cannot sign in on its own either.
+	expectStatus(t, verifyTOTP(clicker, "000000"), http.StatusUnauthorized, CodeInvalidCode)
+	if linked() != 0 {
+		t.Fatal("a refused code linked the identity")
+	}
+	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/auth/verification-requested?purpose=sso_recovery")
+
+	expectStatus(t, verifyTOTP(clicker, e.totpCode(id, 0)), http.StatusOK, "")
+	if n := e.count(`SELECT count(*) FROM user_identities WHERE user_id = ? AND provider = 'google' AND subject = 'g-1'`, id); n != 1 {
+		t.Fatal("the identity was not linked once the code was accepted")
+	}
+	if me := clicker.get("/auth/me"); me.json()["id"] != id.String() {
+		t.Fatalf("me %s", me.Body.String())
+	}
+	completed := e.auditEvents(audit.ActionSSORecoveryCompleted)
+	if len(completed) != 1 || field(completed[0], "target", "id") != id.String() || field(completed[0], "changes", "provider") != "google" || field(completed[0], "changes", "secondFactor") != true {
+		t.Fatalf("completed events %v", completed)
+	}
+	signedIn := e.auditEvents(audit.ActionSignedIn)
+	if len(signedIn) != 1 || field(signedIn[0], "changes", "authMethod") != signInMethodSSO {
+		t.Fatalf("signed-in events %v", signedIn)
+	}
+
+	t.Run("the linked identity then signs in through the second factor too", func(t *testing.T) {
+		b := e.browser()
+		expectRedirect(t, b.ssoSignIn(fake, "google", ""), twoFactorStep(appBase+"/"))
+		if b.has(sessionCookieName) {
+			t.Fatal("a session was set before the second factor")
+		}
+	})
+}
+
+// An identity linked to another account between the link and the code spends the pending sign-in without linking or signing in.
+func TestSSORecoverySecondFactorRefusesAnIdentityLinkedMeanwhile(t *testing.T) {
+	t.Parallel()
+	e, fake := ssoEnv(t, providerGoogle)
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
+	other := e.seedUser("grace@example.com", strongPassword, userOpts{})
+	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
+
+	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/auth/verification-requested?purpose=sso_recovery")
+	clicker := e.browser()
+	done := clicker.post("/auth/sso/recovery/complete", map[string]string{"token": e.recoveryToken("ada@example.com")})
+	expectStatus(t, done, http.StatusOK, "")
+	if done.json()["status"] != "two_factor_required" {
+		t.Fatalf("completion %s", done.Body.String())
+	}
+	e.exec(`INSERT INTO user_identities (user_id, provider, subject) VALUES (?, 'google', 'g-1')`, other)
+
+	r := verifyTOTP(clicker, e.totpCode(id, 0))
+	expectStatus(t, r, http.StatusBadRequest, CodeAccountNotLinked)
+	if c := r.cookie(twoFactorCookieName); c == nil || c.MaxAge >= 0 {
+		t.Fatalf("the spent pending sign-in's cookie was not cleared: %v", c)
+	}
+	if e.count(`SELECT count(*) FROM sessions WHERE user_id = ?`, id) != 0 || e.count(`SELECT count(*) FROM user_identities WHERE user_id = ? AND provider = 'google'`, id) != 0 {
+		t.Fatal("the refused recovery signed in or linked")
+	}
+	if e.count(`SELECT count(*) FROM verifications WHERE user_id = ? AND purpose = 'two_factor' AND consumed_at IS NULL`, id) != 0 {
+		t.Fatal("the pending sign-in was not spent")
+	}
+}
+
+// A refused link must not spend the backup code that would have completed the sign-in: the identity's owner is checked before the code is.
+func TestSSORecoveryRefusedLinkKeepsTheBackupCode(t *testing.T) {
+	t.Parallel()
+	e, fake := ssoEnv(t, providerGoogle)
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
+	other := e.seedUser("grace@example.com", strongPassword, userOpts{})
+	codes := e.totp[id].BackupCodes
+	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
+
+	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/auth/verification-requested?purpose=sso_recovery")
+	clicker := e.browser()
+	done := clicker.post("/auth/sso/recovery/complete", map[string]string{"token": e.recoveryToken("ada@example.com")})
+	expectStatus(t, done, http.StatusOK, "")
+	if done.json()["status"] != "two_factor_required" {
+		t.Fatalf("completion %s", done.Body.String())
+	}
+	e.exec(`INSERT INTO user_identities (user_id, provider, subject) VALUES (?, 'google', 'g-1')`, other)
+
+	r := verifyBackup(clicker, codes[0])
+	expectStatus(t, r, http.StatusBadRequest, CodeAccountNotLinked)
+	if c := r.cookie(twoFactorCookieName); c == nil || c.MaxAge >= 0 {
+		t.Fatalf("the spent pending sign-in's cookie was not cleared: %v", c)
+	}
+	if e.count(`SELECT count(*) FROM sessions WHERE user_id = ?`, id) != 0 || e.count(`SELECT count(*) FROM user_identities WHERE user_id = ? AND provider = 'google'`, id) != 0 {
+		t.Fatal("the refused recovery signed in or linked")
+	}
+	if e.count(`SELECT count(*) FROM verifications WHERE user_id = ? AND purpose = 'two_factor' AND consumed_at IS NULL`, id) != 0 {
+		t.Fatal("the pending sign-in was not spent")
+	}
+	left, err := openBackupCodes(e.twoFactor.cipher, id, e.backupCodesCiphertext(id))
+	if err != nil || len(left) != len(codes) || !slices.Contains(left, codes[0]) {
+		t.Fatalf("the refused link spent the backup code: %d left, %v", len(left), err)
+	}
+	// The kept code still completes a password sign-in.
+	b := e.browser()
+	b.signInPending()
+	expectStatus(t, verifyBackup(b, codes[0]), http.StatusOK, "")
 }

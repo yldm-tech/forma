@@ -91,6 +91,9 @@ func (h *SSOHandler) finish(c *gin.Context, provider string) {
 	if res.session != nil {
 		h.cookies.setSession(c, *res.session)
 	}
+	if res.pending != nil {
+		h.cookies.set(c, h.cookies.twoFactor, *res.pending)
+	}
 	h.cookies.clearAttribution(c, attr)
 	c.Header("Cache-Control", "no-store")
 	c.Redirect(http.StatusFound, res.redirect)
@@ -128,8 +131,10 @@ func (h *SSOHandler) samlMetadata(c *gin.Context) {
 }
 
 type ssoRecoveryResponse struct {
-	// RedirectURL is where the SPA navigates now that the browser is signed in.
+	// RedirectURL is where the SPA navigates now that the browser is signed in, or, when Status is "two_factor_required", once the second factor is accepted.
 	RedirectURL string `json:"redirectUrl"`
+	// Status is "signed_in", or "two_factor_required" when the account's second factor must be submitted to the two-factor endpoints before anything is linked.
+	Status string `json:"status"`
 }
 
 // completeRecovery redeems the emailed SSO recovery link. It is a POST behind the CSRF check, so only the SPA page the link opens can redeem it, never a cross-site request.
@@ -139,12 +144,18 @@ func (h *SSOHandler) completeRecovery(c *gin.Context) {
 		return
 	}
 	attr := readAttribution(c)
-	redirect, sess, err := h.sso.completeRecovery(c.Request.Context(), req.Token, clientMetaFrom(c))
+	redirect, res, err := h.sso.completeRecovery(c.Request.Context(), req.Token, clientMetaFrom(c))
 	if err != nil {
 		httpapi.Fail(c, err)
 		return
 	}
-	h.cookies.setSession(c, sess)
 	h.cookies.clearAttribution(c, attr)
-	c.JSON(http.StatusOK, ssoRecoveryResponse{RedirectURL: redirect})
+	if res.pending != nil {
+		h.cookies.set(c, h.cookies.twoFactor, *res.pending)
+		c.JSON(http.StatusOK, ssoRecoveryResponse{RedirectURL: redirect, Status: "two_factor_required"})
+		return
+	}
+	h.cookies.setSession(c, *res.session)
+	h.cookies.clear(c, h.cookies.twoFactor)
+	c.JSON(http.StatusOK, ssoRecoveryResponse{RedirectURL: redirect, Status: "signed_in"})
 }

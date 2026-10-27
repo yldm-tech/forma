@@ -3,10 +3,13 @@ package mailer_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"image/png"
 	"io"
 	"log/slog"
 	"net"
@@ -14,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -426,6 +430,58 @@ func TestRenderOrganizationLogo(t *testing.T) {
 	}
 	if !strings.Contains(html, "utm_campaign=email_logo") {
 		t.Fatalf("Forma's logo URL was treated as a custom logo:\n%s", html)
+	}
+	_, html, err = m.Render("en-US", mailer.LinkSurvey{SurveyName: "S", SurveyLink: "https://x.example.com/s/1", LogoURL: "https://forma.yldm.ai/logo-transparent.png?v=219574d1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(html, "utm_campaign=email_logo") {
+		t.Fatalf("Forma's versioned logo URL was treated as a custom logo:\n%s", html)
+	}
+}
+
+// Forma's logo is drawn in a box of fixed width and height, in the aspect ratio of apps/web/public/logo-transparent.png, so no client stretches it or leaves the transparent margin of a square canvas above the card: Outlook ignores max-height and object-fit, and sizes an image only by its width and height attributes.
+func TestRenderFormaLogoSize(t *testing.T) {
+	t.Parallel()
+	file, err := os.ReadFile(filepath.Join(repotest.Root(t), "apps/web/public/logo-transparent.png"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	asset, err := png.DecodeConfig(bytes.NewReader(file))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The URL carries a version derived from the file's content, so a mail image proxy or client cache that keys on the URL (Gmail's, Apple Mail Privacy Protection's, Outlook's) never draws a stale copy of an older file into this box.
+	sum := sha256.Sum256(file)
+	src := "https://forma.yldm.ai/logo-transparent.png?v=" + hex.EncodeToString(sum[:4])
+	m := newMailer(t, baseConfig(), nil)
+	img := regexp.MustCompile(`<img alt="Logo" src="` + regexp.QuoteMeta(src) + `"[^>]*>`)
+	size := regexp.MustCompile(`width="(\d+)" height="(\d+)"`)
+	for _, content := range everyTemplate {
+		_, html, err := m.Render("en-US", content)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tag := img.FindString(html)
+		if tag == "" {
+			t.Fatalf("%T: Forma's logo is not loaded from %s:\n%s", content, src, html)
+		}
+		match := size.FindStringSubmatch(tag)
+		if match == nil {
+			t.Fatalf("%T: Forma's logo has no width and height attributes: %q", content, tag)
+		}
+		width, _ := strconv.Atoi(match[1])
+		height, _ := strconv.Atoi(match[2])
+		if height > 48 || width > 240 {
+			t.Errorf("%T: logo drawn at %dx%d, want at most 240x48", content, width, height)
+		}
+		// The drawn box keeps the file's aspect ratio to within a pixel.
+		if want := width * asset.Height / asset.Width; height < want-1 || height > want+1 {
+			t.Errorf("%T: logo drawn at %dx%d, but the file is %dx%d", content, width, height, asset.Width, asset.Height)
+		}
+		if !strings.Contains(tag, fmt.Sprintf("width:%dpx;height:%dpx", width, height)) {
+			t.Errorf("%T: the logo's CSS size does not match its attributes: %q", content, tag)
+		}
 	}
 }
 

@@ -107,13 +107,30 @@ func (e *env) session(user uuid.UUID) (int, map[string]any) {
 	return rec.Code, body
 }
 
-// Without PLAIN_APP_ID there is no chat, so the app never loads the widget.
+// Without PLAIN_APP_ID there is no chat, so the app never loads the widget. A chat that is switched off is not an error: the answer is 204 with no body, so the browser logs no failed request on every page of an instance without Plain.
 func TestSessionUnconfigured(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t, config.PlainConfig{ChatHMACSecret: "test-secret"}, true)
 	user := e.insert(`INSERT INTO users (name, email) VALUES ('John Doe', 'john@example.com') RETURNING id`)
-	if status, body := e.session(user); status != http.StatusNotFound || body["code"] != apperr.CodeNotFound {
-		t.Fatalf("%d %v", status, body)
+	req := httptest.NewRequest(http.MethodGet, "/api/app/plain/session", nil)
+	req.Header.Set(testUserHeader, user.String())
+	rec := httptest.NewRecorder()
+	e.engine.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent || rec.Body.Len() != 0 || rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("%d %q %q", rec.Code, rec.Header().Get("Cache-Control"), rec.Body.String())
+	}
+}
+
+// The session stays behind sign-in when the chat is off, so an anonymous caller cannot tell whether an instance runs Plain.
+func TestSessionUnconfiguredRequiresSignIn(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t, config.PlainConfig{}, false)
+	rec := httptest.NewRecorder()
+	e.engine.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/app/plain/session", nil))
+	var body map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &body)
+	if rec.Code != http.StatusUnauthorized || body["code"] != apperr.CodeNotAuthenticated {
+		t.Fatalf("%d %v", rec.Code, body)
 	}
 }
 

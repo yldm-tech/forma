@@ -17,6 +17,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/mrkdwn"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 	"github.com/yldm-tech/forma/apps/server/internal/webhook"
@@ -211,9 +212,6 @@ func (a *actions) chatMessage(ctx context.Context, env actionEnv, actionType str
 	return a.deliver(ctx, env, http.MethodPost, target, http.Header{"Content-Type": {"application/json"}}, payload)
 }
 
-// slackEscape escapes the three characters Slack's mrkdwn reads as markup in a value, so an answer cannot mention a channel or forge a link; the template's own markup is left alone.
-var slackEscape = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace
-
 // markdownEscape backslash-escapes the characters Discord's markdown and a Teams Adaptive Card's read as markup in a value: emphasis, strikethrough, code, spoilers, headings, quotes, list markers, [text](url) links, and Discord's <...> mentions, channels, emoji and timestamps. An answer then shows as typed instead of as formatting or a disguised link; the template's own markup is left alone.
 var markdownEscape = strings.NewReplacer(
 	`\`, `\\`, "*", `\*`, "_", `\_`, "~", `\~`, "`", "\\`", "|", `\|`,
@@ -224,7 +222,8 @@ var markdownEscape = strings.NewReplacer(
 func chatPayload(actionType string, t *Template, message string) any {
 	switch actionType {
 	case ActionSlackMessage:
-		return map[string]any{"text": t.RenderText(message, slackEscape)}
+		// Each value is escaped with mrkdwn.Escape, so an answer cannot notify the channel, mention anyone, forge a link or take on formatting; the template's own markup is left alone.
+		return map[string]any{"text": t.RenderText(message, mrkdwn.Escape)}
 	case ActionDiscordMessage:
 		text := t.RenderText(message, markdownEscape)
 		if utf8.RuneCountInString(text) > discordMaxContent {

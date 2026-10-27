@@ -102,9 +102,11 @@ func TestTwoFactorEnrolment(t *testing.T) {
 	expectStatus(t, b.post("/test/protected", nil), http.StatusOK, "")
 	expectStatus(t, before.post("/test/protected", nil), http.StatusUnauthorized, apperr.CodeNotAuthenticated)
 
+	// The code that enabled it is spent; the next one completes a sign-in.
 	other := e.browser()
 	other.signInPending()
-	expectStatus(t, verifyTOTP(other, e.codeFor(secret, 0)), http.StatusOK, "")
+	expectStatus(t, verifyTOTP(other, e.codeFor(secret, 0)), http.StatusUnauthorized, CodeInvalidCode)
+	expectStatus(t, verifyTOTP(other, e.codeFor(secret, 1)), http.StatusOK, "")
 
 	var changes []string
 	for _, ev := range e.auditEvents(audit.ActionUpdated) {
@@ -198,6 +200,8 @@ func TestTwoFactorForAPasswordAccountWithAnExternalIdentity(t *testing.T) {
 	}
 	e.browser().signInPending()
 
+	// The code that enabled it is spent (TestTOTPCodeWorksOnce); the next period's disables it.
+	e.advance(totpPeriod * time.Second)
 	expectStatus(t, b.post("/auth/two-factor/disable", map[string]string{"password": strongPassword, "code": e.codeFor(secret, 0)}), http.StatusOK, "")
 	if e.twoFactorEnabled(id) {
 		t.Fatal("disable left two-factor authentication on")
@@ -295,7 +299,7 @@ func (e *env) backupCodesCiphertext(id uuid.UUID) []byte {
 	return sealed
 }
 
-// Better Auth's sign-in check accepts one step either side, and refuses a wrong code with 401.
+// Better Auth's sign-in check accepts one step either side, and refuses a wrong code with 401. The steps go forward because a code accepted rules out its own step and every earlier one (TestTOTPCodeWorksOnce).
 func TestSignInTOTPWindow(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t)
@@ -303,7 +307,7 @@ func TestSignInTOTPWindow(t *testing.T) {
 	for _, tc := range []struct {
 		steps int
 		ok    bool
-	}{{-2, false}, {2, false}, {1, true}, {-1, true}} {
+	}{{-2, false}, {2, false}, {-1, true}, {1, true}} {
 		b := e.browser()
 		b.signInPending()
 		r := verifyTOTP(b, e.totpCode(id, tc.steps))
@@ -312,6 +316,55 @@ func TestSignInTOTPWindow(t *testing.T) {
 		} else {
 			expectStatus(t, r, http.StatusUnauthorized, CodeInvalidCode)
 		}
+	}
+}
+
+// RFC 6238 section 5.2: a code is accepted once. The code that completed one sign-in is refused for a second inside its window, and so is any earlier step; a later one works. Enabling spends its code for sign-in, and a code spent at sign-in cannot disable two-factor authentication. A replayed code counts as a refused one.
+func TestTOTPCodeWorksOnce(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
+	first, second := e.browser(), e.browser()
+	first.signInPending()
+	second.signInPending()
+	code := e.totpCode(id, 0)
+	expectStatus(t, verifyTOTP(first, code), http.StatusOK, "")
+	expectStatus(t, verifyTOTP(second, code), http.StatusUnauthorized, CodeInvalidCode)
+	expectStatus(t, verifyTOTP(second, e.totpCode(id, -1)), http.StatusUnauthorized, CodeInvalidCode)
+	if e.failedAttempts(id) != 2 {
+		t.Fatalf("failed attempts %d, want the two replays counted", e.failedAttempts(id))
+	}
+	expectStatus(t, verifyTOTP(second, e.totpCode(id, 1)), http.StatusOK, "")
+
+	// Still inside the window of the code used last, nothing it covers works; the next period's code does.
+	e.advance(totpPeriod * time.Second)
+	third := e.browser()
+	third.signInPending()
+	expectStatus(t, verifyTOTP(third, e.totpCode(id, 0)), http.StatusUnauthorized, CodeInvalidCode)
+	expectStatus(t, first.post("/auth/two-factor/disable", map[string]string{"password": strongPassword, "code": e.totpCode(id, 0)}), http.StatusBadRequest, CodeInvalidCode)
+	if !e.twoFactorEnabled(id) {
+		t.Fatal("a spent code disabled two-factor authentication")
+	}
+	e.advance(totpPeriod * time.Second)
+	expectStatus(t, verifyTOTP(third, e.totpCode(id, 0)), http.StatusOK, "")
+
+	// The code that enables a new enrolment is spent for sign-in too.
+	grace := e.seedUser("grace@example.com", strongPassword, userOpts{})
+	g := e.browser()
+	g.signIn("grace@example.com", strongPassword)
+	secret := setupTOTP(t, g)["secret"].(string)
+	enabled := e.codeFor(secret, 0)
+	expectStatus(t, g.post("/auth/two-factor/enable", map[string]string{"code": enabled}), http.StatusOK, "")
+	pending := e.browser()
+	r := pending.post("/auth/sign-in", credentials("grace@example.com", strongPassword))
+	expectStatus(t, r, http.StatusOK, "")
+	expectStatus(t, verifyTOTP(pending, enabled), http.StatusUnauthorized, CodeInvalidCode)
+	expectStatus(t, verifyTOTP(pending, e.codeFor(secret, 1)), http.StatusOK, "")
+
+	// The sign-in moved the last step past the enabling one, so the enabling code, still inside the settings window, cannot disable either.
+	expectStatus(t, g.post("/auth/two-factor/disable", map[string]string{"password": strongPassword, "code": enabled}), http.StatusBadRequest, CodeInvalidCode)
+	if !e.twoFactorEnabled(grace) {
+		t.Fatal("a spent code disabled two-factor authentication")
 	}
 }
 

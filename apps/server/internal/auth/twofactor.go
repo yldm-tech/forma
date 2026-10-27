@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -130,7 +131,7 @@ const (
 	messageTwoFactorDisabled = "Two factor authentication disabled"
 )
 
-// enable confirms an enrolment with a code from the authenticator app and turns two-factor authentication on. Every other session of the user is signed out in the same transaction: a session opened with the password alone, possibly by someone who stole it, would otherwise outlive the switch to a second factor. The current session stays, as in forma2.
+// enable confirms an enrolment with a code from the authenticator app and turns two-factor authentication on. Every other session of the user, and every OAuth grant, is signed out in the same transaction: a session opened with the password alone, possibly by someone who stole it, would otherwise outlive the switch to a second factor. The current session stays, as in forma2.
 func (t *TwoFactor) enable(ctx context.Context, actor httpapi.Actor, code string) error {
 	err := t.confirmEnrolment(ctx, actor, code)
 	t.logChange(ctx, actor.UserID, "enabled", err)
@@ -162,11 +163,7 @@ func (t *TwoFactor) confirmEnrolment(ctx context.Context, actor httpapi.Actor, c
 		if row == nil {
 			return apperr.InvalidInput(CodeTwoFactorSetupIncomplete, "Two factor setup has not been completed")
 		}
-		key, err := openTOTPKey(t.cipher, acc.ID, row.SecretCiphertext)
-		if err != nil {
-			return err
-		}
-		ok, err := checkTOTP(key, code, t.svc.now(), settingsWindow)
+		ok, err := t.acceptTOTP(ctx, tx, row, code, t.svc.now(), settingsWindow)
 		if err != nil {
 			return err
 		}
@@ -176,12 +173,12 @@ func (t *TwoFactor) confirmEnrolment(ctx context.Context, actor httpapi.Actor, c
 		if err := tx.markTOTPVerified(ctx, acc.ID, t.svc.now()); err != nil {
 			return err
 		}
-		_, err = t.svc.sessions.RevokeAll(ctx, tx.db, acc.ID, actor.SessionID)
+		_, err = t.svc.sessions.endOtherAccess(ctx, tx.db, acc.ID, actor.SessionID)
 		return err
 	})
 }
 
-// disable turns two-factor authentication off after the password and either a backup code or a current code; a backup code, when given, is the one checked. The secret and the remaining backup codes are deleted.
+// disable turns two-factor authentication off after the password and either a backup code or a current code; a backup code, when given, is the one checked. The secret and the remaining backup codes are deleted, and every OAuth grant is revoked with them, as enabling does: a change to how the account signs in ends the MCP clients authorized under the old one.
 func (t *TwoFactor) disable(ctx context.Context, actor httpapi.Actor, password, code, backupCode string) error {
 	err := t.removeSecondFactor(ctx, actor, password, code, backupCode)
 	t.logChange(ctx, actor.UserID, "disabled", err)
@@ -225,11 +222,7 @@ func (t *TwoFactor) removeSecondFactor(ctx context.Context, actor httpapi.Actor,
 			if code == "" {
 				return apperr.InvalidInput(CodeTwoFactorCodeRequired, "Two factor code required")
 			}
-			key, err := openTOTPKey(t.cipher, acc.ID, row.SecretCiphertext)
-			if err != nil {
-				return err
-			}
-			ok, err := checkTOTP(key, code, t.svc.now(), settingsWindow)
+			ok, err := t.acceptTOTP(ctx, tx, row, code, t.svc.now(), settingsWindow)
 			if err != nil {
 				return err
 			}
@@ -237,6 +230,26 @@ func (t *TwoFactor) removeSecondFactor(ctx context.Context, actor httpapi.Actor,
 				return apperr.InvalidInput(CodeInvalidCode, "Invalid code")
 			}
 		}
-		return tx.deleteTOTP(ctx, acc.ID)
+		if err := tx.deleteTOTP(ctx, acc.ID); err != nil {
+			return err
+		}
+		_, err = RevokeOAuthGrants(ctx, tx.db, acc.ID)
+		return err
 	})
+}
+
+// acceptTOTP checks code against the locked row's key and refuses a code from a step at or before the last one accepted for the row, as RFC 6238 section 5.2 asks: a code is good once, however long it stays inside the window, so one seen over a shoulder or replayed from a phished sign-in cannot complete a second. The accepted step is recorded in the caller's transaction.
+func (t *TwoFactor) acceptTOTP(ctx context.Context, tx *Repository, row *totpRow, code string, now time.Time, w totpWindow) (bool, error) {
+	key, err := openTOTPKey(t.cipher, row.UserID, row.SecretCiphertext)
+	if err != nil {
+		return false, err
+	}
+	step, ok, err := checkTOTP(key, code, now, w)
+	if err != nil || !ok {
+		return false, err
+	}
+	if row.LastUsedStep.Valid && step <= row.LastUsedStep.Int64 {
+		return false, nil
+	}
+	return true, tx.setTOTPLastUsedStep(ctx, row.UserID, step, now)
 }
