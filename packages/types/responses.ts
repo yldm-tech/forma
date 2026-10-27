@@ -541,6 +541,8 @@ export const ZResponseUpdateInput = z.object({
   ttc: ZResponseTtcInput.optional(),
   language: z.string().optional(),
   pinAuthToken: z.string().nullish(),
+  /** The email verification token of the link survey page sending the update. With email verification on, the server refuses (403) an update whose token proves another address than the one the response was created with. Optional: pages and SDKs that do not send it are not checked. */
+  verifyToken: z.string().nullish(),
 });
 
 export type TResponseUpdateInput = z.infer<typeof ZResponseUpdateInput>;
