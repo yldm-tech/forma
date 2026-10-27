@@ -629,3 +629,53 @@ func TestDropForma2LeftoversMigration(t *testing.T) {
 		t.Fatalf("down to 9 through 00010's Down: %v", err)
 	}
 }
+
+// 00030 adds the "Allow AI to read responses" switch: on for an organization created from then on, and for one that had AI smart tools off, but off for one that had them on, which turned AI on under copy that promised AI would never touch its data. Its Down drops the switch.
+func TestAIResponseReadingMigration(t *testing.T) {
+	const version = 30
+	dsn := startPostgres(t)
+	ctx := context.Background()
+	provider, cleanup, err := NewMigrator(dsn, migrations.FS)
+	if err != nil {
+		t.Fatalf("NewMigrator: %v", err)
+	}
+	defer cleanup()
+	if _, err := provider.UpTo(ctx, version-1); err != nil {
+		t.Fatalf("up to %d: %v", version-1, err)
+	}
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	withAI := mustScanID(t, db, `INSERT INTO organizations (name, is_ai_smart_tools_enabled) VALUES ('With AI', true) RETURNING id`)
+	withoutAI := mustScanID(t, db, `INSERT INTO organizations (name) VALUES ('Without AI') RETURNING id`)
+	reading := func(id string) bool {
+		t.Helper()
+		var on bool
+		if err := db.QueryRow(`SELECT is_ai_response_reading_enabled FROM organizations WHERE id = $1`, id).Scan(&on); err != nil {
+			t.Fatal(err)
+		}
+		return on
+	}
+
+	if _, err := provider.UpTo(ctx, version); err != nil {
+		t.Fatalf("up to %d: %v", version, err)
+	}
+	if reading(withAI) || !reading(withoutAI) {
+		t.Fatalf("after Up: reading on for the organization with AI %v (want false), without AI %v (want true)", reading(withAI), reading(withoutAI))
+	}
+	created := mustScanID(t, db, `INSERT INTO organizations (name, is_ai_smart_tools_enabled) VALUES ('New', true) RETURNING id`)
+	if !reading(created) {
+		t.Fatal("a new organization starts with reading off, want on")
+	}
+
+	if _, err := provider.DownTo(ctx, version-1); err != nil {
+		t.Fatalf("down to %d: %v", version-1, err)
+	}
+	var present bool
+	if err := db.QueryRow(`SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'organizations' AND column_name = 'is_ai_response_reading_enabled')`).Scan(&present); err != nil || present {
+		t.Fatalf("after Down: column present %v (%v)", present, err)
+	}
+}

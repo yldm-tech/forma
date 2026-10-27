@@ -139,6 +139,10 @@ func (s *Service) Create(ctx context.Context, sv *Survey, in CreateInput) (*Resu
 	if flags == nil {
 		flags = []embeddeddata.Flag{}
 	}
+	// The row is not written yet: the reserved values the replay's conditions read come from what the response will hold, without its id and timestamps, which no condition a respondent's path depends on can read (the runtime only knows the reserved values a browser does).
+	s.recomputeScore(ctx, sv, nil, embeddeddata.ValueResponse{
+		SurveyID: sv.ID.String(), Finished: in.Finished, Language: language, Data: data, Variables: variables, TTC: ttcValues(ttc), Meta: meta,
+	}, ttc, variables, in.Variables)
 
 	var result *Result
 	err := s.jobs.Transaction(ctx, s.db, func(tx *jobs.Tx) error {
@@ -296,12 +300,17 @@ func insertResponse(ctx context.Context, tx *jobs.Tx, surveyID uuid.UUID, owner 
 
 // valueResponse is the persisted response as the reserved fields read it.
 func valueResponse(row Response, data, variables map[string]any, ttc map[string]float64, meta map[string]any) embeddeddata.ValueResponse {
-	ttcValues := make(map[string]any, len(ttc))
-	for k, v := range ttc {
-		ttcValues[k] = v
-	}
 	return embeddeddata.ValueResponse{
 		ID: row.ID.String(), SurveyID: row.SurveyID.String(), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Finished: row.Finished,
-		Language: row.Language, Data: data, Variables: variables, TTC: ttcValues, Meta: meta,
+		Language: row.Language, Data: data, Variables: variables, TTC: ttcValues(ttc), Meta: meta,
 	}
+}
+
+// ttcValues is ttc as the reserved fields read it.
+func ttcValues(ttc map[string]float64) map[string]any {
+	out := make(map[string]any, len(ttc))
+	for k, v := range ttc {
+		out[k] = v
+	}
+	return out
 }

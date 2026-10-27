@@ -4,7 +4,7 @@ The SDK that shows Forma's website and in-app surveys on your own pages. Every F
 
 ## Install
 
-Copy the snippet from your workspace in Forma, under **Integrations → Web & Mobile SDK**, which fills in your workspace ID and your instance's URL. It looks like this:
+Copy the snippet from your workspace in Forma, under **Integrations → Web SDK**, which fills in your workspace ID and your instance's URL. It looks like this:
 
 ```html
 <!-- START Forma Surveys -->
@@ -97,6 +97,10 @@ interface Window {
 }
 ```
 
+### Staging and production
+
+The SDK has no separate test mode: every site that uses a workspace ID shows the surveys published in that workspace to real visitors. Create a second workspace in the same organization for staging, put its ID in your staging or local site, and build and try surveys there. When a survey is ready, choose **Copy to...** in its menu in the survey list to copy it into the production workspace as a draft: code actions are matched by key, and missing ones are created. The copy keeps the questions, styling, triggers, audience and languages, but its display and response settings go back to their defaults (the share of users it shows to, delay, auto close, response limit, PIN, email verification, spam protection, and the publish and close dates), so review them in the survey editor before you publish. Responses and contacts stay in the workspace that collected them.
+
 ## Identify users
 
 Surveys that target a segment, or that should be shown only once per person, need to know who the visitor is. Anonymous visitors still see surveys whose audience is everyone.
@@ -121,7 +125,7 @@ window.forma.logout();
 
 The workspace ID in the snippet is public, so anyone can call the SDK's API with any user ID. Forma therefore trusts the browser only so far:
 
-- The SDK never writes an attribute marked as protected. Mark the attributes your own systems own (a plan, a role, an account tier) in the **Identity verification** card of the workspace's **Web & Mobile SDK** page in Forma (under Integrations), and set them through the Management API, a CSV import or the contact page.
+- The SDK never writes an attribute marked as protected. Mark the attributes your own systems own (a plan, a role, an account tier) in the **Identity verification** card of the workspace's **Web SDK** page in Forma (under Integrations), and set them through the Management API, a CSV import or the contact page.
 - The SDK writes the email only for a verified user.
 - The user state the SDK receives names neither the contact nor any survey by ID.
 

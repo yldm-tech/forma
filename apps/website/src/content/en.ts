@@ -118,12 +118,12 @@ export const en: SiteContent = {
       },
       act: {
         title: "Turn responses into next steps",
-        body: "Send responses to any endpoint with webhooks, and on self-hosted instances to Slack, Notion, Airtable or Google Sheets. Workflows (Beta) send an email when a response is completed, optionally only for the endings you choose.",
+        body: "Send responses to any endpoint with webhooks, and on self-hosted instances to Slack, Notion, Airtable or Google Sheets. Workflows (Beta) act when a response is completed, optionally only for the endings you choose: send an email, call an HTTP endpoint, post to Slack, Discord or Microsoft Teams, tag the response, or set an attribute on the contact.",
         link: "See integrations →",
       },
       ai: {
         title: "AI, only when you turn it on",
-        body: "Describe a survey and get an editable draft, translate a survey into your enabled languages, or generate example responses to preview the analysis. AI stays off until an owner or manager enables it for the organization.",
+        body: "Describe a survey and get an editable draft, translate a survey into your enabled languages, or generate example responses to preview the analysis. With “Allow AI to read responses” also on, members can have AI sum up open-text answers in themes and sentiment; those answers are sent to the configured AI provider with email addresses and phone numbers removed. AI stays off until an owner or manager enables it for the organization.",
       },
       developers: {
         title: "Built to be wired in",
@@ -244,7 +244,7 @@ export const en: SiteContent = {
       meta: {
         title: "Integrations and Workflows · Forma",
         description:
-          "Send responses to webhooks, or to Slack, Notion, Airtable and Google Sheets on self-hosted instances, and email on completed responses with Workflows (Beta).",
+          "Send responses to webhooks, or to Slack, Notion, Airtable and Google Sheets on self-hosted instances, and act on completed responses with Workflows (Beta): email, HTTP requests, Slack, Discord and Teams messages, tags and contact attributes.",
       },
       title: "Integrations and Workflows",
       sub: "Responses are only useful once someone sees them. Send them where your team works.",
@@ -262,7 +262,7 @@ export const en: SiteContent = {
       },
       workflows: {
         title: "Workflows",
-        body: "Trigger: a response is completed. Filter: only the endings you choose. Action: send an email. Every run is recorded with its status and step logs.",
+        body: "Trigger: a response is completed. Filter: only the endings you choose. Actions: send an email, call an HTTP endpoint, post to Slack, Discord or Microsoft Teams, tag the response, or set a contact attribute. Every run is recorded with its status and step logs.",
         badgeNote: "Beta: the set of triggers and actions will grow.",
       },
     },
@@ -359,11 +359,13 @@ export const en: SiteContent = {
       sub: "One script tag shows your website and in-app surveys. Everything else is a call on `window.forma`.",
       install: {
         title: "Install",
-        body: "Copy the snippet from Integrations → Web & Mobile SDK in Forma, which fills in your workspace ID and your instance's URL, and paste it into the `<head>` of every page. With Google Tag Manager, paste it into a Custom HTML tag that fires on All Pages.",
+        body: "Copy the snippet from Integrations → Web SDK in Forma, which fills in your workspace ID and your instance's URL, and paste it into the `<head>` of every page. With Google Tag Manager, paste it into a Custom HTML tag that fires on All Pages.",
         frameworks:
           'React and Vue: paste it into `index.html`. Next.js: render the same JavaScript with `next/script` and `strategy="beforeInteractive"`, so `window.forma` exists before your components\' effects run: in the root `app/layout.tsx` with the App Router, or directly in `pages/_document.tsx` with the Pages Router. No route hooks are needed. The SDK is not published on npm; mobile SDKs and a WordPress plugin are not available yet.',
         queue:
           'Until the script arrives, `window.forma` is a stub: calls are queued, not thrown, and replayed in order once the SDK has loaded and set itself up. A queued call returns nothing, so do not await it. Once the SDK has loaded, the stub forwards to it, so a reference kept from before then still works. In TypeScript, declare the global once, naming the methods you call rather than using an index signature, which `noUncheckedIndexedAccess` makes possibly undefined: `interface Window { forma: Record<"setUserId" | "track" | "logout", (...args: unknown[]) => unknown> }`.',
+        staging:
+          "Test against a staging workspace: the SDK has no separate test mode, and every site that uses a workspace ID shows the surveys published in it to real visitors. Create a second workspace in the same organization for staging, put its ID in your staging or local site, and build and try surveys there. When a survey is ready, choose Copy to... in its menu in the survey list to copy it into the production workspace as a draft: code actions are matched by key, and missing ones are created. The copy keeps the questions, styling, triggers, audience and languages, but its display and response settings go back to their defaults (the share of users it shows to, delay, auto close, response limit, PIN, email verification, spam protection, and the publish and close dates), so review them in the survey editor before you publish. Responses and contacts stay in the workspace that collected them.",
       },
       reference: {
         title: "Methods",
@@ -381,7 +383,7 @@ export const en: SiteContent = {
             },
             {
               term: "Identity verification",
-              body: "The workspace ID is public, so the SDK never writes attributes marked as protected in Forma, and writes the email only for a verified user. To verify users, generate the identity secret under Integrations → Web & Mobile SDK, compute the HMAC-SHA256 of the user ID under it in hex on your server, and pass it as `userHash`. With verified identities required, an identify without a valid hash is refused.",
+              body: "The workspace ID is public, so the SDK never writes attributes marked as protected in Forma, and writes the email only for a verified user. To verify users, generate the identity secret under Integrations → Web SDK, compute the HMAC-SHA256 of the user ID under it in hex on your server, and pass it as `userHash`. With verified identities required, an identify without a valid hash is refused.",
             },
             {
               term: "setLanguage(language)",

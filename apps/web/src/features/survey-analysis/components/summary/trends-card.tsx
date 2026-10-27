@@ -1,3 +1,4 @@
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -39,6 +40,8 @@ import {
   formatTrendValue,
   labelledBuckets,
   metricScale,
+  scoreScale,
+  sliderScale,
   tooltipPosition,
   trendData,
   viewElement,
@@ -61,6 +64,7 @@ const TrendChart = ({
   data,
   scale,
   kind,
+  isScore,
   interval,
   locale,
   label,
@@ -68,6 +72,8 @@ const TrendChart = ({
   data: TrendDatum[];
   scale: TrendScale;
   kind: ValueKind;
+  /** The values are the average total score, taken over the completed responses that have a score rather than over answers. */
+  isScore: boolean;
   interval: TrendInterval;
   locale: string;
   label: string;
@@ -257,7 +263,9 @@ const TrendChart = ({
                       ? t("workspace.analysis.trends.responses_count", {
                           count: activeDatum.bucket.responses,
                         })
-                      : t("workspace.analysis.trends.answers_count", { count: activeDatum.answered })}
+                      : isScore
+                        ? t("workspace.analysis.trends.scored_count", { count: activeDatum.answered })
+                        : t("workspace.analysis.trends.answers_count", { count: activeDatum.answered })}
                   </p>
                 </>
               )}
@@ -287,12 +295,14 @@ const TrendChart = ({
 const TrendTable = ({
   data,
   kind,
+  isScore,
   caption,
   valueHeader,
   locale,
 }: {
   data: TrendDatum[];
   kind: ValueKind;
+  isScore: boolean;
   caption: string;
   valueHeader: string;
   locale: string;
@@ -309,7 +319,11 @@ const TrendTable = ({
             <th scope="col">{t("workspace.analysis.trends.period")}</th>
             <th scope="col">{valueHeader}</th>
             <th scope="col">
-              {bars ? t("workspace.analysis.trends.completed") : t("workspace.analysis.trends.answers")}
+              {bars
+                ? t("workspace.analysis.trends.completed")
+                : isScore
+                  ? t("workspace.analysis.trends.scored")
+                  : t("workspace.analysis.trends.answers")}
             </th>
           </tr>
         </thead>
@@ -337,7 +351,7 @@ const TrendTable = ({
   );
 };
 
-/** The trend over time of the summary: responses, completion rate, or a score element's NPS, CSAT or average per day, week or month in the organization's time zone, under the current filter. In a read-only results link (sharedToken) it reads the trend through the link, under the filter the link froze, and offers no download. */
+/** The trend over time of the summary: responses, completion rate, a score element's NPS, CSAT or average, or the average total score of a scored survey per day, week or month in the organization's time zone, under the current filter. In a read-only results link (sharedToken) it reads the trend through the link, under the filter the link froze, and offers no download. */
 export const TrendsCard = ({
   survey,
   locale,
@@ -387,12 +401,21 @@ export const TrendsCard = ({
       value: `element:${element.elementId}` as TrendView,
       label: elementLabel(element.elementId, element.type, element.headline),
     })),
+    ...(trends?.score
+      ? [
+          {
+            value: "score" as TrendView,
+            label: t("workspace.analysis.trends.view_score", { name: trends.score.name }),
+          },
+        ]
+      : []),
   ];
   // A view of an element the survey no longer has falls back to the responses.
   const activeView: TrendView = viewOptions.some((option) => option.value === view) ? view : "responses";
   const activeViewLabel = viewOptions.find((option) => option.value === activeView)?.label ?? "";
   const element = trends ? viewElement(trends, activeView) : undefined;
   const data = trends ? trendData(trends, activeView) : [];
+  const isScore = activeView === "score";
   const kind: ValueKind =
     activeView === "responses"
       ? "count"
@@ -404,14 +427,15 @@ export const TrendsCard = ({
     surveyElement && "range" in surveyElement && typeof surveyElement.range === "number"
       ? surveyElement.range
       : undefined;
+  const values = data.map((datum) => datum.value);
   const scale =
     kind === "count"
       ? countScale(Math.max(0, ...data.map((datum) => datum.value ?? 0)))
-      : metricScale(
-          kind,
-          elementRange,
-          data.map((datum) => datum.value)
-        );
+      : isScore
+        ? scoreScale(values)
+        : surveyElement?.type === TSurveyElementTypeEnum.Slider
+          ? sliderScale(surveyElement.min, surveyElement.max, values)
+          : metricScale(kind, elementRange, values);
   const hint =
     kind === "count"
       ? null
@@ -421,7 +445,9 @@ export const TrendsCard = ({
           ? t("workspace.analysis.trends.hint_nps")
           : kind === "satisfied"
             ? t("workspace.analysis.trends.hint_satisfied")
-            : t("workspace.analysis.trends.hint_average");
+            : isScore
+              ? t("workspace.analysis.trends.hint_score")
+              : t("workspace.analysis.trends.hint_average");
   const tooManyBuckets = query.error instanceof ApiError && query.error.code === TREND_TOO_MANY_BUCKETS;
   // Only an interval the user picked can be refused for its length, so the advice follows it: a longer interval while there is one, a shorter date range by month.
   const tooManyBucketsMessage = {
@@ -481,6 +507,7 @@ export const TrendsCard = ({
           data={data}
           scale={scale}
           kind={kind}
+          isScore={isScore}
           interval={shownInterval}
           locale={locale}
           label={t("workspace.analysis.trends.chart_label", {
@@ -491,6 +518,7 @@ export const TrendsCard = ({
         <TrendTable
           data={data}
           kind={kind}
+          isScore={isScore}
           caption={t("workspace.analysis.trends.chart_label", {
             view: activeViewLabel,
             interval: intervalLabels[shownInterval],

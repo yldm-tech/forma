@@ -88,7 +88,7 @@ export const WorkflowRunsTable = ({
           </TableHeader>
           <TableBody>
             {runs.map((run) => {
-              const statusBadge = getWorkflowRunStatusBadge(run.status, t);
+              const statusBadge = getWorkflowRunStatusBadge(run, t);
               const triggerLabel = getWorkflowTriggerTypeLabel(run.triggerType, t);
               return (
                 <TableRow

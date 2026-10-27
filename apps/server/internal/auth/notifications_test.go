@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 )
 
 type notificationsFixture struct {
@@ -196,4 +197,117 @@ func TestNotificationsWeeklySummary(t *testing.T) {
 	for _, id := range []uuid.UUID{f.billingOrg, f.noAccessOrg, f.ownedSurvey} {
 		expectStatus(t, set(id, false), http.StatusNotFound, apperr.CodeNotFound)
 	}
+}
+
+// An organization that refuses the user, by a suspension or, once its grace period is over, by its two-factor requirement (the user signs in with a password and has not enrolled), is left off the page with its workspaces and surveys, and its switches are refused: the app refuses the user its workspaces, and its alerts and weekly summary are not sent to them.
+func TestNotificationsLeaveOutOrganizationsThatRefuseTheUser(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	f := e.seedNotifications()
+	b := e.sessionFor(f.user)
+	set := func(kind string, id uuid.UUID) response {
+		return b.patch("/auth/me/notifications", map[string]any{"type": kind, "id": id, "enabled": true})
+	}
+	ids := func() []uuid.UUID {
+		t.Helper()
+		var out []uuid.UUID
+		for _, o := range b.notifications().Organizations {
+			out = append(out, o.ID)
+		}
+		return out
+	}
+
+	// In the grace period the requirement refuses no one yet.
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() + interval '1 day' WHERE id = ?`, f.teamOrg)
+	if got := ids(); len(got) != 2 || got[0] != f.owned || got[1] != f.teamOrg {
+		t.Fatalf("in the grace period %v", got)
+	}
+
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() - interval '1 minute' WHERE id = ?`, f.teamOrg)
+	e.exec(`UPDATE memberships SET suspended_at = now() WHERE user_id = ? AND organization_id = ?`, f.user, f.owned)
+	if got := ids(); len(got) != 0 {
+		t.Fatalf("refused organizations listed: %v", got)
+	}
+	expectStatus(t, set(notificationAlert, f.teamSurvey), http.StatusNotFound, apperr.CodeNotFound)
+	expectStatus(t, set(notificationAlert, f.ownedSurvey), http.StatusNotFound, apperr.CodeNotFound)
+	expectStatus(t, set(notificationOrganizationAutoAlert, f.teamOrg), http.StatusNotFound, apperr.CodeNotFound)
+	expectStatus(t, set(NotificationWeeklySummary, f.teamOrg), http.StatusNotFound, apperr.CodeNotFound)
+
+	// Once the user enrols, the requirement no longer refuses them.
+	e.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, '\x00', '\x00', true)`, f.user)
+	if got := ids(); len(got) != 1 || got[0] != f.teamOrg {
+		t.Fatalf("after enrolling %v", got)
+	}
+}
+
+// An email's signed unsubscribe link reads and switches a setting by the user it names, without a session, under the notifications page's rules: only what the page lists for the user, read as the page shows it; the change is audited with the user as the actor.
+func TestNotificationSwitchByUser(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	f := e.seedNotifications()
+	ctx := t.Context()
+
+	got, err := e.svc.NotificationSwitchOf(ctx, f.user, notificationAlert, f.ownedSurvey)
+	if err != nil || got != (NotificationSwitch{Type: notificationAlert, ID: f.ownedSurvey, Name: "Owned survey", Enabled: true}) {
+		t.Fatalf("alert %+v, %v", got, err)
+	}
+	got, err = e.svc.NotificationSwitchOf(ctx, f.user, notificationOrganizationAutoAlert, f.owned)
+	if err != nil || got != (NotificationSwitch{Type: notificationOrganizationAutoAlert, ID: f.owned, Name: "Owned", Enabled: false}) {
+		t.Fatalf("auto-subscribe %+v, %v", got, err)
+	}
+	got, err = e.svc.NotificationSwitchOf(ctx, f.user, NotificationWeeklySummary, f.teamOrg)
+	if err != nil || got != (NotificationSwitch{Type: NotificationWeeklySummary, ID: f.teamOrg, Name: "Team org", Enabled: true}) {
+		t.Fatalf("weekly summary %+v, %v", got, err)
+	}
+
+	if err := e.svc.SetNotificationSwitch(ctx, f.user, notificationAlert, f.ownedSurvey, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.SetNotificationSwitch(ctx, f.user, NotificationWeeklySummary, f.teamOrg, false); err != nil {
+		t.Fatal(err)
+	}
+	orgs := e.sessionFor(f.user).notifications().Organizations
+	if orgs[0].Surveys[0].Alert || orgs[1].WeeklySummary || !orgs[0].WeeklySummary {
+		t.Fatalf("after switching %+v", orgs)
+	}
+	events := e.auditEvents(audit.ActionUpdated)
+	if len(events) != 2 || field(events[0], "actor", "id") != f.user.String() || field(events[0], "target", "id") != f.user.String() || field(events[0], "status") != string(audit.StatusSuccess) {
+		t.Fatalf("audit %+v", events)
+	}
+
+	// A kind the page does not have is refused, even for an organization the user can see, rather than taken for one it has.
+	if _, err := e.svc.NotificationSwitchOf(ctx, f.user, "evil", f.owned); err == nil {
+		t.Error("read an unknown kind")
+	}
+	if err := e.svc.SetNotificationSwitch(ctx, f.user, "evil", f.owned, true); err == nil {
+		t.Error("switched an unknown kind")
+	}
+	if n := len(e.auditEvents(audit.ActionUpdated)); n != 2 {
+		t.Fatalf("%d audit events after refusing an unknown kind", n)
+	}
+
+	// What the page does not list for the user is not found, read or switched: a survey out of their reach, an organization without workspace access or where they are billing, another user's survey.
+	other := e.seedUser("grace@example.com", strongPassword, userOpts{})
+	for _, tc := range []struct {
+		user uuid.UUID
+		kind string
+		id   uuid.UUID
+	}{
+		{f.user, notificationAlert, f.hiddenSurvey},
+		{f.user, notificationOrganizationAutoAlert, f.noAccessOrg},
+		{f.user, NotificationWeeklySummary, f.billingOrg},
+		{other, notificationAlert, f.ownedSurvey},
+	} {
+		if _, err := e.svc.NotificationSwitchOf(ctx, tc.user, tc.kind, tc.id); !isNotFound(err) {
+			t.Errorf("read %s %s = %v", tc.kind, tc.id, err)
+		}
+		if err := e.svc.SetNotificationSwitch(ctx, tc.user, tc.kind, tc.id, false); !isNotFound(err) {
+			t.Errorf("switch %s %s = %v", tc.kind, tc.id, err)
+		}
+	}
+}
+
+func isNotFound(err error) bool {
+	e, ok := apperr.As(err)
+	return ok && e.Code == apperr.CodeNotFound
 }

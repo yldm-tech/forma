@@ -6,7 +6,13 @@ import type {
   TWorkflowResponseCompletedTriggerNode,
   TWorkflowSendEmailActionNode,
 } from "../definition";
-import { getNodeRegistryEntry, getNodeRegistryKind, getWorkflowActionOptions } from "./node-registry";
+import {
+  getNodeRegistryEntry,
+  getNodeRegistryKind,
+  getWorkflowActionOptions,
+  getWorkflowStepLabel,
+  getWorkflowStepTypeTitle,
+} from "./node-registry";
 
 const t = ((key: string, options?: Record<string, unknown>) =>
   options ? `${key}:${JSON.stringify(options)}` : key) as unknown as TFunction;
@@ -146,5 +152,22 @@ describe("the actions after send_email", () => {
     expect(options.filter((option) => option.needsManage).map((option) => option.actionType)).toEqual([
       "http_request",
     ]);
+  });
+});
+
+describe("run steps", () => {
+  test("a step type is named by the picker's translated title, an unknown one as stored", () => {
+    expect(getWorkflowStepTypeTitle("http_request", t)).toBe("workspace.workflows.http_request");
+    expect(getWorkflowStepTypeTitle("set_contact_attribute", t)).toBe(
+      "workspace.workflows.set_contact_attribute"
+    );
+    expect(getWorkflowStepTypeTitle("future_action", t)).toBe("future_action");
+  });
+
+  test("a step's label is the one its input recorded", () => {
+    expect(getWorkflowStepLabel({ label: "POST to CRM", method: "POST" })).toBe("POST to CRM");
+    expect(getWorkflowStepLabel({ method: "POST" })).toBeNull();
+    expect(getWorkflowStepLabel({ label: "  " })).toBeNull();
+    expect(getWorkflowStepLabel({ label: 3 })).toBeNull();
   });
 });

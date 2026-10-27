@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -36,6 +37,8 @@ type Handler struct {
 	hashes map[string]string
 	// surveyLocales are the survey runtime's locale files (js/surveys-locales/<tag>.<hash>.json, written by the packages/surveys build) by language tag.
 	surveyLocales map[string]string
+	// policy is the Content-Security-Policy of index (appPolicy).
+	policy string
 }
 
 // surveyShell is the survey page bundle's entry in the build (apps/web/survey.html).
@@ -64,7 +67,36 @@ func New(cfg config.Config) (*Handler, error) {
 		return nil, err
 	}
 	h.index = withRuntimeConfig(h.index, cfg)
+	h.policy = appPolicy(cfg)
 	return h, nil
+}
+
+// Script sources the SPA loads beside its own bundle: Cal.com's embed renders a scheduling question in the survey editor's preview; Stripe.js, which @stripe/stripe-js injects as soon as the billing page's code loads, whether or not billing is configured; Cloudflare Turnstile guards sign-up when TURNSTILE_* is set (its script, then its challenge frame); Plain's chat widget runs when PLAIN_APP_ID is set (one script, which talks to and frames chat.*.plain.com).
+const (
+	calEmbedScript   = "https://cal.com/embed.js"
+	stripeScripts    = "https://js.stripe.com"
+	turnstileScripts = "https://challenges.cloudflare.com"
+	plainChatScript  = "https://chat.cdn-plain.com"
+)
+
+// appPolicy is the SPA document's Content-Security-Policy (httpserver.DocumentPolicy): its own bundle, WebAssembly for the in-browser HEIC conversion (heic-convert's decoder, where forma2 converted on its server), the runtime configuration script by its hash, which is fixed for the life of the process, the public domain when PUBLIC_URL sets one (the share modal's website preview loads /js/embed.js from it), and the third-party scripts above.
+func appPolicy(cfg config.Config) string {
+	sources := []string{"'wasm-unsafe-eval'"}
+	if script := runtimeConfigScript(cfg); len(script) > 0 {
+		sum := sha256.Sum256(script)
+		sources = append(sources, "'sha256-"+base64.StdEncoding.EncodeToString(sum[:])+"'")
+	}
+	if u := cfg.PublicURL; u != nil && u.Host != "" {
+		sources = append(sources, u.Scheme+"://"+u.Host)
+	}
+	sources = append(sources, calEmbedScript, stripeScripts)
+	if cfg.TurnstileConfigured() {
+		sources = append(sources, turnstileScripts)
+	}
+	if cfg.Plain.Configured() {
+		sources = append(sources, plainChatScript)
+	}
+	return httpserver.DocumentPolicy(cfg, sources...)
 }
 
 // sentryClientConfig is forma2's TSentryClientRuntimeConfig, read by the SPA from window.__formaSentryClientConfig.
@@ -81,8 +113,23 @@ type postHogClientConfig struct {
 	UIHost  string `json:"uiHost"`
 }
 
-// withRuntimeConfig writes the server-side settings the browser bundle needs into the page, as forma2's root layout did, so one build serves every deployment. Only what is configured is written: without SENTRY_DSN no DSN reaches the browser, without POSTHOG_KEY no key. JSON encoding escapes <, > and &, so no value can close the script element.
+// withRuntimeConfig writes the server-side settings the browser bundle needs into the page, as forma2's root layout did, so one build serves every deployment, as the inline script runtimeConfigScript makes. appPolicy allows that script by its hash.
 func withRuntimeConfig(index []byte, cfg config.Config) []byte {
+	script := runtimeConfigScript(cfg)
+	head := bytes.Index(index, []byte("</head>"))
+	if len(script) == 0 || head < 0 {
+		return index
+	}
+	out := make([]byte, 0, len(index)+len(script)+64)
+	out = append(out, index[:head]...)
+	out = append(out, `<script id="forma-runtime-config">`...)
+	out = append(out, script...)
+	out = append(out, "</script>"...)
+	return append(out, index[head:]...)
+}
+
+// runtimeConfigScript is the body of the SPA's runtime configuration script, empty when there is nothing to configure. Only what is configured is written: without SENTRY_DSN no DSN reaches the browser, without POSTHOG_KEY no key. JSON encoding escapes <, > and &, so no value can close the script element.
+func runtimeConfigScript(cfg config.Config) []byte {
 	var script bytes.Buffer
 	if dsn := cfg.Telemetry.SentryDSN; dsn != "" {
 		c := sentryClientConfig{DSN: dsn, Environment: cfg.Telemetry.SentryEnvironment}
@@ -96,16 +143,7 @@ func withRuntimeConfig(index []byte, cfg config.Config) []byte {
 		b, _ := json.Marshal(postHogClientConfig{Key: key, APIHost: analytics.IngestPath, UIHost: analytics.Host})
 		script.WriteString("window.__formaPostHogConfig=" + string(b) + ";")
 	}
-	head := bytes.Index(index, []byte("</head>"))
-	if script.Len() == 0 || head < 0 {
-		return index
-	}
-	out := make([]byte, 0, len(index)+script.Len()+64)
-	out = append(out, index[:head]...)
-	out = append(out, `<script id="forma-runtime-config">`...)
-	out = append(out, script.Bytes()...)
-	out = append(out, "</script>"...)
-	return append(out, index[head:]...)
+	return script.Bytes()
 }
 
 func NewFromFS(files fs.FS) (*Handler, error) {
@@ -121,7 +159,7 @@ func NewFromFS(files fs.FS) (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Handler{files: files, index: index, survey: survey, hashes: hashes, surveyLocales: surveyLocaleFiles(hashes)}, nil
+	return &Handler{files: files, index: index, survey: survey, hashes: hashes, surveyLocales: surveyLocaleFiles(hashes), policy: appPolicy(config.Config{})}, nil
 }
 
 // sdkDir is the folder of the SDK and survey runtime bundles, served at /js.
@@ -280,8 +318,7 @@ func (h *Handler) serveApp(c *gin.Context, rest string) {
 		return
 	}
 	c.Header("Cache-Control", "no-cache")
-	// The SPA converts HEIC images with WebAssembly.
-	httpserver.AllowWebAssembly(c)
+	httpserver.SetDocumentPolicy(c, h.policy)
 	c.Data(http.StatusOK, "text/html; charset=utf-8", h.index)
 }
 

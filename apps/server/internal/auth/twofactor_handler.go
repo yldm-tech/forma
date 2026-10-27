@@ -118,7 +118,7 @@ func (h *Handler) verifyBackupCode(c *gin.Context) {
 	h.verifySecondFactor(c, factorBackupCode)
 }
 
-// verifySecondFactor completes a sign-in waiting in this browser. The two-factor cookie is dropped once the pending sign-in is gone: completed, spent by too many refused codes, or no longer valid.
+// verifySecondFactor completes a sign-in waiting in this browser. The two-factor cookie is dropped once the pending sign-in is gone: completed, spent by too many refused codes or by an identity that can no longer be linked, or no longer valid.
 func (h *Handler) verifySecondFactor(c *gin.Context, factor secondFactor) {
 	req := &codeRequest{}
 	if !bind(c, req) {
@@ -128,7 +128,7 @@ func (h *Handler) verifySecondFactor(c *gin.Context, factor secondFactor) {
 	attr := readAttribution(c)
 	sess, err := h.twoFactor.verifySignIn(c.Request.Context(), token, factor, req.Code, clientMetaFrom(c))
 	if err != nil {
-		if e, ok := apperr.As(err); ok && (e.Code == CodeTooManyAttempts || e.Code == CodeInvalidTwoFactorCookie) {
+		if e, ok := apperr.As(err); ok && (e.Code == CodeTooManyAttempts || e.Code == CodeInvalidTwoFactorCookie || e.Code == CodeAccountNotLinked) {
 			h.cookies.clear(c, h.cookies.twoFactor)
 		}
 		httpapi.Fail(c, err)

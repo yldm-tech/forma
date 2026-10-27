@@ -123,6 +123,138 @@ func TestDeliverAPIKeyProjectsThatKeyBeforeTheWorker(t *testing.T) {
 	(*Delivery)(nil).DeliverAPIKey(e.ctx, other)
 }
 
+// The revocations an owner makes in the app reach SpiceDB before the request answers: none is left for a worker whose queue may be minutes behind, where it would pass the freshness window and stop every check in the deployment.
+func TestDeliverMembershipsTeamAndWorkspaceProjectRevocationsBeforeTheWorker(t *testing.T) {
+	e := newTestEnv(t)
+	org, owner, member, bystander := e.org(), e.user(), e.user(), e.user()
+	e.member(org, owner, "owner")
+	e.member(org, member, "member")
+	e.member(org, bystander, "member")
+	team, other := e.team(org), e.team(org)
+	ws := e.workspace(org)
+	e.teamMember(team, member, "contributor")
+	e.teamMember(other, bystander, "contributor")
+	e.workspaceTeam(ws, team, "manage")
+	e.workspaceTeam(ws, other, "read")
+	key := e.apiKey(org, false, false)
+	e.apiKeyWorkspace(key, ws, "read")
+	e.drain()
+	revocations := func() int { return e.countOutbox(`is_revocation AND processed_at IS NULL`) }
+
+	// Removing a member takes their team seats with them, as org.Repository.deleteMembership does.
+	e.exec(`DELETE FROM team_members WHERE user_id = ?`, member)
+	e.exec(`DELETE FROM memberships WHERE organization_id = ? AND user_id = ?`, org, member)
+	// Another aggregate's revocation is left to the worker.
+	e.exec(`DELETE FROM team_members WHERE team_id = ? AND user_id = ?`, other, bystander)
+	e.delivery.DeliverMemberships(e.ctx, member)
+	if n := e.countOutbox(`secondary_id = ? AND processed_at IS NULL`, member.String()); n != 0 {
+		t.Fatalf("%d of the member's events are still pending", n)
+	}
+	e.expect(User(member), Organization(org), map[Action]bool{OrganizationRead: false})
+	e.expect(User(member), Workspace(ws), map[Action]bool{WorkspaceRead: false})
+	if revocations() != 1 {
+		t.Fatalf("%d revocations pending, want only the other team's", revocations())
+	}
+
+	e.exec(`DELETE FROM teams WHERE id = ?`, other)
+	e.delivery.DeliverTeam(e.ctx, other)
+	if revocations() != 0 {
+		t.Fatalf("%d revocations pending after the team's delivery", revocations())
+	}
+	e.expect(User(bystander), Workspace(ws), map[Action]bool{WorkspaceRead: false})
+
+	e.exec(`DELETE FROM workspaces WHERE id = ?`, ws)
+	e.delivery.DeliverWorkspace(e.ctx, ws)
+	if revocations() != 0 {
+		t.Fatalf("%d revocations pending after the workspace's delivery", revocations())
+	}
+	if rels := e.relationships("workspace", ws); len(rels) != 0 {
+		t.Fatalf("the deleted workspace kept %d relationships", len(rels))
+	}
+	e.expect(User(owner), Organization(org), map[Action]bool{OrganizationRead: true})
+
+	// Nil is AuthZed disabled: nothing to project, nothing to fail.
+	(*Delivery)(nil).DeliverMemberships(e.ctx, owner)
+	(*Delivery)(nil).DeliverTeam(e.ctx, team)
+	(*Delivery)(nil).DeliverWorkspace(e.ctx, ws)
+}
+
+// Deleting an organization, alone or with its owner's account, revokes a relationship for every member, team, workspace and API key in it; all of them reach SpiceDB before the request answers, past a single claim's batch, and none is left to the worker.
+func TestDeliverOrganizationsProjectsADeletionBeforeTheWorker(t *testing.T) {
+	e := newTestEnv(t)
+	org, owner, kept := e.org(), e.user(), e.org()
+	e.member(org, owner, "owner")
+	e.member(kept, owner, "member")
+	members := make([]uuid.UUID, 0, outboxBatchSize+10)
+	for range outboxBatchSize + 10 {
+		u := e.user()
+		e.member(org, u, "member")
+		members = append(members, u)
+	}
+	team := e.team(org)
+	e.teamMember(team, members[0], "contributor")
+	ws := e.workspace(org)
+	e.workspaceTeam(ws, team, "manage")
+	key := e.apiKey(org, true, false)
+	e.apiKeyWorkspace(key, ws, "read")
+	keptWS := e.workspace(kept)
+	e.drain()
+	pending := func() int { return e.countOutbox(`processed_at IS NULL`) }
+
+	o, err := ReadOrganizations(e.ctx, e.db, org)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The account's deletion: its sole-owned organization, then the user, whose membership elsewhere cascades.
+	e.exec(`DELETE FROM organizations WHERE id = ?`, org)
+	e.exec(`DELETE FROM users WHERE id = ?`, owner)
+	if pending() <= outboxBatchSize {
+		t.Fatalf("only %d events pending; the deletion must need more than one claim", pending())
+	}
+	e.delivery.DeliverOrganizations(e.ctx, o, owner)
+	if n := pending(); n != 0 {
+		t.Fatalf("%d events left for the worker after the deletion's delivery", n)
+	}
+	for _, rel := range []struct {
+		typ string
+		id  uuid.UUID
+	}{{"organization", org}, {"team", team}, {"workspace", ws}, {"api_key", key}} {
+		if rels := e.relationships(rel.typ, rel.id); len(rels) != 0 {
+			t.Fatalf("the deleted %s kept %d relationships", rel.typ, len(rels))
+		}
+	}
+	e.expect(User(members[0]), Organization(org), map[Action]bool{OrganizationRead: false})
+	if e.spicedbCheck("organization", kept, "read", "user", owner) {
+		t.Fatal("the deleted user still reads the organization they were a member of")
+	}
+	if len(e.relationships("workspace", keptWS)) == 0 {
+		t.Fatal("another organization's workspace lost its relationships")
+	}
+
+	// A new organization is delivered the same way: read after it is written, with the user who made it.
+	creator := e.user()
+	fresh := e.org()
+	e.member(fresh, creator, "owner")
+	freshWS := e.workspace(fresh)
+	o, err = ReadOrganizations(e.ctx, e.db, fresh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.delivery.DeliverOrganizations(e.ctx, o, creator)
+	if n := pending(); n != 0 {
+		t.Fatalf("%d events left for the worker after the new organization's delivery", n)
+	}
+	e.expect(User(creator), Workspace(freshWS), map[Action]bool{WorkspaceManage: true})
+
+	// Nothing named claims nothing; nil is AuthZed disabled.
+	e.exec(`DELETE FROM workspaces WHERE id = ?`, keptWS)
+	e.delivery.DeliverOrganizations(e.ctx, Organizations{})
+	if n := pending(); n != 1 {
+		t.Fatalf("%d events pending, want the unrelated workspace's still waiting", n)
+	}
+	(*Delivery)(nil).DeliverOrganizations(e.ctx, o, creator)
+}
+
 func TestDeliverAPIKeyFallsBackToTheOutboxWhenSpiceDBIsDown(t *testing.T) {
 	e := newTestEnv(t)
 	down, err := NewClient(config.AuthzConfig{Enabled: true, Endpoint: "127.0.0.1:1", Token: "x", Insecure: true, Consistency: "fully_consistent"}, RequestProfile, discardLog())

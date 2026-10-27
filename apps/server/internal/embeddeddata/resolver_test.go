@@ -90,6 +90,19 @@ func TestDurationSecondsIsUnsetOnAPartialResponse(t *testing.T) {
 	}
 }
 
+// J6: a partial response has not finished, so its last partial save is not reported as its finish time (exports showed it in Finished At).
+func TestFinishedAtIsUnsetOnAPartialResponse(t *testing.T) {
+	r := capturedResponse()
+	r.Finished = false
+	got := Project(ReservedCatalog, r)
+	if v, ok := got["finishedAt"]; ok {
+		t.Fatalf("finishedAt = %v on a partial response", v)
+	}
+	if got["startedAt"] != "2026-08-01T09:00:00.000Z" {
+		t.Fatalf("startedAt = %v", got["startedAt"])
+	}
+}
+
 func TestServerValuesLetDeclaredNamesShadowReservedFields(t *testing.T) {
 	r := capturedResponse()
 	r.Data = map[string]any{"q1": "answer"}
@@ -150,6 +163,44 @@ func TestCatalogDisplay(t *testing.T) {
 	}
 	if !reflect.DeepEqual(byDisplay, want) {
 		t.Errorf("display placement %v", byDisplay)
+	}
+}
+
+// The catalog's availability, as RESERVED_FIELD_CATALOG declares it: what only the server knows, and what the survey runtime reads mid-survey.
+func TestCatalogAvailability(t *testing.T) {
+	byAvailability := map[string][]string{}
+	for _, e := range ReservedCatalog {
+		byAvailability[e.Availability] = append(byAvailability[e.Availability], e.Name)
+	}
+	want := map[string][]string{
+		AvailabilityServer: {"country", "browser", "os", "deviceType", "ipAddress", "finished", "responseId", "surveyId", "durationSeconds", "startedAt", "finishedAt"},
+		AvailabilityBoth:   {"language"},
+		AvailabilityClient: {"source", "url", "action", "pagePath", "pageReferrer", "utmSource", "utmMedium", "utmCampaign", "utmTerm", "utmContent",
+			"screenWidth", "screenHeight", "viewportWidth", "viewportHeight", "timezone", "locale"},
+	}
+	if !reflect.DeepEqual(byAvailability, want) {
+		t.Errorf("availability %v", byAvailability)
+	}
+}
+
+// ClientValues holds what the runtime reads mid-survey: the client and both entries, never a server-only one, with the response's data over them and a declared name shadowing its reserved entry.
+func TestClientValues(t *testing.T) {
+	language := "de"
+	r := ValueResponse{
+		ID: "r1", SurveyID: "s1", Finished: true, Language: &language,
+		Data: map[string]any{"q1": "A", "url": "answered"},
+		TTC:  map[string]any{"_total": 4000.0},
+		Meta: map[string]any{
+			"source": "link", "url": "https://example.com/?a=1", "country": "JP", "ipAddress": "1.2.3.4", "timezone": "Asia/Tokyo",
+			"userAgent": map[string]any{"browser": "Chrome", "os": "macOS", "device": "desktop"},
+		},
+	}
+	want := map[string]any{"source": "link", "language": "de", "timezone": "Asia/Tokyo", "q1": "A", "url": "answered"}
+	if got := ClientValues(r, nil, []string{"q1", "url"}); !reflect.DeepEqual(got, want) {
+		t.Errorf("ClientValues = %v, want %v", got, want)
+	}
+	if got := ServerValues(r, nil, []string{"q1", "url"}); got["country"] != "JP" || got["browser"] != "Chrome" || got["durationSeconds"] != 4.0 {
+		t.Errorf("ServerValues lost a server entry: %v", got)
 	}
 }
 

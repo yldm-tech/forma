@@ -3,12 +3,8 @@ import { Result } from "@forma/types/error-handlers";
 import { type ApiErrorResponse, FILE_UPLOAD_ERROR_NAMES } from "@forma/types/errors";
 import { TSurveyQuotaAction } from "@forma/types/quota";
 import { TResponseInput, TResponseUpdateInput } from "@forma/types/responses";
-import {
-  STORAGE_CONFIGURATION_ERROR_CODES,
-  type TStorageApiErrorDetails,
-  type TUploadFileConfig,
-  type TUploadFileResponse,
-} from "@forma/types/storage";
+import type { TUploadFileConfig, TUploadFileResponse } from "@forma/types/storage";
+import { STORAGE_CONFIGURATION_ERROR_CODES, type TStorageApiErrorDetails } from "@forma/types/storage-errors";
 import { makeRequest } from "@/lib/utils";
 
 type TResponseCreateResponseQuotaFull = {
@@ -98,6 +94,7 @@ export class ApiClient {
     variables,
     language,
     pinAuthToken,
+    verifyToken,
   }: TResponseUpdateInput & { responseId: string }): Promise<
     Result<TResponseUpdateResponse, ApiErrorResponse>
   > {
@@ -109,6 +106,8 @@ export class ApiClient {
       variables,
       language,
       pinAuthToken,
+      // Left out rather than sent as null when there is none, so an update from any other page is the body it always was.
+      verifyToken: verifyToken ?? undefined,
     });
   }
 

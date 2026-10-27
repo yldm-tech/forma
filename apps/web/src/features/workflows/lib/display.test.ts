@@ -37,7 +37,14 @@ describe("getWorkflowRunStatusBadge", () => {
     ["canceled", "common.canceled", "gray"],
     ["queued", "common.queued", "gray"],
   ] as const)("maps %s to label %s / type %s", (status, label, type) => {
-    expect(getWorkflowRunStatusBadge(status, t)).toEqual({ label, type });
+    expect(getWorkflowRunStatusBadge({ status, continuedFailureCount: 0 }, t)).toEqual({ label, type });
+  });
+
+  test("a completed run that went on past failed steps says it completed with failures", () => {
+    expect(getWorkflowRunStatusBadge({ status: "completed", continuedFailureCount: 2 }, t)).toEqual({
+      label: "workspace.workflows.run_completed_with_failures",
+      type: "warning",
+    });
   });
 });
 

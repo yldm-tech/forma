@@ -2,11 +2,14 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "../../../../components/ui/alert";
+import { Label } from "../../../../components/ui/label";
+import { Switch } from "../../../../components/ui/switch";
 import {
   type TWorkflowDefinition,
   type TWorkflowNode,
   type TWorkflowStatus,
   getWorkflowNodeConcreteType,
+  withContinueOnFailure,
 } from "../../definition";
 import { WORKFLOW_CLIENT_EVENTS, trackWorkflowEvent } from "../../lib/analytics";
 import { getNodeRegistryEntry } from "../../lib/node-registry";
@@ -104,7 +107,14 @@ export const WorkflowNodeConfigPanel = ({ isEditable }: Readonly<{ isEditable: b
               <AlertDescription>{blockedReason}</AlertDescription>
             </Alert>
           )}
-          {ConfigForm ? (
+          {selectedNode.type === "if_else" ? (
+            // Branches are stored but never run; the trigger's ending filter is how a workflow acts on some responses only.
+            <Alert variant="warning" size="small">
+              <AlertDescription className="whitespace-normal">
+                {t("workspace.workflows.if_else_not_runnable_description")}
+              </AlertDescription>
+            </Alert>
+          ) : ConfigForm ? (
             // Keyed by node, so switching nodes remounts the form with fresh local state.
             <ConfigForm
               key={selectedNode.id}
@@ -115,6 +125,25 @@ export const WorkflowNodeConfigPanel = ({ isEditable }: Readonly<{ isEditable: b
           ) : (
             <p className="text-sm text-slate-500">{t("workspace.workflows.inspector_unsupported_node")}</p>
           )}
+          {selectedNode.type === "action" ? (
+            // How the run treats this step's failure, the same for every kind of action, so it sits under the step's own form.
+            <div className="flex items-start justify-between gap-3 rounded-md border border-slate-200 p-3">
+              <div className="flex flex-col">
+                <Label htmlFor="workflow-continue-on-failure" className="text-sm font-medium">
+                  {t("workspace.workflows.continue_on_failure_label")}
+                </Label>
+                <p className="text-xs text-slate-500">
+                  {t("workspace.workflows.continue_on_failure_description")}
+                </p>
+              </div>
+              <Switch
+                id="workflow-continue-on-failure"
+                checked={selectedNode.continueOnFailure ?? false}
+                disabled={!isEditable}
+                onCheckedChange={(checked) => handleChange(withContinueOnFailure(selectedNode, checked))}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </aside>

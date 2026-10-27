@@ -32,6 +32,7 @@ type Service struct {
 	workspaces *workspace.Repository
 	navigation *workspace.Service
 	authz      *authz.Authorizer
+	delivery   *authz.Delivery
 	limiter    *ratelimit.Limiter
 	audit      *audit.Emitter
 	billing    *billing.Lifecycle
@@ -39,8 +40,8 @@ type Service struct {
 	log        *slog.Logger
 }
 
-func NewService(cfg config.Config, repo *Repository, workspaces *workspace.Repository, navigation *workspace.Service, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, lifecycle *billing.Lifecycle, m *mailer.Mailer, log *slog.Logger) *Service {
-	return &Service{cfg: cfg, repo: repo, workspaces: workspaces, navigation: navigation, authz: authorizer, limiter: limiter, audit: emitter, billing: lifecycle, mailer: m, log: log}
+func NewService(cfg config.Config, repo *Repository, workspaces *workspace.Repository, navigation *workspace.Service, authorizer *authz.Authorizer, delivery *authz.Delivery, limiter *ratelimit.Limiter, emitter *audit.Emitter, lifecycle *billing.Lifecycle, m *mailer.Mailer, log *slog.Logger) *Service {
+	return &Service{cfg: cfg, repo: repo, workspaces: workspaces, navigation: navigation, authz: authorizer, delivery: delivery, limiter: limiter, audit: emitter, billing: lifecycle, mailer: m, log: log}
 }
 
 // record emits forma2's audit event for a mutation, a failure included, as withAuditLogging did for every error its handler threw.
@@ -90,6 +91,9 @@ func (s *Service) create(ctx context.Context, userID uuid.UUID, name string, tim
 	if err != nil {
 		return nil, err
 	}
+	// The creator's ownership and the first workspace reach SpiceDB before the answer instead of waiting for the worker (see authz.Delivery.DeliverMemberships on what that promises under minimize_latency). The organization's own event projects nothing for a row that exists.
+	s.delivery.DeliverMemberships(ctx, userID)
+	s.delivery.DeliverWorkspace(ctx, workspaceID)
 	// forma2 set up the Stripe customer and Hobby subscription after the organization existed.
 	s.billing.OrganizationCreated(ctx, orgID)
 	o, err := s.repo.byID(ctx, orgID, s.cfg.IsFormaCloud)
@@ -219,7 +223,9 @@ type UpdateInput struct {
 	// SurveySchedulingTimeZone is set when the request names the field; a nil Value means the instance's zone.
 	SurveySchedulingTimeZone *TimeZone
 	IsAISmartToolsEnabled    *bool
-	TwoFactorRequirement     *TwoFactorRequirement
+	// IsAIResponseReadingEnabled is the "Allow AI to read responses" switch.
+	IsAIResponseReadingEnabled *bool
+	TwoFactorRequirement       *TwoFactorRequirement
 }
 
 // TimeZone is a time zone change.
@@ -242,7 +248,7 @@ const CodeEnableTwoFactorFirst = "enable_two_factor_first"
 // CodeAIInstanceNotConfigured is forma2's ai_instance_not_configured refusal.
 const CodeAIInstanceNotConfigured = "ai_instance_not_configured"
 
-// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone and the AI smart tools toggle organization.manage (owners and managers). The two-factor requirement needs organization.write (owners only), and an owner who signs in with a password must use two-factor authentication before requiring it. The survey scheduling time zone, which forma2 did not have, needs organization.manage too; changing it moves the organization's scheduled publish and close dates to the same calendar days in the new zone. Enabling AI smart tools needs an AI provider configured on the instance (forma2's assertOrganizationAISettingsUpdateAllowed); disabling is always allowed.
+// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone, the AI smart tools toggle and the "Allow AI to read responses" switch organization.manage (owners and managers). The two-factor requirement needs organization.write (owners only), and an owner who signs in with a password must use two-factor authentication before requiring it. The survey scheduling time zone, which forma2 did not have, needs organization.manage too; changing it moves the organization's scheduled publish and close dates to the same calendar days in the new zone. Enabling AI smart tools needs an AI provider configured on the instance (forma2's assertOrganizationAISettingsUpdateAllowed); disabling is always allowed.
 func (s *Service) Update(ctx context.Context, userID, organizationID uuid.UUID, in UpdateInput) (*Organization, error) {
 	old, o, err := s.update(ctx, userID, organizationID, in)
 	s.record(ctx, audit.ActionUpdated, audit.TargetOrganization, organizationID.String(), organizationID.String(), err, old, o)
@@ -256,12 +262,12 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 			return nil, nil, err
 		}
 	}
-	if in.DisplayTimeZone != nil || in.SurveySchedulingTimeZone != nil || in.IsAISmartToolsEnabled != nil {
+	if in.DisplayTimeZone != nil || in.SurveySchedulingTimeZone != nil || in.IsAISmartToolsEnabled != nil || in.IsAIResponseReadingEnabled != nil {
 		if err := s.authz.Require(ctx, actor, authz.OrganizationManage, resource); err != nil {
 			return nil, nil, err
 		}
 	}
-	if in.Name == nil && in.DisplayTimeZone == nil && in.SurveySchedulingTimeZone == nil && in.IsAISmartToolsEnabled == nil && in.TwoFactorRequirement == nil {
+	if in.Name == nil && in.DisplayTimeZone == nil && in.SurveySchedulingTimeZone == nil && in.IsAISmartToolsEnabled == nil && in.IsAIResponseReadingEnabled == nil && in.TwoFactorRequirement == nil {
 		if err := s.authz.Require(ctx, actor, authz.OrganizationRead, resource); err != nil {
 			return nil, nil, err
 		}
@@ -288,6 +294,9 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 	}
 	if in.IsAISmartToolsEnabled != nil {
 		columns = append(columns, column{"is_ai_smart_tools_enabled", *in.IsAISmartToolsEnabled})
+	}
+	if in.IsAIResponseReadingEnabled != nil {
+		columns = append(columns, column{"is_ai_response_reading_enabled", *in.IsAIResponseReadingEnabled})
 	}
 	if r := in.TwoFactorRequirement; r != nil {
 		var enforcedAt *time.Time
@@ -372,9 +381,15 @@ func (s *Service) delete(ctx context.Context, userID, organizationID uuid.UUID) 
 	if old == nil {
 		return nil, apperr.NotFound("Organization", organizationID.String())
 	}
+	// What the deletion takes with it is read first: once the rows are gone, nothing says which of the revocations it queues are its own.
+	contents, err := authz.ReadOrganizations(ctx, s.repo.db, organizationID)
+	if err != nil {
+		return old, err
+	}
 	if err := s.repo.delete(ctx, organizationID); err != nil {
 		return old, err
 	}
+	s.delivery.DeliverOrganizations(ctx, contents)
 	s.billing.OrganizationDeleted(ctx, old.Billing.StripeCustomerID)
 	return old, nil
 }

@@ -40,14 +40,21 @@ const (
 // authzMaxWorkers gives each of the authz queue's two kinds a slot of its own. Both are periodic singletons, so this is never more than ran at once before; a single slot would let an audit, which may run for up to an hour, hold back the five-second delivery the freshness guard depends on.
 const authzMaxWorkers = 2
 
-// queues sizes each queue. WORKER_CONCURRENCY applies to the default and the webhooks queue each, so a worker runs up to twice that many jobs plus the authz queue's.
+// queues sizes each queue. WORKER_CONCURRENCY applies to the default and the webhooks queue each, so a worker runs up to twice that many jobs plus the authz and ai queues' two each.
 func queues(concurrency int) map[string]river.QueueConfig {
 	return map[string]river.QueueConfig{
 		QueueDefault:  {MaxWorkers: concurrency},
 		QueueWebhooks: {MaxWorkers: concurrency},
 		QueueAuthz:    {MaxWorkers: authzMaxWorkers},
+		QueueAI:       {MaxWorkers: aiMaxWorkers},
 	}
 }
+
+// QueueAI takes the jobs that wait on the AI provider, the open-text summaries: a generation can take minutes, so it gets slots of its own and never holds back the response pipeline, emails or authorization behind it.
+const QueueAI = "ai"
+
+// aiMaxWorkers is how many AI generations one worker runs at once. Each one sends up to five requests to the provider, so a burst of summaries waits in its queue rather than spending the organization's provider quota all at once.
+const aiMaxWorkers = 2
 
 // Migrate installs or upgrades River's own tables (river_job, river_queue, ...). It runs after the goose migrations in `forma migrate`; River versions its schema itself, so these tables are not in apps/server/migrations.
 func Migrate(ctx context.Context, databaseURL string, log *slog.Logger) error {

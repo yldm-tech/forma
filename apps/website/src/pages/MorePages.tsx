@@ -224,6 +224,9 @@ export const SdkPage = () => {
           <p className="[overflow-wrap:anywhere]">
             <Rich text={page.install.queue} />
           </p>
+          <p id="staging">
+            <Rich text={page.install.staging} />
+          </p>
         </div>
       </SplitSection>
       <section aria-labelledby="methods" className="section-pad">

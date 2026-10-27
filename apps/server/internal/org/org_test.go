@@ -326,6 +326,31 @@ func TestUpdateOrganizationAISmartToolsOnConfiguredInstance(t *testing.T) {
 	}
 }
 
+// The "Allow AI to read responses" switch: on for a new organization, switched by owners and managers, and independent of the AI smart tools toggle, so it can be set before AI is turned on and needs no provider.
+func TestUpdateOrganizationAIResponseReading(t *testing.T) {
+	e := newEnv(t)
+	owner, manager, member := e.user(), e.user(), e.user()
+	c := e.organization(owner, "Acme")
+	e.member(c.ID, manager, RoleManager)
+	e.member(c.ID, member, RoleMember)
+	path := orgPath(c.ID, "")
+
+	var o Organization
+	e.ok(e.do(owner, http.MethodGet, path, nil), http.StatusOK, &o)
+	if !o.IsAIResponseReadingEnabled || o.IsAISmartToolsEnabled {
+		t.Fatalf("a new organization: %+v", o)
+	}
+	e.ok(e.do(manager, http.MethodPatch, path, map[string]any{"isAIResponseReadingEnabled": false}), http.StatusOK, &o)
+	if o.IsAIResponseReadingEnabled {
+		t.Fatal("reading still on")
+	}
+	e.fails(e.do(member, http.MethodPatch, path, map[string]any{"isAIResponseReadingEnabled": true}), http.StatusForbidden, apperr.CodeForbidden, "")
+	e.ok(e.do(owner, http.MethodPatch, path, map[string]any{"isAIResponseReadingEnabled": true}), http.StatusOK, &o)
+	if !o.IsAIResponseReadingEnabled || o.IsAISmartToolsEnabled {
+		t.Fatalf("after turning reading on: %+v", o)
+	}
+}
+
 func TestDeleteOrganization(t *testing.T) {
 	e := newEnv(t)
 	owner, manager := e.user(), e.user()
@@ -345,6 +370,24 @@ func TestDeleteOrganization(t *testing.T) {
 	e.ok(e.do(owner, http.MethodGet, "/api/app/home", nil), http.StatusOK, &home)
 	if home.Path != "/setup/organization/create" {
 		t.Fatalf("home %+v", home)
+	}
+}
+
+// Deleting an organization revokes a relationship for every member, team, workspace and API key in it. They reach SpiceDB before the request answers, with no worker running: left to a worker that may be minutes behind, they would pass the freshness window and stop every authorization check in the deployment.
+func TestDeletingAnOrganizationIsProjectedBeforeItAnswers(t *testing.T) {
+	e := newEnv(t)
+	owner, member := e.user(), e.user()
+	c := e.organization(owner, "Acme")
+	e.member(c.ID, member, RoleMember)
+	team := e.team(c.ID)
+	e.teamMember(team, member)
+	e.workspaceTeam(c.WorkspaceID, team, "read")
+	key := e.insert(`INSERT INTO api_keys (organization_id, label, hashed_key, lookup_hash) VALUES (?, 'key', 'h', ?) RETURNING id`, c.ID, uuid.NewString())
+	e.exec(`INSERT INTO api_key_workspaces (api_key_id, workspace_id, permission) VALUES (?, ?, 'read')`, key, c.WorkspaceID)
+
+	e.ok(e.do(owner, http.MethodDelete, orgPath(c.ID, ""), nil), http.StatusNoContent, nil)
+	if n := e.count(`SELECT count(*) FROM authz_projection_outbox WHERE processed_at IS NULL`); n != 0 {
+		t.Fatalf("%d events left for the worker after deleting the organization", n)
 	}
 }
 

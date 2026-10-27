@@ -9,7 +9,7 @@ import { tokenSearch } from "../../features/auth/search";
 import { ApiError } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
 
-// The link mailed when an SSO sign-in asserted an address that already has an account. Redeeming it links the identity and signs this browser in; it is a CSRF-checked POST from this page, never a GET a crawler or a preload could trigger.
+// The link mailed when an SSO sign-in asserted an address that already has an account. Redeeming it links the identity and signs this browser in, or, for an account with two-factor authentication, sends it to the sign-in page's code step, which does both once the code is accepted; it is a CSRF-checked POST from this page, never a GET a crawler or a preload could trigger.
 export const Route = createFileRoute("/auth/sso-recovery")({
   validateSearch: tokenSearch,
   component: SSORecoveryPage,
@@ -34,7 +34,15 @@ function SSORecoveryPage() {
       return;
     }
     authApi.completeSSORecovery(token).then(
-      async ({ redirectUrl }) => {
+      async ({ redirectUrl, status }) => {
+        if (status === "two_factor_required") {
+          await navigate({
+            to: "/auth/login",
+            search: { twoFactor: "1", callbackUrl: redirectUrl },
+            replace: true,
+          });
+          return;
+        }
         resetSession(queryClient);
         await navigate({ href: callbackPath(redirectUrl, window.location.origin), replace: true });
       },

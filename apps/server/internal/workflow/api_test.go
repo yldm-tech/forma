@@ -339,6 +339,8 @@ func TestRuns(t *testing.T) {
 			w.ID, f.ws, r.ID, f.survey, r.ID.String(), i == 2, []string{RunCompleted, RunFailed, RunQueued}[i], 10-i))
 	}
 	e.exec(`INSERT INTO workflow_run_logs (run_id, sequence, step_id, step_type, status, error) VALUES (?, 1, 'send-email', 'send_email', 'failed', 'boom')`, ids[1])
+	// The completed run went on past two failed steps set to continue on failure.
+	e.exec(`INSERT INTO workflow_run_logs (run_id, sequence, step_id, step_type, status, error) VALUES (?, 1, 'a', 'http_request', 'failed', 'Status 422'), (?, 2, 'b', 'http_request', 'failed', 'Status 503'), (?, 3, 'c', 'tag_response', 'succeeded', NULL)`, ids[0], ids[0], ids[0])
 
 	var got envelope[resource]
 	e.ok(e.v3(f.owner, http.MethodGet, "/api/v3/workflows/"+w.ID.String(), nil), http.StatusOK, &got)
@@ -352,11 +354,11 @@ func TestRuns(t *testing.T) {
 		t.Fatalf("runs page %+v", page)
 	}
 	e.ok(e.v3(f.owner, http.MethodGet, base+"&limit=2&cursor="+*page.Meta.NextCursor, nil), http.StatusOK, &page)
-	if len(page.Data) != 1 || page.Data[0].ID != ids[0] || page.Meta.NextCursor != nil {
+	if len(page.Data) != 1 || page.Data[0].ID != ids[0] || page.Meta.NextCursor != nil || page.Data[0].ContinuedFailureCount != 2 {
 		t.Fatalf("second page %+v", page)
 	}
 	e.ok(e.v3(f.owner, http.MethodGet, base+"&filter[isDryRun][eq]=false&filter[status][in]=failed&filter[status][in]=queued&workflowId="+w.ID.String(), nil), http.StatusOK, &page)
-	if len(page.Data) != 1 || page.Data[0].ID != ids[1] {
+	if len(page.Data) != 1 || page.Data[0].ID != ids[1] || page.Data[0].ContinuedFailureCount != 0 {
 		t.Fatalf("filtered %+v", page.Data)
 	}
 	if strings.Contains(e.v3(f.owner, http.MethodGet, base, nil).Body.String(), "triggerPayload") {
@@ -370,9 +372,13 @@ func TestRuns(t *testing.T) {
 
 	var detail envelope[RunResource]
 	e.ok(e.v3(f.owner, http.MethodGet, "/api/v3/workflows/runs/"+ids[1].String(), nil), http.StatusOK, &detail)
-	if detail.Data.ID != ids[1] || len(detail.Data.Logs) != 1 || *detail.Data.Logs[0].Error != "boom" || string(detail.Data.Data) != `{"steps":[]}` ||
+	if detail.Data.ID != ids[1] || len(detail.Data.Logs) != 1 || detail.Data.ContinuedFailureCount != 0 || *detail.Data.Logs[0].Error != "boom" || string(detail.Data.Data) != `{"steps":[]}` ||
 		string(detail.Data.TriggerPayload) != `{"type":"response.completed"}` || *detail.Data.IdempotencyKey == "" {
 		t.Fatalf("run detail %+v", detail.Data)
+	}
+	e.ok(e.v3(f.owner, http.MethodGet, "/api/v3/workflows/runs/"+ids[0].String(), nil), http.StatusOK, &detail)
+	if detail.Data.ContinuedFailureCount != 2 {
+		t.Fatalf("completed run detail %+v", detail.Data)
 	}
 	outsider := e.user("outsider@example.com")
 	e.problem(e.v3(outsider, http.MethodGet, "/api/v3/workflows/runs/"+ids[1].String(), nil), http.StatusForbidden, "forbidden", "")

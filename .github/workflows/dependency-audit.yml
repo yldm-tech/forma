@@ -1,0 +1,119 @@
+name: Dependency Audit
+
+# Known vulnerabilities in the dependencies (tooling/scripts/audit-dependencies.sh): govulncheck over the Go server, failing only on a vulnerability the server's code reaches and apps/server/govulncheck-accepted.txt does not record, and pnpm audit over the workspace's production dependencies, failing only on a high or critical advisory.
+#
+# Called by pr.yml, so it is part of the PR Check Summary: the Go scan when the Go server or anything it is built from changes (what reaches a vulnerable function depends on the code as much as on go.sum), the npm scan when the npm dependency graph does. Weekly on main as well, so an advisory published against a dependency nobody touched still surfaces.
+#
+# The advisories come over the network, and an outage of vuln.go.dev, the Go module proxy or the npm registry says nothing about the change under test. The script retries every fetch, scans with the vulnerability database cached by an earlier run when the download fails, and passes with a warning annotation when it still has no data; a failed toolchain setup here is a warning too. Only a scan that ran and found something, or a server that does not load, fails the job.
+
+on:
+  workflow_call:
+    inputs:
+      go:
+        description: Scan the Go server with govulncheck
+        type: boolean
+        default: true
+      npm:
+        description: Audit the workspace's production npm dependencies
+        type: boolean
+        default: true
+  workflow_dispatch:
+  schedule:
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    name: Go vulnerabilities (govulncheck)
+    # A scheduled or dispatched run has no inputs; it scans both.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.go
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Go (version from go.mod)
+        id: setup-go
+        continue-on-error: true
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
+
+      # One cache entry a day: a run restores the newest copy of the vulnerability database, which the scan falls back to when vuln.go.dev cannot be reached.
+      - name: Date the vulnerability database cache
+        id: day
+        run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the Go vulnerability database
+        continue-on-error: true
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/forma-govulndb
+          key: govulndb-${{ steps.day.outputs.day }}
+          restore-keys: govulndb-
+
+      - name: Scan with govulncheck
+        env:
+          SETUP_GO: ${{ steps.setup-go.outcome }}
+        run: |
+          set -euo pipefail
+          # Without go.mod's toolchain the scan would judge the standard library of whatever Go the runner has.
+          if [ "$SETUP_GO" != "success" ]; then
+            echo "::warning::Setting up Go failed; the Go vulnerability scan was skipped."
+            exit 0
+          fi
+          # setup-go's problem matcher would turn every file:line of govulncheck's call traces into an error annotation, accepted findings included; the script annotates what fails by itself.
+          echo "::remove-matcher owner=go::"
+          bash tooling/scripts/audit-dependencies.sh go
+
+  pnpm-audit:
+    name: npm vulnerabilities (pnpm audit)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Node.js from .node-version and pnpm from packageManager, without installing the workspace: pnpm audit reads the lockfile.
+      - name: Setup Vite+
+        id: setup-vp
+        continue-on-error: true
+        uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af # v1.21.2
+        with:
+          node-version-file: ".node-version"
+          run-install: false
+
+      - name: Audit with pnpm
+        env:
+          SETUP_VP: ${{ steps.setup-vp.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "$SETUP_VP" != "success" ]; then
+            echo "::warning::Setting up Node.js and pnpm failed; the npm vulnerability scan was skipped."
+            exit 0
+          fi
+          # Vite+ fetches the pnpm release on first use.
+          if ! pnpm --version; then
+            echo "::warning::pnpm did not start; the npm vulnerability scan was skipped."
+            exit 0
+          fi
+          bash tooling/scripts/audit-dependencies.sh npm

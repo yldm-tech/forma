@@ -1,6 +1,6 @@
 import { AUTO_OPENED_KEY_PREFIX, MODE_ATTRIBUTES, OPTION_ATTRIBUTES } from "@forma/embed/protocol";
 import { CopyIcon } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdvancedOptionToggle } from "../../../../components/ui/advanced-option-toggle";
 import { Button } from "../../../../components/ui/button";
@@ -81,10 +81,23 @@ export const scriptEmbedCode = (
 const withPreview = (url: string) => `${url}${url.includes("?") ? "&" : "?"}preview=true`;
 
 /**
- * A sample page with the snippet on it, for the preview frame: the layouts that open over a page can only be shown on one. The frame shares this tab's session storage, where the embed script remembers a survey that already opened on its own; the page forgets that first, so a delayed popup opens again every time the preview is shown.
+ * A sample page with the snippet on it, for the preview frame: the layouts that open over a page can only be shown on one. It runs no script of its own: the frame is under this page's Content-Security-Policy, which refuses inline scripts.
  */
 const previewDocument = (snippet: string) =>
-  `<!doctype html><html><head><meta charset="utf-8"><script>try{Object.keys(sessionStorage).forEach(function(k){if(k.indexOf("${AUTO_OPENED_KEY_PREFIX}")===0)sessionStorage.removeItem(k)})}catch(e){}</script><style>body{margin:0;padding:24px;font:14px/1.5 system-ui,sans-serif;color:#334155;background:#f8fafc}.line{height:12px;margin:0 0 12px;border-radius:6px;background:#e2e8f0}button[data-forma-popup],button[data-forma-slider]{padding:10px 16px;border:0;border-radius:8px;background:#0f172a;color:#fff;font:inherit;cursor:pointer}</style></head><body><div class="line" style="width:60%"></div><div class="line" style="width:85%"></div><div class="line" style="width:40%;margin-bottom:24px"></div>${snippet}</body></html>`;
+  `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;padding:24px;font:14px/1.5 system-ui,sans-serif;color:#334155;background:#f8fafc}.line{height:12px;margin:0 0 12px;border-radius:6px;background:#e2e8f0}button[data-forma-popup],button[data-forma-slider]{padding:10px 16px;border:0;border-radius:8px;background:#0f172a;color:#fff;font:inherit;cursor:pointer}</style></head><body><div class="line" style="width:60%"></div><div class="line" style="width:85%"></div><div class="line" style="width:40%;margin-bottom:24px"></div>${snippet}</body></html>`;
+
+/**
+ * The preview frame shares this tab's session storage, where the embed script remembers a survey that already opened on its own. Forgetting that before each new preview document loads makes a delayed popup open again every time the preview is shown.
+ */
+const forgetAutoOpenedSurveys = () => {
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if (key.startsWith(AUTO_OPENED_KEY_PREFIX)) sessionStorage.removeItem(key);
+    }
+  } catch {
+    // Storage the browser refuses to this page is storage the embed script cannot read either.
+  }
+};
 
 /** The website embed tab: one of the embed script's layouts (or a plain iframe), its options, the code to copy, and a live preview. */
 export const WebsiteEmbedTab = ({
@@ -165,6 +178,9 @@ export const WebsiteEmbedTab = ({
       srcDoc: previewDocument(scriptEmbedCode(withPreview(surveyUrl), scriptUrl, scriptOptions(layout))),
     };
   }
+
+  // A layout effect runs once the frame for this code is in the document and before the document it is given loads, so the embed script in it finds nothing remembered.
+  useLayoutEffect(forgetAutoOpenedSurveys, [code]);
 
   const opensFromButton = (layout === "popup" || layout === "slider") && !opensAfterDelay;
 

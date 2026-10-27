@@ -193,7 +193,7 @@ func insertOn(t *testing.T, pool *pgxpool.Pool, args river.JobArgs, queue string
 	return res.Job.ID
 }
 
-// Each queue has slots of its own: jobs that hold every slot of one queue, a backlog behind them included, delay nothing queued on another. WORKER_CONCURRENCY sizes the default and the webhooks queue each; the authz queue has two slots, one for each of its periodic singletons.
+// Each queue has slots of its own: jobs that hold every slot of one queue, a backlog behind them included, delay nothing queued on another. WORKER_CONCURRENCY sizes the default and the webhooks queue each; the authz queue has two slots, one for each of its periodic singletons, and the ai queue two.
 func TestEachQueueHasSlotsOfItsOwn(t *testing.T) {
 	cfg := testConfig(pgtest.DSN(t))
 	pool := openPool(t, cfg)
@@ -229,10 +229,13 @@ func TestEachQueueHasSlotsOfItsOwn(t *testing.T) {
 	works(jobs.QueueAuthz)
 	fill(jobs.QueueDefault, cfg.WorkerConcurrency)
 	works(jobs.QueueAuthz)
+	works(jobs.QueueAI)
 	fill(jobs.QueueAuthz, 2)
+	works(jobs.QueueAI)
+	fill(jobs.QueueAI, 2)
 	// Every queue is now full and has one job waiting beyond its slots: none of them took another queue's slot.
-	if n := count("available"); n != 3 {
-		t.Fatalf("%d held jobs wait for a slot, want one on each of the three queues", n)
+	if n := count("available"); n != 4 {
+		t.Fatalf("%d held jobs wait for a slot, want one on each of the four queues", n)
 	}
 }
 

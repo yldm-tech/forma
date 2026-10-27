@@ -15,6 +15,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
+	"github.com/yldm-tech/forma/apps/server/internal/recipient"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
@@ -121,19 +122,20 @@ type ConditionGroup struct {
 // ActionTypes are the action nodes this server stores and runs, in the order the builder offers them.
 var ActionTypes = []string{ActionSendEmail, ActionHTTPRequest, ActionSlackMessage, ActionDiscordMessage, ActionTeamsMessage, ActionTagResponse, ActionSetContactAttribute}
 
-// Node is a node after the trigger: an action, with the config of its actionType set (Email, HTTP, Chat for the three chat messages, Tag or Attribute), or an if_else branch (Condition set), which can be stored but not executed.
+// Node is a node after the trigger: an action, with the config of its actionType set (Email, HTTP, Chat for the three chat messages, Tag or Attribute), or an if_else branch (Condition set), which can be stored but not executed. ContinueOnFailure, an action's only, lets the run go on to the next step when this one fails instead of stopping there: the failed step is still retried with the run, which then completes rather than fails. It is off unless the author turns it on.
 type Node struct {
-	ID         string
-	Type       string
-	ActionType string
-	Label      *string
-	UI         UI
-	Email      *SendEmailConfig
-	HTTP       *HTTPRequestConfig
-	Chat       *ChatMessageConfig
-	Tag        *TagResponseConfig
-	Attribute  *SetContactAttributeConfig
-	Condition  *ConditionGroup
+	ID                string
+	Type              string
+	ActionType        string
+	Label             *string
+	UI                UI
+	ContinueOnFailure bool
+	Email             *SendEmailConfig
+	HTTP              *HTTPRequestConfig
+	Chat              *ChatMessageConfig
+	Tag               *TagResponseConfig
+	Attribute         *SetContactAttributeConfig
+	Condition         *ConditionGroup
 }
 
 type nodeJSON struct {
@@ -142,11 +144,13 @@ type nodeJSON struct {
 	Label      *string `json:"label,omitempty"`
 	UI         UI      `json:"ui,omitempty"`
 	ActionType string  `json:"actionType,omitempty"`
-	Config     any     `json:"config"`
+	// ContinueOnFailure is stored only when on, so a definition written before the option existed reads back unchanged.
+	ContinueOnFailure bool `json:"continueOnFailure,omitempty"`
+	Config            any  `json:"config"`
 }
 
 func (n Node) MarshalJSON() ([]byte, error) {
-	out := nodeJSON{ID: n.ID, Type: n.Type, Label: n.Label, UI: n.UI, ActionType: n.ActionType}
+	out := nodeJSON{ID: n.ID, Type: n.Type, Label: n.Label, UI: n.UI, ActionType: n.ActionType, ContinueOnFailure: n.ContinueOnFailure}
 	switch {
 	case n.Email != nil:
 		out.Config = n.Email
@@ -283,7 +287,7 @@ func BlankContentFields(c SendEmailConfig) []string {
 
 // IsLiteralRecipient is forma2's isLiteralEmailRecipient: a `to` that is itself an address, as opposed to the id of the element whose answer holds the respondent's. Literal recipients must be able to access the workspace.
 func IsLiteralRecipient(to string) bool {
-	return userinput.ValidEmailFormat(to)
+	return recipient.IsLiteral(to)
 }
 
 // parser walks a decoded document the way the zod schemas did, collecting issues with their paths. aborted records a type-level issue, after which zod skipped refinements.
@@ -616,6 +620,9 @@ func (p *parser) node(v any, at []any) *Node {
 		}
 		n := &Node{Type: NodeAction, ActionType: actionType}
 		n.ID, n.Label, n.UI = p.base(m, at)
+		if b := p.optBool(m, "continueOnFailure", at); b != nil {
+			n.ContinueOnFailure = *b
+		}
 		cfg, present := m["config"]
 		c, ok := p.object(cfg, present, path(at, "config"))
 		// A config that is not an object already failed the parse; the node still gets its type's empty config, so nothing downstream meets a nil.

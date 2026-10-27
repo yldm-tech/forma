@@ -79,6 +79,14 @@ export interface SegmentSurvey {
   status: string;
 }
 
+/** A survey's results link whose frozen filter names a segment: deleting the segment leaves it showing no responses for that segment. */
+export interface SegmentResultShare {
+  id: string;
+  name: string;
+  surveyId: string;
+  surveyName: string;
+}
+
 export interface SegmentUpdate {
   title?: string;
   description?: string | null;
@@ -127,6 +135,8 @@ export const contactKeys = {
   segments: (workspaceId: string) => ["segments", workspaceId] as const,
   segmentSurveys: (workspaceId: string) => ["segments", workspaceId, "surveys"] as const,
   segmentContactCounts: (workspaceId: string) => ["segments", workspaceId, "contact-counts"] as const,
+  segmentResultShares: (workspaceId: string, segmentId: string) =>
+    ["segments", workspaceId, "result-shares", segmentId] as const,
 };
 
 export const attributeKeysQuery = (workspaceId: string) =>
@@ -332,6 +342,14 @@ export const useCreateSegment = (workspaceId: string) =>
       surveyId: string;
     }) => api.post<Segment>(`/api/app/workspaces/${workspaceId}/segments`, input)
   );
+
+/** The results links whose filter names the segment, which the delete dialog warns about; only those who may change the segment can list them. */
+export const segmentResultSharesQuery = (workspaceId: string, segmentId: string) =>
+  queryOptions({
+    queryKey: contactKeys.segmentResultShares(workspaceId, segmentId),
+    queryFn: ({ signal }) =>
+      api.get<SegmentResultShare[]>(`/api/app/segments/${segmentId}/result-shares`, { signal }),
+  });
 
 export const useUpdateSegment = (workspaceId: string) =>
   useSegmentMutation(workspaceId, ({ id, update }: { id: string; update: SegmentUpdate }) =>

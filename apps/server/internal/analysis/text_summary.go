@@ -25,6 +25,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/ai"
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
@@ -48,6 +49,18 @@ const (
 // CodeNoTextAnswers is the 400 for a summary asked of a question no matching response answered.
 const CodeNoTextAnswers = "no_text_answers"
 
+// CodeTextSummaryFailed is the code of a generation that failed for a reason the reader cannot act on, such as a provider answer that could not be used or a worker that stopped: asking again may succeed.
+const CodeTextSummaryFailed = "text_summary_failed"
+
+// ReasonNotFreeText is why an open-text question cannot be summarized while AI is otherwise available: it asks for an email address, a phone number, a URL or a number, answers that are removed before the provider reads them or that share no themes.
+const ReasonNotFreeText = "not_free_text"
+
+// The generation status of a summary, TextSummaryState.Status.
+const (
+	TextStatusPending = "pending"
+	TextStatusFailed  = "failed"
+)
+
 const (
 	// textReadLimit bounds the responses one summary reads, newest first; a summary of a larger set says it read only the newest.
 	textReadLimit = 10000
@@ -62,13 +75,14 @@ const (
 	textMaxChunks   = 4
 	// textMaxOutputTokens leaves a reasoning model room to think before it writes the themes.
 	textMaxOutputTokens = 8000
-	textTimeout         = 90 * time.Second
-	// textGenerationTimeout bounds one generation: its chunk requests run in parallel, the merge after them. A generation does not stop when the request that asked for it goes away (a closed tab, a proxy timeout), so what it costs is cached for the next lookup.
-	textGenerationTimeout = 2*textTimeout + 20*time.Second
-	// textLockTTL outlives a generation, so one that crashed holds the lock no longer than that.
-	textLockTTL = textGenerationTimeout + 30*time.Second
-	// textLockPoll is how often a request waiting for another one's generation looks for its result.
-	textLockPoll   = 500 * time.Millisecond
+	// textJobTimeout bounds one generation in `forma worker`: its chunk requests run in parallel, then the merge, a short request over the chunks' themes. A generation runs there, not in the request that asked for it, so a proxy that cuts long requests (Cloudflare's 100 seconds) cannot lose it.
+	textJobTimeout = 5 * time.Minute
+	// textTimeout bounds one request to the provider, its retries included: a reasoning model can take over two minutes on a full chunk, and the minute left of textJobTimeout is the merge's.
+	textTimeout = 4 * time.Minute
+	// textPendingTTL bounds how long a queued generation is reported pending: the wait for a slot of the ai queue plus the job itself. A job lost with its worker stops being reported after it.
+	textPendingTTL = 10 * time.Minute
+	// textFailedTTL is how long a failed generation is reported.
+	textFailedTTL  = 10 * time.Minute
 	textMaxThemes  = 8
 	textMinQuotes  = 2
 	textMaxQuotes  = 3
@@ -77,6 +91,12 @@ const (
 	// textCacheTTL bounds how long a summary, and the redacted quotes in it, outlive the responses they came from: a new or changed answer invalidates it at once, as does a reset of the survey; a deleted response, or survey, by this time at the latest. A summary that is no longer current is never served.
 	textCacheTTL = 7 * 24 * time.Hour
 )
+
+// textFailedMessage is the message of CodeTextSummaryFailed.
+const textFailedMessage = "The summary could not be generated. Try again."
+
+// notFreeTextMessage refuses a summary of a question whose answers are not free text.
+const notFreeTextMessage = "This question has no free-text answers to summarize."
 
 // TextSummaryInput names the answers to summarize: an element of the survey, which of its answers, the language the themes are written in (the reader's UI language) and the analysis filter. Refresh asks for a new summary even when the cached one is current.
 type TextSummaryInput struct {
@@ -87,11 +107,20 @@ type TextSummaryInput struct {
 	Refresh        bool               `json:"refresh"`
 }
 
-// TextSummaryState is what the summary card shows: whether AI is available to the organization, why not when it is not, and the current summary of the answers, null when there is none.
+// TextSummaryState is what the summary card shows: whether the reader can generate a summary and why not when they cannot, the current summary of the answers, and the generation asked for. Summary is the one in the language asked for, or else the newest current one in another language, which its Language names; null when there is none. Status is pending while a generation in the language asked for is queued or running, PendingSeconds saying how long ago it was asked for (measured by the server, so the card's own clock does not matter), and failed when the last one failed, Error saying why; empty otherwise.
 type TextSummaryState struct {
-	Available bool         `json:"available"`
-	Reason    string       `json:"reason,omitempty"`
-	Summary   *TextSummary `json:"summary"`
+	Available      bool              `json:"available"`
+	Reason         string            `json:"reason,omitempty"`
+	Summary        *TextSummary      `json:"summary"`
+	Status         string            `json:"status,omitempty"`
+	PendingSeconds *int              `json:"pendingSeconds,omitempty"`
+	Error          *TextSummaryError `json:"error,omitempty"`
+}
+
+// TextSummaryError is why a generation failed: the code and message of the error it ended with.
+type TextSummaryError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 // TextSummary is the AI summary of a question's free-text answers under one filter. Themes are counted over the answers sent to the model (SampledCount of AnswerCount); ReadLimit is how many of the newest responses were read when more matched, 0 when all were.
@@ -130,7 +159,7 @@ type TextQuote struct {
 	Text       string    `json:"text"`
 }
 
-// TextSummaries summarizes the free-text answers of a survey's questions with the organization's AI. Reading a summary needs what reading the answers needs (survey.response_read); generating one needs what every other AI tool needs, write access to the survey's workspace (survey.write) and AI available to the organization, and is rate limited per member and per organization. Summaries are cached in Valkey by survey, question, target, language and filter, together with a fingerprint of the answers they were made from and of the question, so a new or changed answer, or an edited question, makes the cached one stale.
+// TextSummaries summarizes the free-text answers of a survey's questions with the organization's AI. Reading a summary needs what reading the answers needs (survey.response_read); generating one needs what every other AI tool needs, write access to the survey's workspace (survey.write) and AI available to the organization, and on top the organization's "Allow AI to read responses" switch, since the answers go to the provider; it is rate limited per member and per organization. A generation is a job on the ai queue of `forma worker` (TextSummaryArgs), whose progress the card follows through Lookup. Summaries are cached in Valkey by survey, question, target, language and filter, together with a fingerprint of the answers they were made from and of the question, so a new or changed answer, or an edited question, makes the cached one stale; next to them, the status of the generation asked for and the set of languages each summary is cached in.
 type TextSummaries struct {
 	svc     *Service
 	ai      *ai.Service
@@ -144,16 +173,41 @@ func NewTextSummaries(svc *Service, aiService *ai.Service, limiter *ratelimit.Li
 	return &TextSummaries{svc: svc, ai: aiService, limiter: limiter, cache: cache, log: log, now: time.Now}
 }
 
-// textScope is one summary's subject, authorized and resolved. question is a hash of what the summary reads of the survey besides the answers: the element (its headline, and the choice labels that decide which values are Other) and the survey's languages.
+// textScope is one summary's subject, resolved. key is the cache key of the summary in the language asked for. question is a hash of what the summary reads of the survey besides the answers: the element (its headline, and the choice labels that decide which values are Other) and the survey's languages. freeText is false for an open-text question that asks for something other than text.
 type textScope struct {
 	sv       *surveyDoc
 	el       *element
 	target   string
 	language string
+	criteria string
 	clause   response.Clause
 	key      string
 	question string
+	freeText bool
 }
+
+// keyFor is the cache key of the summary in a language.
+func (s *textScope) keyFor(language string) string {
+	h := sha256.New()
+	for _, part := range []string{s.el.ID, s.target, language, s.criteria} {
+		h.Write([]byte(part))
+		h.Write([]byte{0})
+	}
+	return textKeyPrefix(s.sv.ID) + hex.EncodeToString(h.Sum(nil))
+}
+
+// languagesKey is the set of the languages the summary is cached in, whatever language is asked for.
+func (s *textScope) languagesKey() string {
+	h := sha256.New()
+	for _, part := range []string{s.el.ID, s.target, s.criteria} {
+		h.Write([]byte(part))
+		h.Write([]byte{0})
+	}
+	return textKeyPrefix(s.sv.ID) + "languages:" + hex.EncodeToString(h.Sum(nil))
+}
+
+// textStatusKey holds the status of the generation of the summary under key.
+func textStatusKey(key string) string { return key + ":status" }
 
 // cachedTextSummary is a cache entry: the summary and the fingerprint of the answers it summarized. raw is the entry as stored.
 type cachedTextSummary struct {
@@ -162,13 +216,24 @@ type cachedTextSummary struct {
 	raw         []byte
 }
 
-// Lookup answers the summary card: AI availability, and the cached summary when it is still current. It never calls the AI provider. A member who cannot generate a summary (no write access) is told read_only, and still sees the current one.
+// textStatus is the stored status of a generation: pending since it was asked for, or failed with the code and message of its error.
+type textStatus struct {
+	Status  string    `json:"status"`
+	Since   time.Time `json:"since"`
+	Code    string    `json:"code,omitempty"`
+	Message string    `json:"message,omitempty"`
+}
+
+// Lookup answers the summary card: AI availability (response_reading_disabled while the organization does not allow AI to read its responses, and then no summary either), the current summary, and the generation pending or failed. When there is no current summary in the language asked for, the newest current one in another language is answered, so a member reading in another language than the one who generated it still sees it. It never calls the AI provider. A member who cannot generate a summary (no write access) is told read_only, and still sees the current one. An open-text question that asks for something other than text is not_free_text.
 func (x *TextSummaries) Lookup(ctx context.Context, userID, surveyID uuid.UUID, in TextSummaryInput) (*TextSummaryState, error) {
 	scope, err := x.scope(ctx, userID, surveyID, in)
 	if err != nil {
 		return nil, err
 	}
-	a, err := x.ai.Availability(ctx, scope.sv.OrganizationID)
+	if !scope.freeText {
+		return &TextSummaryState{Reason: ReasonNotFreeText}, nil
+	}
+	a, err := x.ai.ResponseReadingAvailability(ctx, scope.sv.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,116 +248,226 @@ func (x *TextSummaries) Lookup(ctx context.Context, userID, surveyID uuid.UUID, 
 	if !canWrite {
 		state.Available, state.Reason = false, ai.ReasonReadOnly
 	}
-	cached := x.cached(ctx, scope.key)
-	if cached == nil {
-		return state, nil
-	}
-	fingerprint, err := textFingerprint(ctx, x.svc.db, scope)
-	if err != nil {
+	if state.Summary, err = x.current(ctx, scope); err != nil {
 		return nil, err
 	}
-	if fingerprint != cached.Fingerprint {
-		x.forget(ctx, scope.key, cached.raw)
-		return state, nil
+	st := x.status(ctx, scope.key)
+	switch {
+	case st == nil:
+	case st.Status == TextStatusFailed:
+		state.Status, state.Error = TextStatusFailed, &TextSummaryError{Code: st.Code, Message: st.Message}
+	// A pending status outlived by a summary generated since it was asked for is a leftover: the generation it names has finished.
+	case state.Summary == nil || state.Summary.Language != scope.language || state.Summary.GeneratedAt.Before(st.Since):
+		state.Status, state.PendingSeconds = TextStatusPending, x.secondsSince(st.Since)
 	}
-	state.Summary = &cached.Summary
 	return state, nil
 }
 
-// Generate summarizes the answers, unless the cached summary is current and no refresh was asked for. Only a generation that reaches the provider is charged to the rate limits, the member's and the organization's. Concurrent generations of one summary run once: the later requests wait for the first and are answered with its summary.
+// current is the current summary: the one in the language asked for, or else the newest current one in another language. The stale summaries it comes across are dropped.
+func (x *TextSummaries) current(ctx context.Context, scope *textScope) (*TextSummary, error) {
+	fingerprint := ""
+	isCurrent := func(key string, cached *cachedTextSummary) (bool, error) {
+		if fingerprint == "" {
+			f, _, err := textFingerprint(ctx, x.svc.db, scope)
+			if err != nil {
+				return false, err
+			}
+			fingerprint = f
+		}
+		if cached.Fingerprint != fingerprint {
+			x.forget(ctx, key, cached.raw)
+			return false, nil
+		}
+		return true, nil
+	}
+	if cached := x.cached(ctx, scope.key); cached != nil {
+		ok, err := isCurrent(scope.key, cached)
+		if err != nil || ok {
+			return &cached.Summary, err
+		}
+	}
+	languages, err := x.cache.SMembers(ctx, scope.languagesKey()).Result()
+	if err != nil {
+		x.log.WarnContext(ctx, "text summary languages read failed", "err", err)
+		return nil, nil
+	}
+	var newest *TextSummary
+	for _, language := range languages {
+		if language == scope.language {
+			continue
+		}
+		key := scope.keyFor(language)
+		cached := x.cached(ctx, key)
+		if cached == nil {
+			continue
+		}
+		ok, err := isCurrent(key, cached)
+		if err != nil {
+			return nil, err
+		}
+		if ok && (newest == nil || cached.Summary.GeneratedAt.After(newest.GeneratedAt)) {
+			newest = &cached.Summary
+		}
+	}
+	return newest, nil
+}
+
+// Generate asks for a summary of the answers. A current cached summary is answered at once unless a refresh was asked for. Otherwise the generation is queued for `forma worker` and the state answered is pending (with the summary it refreshes, if any), which Lookup reports until the new summary is stored or the generation fails. A generation already pending, or queued or running, for the same summary is not queued, or charged, again; a new one is charged to the rate limits, the member's and the organization's, as it is queued.
 func (x *TextSummaries) Generate(ctx context.Context, userID, surveyID uuid.UUID, in TextSummaryInput) (*TextSummaryState, error) {
 	scope, err := x.scope(ctx, userID, surveyID, in)
 	if err != nil {
 		return nil, err
 	}
+	if !scope.freeText {
+		return nil, apperr.BadRequest(notFreeTextMessage)
+	}
 	if err := x.svc.authz.Require(ctx, authz.User(userID), authz.SurveyWrite, authz.Survey(surveyID)); err != nil {
 		return nil, err
 	}
 	organizationID := scope.sv.OrganizationID
-	if _, err := x.ai.Assert(ctx, organizationID); err != nil {
+	if _, err := x.ai.AssertResponseReading(ctx, organizationID); err != nil {
 		return nil, err
+	}
+	fingerprint, answered, err := textFingerprint(ctx, x.svc.db, scope)
+	if err != nil {
+		return nil, err
+	}
+	cached := x.cached(ctx, scope.key)
+	if cached != nil && cached.Fingerprint != fingerprint {
+		x.forget(ctx, scope.key, cached.raw)
+		cached = nil
+	}
+	if cached != nil && !in.Refresh {
+		return &TextSummaryState{Available: true, Summary: &cached.Summary}, nil
+	}
+	if answered == 0 {
+		return nil, apperr.InvalidInput(CodeNoTextAnswers, "There are no answers to summarize.")
+	}
+	state := &TextSummaryState{Available: true, Status: TextStatusPending}
+	if cached != nil {
+		state.Summary = &cached.Summary
+	}
+	if st := x.status(ctx, scope.key); st != nil && st.Status == TextStatusPending {
+		state.PendingSeconds = x.secondsSince(st.Since)
+		return state, nil
+	}
+	now := x.now().UTC()
+	args := TextSummaryArgs{Key: scope.key, SurveyID: surveyID, ElementID: in.ElementID, Target: in.Target, Language: in.Language, FilterCriteria: in.FilterCriteria, Criteria: scope.criteria, Refresh: in.Refresh, RequestedAt: now}
+	marked, since := false, now
+	err = x.svc.jobs.Transaction(ctx, x.svc.db, func(tx *jobs.Tx) error {
+		job, inserted, err := tx.EnqueueUnique(ctx, args, nil)
+		if err != nil {
+			return err
+		}
+		// A duplicate is a generation of the same summary already queued or running, its status gone (expired while it waited for a slot, or lost with a worker killed while it ran): it is not charged, and is reported pending again since it was queued, so a status marked just after it finished is a leftover Lookup ignores. A status written meanwhile is kept.
+		if !inserted {
+			since = job.CreatedAt
+			x.markPending(ctx, scope.key, since)
+			return nil
+		}
+		// Charged only for the job inserted, before it commits: a limit reached rolls the job back. The organization's budget is checked first so a member is not charged for a generation it refuses.
+		if err := x.limiter.AssertAvailable(ctx, ratelimit.ActionAITextSummary, organizationID.String()); err != nil {
+			return err
+		}
+		if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummaryMember, userID.String()); err != nil {
+			return err
+		}
+		if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummary, organizationID.String()); err != nil {
+			return err
+		}
+		// Marked before the job commits, so the job cannot finish, and clear the status, before it is written.
+		marked = x.setStatus(ctx, scope.key, textStatus{Status: TextStatusPending, Since: now}, textPendingTTL)
+		return nil
+	})
+	if err != nil {
+		if marked {
+			x.clearStatus(ctx, scope.key)
+		}
+		return nil, err
+	}
+	state.PendingSeconds = x.secondsSince(since)
+	return state, nil
+}
+
+// secondsSince is the whole seconds from t to now, at least 0.
+func (x *TextSummaries) secondsSince(t time.Time) *int {
+	seconds := max(0, int(x.now().Sub(t)/time.Second))
+	return &seconds
+}
+
+// run generates the summary a TextSummaryArgs job asks for, in `forma worker`. The member who asked was authorized as it was queued; run checks again what the organization decides, AI available and allowed to read its responses, so a switch turned off in between keeps the answers from the provider. A summary that became current since it was asked for (by another generation, or because a refresh was overtaken) is not generated again.
+func (x *TextSummaries) run(ctx context.Context, args TextSummaryArgs) error {
+	sv, err := loadSurveyDoc(ctx, x.svc.db, args.SurveyID)
+	if err != nil {
+		return err
+	}
+	if sv == nil {
+		return apperr.NotFound("Survey", args.SurveyID.String())
+	}
+	scope, err := x.resolve(ctx, sv, TextSummaryInput{ElementID: args.ElementID, Target: args.Target, Language: args.Language, FilterCriteria: args.FilterCriteria})
+	if err != nil {
+		return err
+	}
+	if !scope.freeText {
+		return apperr.BadRequest(notFreeTextMessage)
+	}
+	// The filter read back from River is the one asked with, but not byte for byte: jsonb decodes the escapes of its values and reorders the keys of its objects. The summary is keyed by the encoding it was asked with, which Generate marked pending and the lookups compute.
+	scope.criteria = args.Criteria
+	if scope.key = scope.keyFor(scope.language); scope.key != args.Key {
+		return fmt.Errorf("text summary job: key %s does not match its input", args.Key)
+	}
+	x.setStatus(ctx, scope.key, textStatus{Status: TextStatusPending, Since: args.RequestedAt}, textJobTimeout+time.Minute)
+	if _, err := x.ai.AssertResponseReading(ctx, sv.OrganizationID); err != nil {
+		return err
 	}
 	answers, readLimited, fingerprint, err := readTextAnswers(ctx, x.svc.db, scope)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if !in.Refresh {
-		if cached := x.cached(ctx, scope.key); cached != nil && cached.Fingerprint == fingerprint {
-			return &TextSummaryState{Available: true, Summary: &cached.Summary}, nil
-		}
+	if cached := x.cached(ctx, scope.key); cached != nil && cached.Fingerprint == fingerprint && (!args.Refresh || !cached.Summary.GeneratedAt.Before(args.RequestedAt)) {
+		x.clearStatus(ctx, scope.key)
+		return nil
 	}
 	if len(answers) == 0 {
-		return nil, apperr.InvalidInput(CodeNoTextAnswers, "There are no answers to summarize.")
+		return apperr.InvalidInput(CodeNoTextAnswers, "There are no answers to summarize.")
 	}
-	release, done, err := x.claim(ctx, scope.key, fingerprint)
+	summary, err := x.summarize(ctx, sv.OrganizationID, scope, answers)
 	if err != nil {
-		return nil, err
-	}
-	if done != nil {
-		return &TextSummaryState{Available: true, Summary: &done.Summary}, nil
-	}
-	defer release()
-	if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummaryMember, userID.String()); err != nil {
-		return nil, err
-	}
-	if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummary, organizationID.String()); err != nil {
-		return nil, err
-	}
-	// The provider work outlives the request, so a summary paid for is cached even when nobody waits for it any more.
-	work, cancel := context.WithTimeout(context.WithoutCancel(ctx), textGenerationTimeout)
-	defer cancel()
-	summary, err := x.summarize(work, organizationID, scope, answers)
-	if err != nil {
-		return nil, err
+		return err
 	}
 	if readLimited {
 		summary.ReadLimit = textReadLimit
 	}
 	summary.GeneratedAt = x.now().UTC()
-	x.store(work, scope.key, cachedTextSummary{Fingerprint: fingerprint, Summary: *summary})
-	return &TextSummaryState{Available: true, Summary: summary}, nil
+	x.store(ctx, scope, cachedTextSummary{Fingerprint: fingerprint, Summary: *summary})
+	x.clearStatus(ctx, scope.key)
+	return nil
 }
 
-// deleteIfUnchanged deletes a key only while it still holds the value given: a generation lock only while it is its holder's, a stale summary only while no generation has stored a current one over it.
+// fail records why the generation of the summary under key failed: the code and message of an expected error, CodeTextSummaryFailed for any other.
+func (x *TextSummaries) fail(ctx context.Context, key string, err error) {
+	st := textStatus{Status: TextStatusFailed, Since: x.now().UTC(), Code: CodeTextSummaryFailed, Message: textFailedMessage}
+	var ae *apperr.Error
+	if errors.As(err, &ae) {
+		st.Code, st.Message = ae.Code, ae.Message
+	}
+	x.setStatus(context.WithoutCancel(ctx), key, st, textFailedTTL)
+}
+
+// deleteIfUnchanged deletes a key only while it still holds the value given: a stale summary only while no generation has stored a current one over it.
 var deleteIfUnchanged = redis.NewScript(`if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0`)
 
-// claim makes the caller the one that generates the summary under key. While another request is generating it, claim waits; it returns what that one stored when it summarizes the same answers (done), and claims the generation itself when that one failed. release gives the claim up. When Valkey cannot be reached the caller generates unclaimed, as the rate limiter fails open.
-func (x *TextSummaries) claim(ctx context.Context, key, fingerprint string) (release func(), done *cachedTextSummary, err error) {
-	lock, token, since := key+":lock", uuid.NewString(), x.now()
-	for {
-		claimed, err := x.cache.SetNX(ctx, lock, token, textLockTTL).Result()
-		if err != nil {
-			if ctx.Err() != nil {
-				return nil, nil, ctx.Err()
-			}
-			x.log.WarnContext(ctx, "text summary lock failed", "err", err)
-			return func() {}, nil, nil
-		}
-		if claimed {
-			return func() {
-				if err := deleteIfUnchanged.Run(context.WithoutCancel(ctx), x.cache, []string{lock}, token).Err(); err != nil {
-					x.log.WarnContext(ctx, "text summary unlock failed", "err", err)
-				}
-			}, nil, nil
-		}
-		select {
-		case <-ctx.Done():
-			return nil, nil, ctx.Err()
-		case <-time.After(textLockPoll):
-		}
-		// Only a summary stored since this request began waiting answers it: a refresh must not be answered with the summary it refreshes.
-		if cached := x.cached(ctx, key); cached != nil && cached.Fingerprint == fingerprint && !cached.Summary.GeneratedAt.Before(since) {
-			return nil, cached, nil
-		}
-	}
-}
-
-// scope authorizes reading the survey's responses, finds the element and checks it has answers of the target's kind, and compiles the filter.
+// scope authorizes reading the survey's responses and resolves the summary's subject.
 func (x *TextSummaries) scope(ctx context.Context, userID, surveyID uuid.UUID, in TextSummaryInput) (*textScope, error) {
 	sv, err := x.svc.readableSurvey(ctx, userID, surveyID, authz.SurveyResponseRead)
 	if err != nil {
 		return nil, err
 	}
+	return x.resolve(ctx, sv, in)
+}
+
+// resolve finds the element and checks it has answers of the target's kind, and compiles the filter.
+func (x *TextSummaries) resolve(ctx context.Context, sv *surveyDoc, in TextSummaryInput) (*textScope, error) {
 	var el *element
 	for i := range sv.Elements {
 		if sv.Elements[i].ID == in.ElementID {
@@ -304,7 +479,7 @@ func (x *TextSummaries) scope(ctx context.Context, userID, surveyID uuid.UUID, i
 		return nil, apperr.NotFound("Element", in.ElementID)
 	}
 	if !summarizable(el, in.Target) {
-		return nil, apperr.BadRequest("This question has no free-text answers to summarize.")
+		return nil, apperr.BadRequest(notFreeTextMessage)
 	}
 	clause, err := response.Where(ctx, x.svc.segments, sv.Survey, in.FilterCriteria)
 	if err != nil {
@@ -314,26 +489,23 @@ func (x *TextSummaries) scope(ctx context.Context, userID, surveyID uuid.UUID, i
 	if err != nil {
 		return nil, fmt.Errorf("encode filter criteria: %w", err)
 	}
-	h := sha256.New()
-	for _, part := range []string{el.ID, in.Target, in.Language, string(criteria)} {
-		h.Write([]byte(part))
-		h.Write([]byte{0})
-	}
-	key := textKeyPrefix(sv.ID) + hex.EncodeToString(h.Sum(nil))
 	q := sha256.New()
 	q.Write(el.Raw)
 	for _, l := range sv.Languages {
 		_, _ = fmt.Fprintf(q, "\x00%s:%t", l.Code, l.Default)
 	}
-	return &textScope{sv: sv, el: el, target: in.Target, language: in.Language, clause: clause, key: key, question: hex.EncodeToString(q.Sum(nil))[:16]}, nil
+	scope := &textScope{sv: sv, el: el, target: in.Target, language: in.Language, criteria: string(criteria), clause: clause, question: hex.EncodeToString(q.Sum(nil))[:16]}
+	scope.key = scope.keyFor(in.Language)
+	scope.freeText = in.Target != TextTargetAnswers || el.OpenTextInputType() == "text"
+	return scope, nil
 }
 
-// textKeyPrefix is the prefix of the survey's cached summaries and their generation locks.
+// textKeyPrefix is the prefix of the survey's cached summaries, their language sets and their generation statuses.
 func textKeyPrefix(surveyID uuid.UUID) string {
 	return valkey.KeyPrefix + "ai-text-summary:" + surveyID.String() + ":"
 }
 
-// summarizable reports whether the element has free-text answers of the target's kind: an open-text question's answers, or the Other values of a choice question that has an Other option.
+// summarizable reports whether the element has answers of the target's kind: an open-text question's answers, or the Other values of a choice question that has an Other option. Of an open-text question, only one that asks for text has answers worth summarizing (textScope.freeText).
 func summarizable(el *element, target string) bool {
 	switch target {
 	case TextTargetAnswers:
@@ -398,14 +570,14 @@ func readTextAnswers(ctx context.Context, db *gorm.DB, scope *textScope) (answer
 				collect(r, value)
 			}
 		}
-		fingerprint, err = textFingerprint(ctx, tx, scope)
+		fingerprint, _, err = textFingerprint(ctx, tx, scope)
 		return err
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	return answers, readLimited, fingerprint, err
 }
 
-// textFingerprint identifies what a summary is made from: how many matching responses answered the element, an order-independent sum of a hash of each one's id, language and answer, and the hash of the question. A response answering, changing its answer or leaving the filter changes it, and so does editing the question.
-func textFingerprint(ctx context.Context, db *gorm.DB, scope *textScope) (string, error) {
+// textFingerprint identifies what a summary is made from: how many matching responses answered the element (answered), an order-independent sum of a hash of each one's id, language and answer, and the hash of the question. A response answering, changing its answer or leaving the filter changes it, and so does editing the question.
+func textFingerprint(ctx context.Context, db *gorm.DB, scope *textScope) (fingerprint string, answered int64, err error) {
 	id := scope.el.ID
 	args := []any{id, scope.sv.ID, id}
 	args = append(args, scope.clause.Args...)
@@ -413,13 +585,13 @@ func textFingerprint(ctx context.Context, db *gorm.DB, scope *textScope) (string
 		N int64
 		H string
 	}
-	err := db.WithContext(ctx).Raw(`SELECT count(*) AS n,
+	err = db.WithContext(ctx).Raw(`SELECT count(*) AS n,
 		coalesce(sum(('x' || substr(md5(r.id::text || ':' || coalesce(r.language, '') || ':' || `+textPath+`::text), 1, 15))::bit(60)::bigint), 0)::text AS h
 		FROM responses r WHERE r.survey_id = ? AND `+textPath+` IS NOT NULL AND `+scope.clause.SQL, args...).Scan(&out).Error
 	if err != nil {
-		return "", fmt.Errorf("fingerprint text answers: %w", err)
+		return "", 0, fmt.Errorf("fingerprint text answers: %w", err)
 	}
-	return strconv.FormatInt(out.N, 10) + ":" + out.H + ":" + scope.question, nil
+	return strconv.FormatInt(out.N, 10) + ":" + out.H + ":" + scope.question, out.N, nil
 }
 
 func (x *TextSummaries) cached(ctx context.Context, key string) *cachedTextSummary {
@@ -438,13 +610,67 @@ func (x *TextSummaries) cached(ctx context.Context, key string) *cachedTextSumma
 	return &entry
 }
 
-func (x *TextSummaries) store(ctx context.Context, key string, entry cachedTextSummary) {
+// store caches the summary in the scope's language and adds the language to the summary's languages.
+func (x *TextSummaries) store(ctx context.Context, scope *textScope, entry cachedTextSummary) {
 	b, err := json.Marshal(entry)
 	if err == nil {
-		err = x.cache.Set(ctx, key, b, textCacheTTL).Err()
+		languages := scope.languagesKey()
+		_, err = x.cache.TxPipelined(ctx, func(p redis.Pipeliner) error {
+			p.Set(ctx, scope.key, b, textCacheTTL)
+			p.SAdd(ctx, languages, scope.language)
+			p.Expire(ctx, languages, textCacheTTL)
+			return nil
+		})
 	}
 	if err != nil {
 		x.log.WarnContext(ctx, "text summary cache write failed", "err", err)
+	}
+}
+
+// status is the status of the generation of the summary under key, nil when none is pending or failed.
+func (x *TextSummaries) status(ctx context.Context, key string) *textStatus {
+	b, err := x.cache.Get(ctx, textStatusKey(key)).Bytes()
+	if err != nil {
+		if !errors.Is(err, redis.Nil) {
+			x.log.WarnContext(ctx, "text summary status read failed", "err", err)
+		}
+		return nil
+	}
+	var st textStatus
+	if err := json.Unmarshal(b, &st); err != nil {
+		return nil
+	}
+	return &st
+}
+
+// setStatus records the status of the generation of the summary under key for ttl, and reports whether it was written.
+func (x *TextSummaries) setStatus(ctx context.Context, key string, st textStatus, ttl time.Duration) bool {
+	b, err := json.Marshal(st)
+	if err == nil {
+		err = x.cache.Set(ctx, textStatusKey(key), b, ttl).Err()
+	}
+	if err != nil {
+		x.log.WarnContext(ctx, "text summary status write failed", "err", err)
+		return false
+	}
+	return true
+}
+
+// markPending records a generation of the summary under key pending since then, unless a status is recorded already.
+func (x *TextSummaries) markPending(ctx context.Context, key string, since time.Time) {
+	b, err := json.Marshal(textStatus{Status: TextStatusPending, Since: since})
+	if err == nil {
+		err = x.cache.SetNX(ctx, textStatusKey(key), b, textPendingTTL).Err()
+	}
+	if err != nil {
+		x.log.WarnContext(ctx, "text summary status write failed", "err", err)
+	}
+}
+
+// clearStatus forgets the status of the generation of the summary under key.
+func (x *TextSummaries) clearStatus(ctx context.Context, key string) {
+	if err := x.cache.Del(context.WithoutCancel(ctx), textStatusKey(key)).Err(); err != nil {
+		x.log.WarnContext(ctx, "text summary status delete failed", "err", err)
 	}
 }
 
@@ -455,7 +681,7 @@ func (x *TextSummaries) forget(ctx context.Context, key string, raw []byte) {
 	}
 }
 
-// Purge drops every cached summary of the survey, for a reset that deleted its responses: the quotes in them must not wait for the TTL.
+// Purge drops every cached summary of the survey, with their language sets and generation statuses, for a reset that deleted its responses: the quotes in them must not wait for the TTL.
 func (x *TextSummaries) Purge(ctx context.Context, surveyID uuid.UUID) {
 	iter := x.cache.Scan(ctx, 0, textKeyPrefix(surveyID)+"*", 100).Iterator()
 	var keys []string

@@ -390,15 +390,15 @@ export const ResponseOptionsCard = ({
     setResponseLimitError(responseLimitIssue(Number.parseInt(e.target.value)));
   };
 
+  // Turning it off is always allowed: a survey saved with it on keeps it after the instance loses its reCAPTCHA keys, and the server refuses to save it on until it is switched off.
   const handleRecaptchaToggle = () => {
-    if (!isSpamProtectionAllowed) return;
     if (recaptchaToggle) {
       setRecaptchaToggle(false);
       if (localSurvey.recaptcha?.enabled) {
         setRecaptchaThreshold(0.1);
         setLocalSurvey({ ...localSurvey, recaptcha: { enabled: false, threshold: 0.1 } });
       }
-    } else {
+    } else if (isSpamProtectionAllowed) {
       setRecaptchaToggle(true);
       setLocalSurvey({ ...localSurvey, recaptcha: { enabled: true, threshold: 0.1 } });
     }
@@ -577,25 +577,31 @@ export const ResponseOptionsCard = ({
           </AdvancedOptionToggle>
 
           {/* recaptcha for spam protection */}
-          {isSpamProtectionAllowed && (
+          {(isSpamProtectionAllowed || recaptchaToggle) && (
             <AdvancedOptionToggle
               htmlId="recaptchaToggle"
               isChecked={recaptchaToggle}
               onToggle={handleRecaptchaToggle}
               title={t("workspace.surveys.edit.enable_spam_protection")}
-              description={t("workspace.surveys.edit.enable_recaptcha_to_protect_your_survey_from_spam")}
+              description={
+                isSpamProtectionAllowed
+                  ? t("workspace.surveys.edit.enable_recaptcha_to_protect_your_survey_from_spam")
+                  : t("workspace.surveys.edit.spam_protection_unavailable")
+              }
               childBorder={true}>
               <div className="w-full px-2 py-4">
                 <p className="text-sm font-semibold text-slate-800">
                   {t("workspace.surveys.edit.spam_protection_threshold_heading")} : {recaptchaThreshold}
                 </p>
                 <p className="mb-2 text-xs text-slate-500">
-                  {t("workspace.surveys.edit.spam_protection_threshold_description")}
+                  {t("workspace.surveys.edit.spam_protection_threshold_range_description")}
                 </p>
                 <div className="flex w-full items-center gap-1">
                   <div className="text-center">
                     <p className="mx-2">0.1</p>
-                    <p className="mx-2 text-xs text-slate-500">Lenient</p>
+                    <p className="mx-2 text-xs text-slate-500">
+                      {t("workspace.surveys.edit.spam_protection_lenient")}
+                    </p>
                   </div>
 
                   <Slider
@@ -611,11 +617,13 @@ export const ResponseOptionsCard = ({
                   />
                   <div className="text-center">
                     <p className="mx-2">0.9</p>
-                    <p className="mx-2 text-xs text-slate-500">Strict</p>
+                    <p className="mx-2 text-xs text-slate-500">
+                      {t("workspace.surveys.edit.spam_protection_strict")}
+                    </p>
                   </div>
                 </div>
                 <Alert variant="warning" size="default" className="w-fill mt-2 text-sm" role="status">
-                  <AlertTitle>{t("workspace.surveys.edit.spam_protection_note")}</AlertTitle>
+                  <AlertTitle>{t("workspace.surveys.edit.spam_protection_web_note")}</AlertTitle>
                 </Alert>
               </div>
             </AdvancedOptionToggle>

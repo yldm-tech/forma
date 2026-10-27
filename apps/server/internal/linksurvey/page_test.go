@@ -115,7 +115,7 @@ func mustJSON(v any) string {
 }
 
 func TestSurveyPageRendersTheSurvey(t *testing.T) {
-	e := newEnv(t, func(c *config.Config) {
+	e := newEnv(t, withSurveyDomain, func(c *config.Config) {
 		c.RecaptchaSiteKey, c.RecaptchaSecretKey = "site-key", "secret-key"
 		c.ImprintURL, c.PrivacyURL, c.TermsURL = "https://example.com/imprint", "https://example.com/privacy", "https://example.com/terms"
 	})
@@ -140,7 +140,7 @@ func TestSurveyPageRendersTheSurvey(t *testing.T) {
 	if s["recaptchaSiteKey"] != "site-key" || s["isSpamProtectionEnabled"] != true || s["isFormaCloud"] != false {
 		t.Fatalf("recaptcha %v", s)
 	}
-	if s["imprintUrl"] != "https://example.com/imprint" || s["privacyUrl"] != "https://example.com/privacy" || s["termsUrl"] != "https://example.com/terms" || s["publicDomain"] != "http://localhost:3999" {
+	if s["imprintUrl"] != "https://example.com/imprint" || s["privacyUrl"] != "https://example.com/privacy" || s["termsUrl"] != "https://example.com/terms" || s["publicDomain"] != "http://surveys.localhost:3999" {
 		t.Fatalf("legal %v", s)
 	}
 	if s["responseCount"] != float64(2) {
@@ -164,8 +164,9 @@ func TestSurveyPageRendersTheSurvey(t *testing.T) {
 	if fields, ok := sv["embeddedFields"].([]any); !ok || fields == nil {
 		t.Fatalf("embedded fields %v", sv["embeddedFields"])
 	}
-	// The runtime's script is in the document, so it loads alongside the page bundle, by a URL pinned to the build so browsers and the CDN keep it until a deploy changes it.
-	if !strings.Contains(p.Body, `<link rel="preload" href="`+testRuntimeSrc+`" as="script" fetchpriority="high"><script async src="`+testRuntimeSrc+`"></script>`) {
+	// The runtime's script is in the document, so it loads alongside the page bundle, by a URL pinned to the build so browsers and the CDN keep it until a deploy changes it, marked as this page's so it may set zod jitless for the page.
+	runtimeSrc := strings.Replace(testRuntimeSrc, "http://localhost:3999", "http://surveys.localhost:3999", 1)
+	if !strings.Contains(p.Body, `<link rel="preload" href="`+runtimeSrc+`" as="script" fetchpriority="high"><script async src="`+runtimeSrc+`" data-forma-survey-page></script>`) {
 		t.Fatal("the survey runtime is not in the document")
 	}
 	// An English survey needs none of the runtime's translation files.
@@ -265,6 +266,45 @@ func TestSurveyPageMetadata(t *testing.T) {
 	}
 }
 
+// withSurveyDomain gives the instance a PUBLIC_URL of its own, without which the pages carry no custom head scripts.
+func withSurveyDomain(c *config.Config) {
+	c.PublicURL, _ = url.Parse("http://surveys.localhost:3999")
+}
+
+// Where the survey pages share the admin origin (no PUBLIC_URL, or one on the admin host), or on Forma Cloud, neither the workspace's nor the survey's custom head scripts reach the page, nor the survey a correct PIN unlocks: a script there would run with the session of every signed-in user who opens the link.
+func TestSurveyPageLeavesOutCustomScriptsWithoutASurveyDomain(t *testing.T) {
+	for name, configure := range map[string]func(*config.Config){
+		"no PUBLIC_URL":                func(*config.Config) {},
+		"PUBLIC_URL on the admin host": func(c *config.Config) { c.PublicURL, _ = url.Parse("http://LOCALHOST:3999/") },
+		"Forma Cloud":                  func(c *config.Config) { withSurveyDomain(c); c.IsFormaCloud = true },
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, configure)
+			ws := e.workspace("custom_head_scripts", "<script>window.ws=1</script>")
+			id := e.survey(ws, "custom_head_scripts", "<script>window.survey=1</script>", "custom_head_scripts_mode", "replace")
+			p := e.page("/s/" + id.String())
+			if p.Status != http.StatusOK || p.view() != viewSurvey {
+				t.Fatalf("status %d view %q", p.Status, p.view())
+			}
+			if w := p.sub("survey", "workspace"); w["customHeadScripts"] != nil {
+				t.Fatalf("workspace scripts reached the page: %v", w)
+			}
+			if sv := p.sub("survey", "survey"); sv["customHeadScripts"] != nil {
+				t.Fatalf("survey scripts reached the page: %v", sv)
+			}
+			if strings.Contains(p.Body, "window.ws=1") || strings.Contains(p.Body, "window.survey=1") {
+				t.Fatalf("a script reached the page: %s", p.Body)
+			}
+
+			gated := e.survey(ws, "pin", "1234", "custom_head_scripts", "<script>window.survey=1</script>")
+			rec := e.request(http.MethodPost, "/s/"+gated.String()+"/pin", map[string]any{"pin": "1234"})
+			if rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), "window.survey=1") {
+				t.Fatalf("PIN unlock: %d %s", rec.Code, rec.Body)
+			}
+		})
+	}
+}
+
 func TestSurveyPageFormaCloudTitle(t *testing.T) {
 	e := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
 	ws := e.workspace()
@@ -343,6 +383,46 @@ func TestSurveyPageSingleUse(t *testing.T) {
 	p = e.page("/s/" + plain.String() + "?suId=su-1&suToken=" + token)
 	if p.view() != viewCompleted || p.sub("completed", "singleUse")["heading"] != "Already done" || p.sub("completed", "workspace")["linkSurveyBranding"] != false {
 		t.Fatalf("finished response: view %q completed %v", p.view(), p.sub("completed"))
+	}
+}
+
+// A single-use link of a survey that verifies emails, whose unfinished response another address started: the runtime would continue that response by its id and the client API refuses the update (response.CheckVerifiedEmail), so the page says the link is in use instead of letting the respondent answer into a 403. The address that started it goes on, compared case-insensitively.
+func TestSurveyPageSingleUseVerifiedByAnotherEmail(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace("link_survey_branding", "false")
+	id := e.survey(ws, "is_verify_email_enabled", true, "single_use", `{"enabled":true,"isEncrypted":false}`)
+	suToken := survey.SingleUseSignature(string(e.cfg.EncryptionKeyText), id.String(), "su-1")
+	link := func(email string) string {
+		t.Helper()
+		token, err := newEmailToken(e.cfg, id, email, e.now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return "/s/" + id.String() + "?suId=su-1&suToken=" + suToken + "&verify=" + token
+	}
+	if p := e.page(link("b@example.com")); p.view() != viewSurvey || p.sub("survey")["singleUseResponseId"] != nil {
+		t.Fatalf("no response yet: view %q survey %v", p.view(), p.sub("survey"))
+	}
+	started := e.response(id, false, "single_use_id", "su-1", "data", `{"verifiedEmail": "A@example.com"}`)
+	p := e.page(link("b@example.com"))
+	if p.view() != viewInactive || p.sub("inactive")["status"] != inactiveLinkInUse || p.sub("inactive", "workspace")["linkSurveyBranding"] != false || strings.Contains(p.Body, started.String()) {
+		t.Fatalf("another address: view %q inactive %v", p.view(), p.sub("inactive"))
+	}
+	if p = e.page(link("a@example.com")); p.view() != viewSurvey || p.sub("survey")["singleUseResponseId"] != started.String() || p.sub("survey")["verifiedEmail"] != "a@example.com" {
+		t.Fatalf("the address that started it: view %q survey %v", p.view(), p.sub("survey"))
+	}
+	// A response the link started before the survey verified emails records no address, and the update refuses every verified one.
+	e.exec(`UPDATE responses SET data = '{}' WHERE id = ?`, started)
+	if p = e.page(link("a@example.com")); p.view() != viewInactive || p.sub("inactive")["status"] != inactiveLinkInUse {
+		t.Fatalf("no recorded address: view %q inactive %v", p.view(), p.sub("inactive"))
+	}
+	// Still the verification gate without a token, and the completed screen once the response is finished.
+	if p = e.page("/s/" + id.String() + "?suId=su-1&suToken=" + suToken); p.view() != viewVerifyEmail {
+		t.Fatalf("no token: view %q", p.view())
+	}
+	e.exec(`UPDATE responses SET finished = true WHERE id = ?`, started)
+	if p = e.page(link("b@example.com")); p.view() != viewCompleted {
+		t.Fatalf("finished: view %q", p.view())
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
@@ -91,6 +92,7 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 	var userID, orgID uuid.UUID
 	var intent issuedToken
 	var notifyInviter func(context.Context)
+	var provisioned authz.Organizations
 	created := false
 	err = s.repo.transaction(ctx, func(tx *Repository) error {
 		// On a closed instance only the first user gets in uninvited. The check above ran before the slow password hash, so concurrent first sign-ups are serialized here and the check repeated under the lock: exactly one of them becomes the administrator.
@@ -118,8 +120,8 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 			if err == nil && !ok {
 				err = errInviteTokenInvalid()
 			}
-		} else {
-			orgID, err = tx.provisionOrganization(ctx, userID, in.Name, in.TimeZone)
+		} else if orgID, err = tx.provisionOrganization(ctx, userID, in.Name, in.TimeZone); err == nil {
+			provisioned, err = authz.ReadOrganizations(ctx, tx.db, orgID)
 		}
 		if err != nil {
 			return err
@@ -135,6 +137,8 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 		return s.decoyIntent()
 	}
 	if !invited {
+		// The new owner and their first workspace reach SpiceDB before the answer instead of waiting for the worker; an invitee's membership is the invite module's to deliver, when it tells the inviter.
+		s.delivery.DeliverOrganizations(ctx, provisioned, userID)
 		s.billing.OrganizationCreated(ctx, orgID)
 	}
 	if notifyInviter != nil {

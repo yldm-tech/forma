@@ -335,3 +335,42 @@ func TestWorkspaceTeams(t *testing.T) {
 	expect(t, e.do(o.member, http.MethodGet, "/workspaces/"+other.String()+"/teams", nil), http.StatusForbidden, "forbidden")
 	expect(t, e.do(o.billing, http.MethodGet, "/workspaces/"+ws.String()+"/teams", nil), http.StatusForbidden, "forbidden")
 }
+
+// A team change reaches SpiceDB before the request answers, with no worker running: the creator manages the new team at once, a member's new seat works at once, and a removed one, or the deleted team's grants, leave no revocation for a worker that may be minutes behind.
+func TestTeamWritesAreProjectedBeforeTheyAnswer(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	o := e.orgWithRoles()
+	ws := e.workspace(o.id, "Website")
+	e.drain()
+	pending := func() int {
+		return e.count(`SELECT count(*) FROM authz_projection_outbox WHERE processed_at IS NULL`)
+	}
+
+	r := e.do(o.manager, http.MethodPost, "/organizations/"+o.id.String()+"/teams", map[string]string{"name": "Design"})
+	expect(t, r, http.StatusCreated, "")
+	team := uuid.MustParse(r.json()["id"].(string))
+	if n := pending(); n != 0 {
+		t.Fatalf("%d events left for the worker after creating the team", n)
+	}
+	expect(t, e.do(o.manager, http.MethodGet, "/teams/"+team.String(), nil), http.StatusOK, "")
+
+	path := "/teams/" + team.String()
+	expect(t, e.do(o.owner, http.MethodPut, path, map[string]any{"name": "Design", "members": memberList(o.member, "contributor"), "workspaces": workspaceList(ws, "readWrite")}), http.StatusOK, "")
+	if n := pending(); n != 0 {
+		t.Fatalf("%d events left for the worker after the update", n)
+	}
+	if !e.can(o.member, "workspace.write", ws) {
+		t.Fatal("the new seat was not projected before the answer")
+	}
+	expect(t, e.do(o.owner, http.MethodPut, path, map[string]any{"name": "Design", "members": memberList(o.owner, "admin"), "workspaces": workspaceList(ws, "readWrite")}), http.StatusOK, "")
+	if n := pending(); n != 0 || e.can(o.member, "workspace.read", ws) {
+		t.Fatalf("the removed seat was not projected before the answer (%d events pending)", n)
+	}
+
+	expect(t, e.do(o.owner, http.MethodPut, path, map[string]any{"name": "Design", "members": memberList(o.member, "contributor"), "workspaces": workspaceList(ws, "readWrite")}), http.StatusOK, "")
+	expect(t, e.do(o.owner, http.MethodDelete, path, nil), http.StatusNoContent, "")
+	if n := pending(); n != 0 || e.can(o.member, "workspace.read", ws) {
+		t.Fatalf("the deleted team's access was not revoked before the answer (%d events pending)", n)
+	}
+}

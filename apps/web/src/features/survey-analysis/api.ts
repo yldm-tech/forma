@@ -79,11 +79,17 @@ export interface TextSummary {
   themes: TextSummaryTheme[];
 }
 
-/** Whether the reader may generate a summary, why not when they may not (AI unavailable to the organization, or read_only for a member without edit access, who still gets the current summary), and the current summary, null when there is none. */
+/** Why a question has no summary to offer although AI is available: an open-text question that asks for an email address, a phone number, a URL or a number. */
+export type TextSummaryUnavailableReason = AIUnavailableReason | "not_free_text";
+
+/** Whether the reader may generate a summary, why not when they may not (AI unavailable to the organization, read_only for a member without edit access, who still gets the current summary, or not_free_text), the current summary, null when there is none, and the generation asked for. The summary is the one in the language asked for, or else the newest current one in another language, which its language names. status is pending while a generation is queued or running in `forma worker`, pendingSeconds how long ago it was asked for by the server's clock, and failed when the last one failed, error saying why. */
 export interface TextSummaryState {
   available: boolean;
-  reason?: AIUnavailableReason;
+  reason?: TextSummaryUnavailableReason;
   summary: TextSummary | null;
+  status?: "pending" | "failed";
+  pendingSeconds?: number;
+  error?: { code: string; message: string };
 }
 
 export interface TextSummaryRequest {
@@ -123,7 +129,7 @@ export type ExportFormat = "csv" | "xlsx";
 /** The length of one trend bucket; the server picks one from the range when none is asked for. */
 export type TrendInterval = "day" | "week" | "month";
 
-/** What an element trend's values are: the NPS score (-100 to 100), the satisfied share (4 or 5) in percent, or the average answer. */
+/** What an element trend's values are: the NPS score (-100 to 100), the satisfied share (4 or 5) in percent, or the average answer (a rating, CES or slider). */
 export type TrendMetric = "nps" | "satisfied" | "average";
 
 /** One trend bucket: its first and last day (local dates in the trend's time zone, both inclusive, cut to the range at the two ends), the responses started in it and how many of them are completed. */
@@ -143,12 +149,19 @@ export interface TrendPoint {
   value: number | null;
 }
 
-/** One NPS, CSAT, rating or CES element's metric per bucket, its points lined up with the buckets. */
+/** One NPS, CSAT, rating, CES or slider element's metric per bucket, its points lined up with the buckets. */
 export interface ElementTrend {
   elementId: string;
   type: string;
   headline: string;
   metric: TrendMetric;
+  points: TrendPoint[];
+}
+
+/** The average of the survey's total score variable per bucket over the completed responses that carry one, as the score summary counts them; each point's answered counts those responses. */
+export interface ScoreTrend {
+  variableId: string;
+  name: string;
   points: TrendPoint[];
 }
 
@@ -158,6 +171,8 @@ export interface SurveyTrends {
   timeZone: string;
   buckets: TrendBucket[];
   elements: ElementTrend[];
+  /** Null when the survey has no total score variable. */
+  score: ScoreTrend | null;
 }
 
 /** The error code of a trend whose range needs too many buckets at the interval asked for. */
@@ -348,12 +363,26 @@ export const surveyResponseCountQuery = (surveyId: string, criteria: TResponseFi
         .then((res) => res.count),
   });
 
-/** The cached AI summary of a question's free-text answers, with whether AI is available; reading it never calls the AI provider. */
+/** How often the summary card asks whether a pending generation has finished. */
+export const TEXT_SUMMARY_POLL_MS = 2_500;
+
+/** How long the summary card waits for a pending generation before it stops asking and says it is taking longer than usual: the worker's own limit for one generation. */
+export const TEXT_SUMMARY_WAIT_SECONDS = 5 * 60;
+
+/** Whether the card has stopped waiting for the pending generation of state. */
+export const isTextSummaryOverdue = (state: TextSummaryState): boolean =>
+  state.status === "pending" && (state.pendingSeconds ?? 0) >= TEXT_SUMMARY_WAIT_SECONDS;
+
+/** The cached AI summary of a question's free-text answers, with whether AI is available and the generation asked for; reading it never calls the AI provider. While a generation is pending it is read again every TEXT_SUMMARY_POLL_MS, for at most TEXT_SUMMARY_WAIT_SECONDS. */
 export const textSummaryQuery = (surveyId: string, request: TextSummaryRequest) =>
   queryOptions({
     queryKey: analysisKeys.textSummary(surveyId, request),
     queryFn: ({ signal }) =>
       api.post<TextSummaryState>(`${surveyPath(surveyId)}/text-summaries/lookup`, request, { signal }),
+    refetchInterval: (query) => {
+      const state = query.state.data;
+      return state?.status === "pending" && !isTextSummaryOverdue(state) ? TEXT_SUMMARY_POLL_MS : false;
+    },
   });
 
 /** How often the analysis of a survey in progress asks whether responses arrived, while its tab is visible. */
@@ -408,6 +437,7 @@ export const analysisApi = {
   generateExampleResponses: (surveyId: string) =>
     api.post<ExampleResponsesResult>(`${surveyPath(surveyId)}/ai/example-responses`),
   /** Summarizes the answers with the organization's AI; the cached summary when it is current, unless refresh asks for a new one. */
+  /** Answers the summary at once when the cached one is current; otherwise the generation is queued and the state answered is pending (202), which textSummaryQuery then follows. */
   generateTextSummary: (surveyId: string, request: TextSummaryRequest, refresh: boolean) =>
     api.post<TextSummaryState>(`${surveyPath(surveyId)}/text-summaries`, { ...request, refresh }),
   /** The export file itself, named by the server's Content-Disposition. */

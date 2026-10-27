@@ -1,11 +1,12 @@
 import type { TFunction } from "i18next";
 import { getDeclaredIngestedStorageKeys } from "@forma/types/embedded-data-resolver";
+import { TSurveyElementTypeEnum } from "@forma/types/surveys/elements";
 import type { TSurvey } from "@forma/types/surveys/types";
 import { getTextContent } from "@forma/types/surveys/validation";
 import { recallToHeadline } from "../../../lib/survey/recall";
 import { getElementsFromBlocks } from "../../survey-editor/lib/client-utils";
 
-// The placeholders a step's templates (an HTTP body, a chat message, an attribute value) can use, as the server's Template resolves them (apps/server/internal/workflow/template.go).
+// The placeholders a step's templates (an HTTP body, a chat message, an attribute value, an email subject) can use, as the server's Template resolves them (apps/server/internal/workflow/template.go).
 
 export interface TWorkflowTemplateVariable {
   /** The placeholder as written in a template, `{{answers.q1}}`. */
@@ -18,7 +19,14 @@ const DEFAULT_LANGUAGE_CODE = "default";
 
 export const toTemplateToken = (path: string): string => `{{${path}}}`;
 
-/** The variables offered next to a template: the response's and survey's own values, then each answer of the bound survey (its elements by headline, its hidden fields by id) and its variables. Without a bound survey only the fixed values are offered. */
+// The elements whose answers are choice labels in the respondent's language, which also offer the language-independent choiceId and default placeholders.
+const CHOICE_ELEMENT_TYPES = new Set<string>([
+  TSurveyElementTypeEnum.MultipleChoiceSingle,
+  TSurveyElementTypeEnum.MultipleChoiceMulti,
+  TSurveyElementTypeEnum.Ranking,
+]);
+
+/** The variables offered next to a template: the response's and survey's own values, then each answer of the bound survey (its elements by headline, a choice element's choice id and default-language label after its answer, its hidden fields by id) and its variables. Without a bound survey only the fixed values are offered. */
 export const buildWorkflowTemplateVariables = (
   survey: TSurvey | null,
   t: TFunction
@@ -34,13 +42,25 @@ export const buildWorkflowTemplateVariables = (
     },
   ];
   if (!survey) return fixed;
-  const elements = getElementsFromBlocks(survey.blocks).map((element) => ({
-    token: toTemplateToken(`answers.${element.id}`),
-    label:
+  const elements = getElementsFromBlocks(survey.blocks).flatMap((element) => {
+    const label =
       getTextContent(
         recallToHeadline(element.headline, survey, false, DEFAULT_LANGUAGE_CODE)[DEFAULT_LANGUAGE_CODE] ?? ""
-      ) || element.id,
-  }));
+      ) || element.id;
+    const answer = { token: toTemplateToken(`answers.${element.id}`), label };
+    if (!CHOICE_ELEMENT_TYPES.has(element.type)) return [answer];
+    return [
+      answer,
+      {
+        token: toTemplateToken(`answers.${element.id}.choiceId`),
+        label: t("workspace.workflows.variable_choice_id", { label }),
+      },
+      {
+        token: toTemplateToken(`answers.${element.id}.default`),
+        label: t("workspace.workflows.variable_choice_default", { label }),
+      },
+    ];
+  });
   const hiddenFields = getDeclaredIngestedStorageKeys(survey).map((fieldId) => ({
     token: toTemplateToken(`answers.${fieldId}`),
     label: fieldId,

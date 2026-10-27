@@ -41,6 +41,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpserver"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	surveyv3 "github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/sdkidentity"
@@ -341,10 +342,10 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, log),
 		webhook.NewHandler(nil, sessions),
 		webhook.NewV1Handler(nil, v1, log),
-		mgmtapi.NewHandler(cfg, nil, nil, v1, nil, nil, nil, nil, nil, sessions, nil, nil, nil, nil, nil, nil, log),
+		mgmtapi.NewHandler(cfg, nil, nil, v1, nil, nil, nil, nil, nil, nil, sessions, nil, nil, nil, nil, nil, nil, log),
 		integration.NewHandler(nil, sessions),
 		integration.NewOAuthHandler(nil, sessions, nil, log),
-		notification.NewHandler(),
+		notification.NewHandler(cfg, nil, ratelimit.New(cfg, nil, log), log),
 		analysis.NewAttachmentsHandler(nil, nil, v3, nil, nil, log),
 		workflows,
 		oauth,
@@ -352,7 +353,7 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		mcpHandler,
 		billing.NewHandler(nil, sessions),
 		billing.NewWebhookHandler(nil, log),
-		instance.NewHandler(nil, nil, sessions),
+		instance.NewHandler(cfg, nil, nil, sessions),
 		web,
 		unsplash.NewHandler(nil, sessions),
 		contactsurvey.NewHandler(nil, sessions),

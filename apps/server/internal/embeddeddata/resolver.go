@@ -4,6 +4,7 @@ import (
 	"math"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -40,13 +41,22 @@ const (
 	DisplayNone      = "none"
 )
 
+// Where a reserved field can be read: only by the server from the stored response and its request (AvailabilityServer), or by the survey runtime mid-survey too (AvailabilityClient, AvailabilityBoth), as RESERVED_FIELD_CATALOG declares it.
+const (
+	AvailabilityServer = "server"
+	AvailabilityClient = "client"
+	AvailabilityBoth   = "both"
+)
+
 // ReservedField is one entry of RESERVED_FIELD_CATALOG: a value every response carries, addressed by Name and read rather than stored.
 type ReservedField struct {
 	Name     string
 	DataType string
 	Display  string
 	Privacy  string
-	read     func(r ValueResponse) any
+	// Availability is AvailabilityServer for a field only the server knows (the geo-IP country, the parsed user agent, the response row's own columns); a runtime walking a survey reads it as unset.
+	Availability string
+	read         func(r ValueResponse) any
 }
 
 func member(m map[string]any, key string) any {
@@ -75,45 +85,51 @@ func jsRound(f float64) float64 { return math.Floor(f + 0.5) }
 
 // ReservedCatalog is RESERVED_FIELD_CATALOG, in its order.
 var ReservedCatalog = []ReservedField{
-	{Name: "source", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyKeep, read: metaField("source")},
-	{Name: "url", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyRedactQuery, read: metaField("url")},
-	{Name: "country", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, read: metaField("country")},
-	{Name: "action", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyKeep, read: metaField("action")},
-	{Name: "browser", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, read: userAgentField("browser")},
-	{Name: "os", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, read: userAgentField("os")},
-	{Name: "deviceType", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, read: userAgentField("device")},
-	{Name: "ipAddress", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyDrop, read: metaField("ipAddress")},
-	{Name: "finished", DataType: TypeBoolean, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.Finished }},
-	{Name: "language", DataType: TypeString, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any {
+	{Name: "source", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("source")},
+	{Name: "url", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyRedactQuery, Availability: AvailabilityClient, read: metaField("url")},
+	{Name: "country", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, Availability: AvailabilityServer, read: metaField("country")},
+	{Name: "action", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("action")},
+	{Name: "browser", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, Availability: AvailabilityServer, read: userAgentField("browser")},
+	{Name: "os", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, Availability: AvailabilityServer, read: userAgentField("os")},
+	{Name: "deviceType", DataType: TypeString, Display: DisplayPrimary, Privacy: PrivacyDrop, Availability: AvailabilityServer, read: userAgentField("device")},
+	{Name: "ipAddress", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyDrop, Availability: AvailabilityServer, read: metaField("ipAddress")},
+	{Name: "finished", DataType: TypeBoolean, Display: DisplayNone, Privacy: PrivacyKeep, Availability: AvailabilityServer, read: func(r ValueResponse) any { return r.Finished }},
+	{Name: "language", DataType: TypeString, Display: DisplayNone, Privacy: PrivacyKeep, Availability: AvailabilityBoth, read: func(r ValueResponse) any {
 		if r.Language == nil {
 			return nil
 		}
 		return *r.Language
 	}},
-	{Name: "responseId", DataType: TypeString, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.ID }},
-	{Name: "surveyId", DataType: TypeString, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.SurveyID }},
+	{Name: "responseId", DataType: TypeString, Display: DisplayNone, Privacy: PrivacyKeep, Availability: AvailabilityServer, read: func(r ValueResponse) any { return r.ID }},
+	{Name: "surveyId", DataType: TypeString, Display: DisplayNone, Privacy: PrivacyKeep, Availability: AvailabilityServer, read: func(r ValueResponse) any { return r.SurveyID }},
 	// Total time to complete, in seconds: ttc._total holds milliseconds and only exists on finished responses.
-	{Name: "durationSeconds", DataType: TypeNumber, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any {
+	{Name: "durationSeconds", DataType: TypeNumber, Display: DisplayNone, Privacy: PrivacyKeep, Availability: AvailabilityServer, read: func(r ValueResponse) any {
 		if total, ok := r.TTC["_total"].(float64); ok {
 			return jsRound(total / 1000)
 		}
 		return jsvalue.Undefined
 	}},
-	{Name: "startedAt", DataType: TypeDate, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.CreatedAt }},
-	{Name: "finishedAt", DataType: TypeDate, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.UpdatedAt }},
-	{Name: "pagePath", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("pagePath")},
-	{Name: "pageReferrer", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyRedactQuery, read: metaField("pageReferrer")},
-	{Name: "utmSource", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmSource")},
-	{Name: "utmMedium", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmMedium")},
-	{Name: "utmCampaign", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmCampaign")},
-	{Name: "utmTerm", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmTerm")},
-	{Name: "utmContent", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmContent")},
-	{Name: "screenWidth", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("screenWidth")},
-	{Name: "screenHeight", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("screenHeight")},
-	{Name: "viewportWidth", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("viewportWidth")},
-	{Name: "viewportHeight", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("viewportHeight")},
-	{Name: "timezone", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("timezone")},
-	{Name: "locale", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("locale")},
+	{Name: "startedAt", DataType: TypeDate, Display: DisplayNone, Privacy: PrivacyKeep, Availability: AvailabilityServer, read: func(r ValueResponse) any { return r.CreatedAt }},
+	// When the response was finished: the row's last write, which for a finished response is its submission. An unfinished response has not finished, and its last write is only the last partial save, so it has no value (J6: exports showed it as a finish time).
+	{Name: "finishedAt", DataType: TypeDate, Display: DisplayNone, Privacy: PrivacyKeep, Availability: AvailabilityServer, read: func(r ValueResponse) any {
+		if !r.Finished {
+			return jsvalue.Undefined
+		}
+		return r.UpdatedAt
+	}},
+	{Name: "pagePath", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("pagePath")},
+	{Name: "pageReferrer", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyRedactQuery, Availability: AvailabilityClient, read: metaField("pageReferrer")},
+	{Name: "utmSource", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("utmSource")},
+	{Name: "utmMedium", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("utmMedium")},
+	{Name: "utmCampaign", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("utmCampaign")},
+	{Name: "utmTerm", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("utmTerm")},
+	{Name: "utmContent", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("utmContent")},
+	{Name: "screenWidth", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("screenWidth")},
+	{Name: "screenHeight", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("screenHeight")},
+	{Name: "viewportWidth", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("viewportWidth")},
+	{Name: "viewportHeight", DataType: TypeNumber, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("viewportHeight")},
+	{Name: "timezone", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("timezone")},
+	{Name: "locale", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, Availability: AvailabilityClient, read: metaField("locale")},
 }
 
 var camelBoundary = regexp.MustCompile(`([a-z0-9])([A-Z])`)
@@ -301,6 +317,13 @@ func ShadowingNames(fields []Linked, elementIDs []string) []string {
 // ServerValues is buildServerEmbeddedValues: the full reserved catalog minus what the survey's own fields and elements shadow, projected from the persisted response, with the response's data over it.
 func ServerValues(r ValueResponse, fields []Linked, elementIDs []string) map[string]any {
 	return MergeReserved(Project(DropShadowed(ReservedCatalog, ShadowingNames(fields, elementIDs)), r), r.Data)
+}
+
+// ClientValues is what the survey runtime's logic reads mid-survey, survey.tsx's mergeReservedValues(projectClientReservedValues(...), data): ServerValues without the entries only the server knows (AvailabilityServer), which the runtime reads as unset. A replay of the runtime's walk (the server's score recomputation) reads these, not ServerValues, or a condition on the country or the browser would take another branch than the respondent did.
+func ClientValues(r ValueResponse, fields []Linked, elementIDs []string) map[string]any {
+	readable := DropShadowed(ReservedCatalog, ShadowingNames(fields, elementIDs))
+	readable = slices.DeleteFunc(readable, func(e ReservedField) bool { return e.Availability == AvailabilityServer })
+	return MergeReserved(Project(readable, r), r.Data)
 }
 
 // Linked is forma2's TLinkedEmbeddedField: a field definition and the key the survey's link stores its value under.

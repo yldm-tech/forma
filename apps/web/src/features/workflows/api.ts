@@ -29,6 +29,8 @@ export interface TWorkflowRunSummary {
   updatedAt: string;
   startedAt: string | null;
   finishedAt: string | null;
+  /** How many failed steps a completed run went on past, its steps being set to continue on failure: such a run completed, but not cleanly. 0 for any other run. */
+  continuedFailureCount: number;
 }
 
 /** A row of the runs list: the summary and its workflow's name. */

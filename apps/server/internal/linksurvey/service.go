@@ -57,6 +57,8 @@ const (
 	inactiveResponseSubmitted = "response submitted"
 	// inactiveEmailResponded is a verification link whose address already finished a response to a survey that takes one response per verified email.
 	inactiveEmailResponded = "email responded"
+	// inactiveLinkInUse is a single-use link of a survey that verifies emails whose unfinished response was started under another address (or under none) than the one the verification link proves: the client API refuses that respondent's updates (response.CheckVerifiedEmail), so the page stops them before they answer.
+	inactiveLinkInUse = "link in use"
 )
 
 // page is one rendered survey page: its status, head and the state the bundle renders.
@@ -66,6 +68,10 @@ type page struct {
 	State  pageState
 	// RuntimeLanguage is the survey language code the respondent runtime renders a survey view in (its getI18nLanguage): LanguageCode, with "default" read as the default language's code. The handler preloads the runtime's translations for it.
 	RuntimeLanguage string
+	// FirstPaintTitle is the title painted over a survey view until the survey has rendered (firstpaint.go); empty paints nothing.
+	FirstPaintTitle string
+	// CustomScripts reports whether the page runs the workspace's or the survey's custom head scripts (CustomScriptsInjector), arbitrary HTML that their owner may write inline or load from any host; the handler then keeps the permissive policy every response gets instead of the survey pages' own (Handler.policy).
+	CustomScripts bool
 }
 
 // pageState is the document the survey page bundle reads. Locale is the locale the page's own chrome is translated in: forma2's root layout locale, negotiated from Accept-Language.
@@ -300,7 +306,7 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 	if in.limitPerBrowser && sv.IsSingleResponsePerBrowserEnabled && !isPreview {
 		state.BrowserLimit = &browserLimitState{SurveyID: sv.ID, Workspace: ws}
 	}
-	public, err := publicSurvey(sv, in.fields)
+	public, err := publicSurvey(sv, in.fields, s.cfg)
 	if err != nil {
 		return page{}, err
 	}
@@ -323,6 +329,13 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 				state.Inactive = &inactiveState{Status: inactiveEmailResponded, SurveyClosedMessage: json.RawMessage("null"), Workspace: ws}
 				return page{Status: http.StatusOK, State: state}, nil
 			}
+		}
+		// The runtime continues a single-use link's unfinished response by its id, whoever opens the link; another verified address would only get 403s from the update, after typing its answers. Addresses compare case-insensitively, as response.CheckVerifiedEmail reads them.
+		if verified != "" && in.singleUseResponse != nil && !strings.EqualFold(in.singleUseResponse.VerifiedEmail, verified) {
+			state.View = viewInactive
+			state.BrowserLimit = nil
+			state.Inactive = &inactiveState{Status: inactiveLinkInUse, SurveyClosedMessage: json.RawMessage("null"), Workspace: ws}
+			return page{Status: http.StatusOK, State: state}, nil
 		}
 		if verified == "" && !isPreview {
 			gated := public
@@ -351,7 +364,7 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 	props := &surveyState{
 		Survey:                  public,
 		SurveyID:                sv.ID,
-		Workspace:               workspaceState{Styling: orNull(in.workspace.Workspace.Styling), Logo: orNull(in.workspace.Workspace.Logo), LinkSurveyBranding: in.workspace.Workspace.LinkSurveyBranding, CustomHeadScripts: in.workspace.Workspace.CustomHeadScripts},
+		Workspace:               workspaceState{Styling: orNull(in.workspace.Workspace.Styling), Logo: orNull(in.workspace.Workspace.Logo), LinkSurveyBranding: in.workspace.Workspace.LinkSurveyBranding, CustomHeadScripts: pageScripts(s.cfg, in.workspace.Workspace.CustomHeadScripts)},
 		Styling:                 computeStyling(in.workspace.Workspace.Styling, sv.Styling),
 		PublicDomain:            s.publicDomainString(),
 		ResponseCount:           in.responseCount,
@@ -381,7 +394,29 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 		props.Locale = gate
 		state.View = viewPin
 	}
-	return page{Status: http.StatusOK, State: state, RuntimeLanguage: runtimeLanguage(languageCode, sv.Languages)}, nil
+	p := page{Status: http.StatusOK, State: state, RuntimeLanguage: runtimeLanguage(languageCode, sv.Languages), CustomScripts: runsCustomScripts(props, public)}
+	if state.View == viewSurvey {
+		// The paint is in the language the survey opens in (languageCode, which ?lang= also names by canonical tag), not the title tag's: /s keeps forma2's narrower rule for <title> (metadataLanguageCode) and /c its default-language head.
+		p.FirstPaintTitle = firstPaintTitle(sv, languageCode)
+	}
+	return p, nil
+}
+
+// runsCustomScripts mirrors the survey page's CustomScriptsInjector: off on Forma Cloud and in a preview, otherwise on when the workspace's scripts in the page state or the survey's in the public survey (which a PIN-gated page receives once the PIN is entered) are not blank. It reads what the browser is given, so whatever keeps the scripts from a page keeps this policy exception from it too.
+func runsCustomScripts(props *surveyState, public json.RawMessage) bool {
+	if props.IsFormaCloud || props.IsPreview {
+		return false
+	}
+	var sv struct {
+		CustomHeadScripts *string `json:"customHeadScripts"`
+	}
+	_ = json.Unmarshal(public, &sv)
+	for _, scripts := range []*string{props.Workspace.CustomHeadScripts, sv.CustomHeadScripts} {
+		if scripts != nil && strings.TrimSpace(*scripts) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // runtimeLanguage is the respondent runtime's getI18nLanguage (packages/surveys/src/lib/i18n-utils.ts) for the codes a page passes it: a stored survey language code as it is, and "default" as the default language's code, or "en" when the survey has none.
@@ -420,8 +455,16 @@ func orNull(raw json.RawMessage) json.RawMessage {
 	return raw
 }
 
-// publicSurvey is the survey as it reaches the respondent's browser: forma2's TSurvey with what the public page must never carry blanked (the PIN, follow-up configuration, the segment's targeting rules), in the shape the runtime reads (toJsWorkspaceStateSurvey: the segment reduced to its id and whether it filters), with the Embedded Data fields inlined.
-func publicSurvey(sv *survey.Survey, fields []embeddeddata.LinkedField) (json.RawMessage, error) {
+// pageScripts is the custom head scripts a page may carry: none on an instance that does not run them (config.CustomScripts), whatever is stored. Values written before the rule, or by a member before the survey-level rule, keep running where the instance allows scripts: who wrote a stored value is not recorded, and there the page runs on its own origin, out of reach of the admin session.
+func pageScripts(cfg config.Config, scripts *string) *string {
+	if cfg.CustomScripts() != config.CustomScriptsAvailable {
+		return nil
+	}
+	return scripts
+}
+
+// publicSurvey is the survey as it reaches the respondent's browser: forma2's TSurvey with what the public page must never carry blanked (the PIN, follow-up configuration, the segment's targeting rules, and the custom head scripts on an instance that does not run them), in the shape the runtime reads (toJsWorkspaceStateSurvey: the segment reduced to its id and whether it filters), with the Embedded Data fields inlined.
+func publicSurvey(sv *survey.Survey, fields []embeddeddata.LinkedField, cfg config.Config) (json.RawMessage, error) {
 	b, err := json.Marshal(sv)
 	if err != nil {
 		return nil, fmt.Errorf("encode public survey: %w", err)
@@ -431,6 +474,7 @@ func publicSurvey(sv *survey.Survey, fields []embeddeddata.LinkedField) (json.Ra
 		return nil, fmt.Errorf("encode public survey: %w", err)
 	}
 	doc["pin"] = nil
+	doc["customHeadScripts"] = pageScripts(cfg, sv.CustomHeadScripts)
 	doc["followUps"] = []any{}
 	doc["questions"] = []any{}
 	if sv.Segment != nil {
@@ -607,7 +651,7 @@ func (s *Service) validatePin(ctx context.Context, rawID, pin string) (pinResult
 	if *sv.Pin != pin {
 		return pinResult{}, errInvalidPin
 	}
-	public, err := publicSurvey(sv, fields)
+	public, err := publicSurvey(sv, fields, s.cfg)
 	if err != nil {
 		return pinResult{}, err
 	}
@@ -633,7 +677,7 @@ func (s *Service) resumePin(ctx context.Context, rawID, token string) (pinResult
 	if !sv.IsProgressSavingEnabled || !VerifyPinToken(s.cfg, token, sv.ID, s.now().Add(pinResumeMargin)) {
 		return pinResult{}, errPinTokenRejected
 	}
-	public, err := publicSurvey(sv, fields)
+	public, err := publicSurvey(sv, fields, s.cfg)
 	if err != nil {
 		return pinResult{}, err
 	}

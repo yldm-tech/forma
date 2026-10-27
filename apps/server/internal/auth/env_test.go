@@ -141,13 +141,13 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	e.sessions.now = e.now
 	limiter, emitter := ratelimit.New(cfg, e.rdb, log), audit.New(cfg, log)
 	// Sign-up redeems invites through the real invite module; nothing on that path asks SpiceDB, so it runs without one.
-	invites := invite.NewService(cfg, invite.NewRepository(e.db), authz.NewAuthorizer(cfg, e.db, nil), limiter, m, emitter, log)
+	invites := invite.NewService(cfg, invite.NewRepository(e.db), authz.NewAuthorizer(cfg, e.db, nil), nil, limiter, m, emitter, log)
 	enqueuer, err := jobs.NewEnqueuer(log)
 	if err != nil {
 		t.Fatal(err)
 	}
 	lifecycle := billing.NewLifecycle(cfg, billing.NewStripe(cfg, log), e.db, enqueuer, log)
-	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, invites, limiter, m, emitter, e.rdb, lifecycle, enqueuer, brevo.NewContacts(cfg), log)
+	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, invites, limiter, m, emitter, e.rdb, lifecycle, nil, enqueuer, brevo.NewContacts(cfg), log)
 	e.svc.now = e.now
 	e.svc.failures.now = e.now
 	cipher, err := secret.NewCipher(cfg)
@@ -597,4 +597,62 @@ func (b *browser) signInPending() {
 	if r.json()["status"] != "two_factor_required" {
 		b.e.t.Fatalf("sign-in: %s", r.Body.String())
 	}
+}
+
+// seedOAuthGrant writes what the authorization server issues an MCP client for the user: a client, and a live refresh token and access token for it.
+func (e *env) seedOAuthGrant(userID uuid.UUID) {
+	e.t.Helper()
+	client := "client-" + uuid.NewString()
+	e.exec(`INSERT INTO oauth_clients (client_id, redirect_uris, application_type, token_endpoint_auth_method, grant_types, response_types, scopes, resources)
+		VALUES (?, '{http://127.0.0.1:9999/callback}', 'native', 'none', '{authorization_code,refresh_token}', '{code}', '{offline_access,surveys:read}', '{https://mcp.example.com/api/mcp}')`, client)
+	hash := make([]byte, 32)
+	if _, err := rand.Read(hash); err != nil {
+		e.t.Fatal(err)
+	}
+	family := uuid.New()
+	e.exec(`INSERT INTO oauth_refresh_tokens (expires_at, token_hash, family_id, client_id, user_id, scopes, resources, auth_time)
+		VALUES (now() + interval '30 days', ?, ?, ?, ?, '{offline_access,surveys:read}', '{https://mcp.example.com/api/mcp}', now())`, hash, family, client, userID)
+	e.exec(`INSERT INTO oauth_access_tokens (expires_at, client_id, user_id, scopes, resources, refresh_family_id)
+		VALUES (now() + interval '15 minutes', ?, ?, '{offline_access,surveys:read}', '{https://mcp.example.com/api/mcp}', ?)`, client, userID, family)
+}
+
+// liveOAuthTokens counts the user's refresh and access tokens that are not revoked.
+func (e *env) liveOAuthTokens(userID uuid.UUID) int64 {
+	e.t.Helper()
+	return e.count(`SELECT (SELECT count(*) FROM oauth_refresh_tokens WHERE user_id = ? AND revoked_at IS NULL) + (SELECT count(*) FROM oauth_access_tokens WHERE user_id = ? AND revoked_at IS NULL)`, userID, userID)
+}
+
+// enableRateLimitsWithClock turns the limiter on like enableRateLimits, with a clock that starts at the beginning of a UTC day and moves only by the returned advance, so a scenario can step into the next window of a short rule while staying inside a longer one.
+func (e *env) enableRateLimitsWithClock() (advance func(time.Duration)) {
+	cfg := e.cfg
+	cfg.RateLimitingDisabled = false
+	var mu sync.Mutex
+	now := time.Now().UTC().Truncate(24 * time.Hour)
+	e.svc.limiter = ratelimit.New(cfg, e.rdb, slog.New(slog.NewTextHandler(io.Discard, nil))).WithClock(func() time.Time {
+		mu.Lock()
+		defer mu.Unlock()
+		return now
+	})
+	return func(d time.Duration) {
+		mu.Lock()
+		defer mu.Unlock()
+		now = now.Add(d)
+	}
+}
+
+// tokens extracts the token of every mail to an address whose subject matches, oldest first.
+func (e *env) tokens(to, subject string) []string {
+	e.t.Helper()
+	var out []string
+	for _, m := range e.sent(to) {
+		if m.Subject != subject {
+			continue
+		}
+		match := tokenPattern.FindStringSubmatch(m.HTML)
+		if match == nil {
+			e.t.Fatalf("no token in %q", m.Subject)
+		}
+		out = append(out, match[1])
+	}
+	return out
 }

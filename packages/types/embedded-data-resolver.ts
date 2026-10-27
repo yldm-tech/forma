@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { regexes } from "zod";
 import type { TContactAttributeKey } from "./contact-attribute-key";
 import type { TEmbeddedData, TEmbeddedDataType, TSurveyEmbeddedData } from "./embedded-data";
 import { type TLegacyEmbeddedFields, toDesiredEmbeddedFields } from "./embedded-data-mapping";
@@ -6,7 +6,7 @@ import type { TI18nString } from "./i18n";
 import type { TResponse, TResponseData, TResponseVariables } from "./responses";
 import { formatFieldNameToTitleCase } from "./safe-identifier";
 import type { TSurveyBlocks } from "./surveys/blocks";
-import { getTextContent } from "./surveys/validation";
+import { getTextContent } from "@forma/types/surveys/html-text";
 
 /**
  * What a resolved Embedded Data value can be. A `date` field resolves to its ISO 8601 string, not a
@@ -357,13 +357,9 @@ export const RESERVED_FIELD_CATALOG: readonly TReservedFieldCatalogEntry[] = [
     },
   },
   /**
-   * startedAt/finishedAt map onto the row's timestamps: `createdAt` is when the response record was
-   * opened, `updatedAt` when it was last written — which for a finished response is its submission.
-   * Both resolve to ISO strings, never `Date` objects (see {@link TResolvedEmbeddedValue}).
+   * startedAt/finishedAt map onto the row's timestamps: `createdAt` is when the response record was opened, `updatedAt` when it was last written — which for a finished response is its submission. Both resolve to ISO strings, never `Date` objects (see {@link TResolvedEmbeddedValue}).
    *
-   * `finishedAt` is `updatedAt` and therefore only means "finished at" on a finished response; on a
-   * partial one it is the last partial write. The pair is the closest honest reading of the columns
-   * that exist — `Response` stores no separate completion timestamp.
+   * `finishedAt` is `updatedAt` on a finished response and unset on a partial one, whose last write is only its last partial save, not a finish time (J6). `Response` stores no separate completion timestamp, so this is the closest honest reading of the columns that exist. Mirrored by apps/server/internal/embeddeddata/resolver.go.
    */
   {
     name: "startedAt",
@@ -379,7 +375,7 @@ export const RESERVED_FIELD_CATALOG: readonly TReservedFieldCatalogEntry[] = [
     availability: "server",
     privacy: "keep",
     display: "none",
-    read: (r) => r.updatedAt,
+    read: (r) => (r.finished ? r.updatedAt : undefined),
   },
   /**
    * **Browser-runtime context (ENG-1841).** Captured by the renderer itself and frozen at display,
@@ -582,7 +578,17 @@ export interface TLinkedEmbeddedField {
  *
  * The datetime takes seconds optionally, as the Go server's rule does (`isoDateTime` in apps/server/internal/embeddeddata). Since zod 4.5, `z.iso.datetime()` alone requires seconds whenever the value ends in `Z`, so the minute-precision form (`2026-08-06T10:30Z`) is its own arm; without it a value the server stored would no longer resolve here.
  */
-const ZIsoDateOrDateTime = z.union([z.iso.date(), z.iso.datetime(), z.iso.datetime({ precision: -1 })]);
+const ISO_DATE_OR_DATETIME: readonly RegExp[] = [
+  regexes.date,
+  regexes.datetime({ precision: null, offset: false, local: false }),
+  regexes.datetime({ precision: -1, offset: false, local: false }),
+];
+
+/**
+ * Whether a string is an ISO date or UTC datetime under the rule above. It tests zod's own patterns, the ones `z.iso.date()` and `z.iso.datetime()` test, instead of building those schemas: the survey runtime and the survey page import this module, and a schema would bring the rest of zod into every respondent's download. `embedded-data-resolver.test.ts` holds it to the schemas.
+ */
+const isIsoDateOrDateTime = (value: string): boolean =>
+  ISO_DATE_OR_DATETIME.some((pattern) => pattern.test(value));
 
 /**
  * Coerces a raw stored value to a field's `dataType`, returning `undefined` when the value cannot
@@ -647,7 +653,7 @@ export const coerceToEmbeddedDataType = (
     }
     case "date": {
       if (value instanceof Date) return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
-      if (typeof value === "string") return ZIsoDateOrDateTime.safeParse(value).success ? value : undefined;
+      if (typeof value === "string") return isIsoDateOrDateTime(value) ? value : undefined;
       return undefined;
     }
   }

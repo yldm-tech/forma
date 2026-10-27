@@ -131,6 +131,28 @@ describe("workflowDefinitionToFlowNodes / Edges", () => {
     });
   });
 
+  test("flags an If/Else node as not runnable, whatever the survey binding", () => {
+    const def = buildDefinition({
+      nodes: [
+        {
+          id: "branch-1",
+          type: "if_else",
+          config: { condition: { combinator: "and", conditions: [] } },
+        } as unknown as TWorkflowDefinition["nodes"][number],
+      ],
+    });
+    for (const options of [
+      { hasBoundSurvey: true, isDraft: false },
+      { hasBoundSurvey: false, isDraft: true },
+    ]) {
+      const nodes = workflowDefinitionToFlowNodes(def, t, options);
+      expect(nodes[1]?.data.issue).toEqual({
+        severity: options.isDraft ? "setup" : "error",
+        label: "workspace.workflows.node_if_else_not_runnable",
+      });
+    }
+  });
+
   test("projects edges with sourceHandle preserved", () => {
     const def = buildDefinition({
       edges: [{ id: "edge-1", source: "trigger-1", target: "action-1", sourceHandle: "then" }],
@@ -246,5 +268,21 @@ describe("canvas layout constants", () => {
       title: "Send email",
       summary: "workspace.workflows.send_email_summary",
     });
+  });
+
+  test("only an action set to continue on failure is marked so on its card", () => {
+    const base = buildDefinition();
+    expect(workflowDefinitionToFlowNodes(base, t).map((node) => node.data.continueOnFailure)).toEqual([
+      false,
+      false,
+    ]);
+    const def = {
+      ...base,
+      nodes: base.nodes.map((node) => ({ ...node, continueOnFailure: true })),
+    } as TWorkflowDefinition;
+    expect(workflowDefinitionToFlowNodes(def, t).map((node) => node.data.continueOnFailure)).toEqual([
+      false,
+      true,
+    ]);
   });
 });

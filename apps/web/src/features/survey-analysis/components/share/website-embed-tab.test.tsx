@@ -109,6 +109,22 @@ describe("WebsiteEmbedTab", () => {
     expect(doc).toContain(SCRIPT_URL);
   });
 
+  // The admin app's Content-Security-Policy, which the frame inherits, refuses inline scripts, so the sample page has none; this page forgets the auto-opened surveys the embed script remembered in the session storage it shares with the frame.
+  test("the sample page runs only the embed script, and a delayed popup opens again in each preview", () => {
+    sessionStorage.setItem("forma-embed:auto-opened:https://s.example.com/s/1", "1");
+    sessionStorage.setItem("unrelated", "kept");
+    renderTab();
+    const doc = preview().getAttribute("srcdoc") ?? "";
+    expect(doc.match(/<script\b[^>]*>/g)).toEqual([`<script src="${SCRIPT_URL}" async>`]);
+    expect(sessionStorage.getItem("forma-embed:auto-opened:https://s.example.com/s/1")).toBeNull();
+    expect(sessionStorage.getItem("unrelated")).toBe("kept");
+
+    sessionStorage.setItem("forma-embed:auto-opened:https://s.example.com/s/1", "1");
+    fireEvent.click(screen.getByRole("button", { name: "Popup" }));
+    expect(sessionStorage.getItem("forma-embed:auto-opened:https://s.example.com/s/1")).toBeNull();
+    sessionStorage.clear();
+  });
+
   test("switches layouts, with each layout's options", () => {
     renderTab();
     fireEvent.click(screen.getByRole("button", { name: "Popup" }));

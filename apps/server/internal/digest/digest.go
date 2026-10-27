@@ -18,6 +18,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/analysis"
 	"github.com/yldm-tech/forma/apps/server/internal/auth"
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
+	"github.com/yldm-tech/forma/apps/server/internal/notification"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
@@ -137,12 +138,11 @@ type Recipient struct {
 	Manager bool
 }
 
-// Recipients are the organization's members who get its summary: active accounts with a membership that is not suspended and that the organization's two-factor requirement does not refuse (authz's userAllowed: once its grace period is over, a member who signs in with a password and has not enrolled), in a role that reads responses (not billing), who can see a workspace there, and who have not turned the summary off. With only set, just that member, if they still qualify. The rules are the notifications page's, which lists the organizations the switch is for.
+// Recipients are the organization's members who get its summary: active accounts with a membership the organization does not refuse (authz.MemberNotRefusedSQL: not suspended, and not refused by its two-factor requirement, which once its grace period is over refuses a member who signs in with a password and has not enrolled), in a role that reads responses (not billing), who can see a workspace there, and who have not turned the summary off. With only set, just that member, if they still qualify. The rules are the notifications page's, which lists the organizations the switch is for.
 func (d *Digest) Recipients(ctx context.Context, orgID uuid.UUID, only *uuid.UUID) ([]Recipient, error) {
 	query := `SELECT u.id AS user_id, u.email, u.locale, m.role IN ('owner', 'manager') AS manager
-		FROM memberships m JOIN users u ON u.id = m.user_id JOIN organizations o ON o.id = m.organization_id
-		WHERE m.organization_id = ? AND u.is_active AND m.suspended_at IS NULL AND m.role <> 'billing'
-		AND NOT (o.two_factor_enforced_at IS NOT NULL AND o.two_factor_enforced_at <= now() AND ` + authz.SecondFactorStatusSQL("u.id") + ` = '` + authz.SecondFactorDisabled + `')
+		FROM memberships m JOIN users u ON u.id = m.user_id
+		WHERE m.organization_id = ? AND u.is_active AND ` + authz.MemberNotRefusedSQL("m") + ` AND m.role <> 'billing'
 		AND NOT COALESCE(u.notification_settings -> '` + auth.NotificationWeeklySummary + `', '[]'::jsonb) @> jsonb_build_array(?::text)
 		AND (m.role IN ('owner', 'manager') OR EXISTS (
 			SELECT 1 FROM team_members tm JOIN workspace_teams wt ON wt.team_id = tm.team_id JOIN workspaces w ON w.id = wt.workspace_id
@@ -233,9 +233,13 @@ func (d *Digest) Content(ctx context.Context, orgID uuid.UUID, r Recipient, week
 	if err != nil || len(surveys) == 0 {
 		return nil, err
 	}
+	unsubscribe, err := notification.NewUnsubscribeLinks(d.cfg, r.UserID, notification.KindWeeklySummary, orgID)
+	if err != nil {
+		return nil, err
+	}
 	c := &mailer.WeeklySummary{
 		OrganizationName: org.Name, PeriodStart: p.FirstDay, PeriodEnd: p.LastDay, TimeZone: loc.String(),
-		SettingsURL: d.cfg.AppPageURL("/account/settings/notifications").String() + "?" + url.Values{"type": {auth.NotificationWeeklySummary}, "elementId": {orgID.String()}}.Encode(),
+		SettingsURL: unsubscribe.Page,
 	}
 	if org.LogoURL != nil && *org.LogoURL != "" {
 		c.LogoURL = responsemail.ResolveStorageURL(responsemail.PublicBase(d.cfg), *org.LogoURL)
@@ -297,7 +301,7 @@ func (d *Digest) summaryURL(s surveyActivity, p Period) string {
 	return d.cfg.AppPageURL("/workspaces/"+s.WorkspaceID.String()+"/surveys/"+s.ID.String()+"/summary").String() + "?" + q.Encode()
 }
 
-// Send builds the recipient's summary and mails it in their locale. It sends nothing, and reports false, when they no longer qualify, there is nothing to summarize, or mail is not configured. A message for the same organization, member and week always carries the same Message-ID.
+// Send builds the recipient's summary and mails it in their locale. It sends nothing, and reports false, when they no longer qualify, there is nothing to summarize, or mail is not configured. A message for the same organization, member and week always carries the same Message-ID. Its turn-off link (SettingsURL) and its List-Unsubscribe header are signed for the member (notification.NewUnsubscribeLinks), so they work without a session.
 func (d *Digest) Send(ctx context.Context, orgID, userID uuid.UUID, week string) (bool, error) {
 	recipients, err := d.Recipients(ctx, orgID, &userID)
 	if err != nil || len(recipients) == 0 {
@@ -312,7 +316,11 @@ func (d *Digest) Send(ctx context.Context, orgID, userID uuid.UUID, week string)
 	if err != nil {
 		return false, err
 	}
-	return d.mailer.Send(ctx, mailer.Message{To: r.Email, Subject: subject, HTML: html, MessageID: d.messageID(orgID, userID, week)})
+	unsubscribe, err := notification.NewUnsubscribeLinks(d.cfg, userID, notification.KindWeeklySummary, orgID)
+	if err != nil {
+		return false, err
+	}
+	return d.mailer.Send(ctx, mailer.Message{To: r.Email, Subject: subject, HTML: html, MessageID: d.messageID(orgID, userID, week), Headers: mailer.OneClickUnsubscribe(unsubscribe.OneClick)})
 }
 
 // messageID is the email's stable Message-ID, on MAIL_FROM's domain.

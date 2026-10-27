@@ -33,6 +33,8 @@ export interface AuthOptions {
   termsUrl?: string;
   privacyUrl?: string;
   isFormaCloud: boolean;
+  /** Whether reCAPTCHA keys are configured, so a survey may turn spam protection on. */
+  spamProtectionAvailable: boolean;
 }
 
 export interface NotificationSurvey {

@@ -1,6 +1,7 @@
 import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
-import { type TIso639Language, supportedLanguages } from "@forma/i18n-utils/utils";
+import { type TIso639Language, getLanguageLabel, supportedLanguages } from "@forma/i18n-utils/utils";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { ChevronDown, InfoIcon, PlusIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,9 +28,11 @@ import {
 import { toast } from "../../lib/toast";
 import {
   type LanguageRowValue,
+  type LanguagesProblem,
   NEW_LANGUAGE_ID,
   defaultLanguageOptions,
   isDefaultSurveyLanguage,
+  languageWrites,
   languagesError,
 } from "../../lib/workspace-languages";
 
@@ -70,6 +73,44 @@ const rowsChanged = (rows: LanguageRowValue[], stored: LanguageRowValue[]) =>
       row.code !== stored[index]?.code ||
       (row.alias || "") !== (stored[index]?.alias || "")
   );
+
+/** A language as the problems name it: its name in the user's language, or the code when it has none. */
+const languageName = (code: string, locale: string) => getLanguageLabel(code, locale) ?? code;
+
+/** Why the form cannot be saved, naming the rows involved. */
+const languagesProblemMessage = (t: TFunction, problem: LanguagesProblem, locale: string): string => {
+  switch (problem.kind) {
+    case "missing_language":
+      return t("workspace.languages.please_select_a_language");
+    case "language_twice":
+      return t("workspace.languages.language_added_twice", {
+        language: languageName(problem.language, locale),
+      });
+    case "alias_twice":
+      return t("workspace.languages.alias_used_twice", {
+        alias: problem.alias,
+        language: languageName(problem.language, locale),
+        other: languageName(problem.other, locale),
+      });
+    case "alias_names_other_row":
+      return t("workspace.languages.alias_names_other_language", {
+        alias: problem.alias,
+        language: languageName(problem.language, locale),
+        other: languageName(problem.other, locale),
+      });
+    case "alias_names_missing_language":
+      return t("workspace.languages.alias_names_missing_language", {
+        alias: problem.alias,
+        language: languageName(problem.language, locale),
+        named: languageName(problem.named, locale),
+      });
+    case "aliases_exchanged":
+      return t("workspace.languages.aliases_exchanged", {
+        language: languageName(problem.language, locale),
+        other: languageName(problem.other, locale),
+      });
+  }
+};
 
 interface Confirmation {
   open: boolean;
@@ -160,35 +201,42 @@ const EditLanguages = ({
   };
 
   const save = async () => {
-    const problem = languagesError(languages);
+    const stored = storedRows(workspace);
+    const problem = languagesError(languages, stored);
     if (problem) {
-      toast.error(t(problem));
+      toast.error(languagesProblemMessage(t, problem, locale));
       return;
     }
     setIsSaving(true);
     try {
-      await Promise.all(
-        languages.map((language) =>
-          language.id === NEW_LANGUAGE_ID
-            ? createLanguage(workspace.id, { code: language.code, alias: language.alias })
-            : updateLanguage(workspace.id, language.id, language.alias)
-        )
-      );
-      if (defaultLanguage !== storedDefault(workspace)) {
+      let defaultSaved = defaultLanguage === storedDefault(workspace);
+      const saveDefault = async () => {
+        if (defaultSaved) return;
         // Only the changed key: the server merges it onto the stored config.
         await updateWorkspace(workspace.id, { config: { defaultSurveyLanguage: defaultLanguage || null } });
-      }
-      if (deletedIds.length > 0) {
-        try {
-          await Promise.all(deletedIds.map((id) => deleteLanguage(workspace.id, id)));
-        } catch (error) {
-          toast.error(errorMessage(t, error));
-          // The rows that survived come back from the server rather than staying hidden.
-          setDeletedIds([]);
-          await refresh();
-          return;
+        defaultSaved = true;
+      };
+      // Only what changed is written, so a stored row an older rule let in is not checked again by the server. The server checks each request against the rows stored when it arrives, so the requests go one at a time, in an order it accepts (an alias moved between rows is given up before it is taken).
+      for (const write of languageWrites(languages, stored)) {
+        if (write.kind === "delete") {
+          // The default goes first: the server refuses to remove the default language, which the edit may have moved off this row.
+          await saveDefault();
+          try {
+            await deleteLanguage(workspace.id, write.id);
+          } catch (error) {
+            toast.error(errorMessage(t, error));
+            // The rows that survived come back from the server rather than staying hidden.
+            setDeletedIds([]);
+            await refresh();
+            return;
+          }
+        } else if (write.kind === "create") {
+          await createLanguage(workspace.id, { code: write.row.code, alias: write.row.alias });
+        } else {
+          await updateLanguage(workspace.id, write.row.id, write.row.alias);
         }
       }
+      await saveDefault();
       toast.success(
         deletedIds.length > 0
           ? t("workspace.languages.language_deleted_successfully")

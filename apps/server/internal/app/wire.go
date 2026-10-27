@@ -308,7 +308,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		database.Open,
 		authz.OpenSpiceDB,
 		authz.NewAuthorizer,
-		// The API key module delivers a new key's relationships itself, before it returns the key.
+		// The API key, organization, team, workspace and v2 management modules deliver their writes' relationships themselves, before they answer.
 		authz.NewDelivery,
 		platformSet,
 		authSet,
@@ -335,6 +335,7 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		billingSet,
 		unsplashSet,
 		notification.NewHandler,
+		wire.Bind(new(notification.Switches), new(*auth.Service)),
 		contactSurveySet,
 		emailEmbedSet,
 		plain.NewHandler,
@@ -347,6 +348,16 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	return nil, nil, nil
 }
 
+// textSummaryJobSet is what the AI text summary generations `forma worker` runs need: the analysis module with its text summaries, and the organization AI service they generate through, which checks the organization's switches again and records the cost.
+var textSummaryJobSet = wire.NewSet(
+	authz.NewAuthorizer,
+	ai.NewClient,
+	ai.NewRepository,
+	ai.NewService,
+	analysis.NewService,
+	analysis.NewTextSummaries,
+)
+
 // InitializeWorker builds `forma worker`. The returned cleanup closes the job queue's pool, the database pool, the Valkey client and the SpiceDB connection.
 func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) (*jobs.Worker, func(), error) {
 	wire.Build(
@@ -356,6 +367,7 @@ func InitializeWorker(ctx context.Context, cfg config.Config, log *slog.Logger) 
 		authz.NewDelivery,
 		authz.NewAudit,
 		audit.New,
+		textSummaryJobSet,
 		storage.NewBucket,
 		storage.NewService,
 		workspace.NewRepository,

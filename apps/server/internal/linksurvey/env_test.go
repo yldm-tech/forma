@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 }
 
 // testShell is a survey page shell with the markers the web build's survey.html carries.
-const testShell = `<!doctype html><html lang="en" translate="no"><head><meta charset="UTF-8"><!--forma:head--><link rel="stylesheet" href="/assets/survey.css"><script type="module" src="/assets/survey.js"></script></head><body><div id="root"></div><!--forma:state--></body></html>`
+const testShell = `<!doctype html><html lang="en" translate="no"><head><meta charset="UTF-8"><!--forma:head--><link rel="stylesheet" href="/assets/survey.css"><script type="module" src="/assets/survey.js"></script></head><body><!--forma:first-paint--><div id="root"></div><!--forma:state--></body></html>`
 
 // testRuntime is the survey runtime bundle of the test build; the page pins its URL to this content.
 const testRuntime = "window.formaSurveys={}"

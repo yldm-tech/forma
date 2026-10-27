@@ -17,6 +17,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/contact"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/mrkdwn"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 	"github.com/yldm-tech/forma/apps/server/internal/webhook"
@@ -30,6 +31,14 @@ var stepRetryWaits = []time.Duration{2 * time.Second, 10 * time.Second}
 
 // discordMaxContent is the length Discord accepts for a message's content.
 const discordMaxContent = 2000
+
+// maxResponseExcerpt is how much of a refusing receiver's answer a failed step records: enough for an error message, never a whole page.
+const maxResponseExcerpt = 512
+
+// responseExcerpt is the start of an answer's body as text: invalid UTF-8, a character cut at the limit among it, dropped, and surrounding space trimmed.
+func responseExcerpt(body []byte) string {
+	return strings.TrimSpace(strings.ToValidUTF8(string(body), ""))
+}
 
 // actions executes the steps after send_email, for the runner and for the builder's test send.
 type actions struct {
@@ -95,22 +104,31 @@ func stepMessageID(runID uuid.UUID, stepID string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// stepInput is what a step's run log records it was asked to do, without its secrets or the path and query of a URL, which often carry a token.
+// stepInput is what a step's run log records it was asked to do, without its secrets or the path and query of a URL, which often carry a token, and the label its author gave the step, which the run detail names it by. It also records continueOnFailure when the step is set to let the run go on past its failure, so the run detail can say why a failed step did not stop the run.
 func stepInput(step Step) map[string]any {
 	n := step.Node
+	var input map[string]any
 	switch {
 	case step.Type == ActionSendEmail:
-		return map[string]any{"to": step.Config.To, "subject": step.Config.Subject}
+		input = map[string]any{"to": step.Config.To, "subject": step.Config.Subject}
 	case n.HTTP != nil:
-		return map[string]any{"method": n.HTTP.Method, "url": redactedURL(n.HTTP.URL)}
+		input = map[string]any{"method": n.HTTP.Method, "url": redactedURL(n.HTTP.URL)}
 	case n.Chat != nil:
-		return map[string]any{"channel": n.Chat.WebhookURL.Hint}
+		input = map[string]any{"channel": n.Chat.WebhookURL.Hint}
 	case n.Tag != nil:
-		return map[string]any{"tagId": n.Tag.TagID}
+		input = map[string]any{"tagId": n.Tag.TagID}
 	case n.Attribute != nil:
-		return map[string]any{"attributeKey": n.Attribute.AttributeKey}
+		input = map[string]any{"attributeKey": n.Attribute.AttributeKey}
+	default:
+		input = map[string]any{}
 	}
-	return map[string]any{}
+	if n.Label != nil && strings.TrimSpace(*n.Label) != "" {
+		input["label"] = *n.Label
+	}
+	if n.ContinueOnFailure {
+		input["continueOnFailure"] = true
+	}
+	return input
 }
 
 // redactedURL is a URL as a run log may show it: its scheme and host.
@@ -197,9 +215,6 @@ func (a *actions) chatMessage(ctx context.Context, env actionEnv, actionType str
 	return a.deliver(ctx, env, http.MethodPost, target, http.Header{"Content-Type": {"application/json"}}, payload)
 }
 
-// slackEscape escapes the three characters Slack's mrkdwn reads as markup in a value, so an answer cannot mention a channel or forge a link; the template's own markup is left alone.
-var slackEscape = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace
-
 // markdownEscape backslash-escapes the characters Discord's markdown and a Teams Adaptive Card's read as markup in a value: emphasis, strikethrough, code, spoilers, headings, quotes, list markers, [text](url) links, and Discord's <...> mentions, channels, emoji and timestamps. An answer then shows as typed instead of as formatting or a disguised link; the template's own markup is left alone.
 var markdownEscape = strings.NewReplacer(
 	`\`, `\\`, "*", `\*`, "_", `\_`, "~", `\~`, "`", "\\`", "|", `\|`,
@@ -210,7 +225,8 @@ var markdownEscape = strings.NewReplacer(
 func chatPayload(actionType string, t *Template, message string) any {
 	switch actionType {
 	case ActionSlackMessage:
-		return map[string]any{"text": t.RenderText(message, slackEscape)}
+		// Each value is escaped with mrkdwn.Escape, so an answer cannot notify the channel, mention anyone, forge a link or take on formatting; the template's own markup is left alone.
+		return map[string]any{"text": t.RenderText(message, mrkdwn.Escape)}
 	case ActionDiscordMessage:
 		text := t.RenderText(message, markdownEscape)
 		if utf8.RuneCountInString(text) > discordMaxContent {
@@ -252,10 +268,14 @@ func (a *actions) deliver(ctx context.Context, env actionEnv, method, rawURL str
 	}
 	var last outcome
 	for attempt := 1; attempt <= attempts; attempt++ {
-		status, err := a.guard.Do(ctx, method, target, header, body, requestTimeout)
+		status, excerpt, err := a.guard.Exchange(ctx, method, target, header, body, requestTimeout, maxResponseExcerpt)
 		output := map[string]any{"attempts": attempt}
 		if status != 0 {
 			output["status"] = status
+		}
+		// What a receiver said when it refused the request is the first thing to read when a step fails.
+		if text := responseExcerpt(excerpt); text != "" && (status < 200 || status >= 300) {
+			output["responseBody"] = text
 		}
 		switch {
 		case errors.Is(err, ssrf.ErrTimeout):

@@ -499,6 +499,45 @@ describe("coerceToEmbeddedDataType", () => {
         expect({ candidate, readAccepts }).toStrictEqual({ candidate, readAccepts: rowAccepts });
       }
     });
+
+    test("accepts exactly the strings zod's ISO date and datetime schemas accept", () => {
+      // The read side tests zod's patterns instead of building the schemas, so the survey runtime does not ship zod; this holds the two to the same answers.
+      const schema = z.union([z.iso.date(), z.iso.datetime(), z.iso.datetime({ precision: -1 })]);
+      const corpus = [
+        "2026-08-06",
+        "2024-02-29",
+        "2023-02-29",
+        "2000-02-29",
+        "1900-02-29",
+        "2026-04-31",
+        "2026-08-06T10:30:00Z",
+        "2026-08-06T10:30:00.1Z",
+        "2026-08-06T10:30:00.123456Z",
+        "2026-08-06T10:30Z",
+        "2026-08-06T24:00:00Z",
+        "2026-08-06T10:60Z",
+        "2026-08-06T10:30:60Z",
+        "2026-08-06T10:30:00+02:00",
+        "2026-08-06T10:30:00",
+        "2026-08-06T10:30",
+        "2026-08-06t10:30:00z",
+        "2026-08-06 10:30:00Z",
+        "2026-08-06T10:30:00.Z",
+        "+2026-08-06",
+        "20260806",
+        "2026-8-6",
+        " 2026-08-06",
+        "2026-08-06\n",
+        "",
+      ];
+      for (const candidate of corpus) {
+        const readAccepts = coerceToEmbeddedDataType(candidate, "date") !== undefined;
+        expect({ candidate, readAccepts }).toStrictEqual({
+          candidate,
+          readAccepts: schema.safeParse(candidate).success,
+        });
+      }
+    });
   });
 });
 
@@ -954,6 +993,13 @@ describe("RESERVED_FIELD_CATALOG", () => {
     expect(finishedAt).not.toBeInstanceOf(Date);
   });
 
+  test("finishedAt is unset on a partial response, whose last write is not a finish time", () => {
+    const entry = catalogEntry("finishedAt");
+
+    expect(resolveEmbeddedValue({ entry }, { ...capturedResponse, finished: false })).toBeUndefined();
+    expect("finishedAt" in projectCatalog({ ...capturedResponse, finished: false })).toBe(false);
+  });
+
   test("finished resolves as a boolean and projects as the string the maps can hold", () => {
     const entry = catalogEntry("finished");
 
@@ -972,7 +1018,6 @@ describe("RESERVED_FIELD_CATALOG", () => {
       responseId: sparseResponse.id,
       surveyId: sparseResponse.surveyId,
       startedAt: "2026-08-02T12:00:00.000Z",
-      finishedAt: "2026-08-02T12:00:00.000Z",
     });
   });
 

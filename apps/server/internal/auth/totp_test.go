@@ -31,9 +31,9 @@ func TestCheckTOTPMatchesRFC6238(t *testing.T) {
 		{2000000000, "279037"},
 	}
 	for _, tc := range cases {
-		ok, err := checkTOTP(rfcKey, tc.code, time.Unix(tc.unix, 0), totpWindow{})
-		if err != nil || !ok {
-			t.Errorf("code %s at %d rejected: %v", tc.code, tc.unix, err)
+		step, ok, err := checkTOTP(rfcKey, tc.code, time.Unix(tc.unix, 0), totpWindow{})
+		if err != nil || !ok || step != tc.unix/totpPeriod {
+			t.Errorf("code %s at %d: step %d, %v, %v", tc.code, tc.unix, step, ok, err)
 		}
 	}
 }
@@ -62,14 +62,18 @@ func TestCheckTOTPWindows(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := checkTOTP(rfcKey, at(tc.steps), now, tc.window)
+			step, got, err := checkTOTP(rfcKey, at(tc.steps), now, tc.window)
 			if err != nil || got != tc.want {
 				t.Fatalf("got %v, %v; want %v", got, err, tc.want)
+			}
+			// The matched step is reported, so a replay of it can be refused.
+			if want := now.Unix()/totpPeriod + int64(tc.steps); got && step != want {
+				t.Fatalf("step %d, want %d", step, want)
 			}
 		})
 	}
 	for _, malformed := range []string{"", "12345", "1234567", "abcdef", at(0) + " "} {
-		if ok, _ := checkTOTP(rfcKey, malformed, now, signInWindow); ok {
+		if _, ok, _ := checkTOTP(rfcKey, malformed, now, signInWindow); ok {
 			t.Errorf("malformed code %q accepted", malformed)
 		}
 	}
@@ -79,7 +83,7 @@ func TestCheckTOTPWindows(t *testing.T) {
 func TestCheckTOTPMatchesBetterAuth(t *testing.T) {
 	key := []byte("OfBqWQvwnfdc8grnNxXfX4rYQ76-cBb-")
 	for counter, code := range map[int64]string{0: "697308", 1: "967714", 59_000_000: "730991"} {
-		ok, err := checkTOTP(key, code, time.Unix(counter*totpPeriod, 0), totpWindow{})
+		_, ok, err := checkTOTP(key, code, time.Unix(counter*totpPeriod, 0), totpWindow{})
 		if err != nil || !ok {
 			t.Errorf("Better Auth code %s at step %d rejected: %v", code, counter, err)
 		}

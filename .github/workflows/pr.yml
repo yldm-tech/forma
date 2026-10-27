@@ -27,6 +27,7 @@ jobs:
       helm: ${{ steps.classify.outputs.helm }}
       docker: ${{ steps.classify.outputs.docker }}
       website: ${{ steps.classify.outputs.website }}
+      npm: ${{ steps.classify.outputs.npm }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
@@ -46,7 +47,7 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          outputs=(go ts authzed helm docker website)
+          outputs=(go ts authzed helm docker website npm)
           declare -A on=()
           all() { for output in "${outputs[@]}"; do on[$output]=1; done; }
 
@@ -86,6 +87,10 @@ jobs:
               # The website image: what apps/website/Dockerfile copies.
               case "$path" in
                 package.json | pnpm-lock.yaml | pnpm-workspace.yaml | .node-version | .dockerignore | patches/* | tooling/typescript/* | apps/website/*) on[website]=1 ;;
+              esac
+              # The npm dependency graph pnpm audit reads (the Go scan of the dependency audit follows the go output).
+              case "$path" in
+                package.json | */package.json | pnpm-lock.yaml | pnpm-workspace.yaml | patches/*) on[npm]=1 ;;
               esac
             done < "$changed"
           fi
@@ -235,7 +240,7 @@ jobs:
       - name: Verify the TanStack Router route tree is committed
         run: git diff --exit-code -- apps/web/src/routeTree.gen.ts
 
-      # The two bundles every respondent downloads, weighed right after the build that produced them (tooling/scripts/check-bundle-budget.mjs).
+      # The bundles and the survey page every respondent downloads, weighed right after the build that produced them (tooling/scripts/check-bundle-budget.mjs).
       - name: Check the SDK bundle budgets
         run: vp run bundle:check
 
@@ -347,6 +352,16 @@ jobs:
       forma-image: ${{ needs.changes.outputs.docker == 'true' }}
       website-image: ${{ needs.changes.outputs.website == 'true' }}
 
+  # govulncheck when the Go server changes, pnpm audit when the npm dependencies do; the called workflow skips the other. Its fetches cannot fail it (dependency-audit.yml).
+  dependency-audit:
+    name: Dependency Audit
+    needs: changes
+    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.npm == 'true'
+    uses: ./.github/workflows/dependency-audit.yml
+    with:
+      go: ${{ needs.changes.outputs.go == 'true' }}
+      npm: ${{ needs.changes.outputs.npm == 'true' }}
+
   required:
     name: PR Check Summary
     needs:
@@ -360,6 +375,7 @@ jobs:
       - helm-chart-validation
       - coderabbit-config-validation
       - docker-build-validation
+      - dependency-audit
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -401,6 +417,8 @@ jobs:
             if [ "$outcome" = "skipped" ]; then
               if [ "$job" = "docker-build-validation" ]; then
                 skippable=$([ "$(output docker)" = "false" ] && [ "$(output website)" = "false" ] && echo yes || echo no)
+              elif [ "$job" = "dependency-audit" ]; then
+                skippable=$([ "$(output go)" = "false" ] && [ "$(output npm)" = "false" ] && echo yes || echo no)
               elif [ -n "${gate[$job]:-}" ]; then
                 skippable=$([ "$(output "${gate[$job]}")" = "false" ] && echo yes || echo no)
               else

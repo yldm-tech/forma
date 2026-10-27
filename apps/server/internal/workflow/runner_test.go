@@ -280,6 +280,48 @@ func TestRunWithoutWhitelabelLogo(t *testing.T) {
 	}
 }
 
+// A send_email subject fills its placeholders like the other steps' templates, and a choice answer's choiceId and default label are the same in every language the survey was answered in.
+func TestRunRendersSubjectAndChoiceIDs(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	e.exec(`UPDATE surveys SET blocks = ?::jsonb WHERE id = ?`, `[{"id":"b1","name":"Block","elements":[
+		{"id":"q1","type":"openText","headline":{"default":"Your email?"},"required":false,"inputType":"email"},
+		{"id":"pmf","type":"multipleChoiceSingle","headline":{"default":"How disappointed?","ja":"どのくらい残念?"},"required":false,"choices":[
+			{"id":"very","label":{"default":"Very disappointed","ja":"とても残念"}},{"id":"not","label":{"default":"Not disappointed","ja":"残念ではない"}}]}
+	]}]`, f.survey)
+	en := e.insert(`INSERT INTO languages (workspace_id, code) VALUES (?, 'en') RETURNING id`, f.ws)
+	ja := e.insert(`INSERT INTO languages (workspace_id, code) VALUES (?, 'ja') RETURNING id`, f.ws)
+	e.exec(`INSERT INTO survey_languages (survey_id, language_id, is_default) VALUES (?, ?, true), (?, ?, false)`, f.survey, en, f.survey, ja)
+	rec, url := serve(t, http.StatusOK)
+	def := definition(f.survey, "owner@example.com")
+	email := def["nodes"].([]any)[0].(map[string]any)
+	email["config"].(map[string]any)["subject"] = "NPS {{answers.nps}}: {{answers.pmf.default}} ({{answers.q1}})"
+	notify := httpNode("notify", url+"/hook")
+	notify["config"].(map[string]any)["body"] = `{"choice":"{{answers.pmf.choiceId}}","label":"{{answers.pmf.default}}"}`
+	def["nodes"] = append(def["nodes"].([]any), notify)
+	def["edges"] = append(def["edges"].([]any), map[string]any{"id": "e-notify", "source": "send-email", "target": "notify"})
+	wf := e.enabled(f, "Choices", def)
+
+	for i, tc := range []struct{ language, data string }{
+		{"en", `{"q1":"jane@example.com\r\nBcc: x@evil.example","nps":3,"pmf":"Very disappointed"}`},
+		{"ja", `{"q1":"jane@example.com\r\nBcc: x@evil.example","nps":3,"pmf":"とても残念"}`},
+	} {
+		r := e.respond(f.survey, true, tc.data, nil)
+		e.exec(`UPDATE responses SET language = ? WHERE id = ?`, tc.language, r.ID)
+		run := e.startRun(f, wf, r.ID)
+		if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err != nil {
+			t.Fatalf("%s: %v\n%s", tc.language, err, e.errorLogs())
+		}
+		mails := e.mails("owner@example.com")
+		if len(mails) != i+1 || mails[i].Subject != "NPS 3: Very disappointed (jane@example.com  Bcc: x@evil.example)" {
+			t.Fatalf("%s: mails %+v", tc.language, mails)
+		}
+		if rec.count() != i+1 || rec.bodies[i] != `{"choice":"very","label":"Very disappointed"}` {
+			t.Fatalf("%s: request %v", tc.language, rec.bodies)
+		}
+	}
+}
+
 func TestRunRecipientAllowlistAndRetries(t *testing.T) {
 	e := newEnv(t)
 	f := e.fixture()
@@ -313,11 +355,70 @@ func TestRunRecipientAllowlistAndRetries(t *testing.T) {
 	if s, _ := status(); s != RunFailed || e.count(`SELECT count(*) FROM workflow_runs WHERE id = ? AND finished_at IS NOT NULL`, run) != 1 {
 		t.Fatalf("after the final attempt: %s", s)
 	}
+	// The run records the delivery that finished it, though the retry found it already running.
+	if got := e.count(`SELECT attempt FROM workflow_runs WHERE id = ?`, run); got != 3 {
+		t.Fatalf("attempt %d after the third delivery", got)
+	}
 	if len(e.mails("jane@example.com")) != 1 || len(e.mails("member@example.com")) != 0 {
 		t.Fatalf("sent %+v", e.mail.Messages())
 	}
 	if e.text(`SELECT status FROM workflow_run_logs WHERE run_id = ? AND step_id = 'notify-owner'`, run) != StepFailed {
 		t.Fatal("the refused step is not failed")
+	}
+}
+
+// A member the organization's two-factor requirement refuses (the grace period is over, they sign in with a password and have not enrolled) is neither listed in the recipient picker nor mailed by a run, like a suspended one; an enrolled member and one who can only sign in through SSO still are.
+func TestMembersLeaveOutMembersTheOrganizationRefuses(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	password := func(user uuid.UUID) {
+		e.exec(`INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES (?, 'credential', ?, '$2a$10$hash')`, user, user.String())
+	}
+	unenrolled := e.user("unenrolled@example.com")
+	password(unenrolled)
+	enrolled := e.user("enrolled@example.com")
+	password(enrolled)
+	e.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, '\x00', '\x00', true)`, enrolled)
+	suspended := e.user("suspended@example.com")
+	for _, u := range []uuid.UUID{unenrolled, enrolled, suspended} {
+		e.member(f.org, u, "manager")
+	}
+	e.exec(`UPDATE memberships SET suspended_at = now() WHERE user_id = ?`, suspended)
+	wf := e.enabled(f, "To the unenrolled manager", definition(f.survey, "unenrolled@example.com"))
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() - interval '1 minute' WHERE id = ?`, f.org)
+
+	emails := func() []string {
+		t.Helper()
+		members, err := Members(context.Background(), e.db, f.ws)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, m := range members {
+			out = append(out, m.Email)
+		}
+		slices.Sort(out)
+		return out
+	}
+	// The fixture's owner has no sign-in method at all, which counts as SSO-only.
+	if got, want := emails(), []string{"enrolled@example.com", "owner@example.com"}; !slices.Equal(got, want) {
+		t.Errorf("after the grace period, members %v, want %v", got, want)
+	}
+	r := e.respond(f.survey, true, `{"q1":"jane@example.com"}`, nil)
+	if err := e.enqueuer.EnqueueResponseCompleted(context.Background(), e.event(f, r)); err != nil {
+		t.Fatal(err)
+	}
+	run := e.runFor(wf, r.ID)
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err == nil || err.Error() != "Recipient unenrolled@example.com cannot access this workspace" {
+		t.Fatalf("run to a refused member: %v", err)
+	}
+	if len(e.mails("unenrolled@example.com")) != 0 {
+		t.Fatalf("sent %+v", e.mail.Messages())
+	}
+	// In the grace period the requirement refuses no one yet.
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() + interval '1 day' WHERE id = ?`, f.org)
+	if got, want := emails(), []string{"enrolled@example.com", "owner@example.com", "unenrolled@example.com"}; !slices.Equal(got, want) {
+		t.Errorf("in the grace period, members %v, want %v", got, want)
 	}
 }
 

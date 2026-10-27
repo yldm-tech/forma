@@ -261,3 +261,93 @@ describe("the notification settings", () => {
     expect(redirectOf({ type: "alert" })).toBeNull();
   });
 });
+
+describe("a signed unsubscribe link", () => {
+  const page = (name: string) => `account.unsubscribe_page.${name}`;
+
+  /** The Go server's /api/unsubscribe for one token's switch: GET answers it as stored (or the given failure), POST switches it. No session exists. Records each POST body and every request path. */
+  const stubTokenServer = ({
+    enabled = true,
+    lookupFailure,
+  }: { enabled?: boolean; lookupFailure?: { status: number; code: string } } = {}) => {
+    const subject = { type: "alert", id: "s1", name: "NPS Survey", enabled };
+    const posts: unknown[] = [];
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init: RequestInit = {}) => {
+        requests.push(`${init.method ?? "GET"} ${path}`);
+        if (path === "/api/unsubscribe" && init.method === "POST") {
+          const body = JSON.parse(init.body as string) as { token: string; enabled: boolean };
+          posts.push(body);
+          subject.enabled = body.enabled;
+          return json(200, subject);
+        }
+        if (path === `/api/unsubscribe?token=${encodeURIComponent("tok.en/1")}`) {
+          return lookupFailure
+            ? json(lookupFailure.status, { code: lookupFailure.code, message: "x" })
+            : json(200, subject);
+        }
+        if (path === "/api/app/auth/me") return json(401, { code: "not_authenticated", message: "x" });
+        return json(404, { code: "not_found", message: path });
+      })
+    );
+    return { posts, requests };
+  };
+
+  test("asks before it switches anything, signed out and on a phone, then turns the alert off and back on", async () => {
+    stubScreen(true);
+    const { posts, requests } = stubTokenServer();
+    const router = await renderAt(`/unsubscribe?token=${encodeURIComponent("tok.en/1")}`);
+
+    expect(await heading(i18n.t(page("confirm_alert"), { survey: "NPS Survey" }))).toBeTruthy();
+    expect(router.state.location.pathname).toBe("/unsubscribe");
+    expect(screen.queryByTestId("no-mobile-overlay")).toBeNull();
+    // Opening the link reads it and nothing else: mail scanners open links too.
+    expect(posts).toEqual([]);
+    expect(requests.filter((r) => r.startsWith("POST") || r.startsWith("PATCH"))).toEqual([]);
+
+    fireEvent.click(screen.getByRole("button", { name: i18n.t(key("unsubscribe")) }));
+    expect(await heading(i18n.t(key("unsubscribed")))).toBeTruthy();
+    expect(screen.getByText(i18n.t(key("alert_off"), { survey: "NPS Survey" }))).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: i18n.t(key("undo")) }));
+    expect(await heading(i18n.t(key("resubscribed")))).toBeTruthy();
+    expect(screen.getByText(i18n.t(key("alert_on"), { survey: "NPS Survey" }))).toBeTruthy();
+    expect(posts).toEqual([
+      { token: "tok.en/1", enabled: false },
+      { token: "tok.en/1", enabled: true },
+    ]);
+  });
+
+  test("says a switch already off is off and offers to turn it back on", async () => {
+    stubScreen(false);
+    const { posts } = stubTokenServer({ enabled: false });
+    await renderAt(`/unsubscribe?token=${encodeURIComponent("tok.en/1")}`);
+
+    expect(await heading(i18n.t(key("already_unsubscribed")))).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: i18n.t(key("subscribe_again")) }));
+    expect(await heading(i18n.t(key("resubscribed")))).toBeTruthy();
+    expect(posts).toEqual([{ token: "tok.en/1", enabled: true }]);
+  });
+
+  test("says a link that does not verify is not valid, and one whose survey is gone no longer applies", async () => {
+    stubScreen(true);
+    stubTokenServer({ lookupFailure: { status: 400, code: "invalid_token" } });
+    await renderAt(`/unsubscribe?token=${encodeURIComponent("tok.en/1")}`);
+    expect(await heading(i18n.t(page("invalid_link")))).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    cleanup();
+
+    stubTokenServer({ lookupFailure: { status: 404, code: "not_found" } });
+    await renderAt(`/unsubscribe?token=${encodeURIComponent("tok.en/1")}`);
+    expect(await heading(i18n.t(key("link_no_longer_applies")))).toBeTruthy();
+    expect(screen.getByText(i18n.t(page("link_no_longer_applies_description")))).toBeTruthy();
+    cleanup();
+
+    const { requests } = stubTokenServer();
+    await renderAt("/unsubscribe");
+    expect(await heading(i18n.t(page("invalid_link")))).toBeTruthy();
+    expect(requests.filter((r) => r.includes("/api/unsubscribe"))).toEqual([]);
+  });
+});

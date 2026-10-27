@@ -456,4 +456,8 @@ jobs:
           # no-transform keeps Cloudflare's Web Analytics beacon out of the HTML, but also its compression, so the assets must not carry it. (`set -e` ignores a `!` pipeline, hence the if.)
           if curl -sI "http://localhost:8080$asset" | grep -qiF 'no-transform'; then echo "$asset: no-transform"; exit 1; fi
           curl -sI http://localhost:8080/zh/ | grep -iF "content-security-policy: default-src 'self'"
+          # HSTS with the Go server's value on a page, a 404 and a redirect alike (add_header ... always).
+          for path in / /zh/ /no-such-page /zh /signup "$asset"; do
+            curl -sI "http://localhost:8080$path" | grep -iF 'strict-transport-security: max-age=63072000; includeSubDomains; preload' >/dev/null || { echo "$path: no Strict-Transport-Security"; exit 1; }
+          done
           curl -sI -H 'Accept-Encoding: gzip' "http://localhost:8080$asset" | grep -iF 'content-encoding: gzip'

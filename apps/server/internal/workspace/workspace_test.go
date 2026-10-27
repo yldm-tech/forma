@@ -3,12 +3,14 @@ package workspace
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/scheduling"
@@ -187,7 +189,7 @@ func TestWorkspaceSurveyScheduling(t *testing.T) {
 }
 
 func TestUpdateWorkspace(t *testing.T) {
-	e := newEnv(t)
+	e := newEnv(t, withSurveyDomain)
 	owner, manageTeam, writer := e.user(), e.user(), e.user()
 	org, ws := e.organization(owner)
 	other, _ := e.organization(e.user())
@@ -270,11 +272,37 @@ func TestUpdateWorkspace(t *testing.T) {
 	}
 }
 
+// withSurveyDomain gives the instance a PUBLIC_URL of its own, which custom head scripts need.
+func withSurveyDomain(c *config.Config) {
+	c.PublicURL, _ = url.Parse("http://surveys.example.com")
+}
+
 func TestCustomHeadScriptsAreSelfHostedOnly(t *testing.T) {
-	e := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
+	e := newEnv(t, withSurveyDomain, func(c *config.Config) { c.IsFormaCloud = true })
 	owner := e.user()
 	_, ws := e.organization(owner)
 	e.fails(e.do(owner, http.MethodPatch, wsPath(ws, ""), map[string]any{"customHeadScripts": "<script></script>"}), http.StatusForbidden, apperr.CodeOperationNotAllowed, "")
+}
+
+// Without a PUBLIC_URL on a host of its own the survey pages share the admin origin, so a script there would act as every signed-in visitor: the instance refuses to set one, even for an owner, and tells the operator what to change. Clearing stays possible.
+func TestCustomHeadScriptsNeedASeparateSurveyDomain(t *testing.T) {
+	for name, configure := range map[string]func(*config.Config){
+		"no PUBLIC_URL":                func(*config.Config) {},
+		"PUBLIC_URL on the admin host": func(c *config.Config) { c.PublicURL, _ = url.Parse(webApp) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, configure)
+			owner := e.user()
+			_, ws := e.organization(owner)
+			e.exec(`UPDATE workspaces SET custom_head_scripts = '<script>stored()</script>' WHERE id = ?`, ws)
+			e.fails(e.do(owner, http.MethodPatch, wsPath(ws, ""), map[string]any{"customHeadScripts": "<script></script>"}), http.StatusForbidden, apperr.CodeOperationNotAllowed, "Custom head scripts are turned off on this instance: its survey pages are served on the admin domain, where a script could act as any signed-in user who opens the survey. The operator can turn them on by setting PUBLIC_URL to a separate domain for surveys.")
+			var got Workspace
+			e.ok(e.do(owner, http.MethodPatch, wsPath(ws, ""), map[string]any{"customHeadScripts": nil}), http.StatusOK, &got)
+			if got.CustomHeadScripts != nil {
+				t.Fatalf("clearing left %q", *got.CustomHeadScripts)
+			}
+		})
+	}
 }
 
 func TestDeleteWorkspace(t *testing.T) {
@@ -381,5 +409,39 @@ func TestResolveClientID(t *testing.T) {
 		if got == nil || got.ID != want || got.OrganizationID != org {
 			t.Errorf("ResolveClientID(%.40q) = %+v, want workspace %s of %s", raw, got, want, org)
 		}
+	}
+}
+
+// Creating and deleting a workspace reach SpiceDB before the request answers, with no worker running: the creator opens the new workspace at once, and the deleted one's grants leave no revocation for a worker that may be minutes behind.
+func TestWorkspaceWritesAreProjectedBeforeTheyAnswer(t *testing.T) {
+	e := newEnv(t)
+	owner, member := e.user(), e.user()
+	org, _ := e.organization(owner)
+	e.member(org, member, "member")
+	team := e.insert(`INSERT INTO teams (organization_id, name) VALUES (?, 'Team') RETURNING id`, org)
+	e.exec(`INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'contributor')`, team, member)
+	pending := func() int {
+		return e.count(`SELECT count(*) FROM authz_projection_outbox WHERE processed_at IS NULL`)
+	}
+	can := func(user uuid.UUID, action authz.Action, ws uuid.UUID) bool {
+		ok, err := e.authz.Authorizer.Can(t.Context(), authz.User(user), action, authz.Workspace(ws))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ok
+	}
+
+	var ws Workspace
+	e.ok(e.do(owner, http.MethodPost, orgWorkspaces(org, ""), map[string]any{"name": "Second", "teamIds": []uuid.UUID{team}}), http.StatusCreated, &ws)
+	if n := pending(); n != 0 {
+		t.Fatalf("%d events left for the worker after creating the workspace", n)
+	}
+	if !can(owner, authz.WorkspaceManage, ws.ID) || !can(member, authz.WorkspaceRead, ws.ID) {
+		t.Fatal("the new workspace was not projected before the answer")
+	}
+
+	e.ok(e.do(owner, http.MethodPost, wsPath(ws.ID, "/delete"), map[string]string{"confirmationName": "Second"}), http.StatusOK, nil)
+	if n := pending(); n != 0 {
+		t.Fatalf("%d events left for the worker after deleting the workspace", n)
 	}
 }

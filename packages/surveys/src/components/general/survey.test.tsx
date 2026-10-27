@@ -1,7 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
+import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
+import { hashVerifyToken } from "@/lib/verify-token";
 import { Survey } from "./survey";
 
 const apiClientMocks = vi.hoisted(() => ({
@@ -73,10 +75,14 @@ vi.mock("@/components/general/block-conditional", () => ({
 }));
 
 vi.mock("@/components/wrappers/stacked-cards-container", () => ({
-  StackedCardsContainer: ({ currentBlockId, getCardContent, survey }: any) => {
+  StackedCardsContainer: ({ currentBlockId, getCardContent, survey, cardArrangement }: any) => {
     const blockIndex =
       currentBlockId === "start" ? -1 : survey.blocks.findIndex((block: any) => block.id === currentBlockId);
-    return <div data-testid="survey-root">{getCardContent(blockIndex, 0)}</div>;
+    return (
+      <div data-testid="survey-root" data-card-arrangement={cardArrangement}>
+        {getCardContent(blockIndex, 0)}
+      </div>
+    );
   },
 }));
 
@@ -677,6 +683,97 @@ describe("Survey progress persistence", () => {
     expect(offlineStorageMocks.getSurveyProgress).not.toHaveBeenCalled();
     expect(offlineStorageMocks.saveSurveyProgress).not.toHaveBeenCalled();
   });
+
+  // NF-01: respondent A verified, answered the first card and left; respondent B then opens B's own verification link in the same browser.
+  describe("of a survey that verifies emails", () => {
+    const progressOf = async (token: string | null, snapshot: Record<string, unknown> = {}) =>
+      makeProgress({
+        surveyStateSnapshot: {
+          ...makeProgress().surveyStateSnapshot,
+          responseId: "response-A",
+          ...(token === null ? {} : { verifyTokenHash: await hashVerifyToken(token) }),
+          ...snapshot,
+        },
+      });
+
+    test("goes on where the same verification link left off, and sends the link's token with each update", async () => {
+      offlineStorageMocks.getSurveyProgress.mockResolvedValue(await progressOf("token-A"));
+
+      renderWith({ persistProgress: true, verifyToken: "token-A" });
+
+      fireEvent.click(await screen.findByTestId("submit-block-2"));
+      await waitFor(() =>
+        expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            responseId: "response-A",
+            data: { q2: "block-2-answer" },
+            verifyToken: "token-A",
+          })
+        )
+      );
+      expect(apiClientMocks.createDisplay).not.toHaveBeenCalled();
+      expect(apiClientMocks.createResponse).not.toHaveBeenCalled();
+    });
+
+    test("starts afresh from the first card when the progress was left by another verification link", async () => {
+      offlineStorageMocks.getSurveyProgress.mockResolvedValue(await progressOf("token-A"));
+      const store = storeRows([
+        earlierRow(
+          { responseId: "response-A", verifyTokenHash: await hashVerifyToken("token-A") },
+          { q1: "A-private" }
+        ),
+      ]);
+
+      renderWith({ persistProgress: true, verifyToken: "token-B" });
+
+      await waitFor(() =>
+        expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id)
+      );
+      await waitFor(() => expect(apiClientMocks.createDisplay).toHaveBeenCalled());
+      // A's unsent answer still reaches A's response, without B's token.
+      await waitFor(() => expect(store.rows).toHaveLength(0));
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledTimes(1);
+      expect(apiClientMocks.updateResponse.mock.calls[0][0]).toMatchObject({ responseId: "response-A" });
+      expect(apiClientMocks.updateResponse.mock.calls[0][0].verifyToken).toBeUndefined();
+
+      // B is on the first card, with none of A's answers.
+      expect(screen.queryByTestId("submit-block-2")).toBeNull();
+      fireEvent.click(await screen.findByTestId("submit-block-1"));
+      await waitFor(() =>
+        expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+          expect.objectContaining({ displayId: "display-created", data: { q1: "block-1-answer" } })
+        )
+      );
+      expect(offlineStorageMocks.saveSurveyProgress).toHaveBeenCalledWith(
+        expect.objectContaining({
+          responseData: { q1: "block-1-answer" },
+          surveyStateSnapshot: expect.objectContaining({ verifyTokenHash: await hashVerifyToken("token-B") }),
+        })
+      );
+    });
+
+    test("does not go on with progress stored before the link was recorded", async () => {
+      offlineStorageMocks.getSurveyProgress.mockResolvedValue(await progressOf(null));
+
+      renderWith({ persistProgress: true, verifyToken: "token-B" });
+
+      await waitFor(() =>
+        expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id)
+      );
+      expect(await screen.findByTestId("submit-block-1")).toBeTruthy();
+    });
+
+    test("a page without a verification link does not go on with a verified respondent's progress", async () => {
+      offlineStorageMocks.getSurveyProgress.mockResolvedValue(await progressOf("token-A"));
+
+      renderWith({ persistProgress: true });
+
+      await waitFor(() =>
+        expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id)
+      );
+      expect(await screen.findByTestId("submit-block-1")).toBeTruthy();
+    });
+  });
 });
 
 // R-01 and R-02: the answers a respondent gives reach the server even when the host re-renders the survey or the connection drops for a while.
@@ -1032,5 +1129,47 @@ describe("Survey scoring", () => {
     const finalUpdate = sent().find(([update]) => update.finished === true)![0];
     expect(finalUpdate.variables).toEqual({ scorevariable00000000000: 5, othervariable00000000000: 1 });
     expect(sent().map(([update]) => update.variables?.scorevariable00000000000)).not.toContain(7);
+  });
+});
+
+describe("Survey card arrangement", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    apiClientMocks.createDisplay.mockResolvedValue({ ok: true, data: { id: "display-created" } });
+    window.parent.postMessage = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  const renderWith = (type: "link" | "app", styling: Record<string, unknown>) =>
+    render(
+      <Survey
+        survey={{ ...baseSurvey, type } as TJsWorkspaceStateSurvey}
+        styling={styling as any}
+        isBrandingEnabled={false}
+        languageCode="en"
+        isSpamProtectionEnabled={false}
+      />
+    );
+
+  // The admin forms start from the same constant (apps/web/src/lib/styling.test.ts), so a form saved without touching the arrangement keeps what respondents already see.
+  test.each(["link", "app"] as const)(
+    "a %s survey without a stored arrangement renders the shared default",
+    async (type) => {
+      renderWith(type, {});
+      const root = await screen.findByTestId("survey-root");
+      const expected =
+        type === "link" ? DEFAULT_CARD_ARRANGEMENT.linkSurveys : DEFAULT_CARD_ARRANGEMENT.appSurveys;
+      expect(root.getAttribute("data-card-arrangement")).toBe(expected);
+      expect(root.getAttribute("data-card-arrangement")).toBe("straight");
+    }
+  );
+
+  test("a stored arrangement wins over the default", async () => {
+    renderWith("link", { cardArrangement: { linkSurveys: "cardless", appSurveys: "simple" } });
+    const root = await screen.findByTestId("survey-root");
+    expect(root.getAttribute("data-card-arrangement")).toBe("cardless");
   });
 });

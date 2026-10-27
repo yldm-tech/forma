@@ -265,6 +265,8 @@ const EditOrganizationSettingsForm = ({ organization }: { organization: Organiza
 
 /**
  * forma2's AISettingsToggle: owners and managers switch AI smart tools on and off. AI needs a provider configured on the instance; without one the toggle reads off, cannot be used, and says why.
+ *
+ * Under it, the "Allow AI to read responses" switch, which forma2 did not have: features that send respondents' answers to the AI provider (the open-text summary) need it on as well as AI. It is independent of the AI switch and of the instance's provider, so owners and managers can decide it before turning AI on; everyone else sees both read-only.
  */
 const AISettingsToggle = ({ organization }: { organization: OrganizationDetail }) => {
   const { t } = useTranslation();
@@ -276,19 +278,25 @@ const AISettingsToggle = ({ organization }: { organization: OrganizationDetail }
   const enabled = isInstanceConfigured && organization.isAISmartToolsEnabled;
   const blockedMessage = t("workspace.settings.general.ai_instance_not_configured");
 
-  const toggle = async (checked: boolean) => {
-    if (checked && !isInstanceConfigured) {
-      toast.error(blockedMessage);
-      return;
-    }
+  const save = async (
+    change: { isAISmartToolsEnabled: boolean } | { isAIResponseReadingEnabled: boolean }
+  ) => {
     try {
-      await update.mutateAsync({ isAISmartToolsEnabled: checked });
+      await update.mutateAsync(change);
       toast.success(t("workspace.settings.general.ai_settings_updated_successfully"));
     } catch (error) {
       toast.error(errorMessage(t, error));
     }
     await queryClient.invalidateQueries({ queryKey: organizationKeys.detail(organization.id) });
     await queryClient.invalidateQueries({ queryKey: aiKeys.organization(organization.id) });
+  };
+
+  const toggle = async (checked: boolean) => {
+    if (checked && !isInstanceConfigured) {
+      toast.error(blockedMessage);
+      return;
+    }
+    await save({ isAISmartToolsEnabled: checked });
   };
 
   return (
@@ -312,6 +320,24 @@ const AISettingsToggle = ({ organization }: { organization: OrganizationDetail }
           </p>
           <p className="text-xs text-slate-600">
             {t("workspace.settings.general.ai_smart_tools_enabled_description")}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-x-4">
+        <Switch
+          id="ai-response-reading-toggle"
+          aria-labelledby="ai-response-reading-title"
+          aria-describedby="ai-response-reading-description"
+          checked={organization.isAIResponseReadingEnabled}
+          disabled={!canEdit || update.isPending}
+          onCheckedChange={(checked) => void save({ isAIResponseReadingEnabled: checked })}
+        />
+        <div>
+          <p id="ai-response-reading-title" className="text-sm font-semibold text-slate-800">
+            {t("workspace.settings.general.ai_response_reading_enabled")}
+          </p>
+          <p id="ai-response-reading-description" className="text-xs text-slate-600">
+            {t("workspace.settings.general.ai_response_reading_enabled_description")}
           </p>
         </div>
       </div>

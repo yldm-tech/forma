@@ -7,7 +7,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { i18n as I18n } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
@@ -32,6 +32,7 @@ beforeAll(async () => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  patches = [];
 });
 
 const organization: OrganizationDetail = {
@@ -40,6 +41,7 @@ const organization: OrganizationDetail = {
   updatedAt: "2026-01-01T00:00:00Z",
   name: "Acme",
   isAISmartToolsEnabled: false,
+  isAIResponseReadingEnabled: true,
   displayTimeZone: null,
   surveySchedulingTimeZone: null,
   surveyScheduling: {
@@ -55,6 +57,9 @@ const organization: OrganizationDetail = {
   twoFactorStatus: "enabled",
   twoFactorBlocked: false,
 };
+
+/** The bodies of the organization updates the page sent. */
+let patches: Partial<OrganizationDetail>[] = [];
 
 /** The server behind the page's other cards. */
 const stubServer = () =>
@@ -75,6 +80,14 @@ const stubServer = () =>
         "GET /api/app/auth/me": { id: "u1", name: "Grace" },
         "GET /api/app/auth/options": { smtpConfigured: true },
       };
+      if (key === `PATCH ${API}`) {
+        const patch = JSON.parse(init.body as string) as Partial<OrganizationDetail>;
+        patches.push(patch);
+        return new Response(JSON.stringify({ ...organization, ...patch }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
       if (!(key in answers)) throw new Error(`unexpected ${key}`);
       return new Response(JSON.stringify(answers[key]), {
         status: 200,
@@ -221,6 +234,33 @@ describe("OrganizationGeneralPage", () => {
     expect(menu.textContent).toContain(unlisted);
     const description = document.getElementById(menu.getAttribute("aria-describedby") ?? "");
     expect(description?.textContent).toContain("00:00");
+  });
+
+  // Decision D1: features that send answers to the AI provider need their own switch, which owners and managers set even before AI is on.
+  test("a manager switches off AI reading responses, under the AI switch", async () => {
+    renderPage({ storageConfigured: true, isFormaCloud: false, role: "manager" });
+    const reading = await screen.findByRole("switch", {
+      name: t("workspace.settings.general.ai_response_reading_enabled"),
+    });
+    expect(reading.getAttribute("aria-checked")).toBe("true");
+    expect(reading.hasAttribute("disabled")).toBe(false);
+    expect(reading.getAttribute("aria-describedby")).toBe("ai-response-reading-description");
+    fireEvent.click(reading);
+    await waitFor(() => expect(patches).toEqual([{ isAIResponseReadingEnabled: false }]));
+  });
+
+  test("a member sees the reading switch but cannot change it", async () => {
+    renderPage({
+      storageConfigured: true,
+      isFormaCloud: false,
+      role: "member",
+      overrides: { isAIResponseReadingEnabled: false },
+    });
+    const reading = await screen.findByRole("switch", {
+      name: t("workspace.settings.general.ai_response_reading_enabled"),
+    });
+    expect(reading.getAttribute("aria-checked")).toBe("false");
+    expect(reading.hasAttribute("disabled")).toBe(true);
   });
 
   test("a manager edits the page and is told only owners delete the organization", async () => {

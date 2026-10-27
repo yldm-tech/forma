@@ -166,7 +166,7 @@ describe("SurveyPageApp", () => {
         surveyClosedMessage: null,
         workspace: { linkSurveyBranding: true },
       },
-      heading: "Survey Paused",
+      heading: "Survey paused",
       description: "This survey is temporarily paused.",
       cta: true,
       logo: true,
@@ -185,7 +185,7 @@ describe("SurveyPageApp", () => {
     },
     {
       inactive: { status: "completed", isScheduled: false, surveyClosedMessage: null, workspace: null },
-      heading: "Survey Completed",
+      heading: "Survey closed",
       description: "This survey is closed.",
       cta: true,
       logo: true,
@@ -240,6 +240,19 @@ describe("SurveyPageApp", () => {
         "This survey accepts one response per email address, and one has already been submitted with this address.",
       cta: false,
       logo: true,
+    },
+    {
+      inactive: {
+        status: "link in use",
+        isScheduled: false,
+        surveyClosedMessage: null,
+        workspace: { linkSurveyBranding: false },
+      },
+      heading: "This link is already in use",
+      description:
+        "A response to this link has already been started, and not with the email address you verified. Only the person who started it can continue.",
+      cta: false,
+      logo: false,
     },
   ] as const)(
     "inactive: $inactive.status, scheduled $inactive.isScheduled",
@@ -505,6 +518,66 @@ describe("the survey", () => {
     act(() => lastRender().onLanguageChange?.("ar"));
     await waitFor(() => expect(document.documentElement.getAttribute("dir")).toBe("rtl"));
     expect(document.documentElement.getAttribute("lang")).toBe("ar");
+  });
+});
+
+// The survey's title the server paints over a survey page before the bundles run (lib/first-paint.ts).
+describe("the server's first paint", () => {
+  const firstPaint = () => document.getElementById("forma-first-paint");
+
+  beforeEach(() => {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      `<div id="forma-first-paint"><p dir="auto">Feedback</p></div>`
+    );
+  });
+  afterEach(() => {
+    firstPaint()?.remove();
+  });
+
+  test("stays over the survey until its first card has rendered, then fades out", async () => {
+    // The runtime draws the card into its container; the page's overlay waits for that.
+    renderSurvey.mockImplementation(({ containerId }) => {
+      document.getElementById(containerId ?? "")?.append(document.createElement("div"));
+    });
+    renderPage({ view: "survey", locale: "en-US", survey: surveyProps() });
+    expect(firstPaint()).not.toBeNull();
+    // The page's own overlay sits under it without its branding or spinner, which would show through the fade.
+    expect(screen.queryByText("powered by")).toBeNull();
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    await waitFor(() => expect(firstPaint()).toBeNull());
+  });
+
+  test("never covers another screen", () => {
+    renderPage({
+      view: "inactive",
+      locale: "en-US",
+      inactive: { status: "paused", isScheduled: false, surveyClosedMessage: null, workspace: null },
+    });
+    expect(firstPaint()).toBeNull();
+  });
+
+  test("never covers the screen of a browser that has already answered", () => {
+    globalThis.localStorage.setItem("forma:responded:survey-1", "1");
+    try {
+      renderPage({
+        view: "survey",
+        locale: "en-US",
+        survey: surveyProps({ survey: publicSurvey({ isSingleResponsePerBrowserEnabled: true }) }),
+        browserLimit: { surveyId: "survey-1", workspace: { linkSurveyBranding: false } },
+      });
+      expect(firstPaint()).toBeNull();
+    } finally {
+      // hasRespondedInBrowser restores the cookie from the stored mark.
+      globalThis.localStorage.clear();
+      document.cookie = "forma_responded_survey-1=; Max-Age=0; Path=/s/survey-1";
+    }
+  });
+
+  test("a page without it keeps the overlay's own branding", () => {
+    firstPaint()?.remove();
+    renderPage({ view: "survey", locale: "en-US", survey: surveyProps() });
+    expect(screen.getByText("powered by")).toBeTruthy();
   });
 });
 

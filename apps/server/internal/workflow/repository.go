@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 
-	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
+	"github.com/yldm-tech/forma/apps/server/internal/recipient"
 )
 
 // Workflow statuses, forma2's ZWorkflowStatus.
@@ -72,13 +72,15 @@ type Run struct {
 	Attempt           int
 	NextAttemptAt     *time.Time
 	LastErrorAt       *time.Time
-	TriggerPayload    json.RawMessage
-	Data              json.RawMessage
-	Error             *string
-	DispatchedAt      *time.Time
-	StartedAt         *time.Time
-	FinishedAt        *time.Time
-	Logs              []RunLog `gorm:"-"`
+	// ContinuedFailureCount is how many failed steps a completed run went on past, its steps being set to continue on failure; 0 for a run that did not complete.
+	ContinuedFailureCount int
+	TriggerPayload        json.RawMessage
+	Data                  json.RawMessage
+	Error                 *string
+	DispatchedAt          *time.Time
+	StartedAt             *time.Time
+	FinishedAt            *time.Time
+	Logs                  []RunLog `gorm:"-"`
 }
 
 // RunLog is a workflow_run_logs row: one step of a run.
@@ -112,7 +114,8 @@ func isUniqueViolation(err error) bool {
 
 const workflowColumns = `w.id, w.created_at, w.updated_at, w.workspace_id, w.created_by, u.name AS creator_name, w.name, w.description, w.status, w.definition`
 
-const runSummaryColumns = `r.id, r.created_at, r.updated_at, r.workflow_id, r.workspace_id, r.workflow_version_id, r.response_id, r.survey_id, r.status, r.trigger_type, r.is_dry_run, r.idempotency_key, r.attempt, r.next_attempt_at, r.last_error_at, r.error, r.dispatched_at, r.started_at, r.finished_at`
+const runSummaryColumns = `r.id, r.created_at, r.updated_at, r.workflow_id, r.workspace_id, r.workflow_version_id, r.response_id, r.survey_id, r.status, r.trigger_type, r.is_dry_run, r.idempotency_key, r.attempt, r.next_attempt_at, r.last_error_at, r.error, r.dispatched_at, r.started_at, r.finished_at,
+	CASE WHEN r.status = 'completed' THEN (SELECT count(*) FROM workflow_run_logs l WHERE l.run_id = r.id AND l.status = 'failed') ELSE 0 END AS continued_failure_count`
 
 // byID loads a workflow with its newest run and run count; nil when there is none.
 func (r *Repository) byID(ctx context.Context, id uuid.UUID) (*Workflow, error) {
@@ -335,42 +338,21 @@ func (r *Repository) surveyEndings(ctx context.Context, surveyID, workspaceID uu
 }
 
 // Member is someone who can access a workspace, as the send_email recipient picker lists them.
-type Member struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
+type Member = recipient.Member
 
-// Members is forma2's getWorkspaceMembers: the active, unsuspended users of the workspace's organization who are its owners or managers, or who are on a team with access to the workspace.
+// Members is the workspace's members, recipient.Members.
 func Members(ctx context.Context, db *gorm.DB, workspaceID uuid.UUID) ([]Member, error) {
-	var rows []Member
-	if err := db.WithContext(ctx).Raw(`SELECT u.name, u.email FROM memberships m
-		JOIN workspaces w ON w.organization_id = m.organization_id
-		JOIN users u ON u.id = m.user_id
-		WHERE w.id = ? AND u.is_active AND m.suspended_at IS NULL AND u.email <> ''
-		AND (m.role IN ('owner', 'manager') OR EXISTS (
-			SELECT 1 FROM team_members tm JOIN workspace_teams wt ON wt.team_id = tm.team_id WHERE tm.user_id = u.id AND wt.workspace_id = w.id))
-		ORDER BY u.name, u.email`, workspaceID).Scan(&rows).Error; err != nil {
-		return nil, fmt.Errorf("load workspace members: %w", err)
-	}
-	return rows, nil
+	return recipient.Members(ctx, db, workspaceID)
 }
 
 // normalizeEmail is forma2's normalizeEmailForComparison.
 func normalizeEmail(email string) string {
-	return strings.ToLower(jsvalue.Trim(email))
+	return recipient.Normalize(email)
 }
 
-// MemberEmails is forma2's getWorkspaceMemberEmails: the recipient allowlist of send_email, normalized for comparison.
+// MemberEmails is the recipient allowlist of send_email, recipient.Allowlist.
 func MemberEmails(ctx context.Context, db *gorm.DB, workspaceID uuid.UUID) (map[string]bool, error) {
-	members, err := Members(ctx, db, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[string]bool, len(members))
-	for _, m := range members {
-		out[normalizeEmail(m.Email)] = true
-	}
-	return out, nil
+	return recipient.Allowlist(ctx, db, workspaceID)
 }
 
 // organizationOf is the workspace's organization, for audit events.

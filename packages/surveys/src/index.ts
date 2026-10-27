@@ -1,3 +1,4 @@
+import "@/lib/zod-jitless";
 import { h, render } from "preact";
 import { SurveyContainerProps } from "@forma/types/forma-surveys";
 import { RenderSurvey } from "@/components/general/render-survey";

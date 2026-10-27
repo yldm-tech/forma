@@ -20,6 +20,8 @@ export interface AuthOptions {
   privacyUrl?: string;
   /** Forma Cloud offers the product update emails at sign-up instead of the security ones. */
   isFormaCloud: boolean;
+  /** Whether reCAPTCHA keys are configured, so the survey editor offers spam protection. */
+  spamProtectionAvailable: boolean;
 }
 
 /** GET /api/app/auth/me. */
@@ -109,7 +111,7 @@ export const authApi = {
   startSSO: (provider: SSOProvider, callbackUrl: string) =>
     api.post<{ url: string }>("/api/app/auth/sso/sign-in", { provider, callbackUrl }),
   completeSSORecovery: (token: string) =>
-    api.post<{ redirectUrl: string }>("/api/app/auth/sso/recovery/complete", { token }),
+    api.post<{ redirectUrl: string; status: SignInStatus }>("/api/app/auth/sso/recovery/complete", { token }),
   inspectInvite: (token: string) => api.post<InviteInspection>("/api/app/invites/inspect", { token }),
   acceptInvite: (token: string) => api.post<{ organizationId: string }>("/api/app/invites/accept", { token }),
 };
