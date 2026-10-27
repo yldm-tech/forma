@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/cn";
 import { LoadingSpinner } from "../../components/ui/loading-spinner";
 import { Wordmark } from "../../components/ui/logo";
+import { fadeOutFirstPaint, hasFirstPaint } from "../lib/first-paint";
 
 /**
  * How long the overlay is held even when everything is ready. Its only job is to stop a flash on a fast connection; anything longer is time a respondent spends looking at a spinner over a question that has already rendered.
@@ -17,7 +18,7 @@ interface SurveyLoadingAnimationProps {
   isBrandingEnabled: boolean;
 }
 
-/** forma2's SurveyLoadingAnimation: a white overlay over the survey until the runtime has rendered its first card and that card's media has loaded. */
+/** forma2's SurveyLoadingAnimation: a white overlay over the survey until the runtime has rendered its first card and that card's media has loaded. Where the server painted the survey's title over the page (lib/first-paint.ts), that paint is the overlay respondents see: this one keeps only its white, under it, and fades the paint out with itself. */
 export const SurveyLoadingAnimation = ({
   isWelcomeCardEnabled,
   isBackgroundLoaded = true,
@@ -30,6 +31,8 @@ export const SurveyLoadingAnimation = ({
   const isReadyToTransition = isMediaLoaded && minTimePassed && isBackgroundLoaded;
   const overlayRef = useRef<HTMLDivElement>(null);
   const cardId = isWelcomeCardEnabled ? `questionCard--1` : `questionCard-0`;
+  // Read on mount: once faded, the paint is gone from the page.
+  const [isUnderFirstPaint] = useState(() => hasFirstPaint());
 
   // Every image in the first card must have loaded.
   const checkMediaLoaded = useCallback(() => {
@@ -77,6 +80,7 @@ export const SurveyLoadingAnimation = ({
       setIsHidden(false);
       return;
     }
+    fadeOutFirstPaint(OVERLAY_FADE_MS);
     const overlay = overlayRef.current;
     if (!overlay) {
       setIsHidden(true);
@@ -130,13 +134,13 @@ export const SurveyLoadingAnimation = ({
           "flex flex-col items-center space-y-4 transition-opacity duration-300",
           isReadyToTransition ? "opacity-0" : "opacity-100"
         )}>
-        {isBrandingEnabled && (
+        {isBrandingEnabled && !isUnderFirstPaint && (
           <div className="flex flex-col items-center gap-1">
             <span className="text-xs tracking-wide text-slate-500">powered by</span>
             <Wordmark className="text-3xl md:text-4xl" />
           </div>
         )}
-        <LoadingSpinner />
+        {!isUnderFirstPaint && <LoadingSpinner />}
       </div>
     </div>
   );

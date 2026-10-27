@@ -522,6 +522,66 @@ describe("the survey", () => {
 });
 
 // D-FG03: a survey that takes one response per browser remembers, once the final answer is in, that this browser answered, and shows "already responded" on the next visit.
+// The survey's title the server paints over a survey page before the bundles run (lib/first-paint.ts).
+describe("the server's first paint", () => {
+  const firstPaint = () => document.getElementById("forma-first-paint");
+
+  beforeEach(() => {
+    document.body.insertAdjacentHTML(
+      "afterbegin",
+      `<div id="forma-first-paint"><p dir="auto">Feedback</p></div>`
+    );
+  });
+  afterEach(() => {
+    firstPaint()?.remove();
+  });
+
+  test("stays over the survey until its first card has rendered, then fades out", async () => {
+    // The runtime draws the card into its container; the page's overlay waits for that.
+    renderSurvey.mockImplementation(({ containerId }) => {
+      document.getElementById(containerId ?? "")?.append(document.createElement("div"));
+    });
+    renderPage({ view: "survey", locale: "en-US", survey: surveyProps() });
+    expect(firstPaint()).not.toBeNull();
+    // The page's own overlay sits under it without its branding or spinner, which would show through the fade.
+    expect(screen.queryByText("powered by")).toBeNull();
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    await waitFor(() => expect(firstPaint()).toBeNull());
+  });
+
+  test("never covers another screen", () => {
+    renderPage({
+      view: "inactive",
+      locale: "en-US",
+      inactive: { status: "paused", isScheduled: false, surveyClosedMessage: null, workspace: null },
+    });
+    expect(firstPaint()).toBeNull();
+  });
+
+  test("never covers the screen of a browser that has already answered", () => {
+    globalThis.localStorage.setItem("forma:responded:survey-1", "1");
+    try {
+      renderPage({
+        view: "survey",
+        locale: "en-US",
+        survey: surveyProps({ survey: publicSurvey({ isSingleResponsePerBrowserEnabled: true }) }),
+        browserLimit: { surveyId: "survey-1", workspace: { linkSurveyBranding: false } },
+      });
+      expect(firstPaint()).toBeNull();
+    } finally {
+      // hasRespondedInBrowser restores the cookie from the stored mark.
+      globalThis.localStorage.clear();
+      document.cookie = "forma_responded_survey-1=; Max-Age=0; Path=/s/survey-1";
+    }
+  });
+
+  test("a page without it keeps the overlay's own branding", () => {
+    firstPaint()?.remove();
+    renderPage({ view: "survey", locale: "en-US", survey: surveyProps() });
+    expect(screen.getByText("powered by")).toBeTruthy();
+  });
+});
+
 describe("one response per browser", () => {
   const MARK_KEY = "forma:responded:survey-1";
   const COOKIE = "forma_responded_survey-1";

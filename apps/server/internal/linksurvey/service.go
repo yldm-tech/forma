@@ -68,6 +68,8 @@ type page struct {
 	State  pageState
 	// RuntimeLanguage is the survey language code the respondent runtime renders a survey view in (its getI18nLanguage): LanguageCode, with "default" read as the default language's code. The handler preloads the runtime's translations for it.
 	RuntimeLanguage string
+	// FirstPaintTitle is the title painted over a survey view until the survey has rendered (firstpaint.go); empty paints nothing.
+	FirstPaintTitle string
 	// CustomScripts reports whether the page runs the workspace's or the survey's custom head scripts (CustomScriptsInjector), arbitrary HTML that their owner may write inline or load from any host; the handler then keeps the permissive policy every response gets instead of the survey pages' own (Handler.policy).
 	CustomScripts bool
 }
@@ -228,7 +230,8 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 		return page{}, err
 	}
 	// The title follows the language the survey opens in, negotiated from the browser when the link names none.
-	md := basicSurveyMetadata(sv, metadataLanguage(q.get("lang"), acceptLanguage, sv.Languages), s.cfg.IsFormaCloud)
+	mdLang := metadataLanguage(q.get("lang"), acceptLanguage, sv.Languages)
+	md := basicSurveyMetadata(sv, mdLang, s.cfg.IsFormaCloud)
 	h := pageHead(s.publicDomain(), sv, md, brandColor(wc.Workspace.Styling, sv.Styling), wc.whitelabel().FaviconURL, linkViewport, true)
 
 	singleUseID := ""
@@ -257,6 +260,9 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 		return notFound, err
 	}
 	p.Head = h
+	if p.State.View == viewSurvey {
+		p.FirstPaintTitle = firstPaintTitle(sv, mdLang)
+	}
 	return p, err
 }
 
@@ -564,6 +570,10 @@ func (s *Service) contactPage(ctx context.Context, token string, q query, accept
 		return notFound, err
 	}
 	p.Head = h
+	// The head keeps forma2's default-language metadata; the first paint follows the language the survey opens in, as on /s.
+	if p.State.View == viewSurvey {
+		p.FirstPaintTitle = firstPaintTitle(sv, metadataLanguage(q.get("lang"), acceptLanguage, sv.Languages))
+	}
 	return p, err
 }
 
