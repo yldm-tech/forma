@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
-import { PLAIN_SCRIPT_ID, PLAIN_SCRIPT_SRC, PlainChat, type PlainSession } from "./plain-chat";
+import { PLAIN_SCRIPT_ID, PLAIN_SCRIPT_SRC, PlainChat, type PlainSession, plainSessionQuery } from "./plain-chat";
 
 afterEach(() => {
   cleanup();
@@ -36,8 +36,29 @@ const renderChat = (answer: Response) => {
 // forma2's app layout mounted PlainChat only when PLAIN_APP_ID was set.
 describe("PlainChat", () => {
   test("loads nothing when the server has no Plain app", async () => {
-    const fetch = renderChat(json(404, { code: "not_found", message: "Plain chat not found" }));
+    const fetch = renderChat(new Response(null, { status: 204 }));
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/app/plain/session", expect.anything()));
+    expect(document.getElementById(PLAIN_SCRIPT_ID)).toBeNull();
+  });
+
+  // A 204 is the session query's null, not a failed query: undefined data would make TanStack Query log an error and refetch.
+  test("reads a 204 as no session", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 204 }))
+    );
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    await expect(queryClient.fetchQuery(plainSessionQuery)).resolves.toBeNull();
+  });
+
+  // A server from before the 204 answered 404 when Plain was not configured.
+  test("still reads an older server's 404 as no session", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(404, { code: "not_found", message: "Plain chat not found" }))
+    );
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    await expect(queryClient.fetchQuery(plainSessionQuery)).resolves.toBeNull();
     expect(document.getElementById(PLAIN_SCRIPT_ID)).toBeNull();
   });
 

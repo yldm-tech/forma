@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"image/png"
 	"io"
 	"log/slog"
 	"net"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -426,6 +428,46 @@ func TestRenderOrganizationLogo(t *testing.T) {
 	}
 	if !strings.Contains(html, "utm_campaign=email_logo") {
 		t.Fatalf("Forma's logo URL was treated as a custom logo:\n%s", html)
+	}
+}
+
+// Forma's logo is drawn in a box of fixed width and height, in the aspect ratio of apps/web/public/logo-transparent.png, so no client stretches it or leaves the transparent margin of a square canvas above the card: Outlook ignores max-height and object-fit, and sizes an image only by its width and height attributes.
+func TestRenderFormaLogoSize(t *testing.T) {
+	t.Parallel()
+	f, err := os.Open(filepath.Join(repotest.Root(t), "apps/web/public/logo-transparent.png"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	asset, err := png.DecodeConfig(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := newMailer(t, baseConfig(), nil)
+	img := regexp.MustCompile(`<img alt="Logo" src="https://forma\.yldm\.ai/logo-transparent\.png"[^>]*>`)
+	size := regexp.MustCompile(`width="(\d+)" height="(\d+)"`)
+	for _, content := range everyTemplate {
+		_, html, err := m.Render("en-US", content)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tag := img.FindString(html)
+		match := size.FindStringSubmatch(tag)
+		if match == nil {
+			t.Fatalf("%T: Forma's logo has no width and height attributes: %q", content, tag)
+		}
+		width, _ := strconv.Atoi(match[1])
+		height, _ := strconv.Atoi(match[2])
+		if height > 48 || width > 240 {
+			t.Errorf("%T: logo drawn at %dx%d, want at most 240x48", content, width, height)
+		}
+		// The drawn box keeps the file's aspect ratio to within a pixel.
+		if want := width * asset.Height / asset.Width; height < want-1 || height > want+1 {
+			t.Errorf("%T: logo drawn at %dx%d, but the file is %dx%d", content, width, height, asset.Width, asset.Height)
+		}
+		if !strings.Contains(tag, fmt.Sprintf("width:%dpx;height:%dpx", width, height)) {
+			t.Errorf("%T: the logo's CSS size does not match its attributes: %q", content, tag)
+		}
 	}
 }
 
