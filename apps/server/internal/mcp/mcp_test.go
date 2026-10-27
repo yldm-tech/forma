@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
 
+	formaauth "github.com/yldm-tech/forma/apps/server/internal/auth"
 	"github.com/yldm-tech/forma/apps/server/internal/oauthserver"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 )
@@ -232,15 +234,15 @@ func TestToolsAreAuthorizedPerWorkspace(t *testing.T) {
 	}
 }
 
-// Tokens /api/mcp must not honour: minted for another resource server (alone or besides this one), without a subject, of an inactive user, expired. All get the same 401 and challenge; the UserInfo audience the server adds for openid is accepted.
+// Tokens /api/mcp must not honour: minted for another resource server (alone or besides this one), without a subject, of an inactive user, expired, not on record. All get the same 401 and challenge; the UserInfo audience the server adds for openid is accepted.
 func TestOAuthTokenChecks(t *testing.T) {
 	e := newEnv(t)
 	f := e.fixture()
-	e.accessToken(f.owner, "surveys:read") // creates the signing key
+	jti := tokenID(t, e.accessToken(f.owner, "surveys:read")) // also creates the signing key
 	issuer := e.url("/api/auth")
 	resource := e.url("/api/mcp")
 	claims := func(change func(map[string]any)) string {
-		c := map[string]any{"iss": issuer, "sub": f.owner.String(), "aud": []string{resource}, "exp": time.Now().Add(time.Minute).Unix(), "iat": time.Now().Unix(), "scope": "surveys:read", "azp": "client"}
+		c := map[string]any{"iss": issuer, "sub": f.owner.String(), "aud": []string{resource}, "exp": time.Now().Add(time.Minute).Unix(), "iat": time.Now().Unix(), "scope": "surveys:read", "azp": "client", "jti": jti}
 		change(c)
 		return e.sign(c)
 	}
@@ -260,6 +262,8 @@ func TestOAuthTokenChecks(t *testing.T) {
 		"no audience":              {claims(func(c map[string]any) { delete(c, "aud") }), "Invalid OAuth access token"},
 		"no subject":               {claims(func(c map[string]any) { delete(c, "sub") }), "User OAuth access token required"},
 		"an unknown subject":       {claims(func(c map[string]any) { c["sub"] = uuid.NewString() }), "Invalid OAuth access token"},
+		"an unknown token id":      {claims(func(c map[string]any) { c["jti"] = uuid.NewString() }), "Invalid OAuth access token"},
+		"no token id":              {claims(func(c map[string]any) { delete(c, "jti") }), "Invalid OAuth access token"},
 		"expired":                  {claims(func(c map[string]any) { c["exp"] = time.Now().Add(-time.Second).Unix() }), "Invalid OAuth access token"},
 		"another issuer":           {claims(func(c map[string]any) { c["iss"] = "https://evil.example.com/api/auth" }), "Invalid OAuth access token"},
 		"garbage":                  {"not-a-token", "Invalid OAuth access token"},
@@ -279,6 +283,46 @@ func TestOAuthTokenChecks(t *testing.T) {
 	if recs := e.logs.records(t, "MCP OAuth authentication failed"); len(recs) == 0 || recs[0]["failure_source"] != "token_verification" {
 		t.Fatalf("log %v", recs)
 	}
+}
+
+// A password reset, signing out other sessions, a second-factor change and deactivation revoke the user's OAuth grants (auth.RevokeOAuthGrants); /api/mcp refuses an access token from then on rather than until it expires. Another user's token keeps working.
+func TestRevokedOAuthToken(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	token := e.accessToken(f.owner, "surveys:read")
+	others := e.accessToken(f.outsider, "surveys:read")
+	if res, _ := e.rpc(bearer(token), "tools/list", map[string]any{}); res.StatusCode != http.StatusOK {
+		t.Fatalf("before revocation: %d", res.StatusCode)
+	}
+	if _, err := formaauth.RevokeOAuthGrants(t.Context(), e.db, f.owner); err != nil {
+		t.Fatal(err)
+	}
+	if res, out := e.rpc(bearer(token), "tools/list", map[string]any{}); res.StatusCode != http.StatusUnauthorized || out["detail"] != "Invalid OAuth access token" {
+		t.Fatalf("after revocation: %d %v", res.StatusCode, out)
+	}
+	if res, _ := e.rpc(bearer(others), "tools/list", map[string]any{}); res.StatusCode != http.StatusOK {
+		t.Fatalf("another user's token: %d", res.StatusCode)
+	}
+}
+
+// tokenID is the jti of an access token.
+func tokenID(t *testing.T, token string) string {
+	t.Helper()
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		t.Fatalf("not a JWT: %q", token)
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var claims struct {
+		JTI string `json:"jti"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil || claims.JTI == "" {
+		t.Fatalf("jti: %v %s", err, payload)
+	}
+	return claims.JTI
 }
 
 // Requests are refused before authentication for credentials in the query and for a foreign Origin; a missing credential is a 401 with the discovery challenge.

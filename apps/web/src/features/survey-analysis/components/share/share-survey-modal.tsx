@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { Dialog, DialogTitle } from "../../../../components/ui/dialog";
 import type { Me } from "../../../../lib/queries/auth";
 import type { WorkspaceDetail } from "../../../../lib/queries/workspaces";
+import { accessFlags } from "../../../../lib/roles";
 import { AnonymousLinksTab } from "./anonymous-links-tab";
 import { AppTab } from "./app-tab";
 import { CustomHtmlTab } from "./custom-html-tab";
@@ -199,6 +200,7 @@ export const ShareSurveyModal = ({
           survey={survey}
           workspaceCustomScripts={workspace.customHeadScripts}
           isReadOnly={isReadOnly}
+          isOwnerOrManager={accessFlags(workspace.access.role).isOwnerOrManager}
         />
       ),
     },

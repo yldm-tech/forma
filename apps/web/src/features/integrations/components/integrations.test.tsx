@@ -193,11 +193,16 @@ const delivery = (overrides: Partial<WebhookDelivery> = {}): WebhookDelivery => 
 });
 
 describe("integrations page", () => {
-  const workspace = (isReadOnly: boolean, appSetupCompleted = false) =>
+  const workspace = (access: "read" | "readWrite" | "manage", appSetupCompleted = false) =>
     ({
       id: WS,
       appSetupCompleted,
-      access: { role: "member", canWrite: !isReadOnly, canManage: false, isReadOnly },
+      access: {
+        role: "member",
+        canWrite: access !== "read",
+        canManage: access === "manage",
+        isReadOnly: access === "read",
+      },
     }) as unknown as WorkspaceDetail;
 
   const card = (label: string) => within(screen.getByRole("heading", { name: label }).parentElement!);
@@ -212,7 +217,7 @@ describe("integrations page", () => {
         },
       }),
     });
-    renderPage(<IntegrationsPage workspace={workspace(false)} />);
+    renderPage(<IntegrationsPage workspace={workspace("manage")} />);
 
     expect(await screen.findByText("2 webhooks")).toBeTruthy();
     expect(card("Zapier").getByText("1 zap")).toBeTruthy();
@@ -257,7 +262,7 @@ describe("integrations page", () => {
         },
       }),
     });
-    renderPage(<IntegrationsPage workspace={workspace(false)} />);
+    renderPage(<IntegrationsPage workspace={workspace("manage")} />);
 
     expect(await screen.findByText("3 webhooks · 1 failing · 1 retrying")).toBeTruthy();
     const dot = (label: string) =>
@@ -279,7 +284,7 @@ describe("integrations page", () => {
         body: { webhooks: [], allowInternalUrls: false },
       }),
     });
-    renderPage(<IntegrationsPage workspace={workspace(false, true)} />);
+    renderPage(<IntegrationsPage workspace={workspace("manage", true)} />);
 
     await screen.findAllByText(t("workspace.integrations.not_available_on_this_instance"));
     for (const label of ["Google Sheets", "Airtable", "Slack", "Notion"]) {
@@ -305,7 +310,7 @@ describe("integrations page", () => {
         body: { webhooks: [], allowInternalUrls: false },
       }),
     });
-    renderPage(<IntegrationsPage workspace={workspace(false)} />);
+    renderPage(<IntegrationsPage workspace={workspace("manage")} />);
 
     await screen.findAllByText(t("common.not_connected"));
     const external = [...document.querySelectorAll("a")].filter(
@@ -365,29 +370,32 @@ describe("integrations page", () => {
     }
   });
 
-  test("a read-only member cannot open the integrations, but still sees the webhooks", async () => {
-    stubServer({
-      [`GET ${BASE}`]: () => ({ body: overview([]) }),
-      [`GET /api/app/workspaces/${WS}/webhooks`]: () => ({
-        body: { webhooks: [], allowInternalUrls: false },
-      }),
-    });
-    renderPage(<IntegrationsPage workspace={workspace(true)} />);
+  test.each(["read", "readWrite"] as const)(
+    "a member with %s access cannot open the integrations or their guides, but still sees the webhooks",
+    async (access) => {
+      stubServer({
+        [`GET ${BASE}`]: () => ({ body: overview([]) }),
+        [`GET /api/app/workspaces/${WS}/webhooks`]: () => ({
+          body: { webhooks: [], allowInternalUrls: false },
+        }),
+      });
+      renderPage(<IntegrationsPage workspace={workspace(access)} />);
 
-    await screen.findAllByText(t("common.not_connected"));
-    expect(card("Google Sheets").getByRole("button", { name: t("common.connect") })).toHaveProperty(
-      "disabled",
-      true
-    );
-    for (const label of ["Zapier", "Make.com", "n8n", "Activepieces"]) {
+      await screen.findAllByText(t("common.not_connected"));
+      expect(card("Google Sheets").getByRole("button", { name: t("common.connect") })).toHaveProperty(
+        "disabled",
+        true
+      );
+      for (const label of ["Zapier", "Make.com", "n8n", "Activepieces"]) {
+        expect(
+          card(label).getByRole("button", { name: t("workspace.integrations.automation_guide_button") })
+        ).toHaveProperty("disabled", true);
+      }
       expect(
-        card(label).getByRole("button", { name: t("workspace.integrations.automation_guide_button") })
-      ).toHaveProperty("disabled", true);
+        card("Webhooks").getByRole("link", { name: t("workspace.integrations.manage_webhooks") })
+      ).toBeTruthy();
     }
-    expect(
-      card("Webhooks").getByRole("link", { name: t("workspace.integrations.manage_webhooks") })
-    ).toBeTruthy();
-  });
+  );
 });
 
 describe("Google Sheets", () => {
@@ -758,7 +766,7 @@ describe("webhooks", () => {
         body: webhook({ ...(body as Partial<Webhook>), secret: "whsec_c2VjcmV0" }),
       }),
     });
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
 
     expect(await screen.findByText(t("workspace.integrations.webhooks.empty_webhook_message"))).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") }));
@@ -799,7 +807,7 @@ describe("webhooks", () => {
       }),
     });
     vi.spyOn(console, "error").mockImplementation(() => {});
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
 
     fireEvent.click(
       await screen.findByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") })
@@ -825,7 +833,7 @@ describe("webhooks", () => {
       [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [], allowInternalUrls: false } }),
       "GET /api/v3/surveys": surveysList,
     });
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
 
     fireEvent.click(
       await screen.findByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") })
@@ -847,7 +855,7 @@ describe("webhooks", () => {
       }),
       "GET /api/v3/surveys": surveysList,
     });
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
 
     const row = await screen.findByRole("button", { name: /Orders/ });
     await waitFor(() =>
@@ -872,7 +880,7 @@ describe("webhooks", () => {
       [`POST ${WEBHOOKS}/test`]: () => ({ body: { success: true } }),
       [`PATCH /api/app/webhooks/${existing.id}`]: (body) => ({ body: webhook(body as Partial<Webhook>) }),
     });
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
     const dialog = within(await screen.findByRole("dialog"));
@@ -903,7 +911,7 @@ describe("webhooks", () => {
       [`POST ${WEBHOOKS}/test`]: () => ({ body: { success: true } }),
       [`PATCH /api/app/webhooks/${existing.id}`]: (body) => ({ body: webhook(body as Partial<Webhook>) }),
     });
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
     const dialog = within(await screen.findByRole("dialog"));
@@ -931,7 +939,7 @@ describe("webhooks", () => {
       }),
       "GET /api/v3/surveys": surveysList,
     });
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly canManage={false} />);
 
     fireEvent.click(await screen.findByRole("button", { name: /hooks\.example\.com/ }));
     expect(
@@ -963,7 +971,7 @@ describe("webhooks", () => {
         }),
       }),
     });
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
 
     const row = await screen.findByRole("button", { name: /Orders/ });
     const badge = within(row).getByText(t("workspace.integrations.webhooks.deliveries.health_failing"));
@@ -1017,7 +1025,7 @@ describe("webhooks", () => {
         }),
       }),
     });
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
     fireEvent.click(
@@ -1042,7 +1050,7 @@ describe("webhooks", () => {
     );
     cleanup();
 
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly canManage={false} />);
     fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
     fireEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
@@ -1074,7 +1082,7 @@ describe("webhooks", () => {
       "GET /api/v3/surveys": surveysList,
       [`POST /api/app/webhooks/${existing.id}/secret`]: () => ({ body: { secret: "whsec_bmV3c2VjcmV0" } }),
     });
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
     const dialog = within(await screen.findByRole("dialog"));
@@ -1097,7 +1105,7 @@ describe("webhooks", () => {
     ]);
     cleanup();
 
-    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} />);
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage />);
     fireEvent.click(await screen.findByRole("button", { name: /Zap/ }));
     const zap = within(await screen.findByRole("dialog"));
     fireEvent.click(zap.getByRole("tab", { name: t("common.settings") }));
@@ -1109,5 +1117,43 @@ describe("webhooks", () => {
     expect(
       zap.queryByRole("button", { name: t("workspace.integrations.webhooks.regenerate_secret.button") })
     ).toBeNull();
+  });
+
+  test("a member who can write to the workspace but not manage it cannot add, edit, test or re-key a webhook, and can still delete one", async () => {
+    const existing = webhook();
+    const calls = stubServer({
+      [`GET ${WEBHOOKS}`]: () => ({ body: { webhooks: [existing], allowInternalUrls: false } }),
+      "GET /api/v3/surveys": surveysList,
+      [`DELETE /api/app/webhooks/${existing.id}`]: () => ({ status: 204 }),
+    });
+    renderPage(<WebhooksPage workspaceId={WS} isReadOnly={false} canManage={false} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Orders/ }));
+    expect(
+      screen.queryByRole("button", { name: t("workspace.integrations.webhooks.add_webhook") })
+    ).toBeNull();
+    expect(screen.getAllByText(t("workspace.integrations.webhooks.managers_only")).length).toBeGreaterThan(0);
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("tab", { name: t("common.settings") }));
+    expect(dialog.getByLabelText(t("common.name"))).toHaveProperty("disabled", true);
+    expect(dialog.getByLabelText(t("common.url"))).toHaveProperty("readOnly", true);
+    expect(
+      dialog.getByRole("checkbox", { name: t("workspace.integrations.webhooks.response_finished") })
+    ).toHaveProperty("disabled", true);
+    for (const name of [
+      t("common.save_changes"),
+      t("workspace.integrations.webhooks.test_endpoint"),
+      t("workspace.integrations.webhooks.regenerate_secret.button"),
+    ]) {
+      expect(dialog.queryByRole("button", { name })).toBeNull();
+    }
+    fireEvent.click(dialog.getByRole("button", { name: t("common.delete") }));
+    const confirm = within(await screen.findByRole("alertdialog"));
+    fireEvent.click(confirm.getByRole("button", { name: t("common.delete") }));
+    await waitFor(() =>
+      expect(
+        calls.filter((call) => call.method !== "GET").map((call) => `${call.method} ${call.path}`)
+      ).toEqual([`DELETE /api/app/webhooks/${existing.id}`])
+    );
   });
 });

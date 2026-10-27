@@ -133,14 +133,10 @@ func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secon
 	return sess, nil
 }
 
-// checkSecondFactor checks the code against the locked row. A matching backup code is removed in the same transaction, so it works once.
+// checkSecondFactor checks the code against the locked row. Each works once: a matching backup code is removed in the same transaction, and a TOTP code from a step already accepted is refused like a wrong one (acceptTOTP).
 func (t *TwoFactor) checkSecondFactor(ctx context.Context, tx *Repository, factor secondFactor, row *totpRow, code string, now time.Time) (bool, error) {
 	if factor == factorTOTP {
-		key, err := openTOTPKey(t.cipher, row.UserID, row.SecretCiphertext)
-		if err != nil {
-			return false, err
-		}
-		return checkTOTP(key, code, now, signInWindow)
+		return t.acceptTOTP(ctx, tx, row, code, now, signInWindow)
 	}
 	codes, err := openBackupCodes(t.cipher, row.UserID, row.BackupCodesCiphertext)
 	if err != nil {

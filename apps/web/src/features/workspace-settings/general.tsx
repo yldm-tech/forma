@@ -14,6 +14,7 @@ import { PageContentWrapper, PageHeader, SettingsCard } from "../../components/u
 import { useUnsavedChanges } from "../../components/shell/unsaved-changes";
 import { cn } from "../../lib/cn";
 import { errorMessage } from "../../lib/errors";
+import { customScriptsUnavailableMessage, instanceQuery } from "../../lib/queries/instance";
 import { organizationKeys } from "../../lib/queries/organizations";
 import {
   type WorkspaceDetail,
@@ -198,12 +199,16 @@ const EditCooldownPeriodForm = ({
 
 const CustomScriptsForm = ({
   workspace,
-  isReadOnly,
+  isReadOnly: isRoleReadOnly,
 }: {
   workspace: WorkspaceDetail;
   isReadOnly: boolean;
 }) => {
   const { t } = useTranslation();
+  // The server refuses scripts on an instance whose survey pages share the admin domain, and on Forma Cloud; the form says so instead of failing on save.
+  const { data: instance } = useQuery(instanceQuery);
+  const unavailable = customScriptsUnavailableMessage(t, instance?.customScripts);
+  const isReadOnly = isRoleReadOnly || instance?.customScripts !== "available";
   const initial = workspace.customHeadScripts ?? "";
   const [scripts, setScripts] = useState(initial);
   const update = useUpdateWorkspace(workspace.id);
@@ -255,7 +260,13 @@ const CustomScriptsForm = ({
           {t("common.save")}
         </Button>
       </form>
-      {isReadOnly && <ReadOnlyNotice />}
+      {unavailable ? (
+        <Alert variant="warning" className="mt-4" role="status">
+          <AlertDescription>{unavailable}</AlertDescription>
+        </Alert>
+      ) : (
+        isRoleReadOnly && <ReadOnlyNotice />
+      )}
     </div>
   );
 };

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v1api"
@@ -122,7 +123,7 @@ func (h *Handler) surveysWorkspace(ctx context.Context, raw []string) (*uuid.UUI
 	return &workspace, nil, 0, nil
 }
 
-// v2WebhookWriteError answers a failed webhook write: the URL check's refusal is 400 on url.
+// v2WebhookWriteError answers a failed webhook write: the URL check's refusal is 400 on url, and a retargeting the key may not make is 401, as a refused webhook route is.
 func (h *Handler) v2WebhookWriteError(c *gin.Context, err error) {
 	if e, ok := apperr.As(err); ok && e.Status == http.StatusBadRequest {
 		v2Error(c, http.StatusBadRequest, detail("url", e.Message))
@@ -132,16 +133,20 @@ func (h *Handler) v2WebhookWriteError(c *gin.Context, err error) {
 		v2Error(c, http.StatusNotFound, detail("webhook", "not found"))
 		return
 	}
+	if e, ok := apperr.As(err); ok && e.Status == http.StatusForbidden {
+		v2Error(c, http.StatusUnauthorized, nil)
+		return
+	}
 	h.v2Unexpected(c, err)
 }
 
-// v2CreateWebhook is forma2's POST /api/v2/management/webhooks: the workspace resolved and authorized for write (403), the input, the surveys all of that workspace, the URL's SSRF check, then the webhook with a new secret, which this answer alone carries.
+// v2CreateWebhook is forma2's POST /api/v2/management/webhooks: the workspace resolved and authorized for manage (403; forma2 asked for write, but sending the workspace's responses to a URL is a manager's decision, as on the settings page), the input, the surveys all of that workspace, the URL's SSRF check, then the webhook with a new secret, which this answer alone carries.
 func (h *Handler) v2CreateWebhook(c *gin.Context) {
 	body, ok := v2Body(c)
 	if !ok {
 		return
 	}
-	workspaceID, ok := h.v2ResolveWorkspace(c, body, http.MethodPost)
+	workspaceID, ok := h.v2ResolveWorkspaceFor(c, body, authz.WorkspaceManage)
 	if !ok {
 		return
 	}
@@ -206,7 +211,7 @@ func (h *Handler) v2GetWebhook(c *gin.Context) {
 	v2OK(c, found.View(), nil)
 }
 
-// v2UpdateWebhook is forma2's PUT /webhooks/{id}: every writable field, the surveys' workspace looked up first, then the webhook (404), workspace.write on it (401), the surveys in its workspace (400), and the update.
+// v2UpdateWebhook is forma2's PUT /webhooks/{id}: every writable field, the surveys' workspace looked up first, then the webhook (404), workspace.write on it (401), the surveys in its workspace (400), and the update, which needs workspace.manage when it changes the URL, the triggers or the surveys (401).
 func (h *Handler) v2UpdateWebhook(c *gin.Context) {
 	body, ok := v2Body(c)
 	if !ok {
@@ -240,7 +245,7 @@ func (h *Handler) v2UpdateWebhook(c *gin.Context) {
 		v2Error(c, http.StatusBadRequest, detail("surveyIds", "webhook workspace does not match the surveys workspace"))
 		return
 	}
-	updated, err := h.webhooks.ReplaceManaged(ctx, found.ID, in)
+	updated, err := h.webhooks.ReplaceManaged(ctx, v2Principal(c).Actor(), found.ID, in)
 	if err != nil {
 		h.v2WebhookWriteError(c, err)
 		return
