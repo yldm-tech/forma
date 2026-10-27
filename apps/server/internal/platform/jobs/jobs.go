@@ -144,11 +144,16 @@ type Worker struct {
 	log             *slog.Logger
 }
 
-func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.Logger) (*Worker, error) {
-	concurrency := cfg.WorkerConcurrency
-	if concurrency == 0 {
-		concurrency = config.DefaultWorkerConcurrency()
+// Concurrency is how many jobs each of the worker's default and webhooks queues runs at once: WORKER_CONCURRENCY, or DefaultWorkerConcurrency when it is 0. The webhook breaker sizes its per-webhook slots from it, since deliveries run on the webhooks queue.
+func Concurrency(cfg config.Config) int {
+	if cfg.WorkerConcurrency == 0 {
+		return config.DefaultWorkerConcurrency()
 	}
+	return cfg.WorkerConcurrency
+}
+
+func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.Logger) (*Worker, error) {
+	concurrency := Concurrency(cfg)
 	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Logger:                      log,
 		Workers:                     reg.workers,

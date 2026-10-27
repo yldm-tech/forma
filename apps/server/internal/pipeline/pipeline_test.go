@@ -598,7 +598,7 @@ func TestRiverEndToEnd(t *testing.T) {
 	t.Cleanup(cleanup)
 	reg := jobs.NewRegistry(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	RegisterJobs(reg, e.worker)
-	webhook.RegisterJobs(reg, e.hooks, e.log)
+	webhook.RegisterJobs(reg, e.hooks, jobs.Concurrency(e.cfg), e.log)
 	worker, err := jobs.NewWorker(e.cfg, pool, reg, e.log)
 	if err != nil {
 		t.Fatal(err)

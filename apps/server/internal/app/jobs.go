@@ -35,7 +35,7 @@ func NewJobRegistry(cfg config.Config, pool *pgxpool.Pool, db *gorm.DB, log *slo
 	oauthserver.RegisterJobs(reg, pool, log)
 	survey.RegisterJobs(reg, cfg, db, emitter, log)
 	pipeline.RegisterJobs(reg, responsePipeline)
-	webhook.RegisterJobs(reg, webhooks, log)
+	webhook.RegisterJobs(reg, webhooks, jobs.Concurrency(cfg), log)
 	workflow.RegisterJobs(reg, workflowRunner, workflowReconciler)
 	storage.RegisterJobs(reg, files, workspaces, log)
 	billing.RegisterJobs(reg, billingEngine)

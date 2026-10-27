@@ -37,17 +37,23 @@ func (e *env) response(survey uuid.UUID) uuid.UUID {
 	return e.insert(`INSERT INTO responses (survey_id, finished) VALUES (?, true) RETURNING id`, survey)
 }
 
-// worker is the webhook.deliver worker over the env's database, sending through a guard that reaches local receivers.
+// worker is the webhook.deliver worker of a queue of 8 slots, as production runs, over the env's database, sending through a guard that reaches local receivers.
 func (e *env) worker() *deliverWorker {
 	guard := ssrf.New(config.Config{DangerouslyAllowWebhookInternalURLs: true})
-	return &deliverWorker{deliverer: NewDeliverer(NewRepository(e.db), guard), log: slog.New(slog.NewJSONHandler(e.logs, nil))}
+	return newDeliverWorker(NewDeliverer(NewRepository(e.db), guard), 8, slog.New(slog.NewJSONHandler(e.logs, nil)))
 }
 
 // work runs the attempt-th attempt of the delivery job.
 func (e *env) work(w *deliverWorker, args DeliverArgs, attempt int) error {
 	e.t.Helper()
+	return e.workQueuedAt(w, args, attempt, time.Now())
+}
+
+// workQueuedAt runs the attempt-th attempt of the delivery job queued at queued.
+func (e *env) workQueuedAt(w *deliverWorker, args DeliverArgs, attempt int, queued time.Time) error {
+	e.t.Helper()
 	return w.Work(context.Background(), &river.Job[DeliverArgs]{
-		JobRow: &rivertype.JobRow{ID: 1, Attempt: attempt, MaxAttempts: deliveryAttempts, Kind: DeliverArgs{}.Kind()},
+		JobRow: &rivertype.JobRow{ID: 1, Attempt: attempt, MaxAttempts: deliveryAttempts, Kind: DeliverArgs{}.Kind(), CreatedAt: queued},
 		Args:   args,
 	})
 }
