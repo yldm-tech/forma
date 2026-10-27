@@ -55,8 +55,10 @@ var (
 	ActionStateMutation = Rule{Namespace: "action:state-mutation", Window: time.Minute, Limit: 120}
 	// PublicResultShare is per client IP, charged by each read through a read-only results link. A link is opened by people without an account, so this is what bounds how fast one address can ask; the key itself carries 256 bits and is not guessable.
 	PublicResultShare = Rule{Namespace: "public:result-share", Window: time.Minute, Limit: 60}
-	// PublicUnsubscribe is per client IP, charged by reading and by redeeming an email's signed unsubscribe link. The token is the authorization and carries 256 bits of signature; the limit only bounds how fast one address can try tokens. It is as generous as BAVerifyEmail for the same reasons: mail scanners prefetch links and corporate NAT puts many users behind one address.
+	// PublicUnsubscribe is per client IP, charged by reading an email's signed unsubscribe link, by redeeming it from the unsubscribe page, and by a one-click post whose token does not verify. The token is the authorization and carries 256 bits of signature; the limit only bounds how fast one address can try tokens. It is as generous as BAVerifyEmail for the same reasons: mail scanners prefetch links and corporate NAT puts many users behind one address.
 	PublicUnsubscribe = Rule{Namespace: "public:unsubscribe", Window: time.Minute, Limit: 30}
+	// PublicUnsubscribeOneClick is per switch a verified token names (user, kind and survey or organization), charged by a mail client's one-click unsubscribe (RFC 8058) instead of PublicUnsubscribe. Those posts come from the mail provider's few egress addresses and a provider does not retry one that is refused, so a per-address limit would leave users subscribed; a verified token can only switch the one setting it names, so this only bounds replays of one link.
+	PublicUnsubscribeOneClick = Rule{Namespace: "public:unsubscribe:one-click", Window: time.Minute, Limit: 10}
 
 	// Better Auth's per-path limits (apps/web/modules/auth/lib/auth.ts, rateLimit.customRules), all per client IP. They guarded the endpoints the browser called directly; the flows forma2 ran through server actions were limited by the rules above instead.
 	//

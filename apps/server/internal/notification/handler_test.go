@@ -12,6 +12,7 @@ import (
 	"sync"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/auth"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey/valkeytest"
 	"github.com/yldm-tech/forma/apps/server/internal/webui"
 )
 
@@ -69,16 +71,23 @@ func newFakeSwitches() *fakeSwitches {
 // newRouter mounts the handler ahead of an SPA whose index.html is "spa", over the given settings, with rate limiting off.
 func newRouter(t *testing.T, switches Switches) *gin.Engine {
 	t.Helper()
+	cfg := tokenConfig(t, "0123456789abcdefghijklmnopqrstuv")
+	cfg.RateLimitingDisabled = true
+	return newLimitedRouter(t, switches, ratelimit.New(cfg, nil, slog.New(slog.NewTextHandler(io.Discard, nil))))
+}
+
+// newLimitedRouter is newRouter with the given limiter.
+func newLimitedRouter(t *testing.T, switches Switches, limiter *ratelimit.Limiter) *gin.Engine {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 	web, err := webui.NewFromFS(fstest.MapFS{"index.html": {Data: []byte("spa")}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	cfg := tokenConfig(t, "0123456789abcdefghijklmnopqrstuv")
-	cfg.RateLimitingDisabled = true
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	r := gin.New()
-	NewHandler(cfg, switches, ratelimit.New(cfg, nil, log), log).Register(r)
+	NewHandler(cfg, switches, limiter, log).Register(r)
 	web.Register(r)
 	return r
 }
@@ -161,6 +170,57 @@ func TestOneClickUnsubscribe(t *testing.T) {
 	rec := serve(r, req)
 	if rec.Code != http.StatusOK || f.switches[KindAlert+" "+tokenSurvey.String()].Enabled {
 		t.Fatalf("one-click = %d %s", rec.Code, rec.Body)
+	}
+}
+
+// A mail provider posts the one-click unsubscribes of all its users from a few addresses and does not retry one that is refused, so a one-click post with a verified token is not charged to the client address: it still unsubscribes once the address has spent the budget reading and the page share. It is limited per switch the token names instead, and a forged token still charges the address.
+func TestOneClickUnsubscribeIsNotLimitedByAddress(t *testing.T) {
+	t.Parallel()
+	other := uuid.MustParse("0192f5c8-0000-7000-8000-000000000003")
+	f := newFakeSwitches()
+	f.switches[KindAlert+" "+other.String()] = &auth.NotificationSwitch{Type: KindAlert, ID: other, Name: "CSAT", Enabled: true}
+	cfg := tokenConfig(t, "0123456789abcdefghijklmnopqrstuv")
+	frozen := time.Unix(1_699_999_210, 0)
+	limiter := ratelimit.New(cfg, valkeytest.Client(t), slog.New(slog.NewTextHandler(io.Discard, nil))).WithClock(func() time.Time { return frozen })
+	r := newLimitedRouter(t, f, limiter)
+	tok := alertToken(t, tokenSurvey)
+
+	// Every request here comes from the same address, as a mail provider's do.
+	for i := range ratelimit.PublicUnsubscribe.Limit {
+		if rec := serve(r, httptest.NewRequest(http.MethodGet, "/api/unsubscribe?token="+url.QueryEscape(tok), nil)); rec.Code != http.StatusOK {
+			t.Fatalf("lookup %d = %d %s", i, rec.Code, rec.Body)
+		}
+	}
+	if rec := serve(r, httptest.NewRequest(http.MethodGet, "/api/unsubscribe?token="+url.QueryEscape(tok), nil)); rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("lookup past the address limit = %d %s", rec.Code, rec.Body)
+	}
+	page := httptest.NewRequest(http.MethodPost, "/api/unsubscribe", strings.NewReader(fmt.Sprintf(`{"token":%q,"enabled":false}`, tok)))
+	page.Header.Set("Content-Type", "application/json")
+	if rec := serve(r, page); rec.Code != http.StatusTooManyRequests || f.sets != 0 {
+		t.Fatalf("page post past the address limit = %d %s, %d sets", rec.Code, rec.Body, f.sets)
+	}
+
+	oneClick := func(token string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/api/unsubscribe?token="+url.QueryEscape(token), strings.NewReader("List-Unsubscribe=One-Click"))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		return serve(r, req)
+	}
+	for i := range ratelimit.PublicUnsubscribeOneClick.Limit {
+		if rec := oneClick(tok); rec.Code != http.StatusOK || f.switches[KindAlert+" "+tokenSurvey.String()].Enabled {
+			t.Fatalf("one-click %d past the address limit = %d %s", i, rec.Code, rec.Body)
+		}
+	}
+	// Replaying one link is bounded per switch; another switch has its own budget.
+	if rec := oneClick(tok); rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("one-click past the switch limit = %d %s", rec.Code, rec.Body)
+	}
+	if rec := oneClick(alertToken(t, other)); rec.Code != http.StatusOK || f.switches[KindAlert+" "+other.String()].Enabled {
+		t.Fatalf("one-click for another switch = %d %s", rec.Code, rec.Body)
+	}
+	// A forged token is charged to the address, which is spent.
+	parts := strings.Split(tok, ".")
+	if rec := oneClick(parts[0] + "." + parts[1] + "." + strings.Repeat("A", len(parts[2]))); rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("forged one-click past the address limit = %d %s", rec.Code, rec.Body)
 	}
 }
 
