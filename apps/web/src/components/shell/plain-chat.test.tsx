@@ -1,7 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
-import { PLAIN_SCRIPT_ID, PLAIN_SCRIPT_SRC, PlainChat, type PlainSession, plainSessionQuery } from "./plain-chat";
+import {
+  PLAIN_SCRIPT_ID,
+  PLAIN_SCRIPT_SRC,
+  PlainChat,
+  type PlainSession,
+  plainSessionQuery,
+} from "./plain-chat";
 
 afterEach(() => {
   cleanup();
