@@ -18,11 +18,11 @@ func pagePolicyWith(scriptSrc string) string {
 	return "default-src 'self'; script-src " + scriptSrc + "; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; frame-ancestors *"
 }
 
-// A survey page runs its bundle, the respondent runtime from the public domain, Cal.com's embed and, where configured, reCAPTCHA, and no inline script or other host; only a page that runs custom head scripts, which are arbitrary HTML by design, keeps the permissive policy, and only where the page runs them: not on Forma Cloud, not in a preview, not for blank scripts.
+// A survey page runs its bundle, the respondent runtime from the public domain, Cal.com's embed and, where configured, reCAPTCHA, and no inline script or other host; only a page that runs custom head scripts, which are arbitrary HTML by design, keeps the permissive policy, and only where the page runs them: not on Forma Cloud, not in a preview, not for blank scripts, not on an instance whose survey pages share the admin origin.
 func TestSurveyPagePolicy(t *testing.T) {
 	recaptcha := func(c *config.Config) { c.RecaptchaSiteKey, c.RecaptchaSecretKey = "site-key", "secret-key" }
-	strict := pagePolicyWith("'self' http://localhost:3999 https://cal.com/embed.js https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/")
-	e := newEnv(t, recaptcha)
+	strict := pagePolicyWith("'self' http://surveys.localhost:3999 https://cal.com/embed.js https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/")
+	e := newEnv(t, recaptcha, withSurveyDomain)
 	plain := e.workspace()
 	scripted := e.workspace("custom_head_scripts", "<script>window.ws=1</script>")
 	blank := e.workspace("custom_head_scripts", "  \n")
@@ -68,5 +68,14 @@ func TestSurveyPagePolicyOnFormaCloud(t *testing.T) {
 	id := cloud.survey(cloud.workspace("custom_head_scripts", "<script>window.ws=1</script>"))
 	if got, want := cloud.page("/s/"+id.String()).Header.Get("Content-Security-Policy"), pagePolicyWith("'self' https://surveys.example.com https://cal.com/embed.js"); got != want {
 		t.Errorf("Forma Cloud: Content-Security-Policy =\n%q\nwant\n%q", got, want)
+	}
+}
+
+// Where the survey pages share the admin origin the instance runs no custom head scripts (config.CustomScripts), so a page whose workspace stores some keeps the survey pages' own policy.
+func TestSurveyPagePolicyWithoutASurveyDomain(t *testing.T) {
+	e := newEnv(t)
+	id := e.survey(e.workspace("custom_head_scripts", "<script>window.ws=1</script>"))
+	if got, want := e.page("/s/"+id.String()).Header.Get("Content-Security-Policy"), pagePolicyWith("'self' http://localhost:3999 https://cal.com/embed.js"); got != want {
+		t.Errorf("without a survey domain: Content-Security-Policy =\n%q\nwant\n%q", got, want)
 	}
 }
