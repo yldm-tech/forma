@@ -188,7 +188,7 @@ services:
     volumes:
       - ./saml-connection:/home/nextjs/apps/web/saml-connection
 
-  # Background jobs: the response pipeline, webhooks, emails, integrations, workflows and the periodic tasks. Scale it with `docker compose up -d --scale forma-worker=2`.
+  # Background jobs: the response pipeline, webhooks, emails, integrations, workflows, the AI summaries of open-text answers (so it needs the AI_* settings too) and the periodic tasks. Scale it with `docker compose up -d --scale forma-worker=2`.
   forma-worker:
     <<: *forma-app
     command: ["worker"]

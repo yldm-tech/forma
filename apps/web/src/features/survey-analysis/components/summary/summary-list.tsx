@@ -38,7 +38,7 @@ import {
   SliderSummary,
 } from "./score-summaries";
 import type { SetSummaryFilter } from "./summary-parts";
-import { TextSummaryPanel } from "./text-summary-panel";
+import { TextSummaryPanel, isFreeTextInput } from "./text-summary-panel";
 import { WithheldSummary } from "./withheld-summary";
 
 /** forma2's EmptyAppSurveys: an app survey of a workspace whose SDK has never connected. */
@@ -131,14 +131,17 @@ export const SummaryList = ({
             locale={locale}
             isReadOnly={isReadOnly}
             aiSummary={
-              <TextSummaryPanel
-                survey={survey}
-                elementId={key}
-                target="answers"
-                answerCount={entry.responseCount}
-                locale={locale}
-                isReadOnly={isReadOnly}
-              />
+              // An answer that is an email address, a phone number, a URL or a number has no themes to summarize.
+              isFreeTextInput(entry.element.inputType) ? (
+                <TextSummaryPanel
+                  survey={survey}
+                  elementId={key}
+                  target="answers"
+                  answerCount={entry.responseCount}
+                  locale={locale}
+                  isReadOnly={isReadOnly}
+                />
+              ) : undefined
             }
           />
         );

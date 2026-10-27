@@ -17,7 +17,7 @@ import { initI18n } from "../../../../lib/i18n";
 import type { TextSummary, TextSummaryState } from "../../api";
 import { ResponseFilterProvider, useResponseFilter } from "../filter/response-filter-context";
 import { SharedSummaryContext } from "./summary-parts";
-import { TextSummaryPanel } from "./text-summary-panel";
+import { TextSummaryPanel, isFreeTextInput } from "./text-summary-panel";
 
 const SURVEY_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0e";
 
@@ -65,11 +65,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** The server: the lookup answers with lookup, a generation with generated (or what the promise it is given resolves to); every request body is recorded by path. */
-const stubServer = (lookup: TextSummaryState, generated?: TextSummaryState | Promise<TextSummaryState>) => {
+/** The server: the lookup answers with lookup (or what the function it is given returns at each call), a generation with generated (or what the promise it is given resolves to) under generatedStatus; every request body is recorded by path. */
+const stubServer = (
+  lookup: TextSummaryState | (() => TextSummaryState),
+  generated?: TextSummaryState | Promise<TextSummaryState>,
+  generatedStatus = 200
+) => {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
-  const json = (body: unknown) =>
-    new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string, init?: RequestInit) => {
@@ -79,9 +83,9 @@ const stubServer = (lookup: TextSummaryState, generated?: TextSummaryState | Pro
       });
       switch (path) {
         case `/api/app/surveys/${SURVEY_ID}/text-summaries/lookup`:
-          return json(lookup);
+          return json(typeof lookup === "function" ? lookup() : lookup);
         case `/api/app/surveys/${SURVEY_ID}/text-summaries`:
-          return json(await generated);
+          return json(await generated, generatedStatus);
         default:
           throw new Error(`unexpected ${path}`);
       }
@@ -220,12 +224,116 @@ describe("TextSummaryPanel", () => {
     expect(screen.queryByRole("button", { name: "Refresh summary" })).toBeNull();
   });
 
-  test("a member without edit access is told why there is nothing to generate", async () => {
+  test("a member without edit access is told there is no summary yet, not that they lack a permission", async () => {
     stubServer({ available: false, reason: "read_only", summary: null });
     await renderPanel(panel());
-    const button = await screen.findByRole("button", { name: "Summarize answers" });
-    expect((button as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText("You need edit access to this workspace to use AI smart tools.")).toBeTruthy();
+    expect(
+      await screen.findByText("No AI summary yet. A member who can edit this workspace can create one.")
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Summarize answers" })).toBeNull();
+    expect(screen.queryByText("You need edit access to this workspace to use AI smart tools.")).toBeNull();
+  });
+
+  // NF-07: a summary is written in the language of the member who generated it.
+  test("a summary in another language is labelled with it, and a reader who can generate is offered one in their own", async () => {
+    const requests = stubServer(
+      { available: true, summary: { ...summary, language: "ja-JP" } },
+      { available: true, summary: null, status: "pending", pendingSeconds: 0 }
+    );
+    await renderPanel(panel());
+    expect(await screen.findByText("Pricing")).toBeTruthy();
+    expect(screen.getByText("This summary was written in 日本語.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Refresh summary" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Summarize in English (US)" }));
+    await vi.waitFor(() =>
+      expect(requests.find((r) => r.path.endsWith("/text-summaries"))?.body).toMatchObject({
+        language: "en-US",
+        refresh: false,
+      })
+    );
+    // The summary stays on screen while the one in the reader's language is generated.
+    expect(await screen.findByRole("status")).toBeTruthy();
+    expect(screen.getByText("Pricing")).toBeTruthy();
+  });
+
+  test("a reader without edit access sees a summary in another language, labelled, with nothing to click", async () => {
+    stubServer({ available: false, reason: "read_only", summary: { ...summary, language: "ja-JP" } });
+    await renderPanel(panel());
+    expect(await screen.findByText("This summary was written in 日本語.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Summarize in/ })).toBeNull();
+  });
+
+  test("a queued generation is followed until its summary lands", async () => {
+    const lookups: TextSummaryState[] = [
+      { available: true, summary: null },
+      { available: true, summary: null, status: "pending", pendingSeconds: 2 },
+      { available: true, summary },
+    ];
+    const requests = stubServer(
+      () => lookups.shift() ?? { available: true, summary },
+      { available: true, summary: null, status: "pending", pendingSeconds: 0 },
+      202
+    );
+    await renderPanel(panel());
+    fireEvent.click(await screen.findByRole("button", { name: "Summarize answers" }));
+    expect(await screen.findByRole("status")).toBeTruthy();
+    expect(await screen.findByText("Pricing", undefined, { timeout: 8000 })).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(requests.filter((r) => r.path.endsWith("/lookup")).length).toBeGreaterThanOrEqual(3);
+  }, 15_000);
+
+  test("a failed generation says so and can be asked for again", async () => {
+    stubServer({
+      available: true,
+      summary: null,
+      status: "failed",
+      error: { code: "text_summary_failed", message: "The summary could not be generated. Try again." },
+    });
+    await renderPanel(panel());
+    expect(await screen.findByText("The summary could not be generated. Try again.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Summarize answers" }) as HTMLButtonElement).disabled).toBe(
+      false
+    );
+  });
+
+  test("a failure of the provider's quota uses its own wording", async () => {
+    stubServer({
+      available: true,
+      summary: null,
+      status: "failed",
+      error: {
+        code: "ai_quota_exceeded",
+        message: "The AI provider is temporarily rate-limited. Try again shortly.",
+      },
+    });
+    await renderPanel(panel());
+    expect(await screen.findByText("The AI provider is busy right now. Try again in a moment.")).toBeTruthy();
+  });
+
+  test("a generation pending for too long stops being waited for", async () => {
+    const requests = stubServer({ available: true, summary: null, status: "pending", pendingSeconds: 400 });
+    await renderPanel(panel());
+    expect(
+      await screen.findByText("The summary is taking longer than usual. Check back in a few minutes.")
+    ).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    expect(requests.filter((r) => r.path.endsWith("/lookup")).length).toBe(1);
+  }, 10_000);
+
+  // NF-16: an email, phone, URL or number question has nothing to summarize.
+  test("a question whose answers are not free text shows nothing", async () => {
+    stubServer({ available: false, reason: "not_free_text", summary: null });
+    await renderPanel(panel());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole("region")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Summarize answers" })).toBeNull();
+  });
+
+  test("only an open-text question that asks for text is summarized", () => {
+    expect(isFreeTextInput(undefined)).toBe(true);
+    expect(isFreeTextInput("text")).toBe(true);
+    for (const inputType of ["email", "phone", "url", "number"])
+      expect(isFreeTextInput(inputType)).toBe(false);
   });
 
   test("explains why AI is unavailable and offers nothing to click", async () => {

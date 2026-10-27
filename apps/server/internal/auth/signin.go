@@ -20,6 +20,51 @@ type signInResult struct {
 	pending *issuedToken
 }
 
+// pendingSignInPayload is what a sign-in waiting for its second factor carries, in the payload of its two_factor verification beside the attempts count verifySignIn keeps there.
+type pendingSignInPayload struct {
+	// Method is the authMethod the completed sign-in is recorded with. Empty, as a pending sign-in written before it was kept reads, is a password sign-in.
+	Method string `json:"method,omitempty"`
+	// Link is an external identity the sign-in links to the account once the second factor is accepted: SSO recovery's, since proving the mailbox alone must not attach a new way into an account that has two-factor authentication.
+	Link *identityLink `json:"link,omitempty"`
+}
+
+// method is the authMethod of the completed sign-in.
+func (p pendingSignInPayload) method() string {
+	if p.Method == "" {
+		return signInMethodPassword
+	}
+	return p.Method
+}
+
+// identityLink names an external identity by provider and subject.
+type identityLink struct {
+	Provider string `json:"provider"`
+	Subject  string `json:"subject"`
+}
+
+// grantSignIn is the one way a sign-in that passed its first factor (a password, an identity provider, a recovery link) becomes a session, so no path can skip the second factor. An account with two-factor authentication gets a pending sign-in instead, which verifySignIn completes with a code, and what the sign-in would change on the account (then.Link) waits in it until the code is accepted; otherwise that change and the session are written now, in tx. The caller runs finalizeSignIn for a session once tx has committed.
+func (s *Service) grantSignIn(ctx context.Context, tx *Repository, acc *account, meta clientMeta, then pendingSignInPayload) (signInResult, error) {
+	if acc.TwoFactorEnabled {
+		token, err := secret.NewToken()
+		if err != nil {
+			return signInResult{}, err
+		}
+		expires := s.now().Add(twoFactorPendingTTL)
+		if err := tx.insertPayloadVerification(ctx, purposeTwoFactor, acc.ID, normalizeEmail(acc.Email), secret.HashToken(token), expires, then); err != nil {
+			return signInResult{}, err
+		}
+		return signInResult{pending: &issuedToken{Value: token, ExpiresAt: expires, MaxAge: twoFactorPendingTTL}}, nil
+	}
+	if err := tx.linkIdentity(ctx, acc.ID, then.Link); err != nil {
+		return signInResult{}, err
+	}
+	sess, err := s.sessions.create(ctx, tx.db, acc.ID, meta)
+	if err != nil {
+		return signInResult{}, err
+	}
+	return signInResult{session: &sess}, nil
+}
+
 // signIn checks an email and password the way Better Auth's /sign-in/email did for forma2. Rejections are audited, throttled per address.
 func (s *Service) signIn(ctx context.Context, email, password string, meta clientMeta) (signInResult, error) {
 	res, err := s.checkCredentials(ctx, email, password, meta)
@@ -72,19 +117,14 @@ func (s *Service) checkCredentials(ctx context.Context, email, password string, 
 	if !acc.IsActive {
 		return signInResult{}, errAccountInactive()
 	}
-	if acc.TwoFactorEnabled {
-		pending, err := s.issueVerification(ctx, s.repo, purposeTwoFactor, acc.ID, normalizeEmail(acc.Email), twoFactorPendingTTL)
-		if err != nil {
-			return signInResult{}, err
-		}
-		return signInResult{pending: &pending}, nil
-	}
-	sess, err := s.sessions.create(ctx, s.repo.db, acc.ID, meta)
+	res, err := s.grantSignIn(ctx, s.repo, acc, meta, pendingSignInPayload{Method: signInMethodPassword})
 	if err != nil {
 		return signInResult{}, err
 	}
-	s.finalizeSignIn(ctx, acc.ID, signInMethodPassword)
-	return signInResult{session: &sess}, nil
+	if res.session != nil {
+		s.finalizeSignIn(ctx, acc.ID, signInMethodPassword)
+	}
+	return res, nil
 }
 
 // signInFailureRules count rejected passwords per account and client address (ratelimit.AuthSignInAccountIP): a short window that forgives a few typos and a daily cap on one source's guesses at one account.

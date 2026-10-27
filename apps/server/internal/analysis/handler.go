@@ -37,7 +37,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/surveys/:surveyId/displays", h.displays)
 	g.POST("/surveys/:surveyId/responses/export", h.export)
 	g.POST("/surveys/:surveyId/reset", h.reset)
-	// The AI summary of a question's free-text answers: the cached one (lookup, which never calls the AI provider) and a new one.
+	// The AI summary of a question's free-text answers: the cached one with the generation in progress (lookup, which never calls the AI provider), and a new one, answered at once (200) when the cached one is current and otherwise queued (202), the lookup reporting it pending until it is done.
 	g.POST("/surveys/:surveyId/text-summaries/lookup", h.lookupTextSummary)
 	g.POST("/surveys/:surveyId/text-summaries", h.generateTextSummary)
 	g.GET("/surveys/:surveyId/result-shares", h.resultShares)
@@ -273,6 +273,10 @@ func (h *Handler) generateTextSummary(c *gin.Context) {
 	out, err := h.texts.Generate(c.Request.Context(), userID(c), surveyID, in)
 	if err != nil {
 		httpapi.Fail(c, err)
+		return
+	}
+	if out.Status == TextStatusPending {
+		c.JSON(http.StatusAccepted, out)
 		return
 	}
 	c.JSON(http.StatusOK, out)

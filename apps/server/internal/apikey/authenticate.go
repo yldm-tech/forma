@@ -97,6 +97,11 @@ func (a *Authenticator) Authenticate(ctx context.Context, h http.Header, opts Op
 		a.log.WarnContext(ctx, "An API key of a suspended member was used", "apiKeyId", key.ID.String())
 		return nil, nil
 	}
+	// So is a key whose creator's account the instance's operator deactivated (forma user deactivate), until it is reactivated: a deactivated user signs in nowhere, and their keys are their way in as much as a session.
+	if key.CreatorDeactivated {
+		a.log.WarnContext(ctx, "An API key of a deactivated user was used", "apiKeyId", key.ID.String())
+		return nil, nil
+	}
 	// An expired key is refused the same way, from the instant it expires.
 	if key.ExpiresAt.Valid && !a.now().Before(key.ExpiresAt.Time) {
 		a.log.WarnContext(ctx, "An expired API key was used", "apiKeyId", key.ID.String())
