@@ -181,6 +181,13 @@ func (r *Runner) execute(ctx context.Context, job *river.Job[RunArgs], run *clai
 		log.InfoContext(ctx, "Workflow run already claimed by another delivery; skipping")
 		return nil
 	}
+	if res.RowsAffected == 0 {
+		// A retry finds its run already running; the run still records which delivery is working on it, never going back to an earlier one.
+		if err := r.db.WithContext(ctx).Exec(`UPDATE workflow_runs SET attempt = ?, updated_at = now() WHERE id = ? AND workspace_id = ? AND status = 'running' AND attempt < ?`,
+			job.Attempt, run.ID, job.Args.WorkspaceID, job.Attempt).Error; err != nil {
+			return fmt.Errorf("record workflow run attempt: %w", err)
+		}
+	}
 	raw := run.VersionDefinition
 	if len(raw) == 0 {
 		raw = run.WorkflowDefinition
@@ -427,7 +434,7 @@ func (r *Runner) perform(ctx context.Context, runID uuid.UUID, step Step, ec *em
 	return o.status, mustJSON(o.output), o.err, o.permanent
 }
 
-// controlChars are what an SMTP header injection smuggles into a subject.
+// controlChars are what an SMTP header injection smuggles into a subject: control characters, line breaks among them, and the Unicode line and paragraph separators.
 var controlChars = regexp.MustCompile("[\x00-\x1f\x7f  ]")
 
 // MessageID is forma2's buildMessageId: <the first 32 hex digits of sha256("<run id>:<step id>")@the domain of the action's from>, the same on every delivery of the step.
@@ -442,7 +449,7 @@ func MessageID(runID uuid.UUID, stepID, from string) string {
 	return "<" + hex.EncodeToString(sum[:])[:32] + "@" + domain + ">"
 }
 
-// send is forma2's sendResolvedEmail: the recipient resolved from `to` (a literal recipient must be in the workspace's allowlist), the follow-up email built from the author's subject and sanitized body, and sent from the instance's MAIL_FROM with a stable Message-ID.
+// send is forma2's sendResolvedEmail: the recipient resolved from `to` (a literal recipient must be in the workspace's allowlist), the follow-up email built from the author's subject, its placeholders filled on one line (Template.RenderSubject), and sanitized body, and sent from the instance's MAIL_FROM with a stable Message-ID.
 func (r *Runner) send(ctx context.Context, runID uuid.UUID, step Step, ec *emailContext) (status string, output json.RawMessage, errMsg string) {
 	failed := func(msg string) (string, json.RawMessage, string) { return StepFailed, json.RawMessage("{}"), msg }
 	cfg := step.Config
@@ -455,7 +462,7 @@ func (r *Runner) send(ctx context.Context, runID uuid.UUID, step Step, ec *email
 	}
 	messageID := MessageID(runID, step.ID, cfg.From)
 	content, err := ec.answers.FollowUpContent(ec.survey, responsemail.EmailOptions{
-		Subject: controlChars.ReplaceAllString(cfg.Subject, ""), Body: cfg.Body, AttachResponseData: cfg.AttachResponseData,
+		Subject: ec.template.RenderSubject(cfg.Subject), Body: cfg.Body, AttachResponseData: cfg.AttachResponseData,
 		IncludeVariables: cfg.IncludeVariables != nil && *cfg.IncludeVariables, IncludeHiddenFields: cfg.IncludeHiddenFields != nil && *cfg.IncludeHiddenFields,
 		LogoURL: ec.logo, Locale: ec.locale, PublicBase: responsemail.PublicBase(r.cfg),
 	})

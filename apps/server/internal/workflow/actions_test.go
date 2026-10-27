@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +25,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
 const (
@@ -378,6 +380,109 @@ func TestTemplates(t *testing.T) {
 	}
 }
 
+// A choice answer's choiceId and default placeholders are the same whatever language the response was given in; an Other text keeps its text and becomes the other choice.
+func TestChoicePlaceholders(t *testing.T) {
+	t.Parallel()
+	label := func(def, ja, zh string) surveydoc.I18nString {
+		return surveydoc.I18nString{"default": def, "ja": ja, "zh-Hans": zh}
+	}
+	elements := []surveydoc.Element{
+		{ID: "pmf", Type: surveydoc.ElementMultipleChoiceSingle, Choices: []surveydoc.Choice{
+			{ID: "very", Label: label("Very disappointed", "とても残念", "非常失望")},
+			{ID: "not", Label: label("Not disappointed", "残念ではない", "")},
+			{ID: "other", Label: label("Other", "その他", "其他")},
+		}},
+		{ID: "tools", Type: surveydoc.ElementMultipleChoiceMulti, Choices: []surveydoc.Choice{
+			{ID: "a", Label: label("Alpha", "アルファ", "阿尔法")}, {ID: "b", Label: label("Beta", "ベータ", "贝塔")},
+		}},
+		{ID: "order", Type: surveydoc.ElementRanking, Choices: []surveydoc.Choice{
+			{ID: "x", Label: label("First", "一番", "第一")}, {ID: "y", Label: label("Second", "二番", "第二")},
+		}},
+		{ID: "note", Type: surveydoc.ElementOpenText},
+	}
+	render := func(lang, data, tmpl string) (string, map[string]any) {
+		t.Helper()
+		r := &response.Response{ID: uuid.New(), SurveyID: uuid.MustParse(testSurveyID), Data: json.RawMessage(data)}
+		a, err := responsemail.Decode(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tpl := &Template{Fixed: map[string]any{}, Answers: a, Attributes: map[string]any{}, Elements: elements, Language: lang}
+		body, err := tpl.RenderJSON(`{"id":"{{answers.pmf.choiceId}}","label":"{{answers.pmf.default}}","tools":"{{answers.tools.choiceId}}","order":"{{answers.order.default}}"}`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var doc map[string]any
+		if err := json.Unmarshal(body, &doc); err != nil {
+			t.Fatal(err)
+		}
+		return tpl.RenderText(tmpl, func(s string) string { return s }), doc
+	}
+	const tmpl = "{{answers.pmf.choiceId}} {{answers.pmf.default}} | {{answers.tools.choiceId}} | {{answers.tools.default}} | {{answers.order.choiceId}} | {{answers.note.default}}{{answers.missing.choiceId}}"
+	const want = "very Very disappointed | a; b | Alpha; Beta | y; x | "
+	for _, tc := range []struct{ lang, data string }{
+		{"default", `{"pmf":"Very disappointed","tools":["Alpha","Beta"],"order":["Second","First"],"note":"hi"}`},
+		{"ja", `{"pmf":"とても残念","tools":["アルファ","ベータ"],"order":["二番","一番"],"note":"hi"}`},
+		{"zh-Hans", `{"pmf":"非常失望","tools":["阿尔法","贝塔"],"order":["第二","第一"],"note":"hi"}`},
+		// A response whose language the survey no longer has still matches its labels in any language.
+		{"default", `{"pmf":"非常失望","tools":["アルファ","Beta"],"order":["二番","First"],"note":"hi"}`},
+	} {
+		text, doc := render(tc.lang, tc.data, tmpl)
+		if text != want {
+			t.Errorf("%s %s:\n got %q\nwant %q", tc.lang, tc.data, text, want)
+		}
+		if doc["id"] != "very" || doc["label"] != "Very disappointed" || fmt.Sprint(doc["tools"]) != "[a b]" || fmt.Sprint(doc["order"]) != "[Second First]" {
+			t.Errorf("%s JSON %v", tc.lang, doc)
+		}
+	}
+	// zh-Hans has no translation of "Not disappointed", so the respondent saw, and the response stored, the default label.
+	if text, _ := render("zh-Hans", `{"pmf":"Not disappointed"}`, "{{answers.pmf.choiceId}}"); text != "not" {
+		t.Fatalf("untranslated label: %q", text)
+	}
+	// An Other text is the other choice, and its default stays as typed.
+	if text, _ := render("ja", `{"pmf":"自由記述"}`, "{{answers.pmf.choiceId}}={{answers.pmf.default}}"); text != "other=自由記述" {
+		t.Fatalf("other: %q", text)
+	}
+	// Without an other choice, an unknown value has no id and is left out of a list.
+	if text, _ := render("ja", `{"tools":["アルファ","what"]}`, "{{answers.tools.choiceId}}|{{answers.tools.default}}"); text != "a|Alpha; what" {
+		t.Fatalf("unknown: %q", text)
+	}
+	// An answer whose key really ends in .default is still that answer.
+	if text, _ := render("default", `{"pmf.default":"stored"}`, "{{answers.pmf.default}}"); text != "stored" {
+		t.Fatalf("stored key: %q", text)
+	}
+	// A test send keeps the placeholders as written.
+	test := testTemplate(uuid.New(), testSurveyID, "Feedback")
+	if got := test.RenderText("{{answers.pmf.choiceId}}", func(s string) string { return s }); got != "{{answers.pmf.choiceId}}" {
+		t.Fatalf("test send %q", got)
+	}
+}
+
+// A subject is rendered on one line: an answer cannot add a header, and the author's own line breaks are dropped as before.
+func TestRenderSubject(t *testing.T) {
+	t.Parallel()
+	r := &response.Response{ID: uuid.New(), SurveyID: uuid.MustParse(testSurveyID), Data: json.RawMessage(`{"nps":3,"q1":"line\r\nBcc: x@evil.example\u2028end","long":"` + strings.Repeat("あ", 1200) + `"}`)}
+	a, err := responsemail.Decode(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tpl := responseTemplate(r, &responsemail.Survey{Name: "Q4"}, a)
+	for _, tc := range []struct{ in, want string }{
+		{"New {{survey.name}} feedback: NPS {{ answers.nps }}", "New Q4 feedback: NPS 3"},
+		{"Re: {{answers.q1}}", "Re: line  Bcc: x@evil.example end"},
+		{"New\r\nBcc: x@evil.example response {{answers.missing}}", "NewBcc: x@evil.example response"},
+		{"Literal {{ not a placeholder", "Literal {{ not a placeholder"},
+	} {
+		if got := tpl.RenderSubject(tc.in); got != tc.want {
+			t.Errorf("RenderSubject(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+	long := tpl.RenderSubject("{{answers.long}}")
+	if n := len([]rune(long)); n != maxSubjectLength || !strings.HasSuffix(long, "…") {
+		t.Fatalf("long subject of %d characters", n)
+	}
+}
+
 func TestChatPayloads(t *testing.T) {
 	t.Parallel()
 	tpl := testAnswers(t)
@@ -509,6 +614,50 @@ func TestDeliverRetriesOnlyTransientFailures(t *testing.T) {
 	rec, url := serve(t, http.StatusInternalServerError, http.StatusOK)
 	if o := a.deliver(context.Background(), actionEnv{}, http.MethodGet, url, http.Header{}, nil); o.status != StepFailed || o.err != "Status 500" || rec.count() != 1 || rec.requests[0].Method != http.MethodGet {
 		t.Fatalf("no retry: %+v after %d", o, rec.count())
+	}
+}
+
+// A refusing receiver's answer is recorded on the step, cut to maxResponseExcerpt bytes of valid text; an accepting receiver's is not.
+func TestDeliverRecordsRefusalExcerpt(t *testing.T) {
+	t.Parallel()
+	a := testActions(t, ssrf.New(config.Config{DangerouslyAllowWebhookInternalURLs: true}))
+	deliver := func(status int, body string) outcome {
+		t.Helper()
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(status)
+			_, _ = io.WriteString(w, body)
+		}))
+		t.Cleanup(srv.Close)
+		return a.deliver(context.Background(), actionEnv{}, http.MethodPost, srv.URL, http.Header{}, []byte(`{}`))
+	}
+	if o := deliver(http.StatusNotFound, "  no_service\n"); o.output["responseBody"] != "no_service" || o.err != "Status 404" {
+		t.Fatalf("404: %+v", o)
+	}
+	// 170 three-byte characters cross the limit inside the 171st: the cut character is dropped, not sent as invalid UTF-8.
+	long := deliver(http.StatusInternalServerError, strings.Repeat("あ", 300))
+	if got := long.output["responseBody"].(string); got != strings.Repeat("あ", maxResponseExcerpt/3) {
+		t.Fatalf("500: %d bytes %q", len(got), got)
+	}
+	if o := deliver(http.StatusOK, "fine"); o.status != StepSucceeded || o.output["responseBody"] != nil {
+		t.Fatalf("200: %+v", o)
+	}
+	if o := deliver(http.StatusBadRequest, ""); o.output["responseBody"] != nil {
+		t.Fatalf("empty body: %+v", o)
+	}
+}
+
+// A step's run log input carries the label its author gave it, which the run detail names the step by.
+func TestStepInputLabel(t *testing.T) {
+	t.Parallel()
+	label := "POST to CRM"
+	step := Step{ID: "h", Type: ActionHTTPRequest, Node: Node{ID: "h", Label: &label, HTTP: &HTTPRequestConfig{Method: "POST", URL: "https://crm.example/hook?token=abc"}}}
+	if in := stepInput(step); in["label"] != label || in["url"] != "https://crm.example" {
+		t.Fatalf("input %v", in)
+	}
+	blank := " "
+	step.Node.Label = &blank
+	if _, ok := stepInput(step)["label"]; ok {
+		t.Fatal("a blank label was recorded")
 	}
 }
 

@@ -33,6 +33,10 @@ const getWorkflowNodeIssue = (
   options: Required<WorkflowFlowNodeOptions>
 ): TWorkflowNodeIssue | null => {
   const severity = options.isDraft ? "setup" : "error";
+  // The runner does not evaluate branches yet, so a branch stored through the API is flagged as what keeps the workflow from running.
+  if (node.type === "if_else") {
+    return { severity, label: t("workspace.workflows.node_if_else_not_runnable") };
+  }
   if (node.type === "trigger" && !options.hasBoundSurvey) {
     return { severity, label: t("workspace.workflows.node_needs_survey") };
   }

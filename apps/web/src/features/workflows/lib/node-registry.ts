@@ -239,3 +239,11 @@ export const getNodeRegistryKind = (node: TWorkflowNode): TWorkflowNodeRegistryK
 
 export const getNodeRegistryEntry = (node: TWorkflowNode): TWorkflowNodeRegistryEntry =>
   REGISTRY[getNodeRegistryKind(node)];
+
+/** A run step's type as the member reads it, the title the add-step picker gives that action; a type this version does not know as stored. */
+export const getWorkflowStepTypeTitle = (stepType: string, t: TFunction): string =>
+  getWorkflowActionOptions(t).find((option) => option.actionType === stepType)?.title ?? stepType;
+
+/** The label the step's author gave it, which the runner records in the step's input; null for a step without one, or one recorded before labels were. */
+export const getWorkflowStepLabel = (input: Record<string, unknown>): string | null =>
+  typeof input.label === "string" && input.label.trim() !== "" ? input.label : null;

@@ -117,6 +117,36 @@ interface WorkflowTemplateTextareaProps {
   onBlur?: () => void;
 }
 
+/** The variables a template can use, from the trigger's bound survey, as a collapsed list; picking one hands its placeholder to onInsert. */
+export const WorkflowTemplateVariablePicker = ({
+  onInsert,
+}: Readonly<{ onInsert: (token: string) => void }>) => {
+  const { t } = useTranslation();
+  const authoringContext = useWorkflowEmailAuthoringContext();
+  const definition = useAtomValue(workflowDefinitionAtom);
+  const survey = resolveBoundTriggerSurvey(authoringContext, definition);
+  const variables = useMemo(() => buildWorkflowTemplateVariables(survey, t), [survey, t]);
+  return (
+    <details className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600">
+      <summary className="cursor-pointer select-none">{t("workspace.workflows.variables_insert")}</summary>
+      <p className="mt-2 text-slate-500">{t("workspace.workflows.variables_description")}</p>
+      <ul className="mt-2 flex max-h-40 flex-col gap-1 overflow-y-auto">
+        {variables.map((variable) => (
+          <li key={variable.token}>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-2 rounded px-1 py-0.5 text-left hover:bg-slate-100"
+              onClick={() => onInsert(variable.token)}>
+              <span className="truncate text-slate-700">{variable.label}</span>
+              <code className="shrink-0 text-slate-500">{variable.token}</code>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+};
+
 /** A template with the variables it can use beneath it; picking one puts its placeholder where the caret was. The variables come from the trigger's bound survey. */
 export const WorkflowTemplateTextarea = ({
   id,
@@ -132,11 +162,6 @@ export const WorkflowTemplateTextarea = ({
   onChange,
   onBlur,
 }: Readonly<WorkflowTemplateTextareaProps>) => {
-  const { t } = useTranslation();
-  const authoringContext = useWorkflowEmailAuthoringContext();
-  const definition = useAtomValue(workflowDefinitionAtom);
-  const survey = resolveBoundTriggerSurvey(authoringContext, definition);
-  const variables = useMemo(() => buildWorkflowTemplateVariables(survey, t), [survey, t]);
   const ref = useRef<HTMLTextAreaElement>(null);
   const errorId = `${id}-error`;
 
@@ -172,27 +197,7 @@ export const WorkflowTemplateTextarea = ({
         onChange={(event) => onChange(event.target.value)}
       />
       {error ? <WorkflowFieldError id={errorId}>{error}</WorkflowFieldError> : null}
-      {isEditable ? (
-        <details className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600">
-          <summary className="cursor-pointer select-none">
-            {t("workspace.workflows.variables_insert")}
-          </summary>
-          <p className="mt-2 text-slate-500">{t("workspace.workflows.variables_description")}</p>
-          <ul className="mt-2 flex max-h-40 flex-col gap-1 overflow-y-auto">
-            {variables.map((variable) => (
-              <li key={variable.token}>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-2 rounded px-1 py-0.5 text-left hover:bg-slate-100"
-                  onClick={() => insert(variable.token)}>
-                  <span className="truncate text-slate-700">{variable.label}</span>
-                  <code className="shrink-0 text-slate-500">{variable.token}</code>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+      {isEditable ? <WorkflowTemplateVariablePicker onInsert={insert} /> : null}
     </div>
   );
 };

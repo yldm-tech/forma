@@ -12,10 +12,18 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
+	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
-// placeholder is a template variable, {{path}} with optional spaces inside the braces. Paths are the names Template.lookup knows: answers.<element or hidden field id>, variables.<id>, contact.attributes.<key>, and the fixed response.*, survey.*, contact.*, workflow.* and run.* values.
+// placeholder is a template variable, {{path}} with optional spaces inside the braces. Paths are the names Template.lookup knows: answers.<element or hidden field id>, answers.<choice element id>.choiceId and .default, variables.<id>, contact.attributes.<key>, and the fixed response.*, survey.*, contact.*, workflow.* and run.* values.
 var placeholder = regexp.MustCompile(`\{\{\s*([A-Za-z0-9_.:\-]+)\s*\}\}`)
+
+// The suffixes of a choice answer's language-independent placeholders: answers.<id>.choiceId is the id of the chosen choice (a list of ids for a multi-select or ranking), answers.<id>.default its label in the survey's default language. A response stores the label in the language it was answered in, so these are what a multi-language survey sends the same whatever language the respondent used.
+const (
+	choiceIDSuffix     = ".choiceId"
+	defaultLabelSuffix = ".default"
+	otherChoiceID      = "other"
+)
 
 // wholePlaceholder is a JSON string that is nothing but one placeholder, which RenderJSON replaces by the value itself rather than its text.
 var wholePlaceholder = regexp.MustCompile(`^\{\{\s*([A-Za-z0-9_.:\-]+)\s*\}\}$`)
@@ -26,7 +34,11 @@ type Template struct {
 	// Answers is the response's data and variables; nil for a test send.
 	Answers *responsemail.Answers
 	// Attributes is the contact's attributes as the response recorded them.
-	Attributes  map[string]any
+	Attributes map[string]any
+	// Elements are the survey's elements, which the choiceId and default placeholders of a choice answer read; nil for a test send.
+	Elements []surveydoc.Element
+	// Language is the key the survey's texts use for the response's language, "default" for its default language.
+	Language    string
 	KeepUnknown bool
 }
 
@@ -40,8 +52,11 @@ func (t *Template) lookup(name string) (value any, answer string, ok bool) {
 		return t.Answers.Data, "", true
 	case strings.HasPrefix(name, "answers.") && t.Answers != nil:
 		key := strings.TrimPrefix(name, "answers.")
-		v, found := t.Answers.Data[key]
-		return v, key, found
+		if v, found := t.Answers.Data[key]; found {
+			return v, key, true
+		}
+		v, found := t.choice(key)
+		return v, "", found
 	case strings.HasPrefix(name, "variables.") && t.Answers != nil:
 		v, found := t.Answers.Variables[strings.TrimPrefix(name, "variables.")]
 		return v, "", found
@@ -50,6 +65,91 @@ func (t *Template) lookup(name string) (value any, answer string, ok bool) {
 		return v, "", found
 	}
 	return nil, "", false
+}
+
+// choice resolves answers.<id>.choiceId and answers.<id>.default for a single-select, multi-select or ranking element the response answered: each stored label is matched to its choice in the response's language, then in any language. A value no choice has, an "Other" text, is the element's other choice for choiceId (and dropped where there is none) and stays as typed for default. A list answer resolves to a list.
+func (t *Template) choice(key string) (any, bool) {
+	id, ok := strings.CutSuffix(key, choiceIDSuffix)
+	wantID := ok
+	if !ok {
+		if id, ok = strings.CutSuffix(key, defaultLabelSuffix); !ok {
+			return nil, false
+		}
+	}
+	var el *surveydoc.Element
+	for i := range t.Elements {
+		e := &t.Elements[i]
+		if e.ID == id && (e.Type == surveydoc.ElementMultipleChoiceSingle || e.Type == surveydoc.ElementMultipleChoiceMulti || e.Type == surveydoc.ElementRanking) {
+			el = e
+		}
+	}
+	if el == nil {
+		return nil, false
+	}
+	resolve := func(v any) (any, bool) {
+		s, isString := v.(string)
+		if !isString || s == "" {
+			return nil, false
+		}
+		c := matchChoice(el, s, t.Language)
+		if wantID {
+			if c == nil {
+				return nil, false
+			}
+			return c.ID, true
+		}
+		if c == nil || c.ID == otherChoiceID {
+			return s, true
+		}
+		if d := c.Label.Default(); d != "" {
+			return d, true
+		}
+		return s, true
+	}
+	switch answer := t.Answers.Data[id].(type) {
+	case string:
+		return resolve(answer)
+	case []any:
+		out := []any{}
+		for _, item := range answer {
+			if v, ok := resolve(item); ok {
+				out = append(out, v)
+			}
+		}
+		return out, true
+	}
+	return nil, false
+}
+
+// matchChoice is the choice of el whose label is s: in lang as the respondent saw it (the default label where lang has no translation), else in any language. A value no label matches is the element's other choice, nil when it has none.
+func matchChoice(el *surveydoc.Element, s, lang string) *surveydoc.Choice {
+	localized := func(l surveydoc.I18nString) string {
+		if v, ok := l[lang]; ok && strings.TrimSpace(v) != "" {
+			return v
+		}
+		return l.Default()
+	}
+	for i, c := range el.Choices {
+		if c.ID != otherChoiceID && localized(c.Label) == s {
+			return &el.Choices[i]
+		}
+	}
+	for i, c := range el.Choices {
+		if c.ID == otherChoiceID {
+			continue
+		}
+		for _, label := range c.Label {
+			if label == s {
+				return &el.Choices[i]
+			}
+		}
+	}
+	for i, c := range el.Choices {
+		if c.ID == otherChoiceID {
+			return &el.Choices[i]
+		}
+	}
+	return nil
 }
 
 // text is a placeholder's value as text, and whether it resolved.
@@ -107,6 +207,16 @@ func (t *Template) RenderText(tmpl string, escape func(string) string) string {
 		}
 		return escape(s)
 	})
+}
+
+// RenderSubject renders an email subject template as plain text on one line: a value's line breaks and other control characters become spaces, the template's own are removed, so neither an answer nor the author can add a header, and the result is cut to maxSubjectLength characters.
+func (t *Template) RenderSubject(tmpl string) string {
+	subject := t.RenderText(controlChars.ReplaceAllString(tmpl, ""), func(s string) string { return controlChars.ReplaceAllString(s, " ") })
+	subject = strings.TrimSpace(subject)
+	if runes := []rune(subject); len(runes) > maxSubjectLength {
+		subject = strings.TrimSpace(string(runes[:maxSubjectLength-1])) + "…"
+	}
+	return subject
 }
 
 // RenderJSON renders a JSON body template. The template must be JSON; placeholders live inside its strings, so whatever the values hold, the result is JSON too. A string that is a single placeholder becomes the value itself (a number stays a number, response.data an object); any other string gets the values' text.
@@ -184,7 +294,11 @@ func responseTemplate(r *response.Response, sv *responsemail.Survey, a *response
 	attributes := map[string]any{}
 	// A snapshot that is not an object leaves the contact's attributes empty rather than failing the run.
 	_ = json.Unmarshal(jsonObject(r.ContactAttributes), &attributes)
-	return &Template{Fixed: fixed, Answers: a, Attributes: attributes}
+	t := &Template{Fixed: fixed, Answers: a, Attributes: attributes, Language: sv.LanguageCode(r.Language)}
+	if sv.Survey != nil {
+		t.Elements = sv.Elements()
+	}
+	return t
 }
 
 // testTemplate is a test send's template: the workflow and its survey's name, every other placeholder left as written.

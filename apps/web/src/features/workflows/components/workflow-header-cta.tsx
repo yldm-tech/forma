@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
 import {
@@ -7,6 +7,7 @@ import {
   ChevronDownIcon,
   CirclePauseIcon,
   CirclePlayIcon,
+  ShieldAlertIcon,
   TrashIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -20,14 +21,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
+import { sdkIdentityQuery } from "../../../lib/queries/workspaces";
 import { toast } from "../../../lib/toast";
 import { getWorkflowApiErrorMessage, workflowKeys, workflowsApi } from "../api";
 import { useWorkflowBuilder } from "../hooks/use-workflow-builder";
 import { WORKFLOW_CLIENT_EVENTS, summarizeValidationProblems, trackWorkflowEvent } from "../lib/analytics";
 import { getWorkflowStatusBadge } from "../lib/display";
+import { getNodeRegistryEntry } from "../lib/node-registry";
+import { getProtectedAttributeWrites } from "../lib/protected-attributes";
 import {
   hasWorkflowSaveFailedAtom,
   workflowAtom,
+  workflowDefinitionAtom,
   workflowValidationProblemsAtom,
   workflowValidityAtom,
 } from "../state/editor";
@@ -50,6 +55,14 @@ export const WorkflowHeaderCta = ({
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isProtectedWriteModalOpen, setIsProtectedWriteModalOpen] = useState(false);
+  const definition = useAtomValue(workflowDefinitionAtom);
+  const workspaceId = workflow?.workspaceId ?? "";
+  const identity = useQuery({ ...sdkIdentityQuery(workspaceId), enabled: workspaceId !== "" && isEditTab });
+  const protectedWrites = getProtectedAttributeWrites(
+    definition,
+    identity.data?.protectedAttributeKeys ?? []
+  );
 
   if (!workflow) return null;
   // The runs tab is read-only; the exception is an unresolved save failure, since the unmount flush can fail during the very tab switch that lands the user there and the editor is no longer mounted to report it.
@@ -58,6 +71,20 @@ export const WorkflowHeaderCta = ({
   const isArchived = workflow.status === "archived";
   const isActive = workflow.status === "enabled";
   const isBusy = isReadOnly || builder.isTransitioning || isDeleting;
+
+  // Enabling a workflow that writes SDK-protected attributes from the respondent's answers is confirmed first; the server accepts it either way.
+  const handleEnable = () => {
+    if (protectedWrites.length > 0) {
+      setIsProtectedWriteModalOpen(true);
+      return;
+    }
+    void builder.enable();
+  };
+
+  const handleProtectedWriteConfirm = async () => {
+    await builder.enable();
+    setIsProtectedWriteModalOpen(false);
+  };
 
   const handleArchiveConfirm = async () => {
     await builder.archive();
@@ -137,7 +164,7 @@ export const WorkflowHeaderCta = ({
                       <DropdownMenuItem
                         icon={<CirclePlayIcon className="size-4" />}
                         disabled={!validity.isReady}
-                        onSelect={() => void builder.enable()}>
+                        onSelect={handleEnable}>
                         {t("common.enable")}
                       </DropdownMenuItem>
                     )}
@@ -163,6 +190,32 @@ export const WorkflowHeaderCta = ({
             isButtonDisabled={isReadOnly || builder.isTransitioning}
             onConfirm={() => void handleArchiveConfirm()}
             Icon={ArchiveIcon}
+          />
+          <ConfirmationModal
+            open={isProtectedWriteModalOpen}
+            setOpen={setIsProtectedWriteModalOpen}
+            title={t("workspace.workflows.enable_protected_attribute_confirm_title")}
+            description={t("workspace.workflows.protected_attribute_confirm_description")}
+            body={
+              <div className="flex flex-col gap-2">
+                <p>{t("workspace.workflows.enable_protected_attribute_confirm_body")}</p>
+                <ul className="list-disc pl-5">
+                  {protectedWrites.map((node) => (
+                    <li key={node.id}>
+                      {t("workspace.workflows.enable_protected_attribute_confirm_step", {
+                        step: getNodeRegistryEntry(node).title(node, t),
+                        key: node.config.attributeKey,
+                      })}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            }
+            buttonText={t("workspace.workflows.enable_protected_attribute_confirm_button")}
+            buttonLoading={builder.isTransitioning}
+            isButtonDisabled={isReadOnly || builder.isTransitioning}
+            onConfirm={() => void handleProtectedWriteConfirm()}
+            Icon={ShieldAlertIcon}
           />
           <DeleteDialog
             open={isDeleteDialogOpen}
