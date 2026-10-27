@@ -2189,6 +2189,7 @@
       "api_key_updated": "API Key updated",
       "api_reference": "API reference",
       "check_key_hint": "To check what a key can reach, put it in the FORMA_API_KEY environment variable and run the command below. The answer lists the key's organization and the workspaces it may use.",
+      "creator_deactivated_hint": "This key's creator has been deactivated on this Forma instance. The key does not work until the instance's administrator turns their account back on.",
       "delete_api_key_confirmation": "Any applications using this key will no longer be able to access your Forma data.",
       "disabled_description": "This key stopped working on {date} and can't be turned back on. Create a new key for the integrations that used it, then delete this one.",
       "disabled_reason_creator_deleted": "Its creator deleted their account.",

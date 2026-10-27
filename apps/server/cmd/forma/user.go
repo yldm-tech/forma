@@ -19,7 +19,7 @@ const userUsage = `usage: forma user <command> <email>
 
 commands:
   activate    turn the account with the email back on: it signs in again and keeps the organizations that have not suspended it
-  deactivate  turn the account off on the whole instance: it signs in nowhere, and its sessions stop working on their next request
+  deactivate  turn the account off on the whole instance: it signs in nowhere, its sessions stop working on their next request, and the API keys it created stop authenticating until it is activated again
 
 An organization's owners and managers suspend and restore a member's access to their own organization; turning an account off or on is the instance operator's alone, and this is the operator's tool for it.
 `

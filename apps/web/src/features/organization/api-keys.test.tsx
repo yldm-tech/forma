@@ -131,7 +131,7 @@ const existing: ApiKey = {
   organizationAccess: { accessControl: { read: true, write: false } },
   workspacePermissions: [],
   lastUsedAt: null,
-  createdBy: { id: "u1", name: "Ada Owner", formerMember: false, suspended: false },
+  createdBy: { id: "u1", name: "Ada Owner", formerMember: false, suspended: false, deactivated: false },
   disabledAt: null,
   disabledReason: null,
   keyHint: null,
@@ -160,7 +160,13 @@ const stubKeysServer = (listed: ApiKey[] = [existing]) => {
           organizationAccess: { accessControl: { read: true, write: false } },
           workspacePermissions: [],
           lastUsedAt: null,
-          createdBy: { id: "u1", name: "Ada Owner", formerMember: false, suspended: false },
+          createdBy: {
+            id: "u1",
+            name: "Ada Owner",
+            formerMember: false,
+            suspended: false,
+            deactivated: false,
+          },
           disabledAt: null,
           disabledReason: null,
           keyHint: "text",
@@ -279,7 +285,7 @@ test("lists when each key was last used, who created it, and which keys a depart
       ...existing,
       id: "k2",
       label: "Left behind",
-      createdBy: { id: "u2", name: "Grace Gone", formerMember: true, suspended: false },
+      createdBy: { id: "u2", name: "Grace Gone", formerMember: true, suspended: false, deactivated: false },
       disabledAt: "2026-02-01T00:00:00Z",
       disabledReason: "creator_removed",
     },
@@ -288,7 +294,25 @@ test("lists when each key was last used, who created it, and which keys a depart
       ...existing,
       id: "k4",
       label: "Paused",
-      createdBy: { id: "u3", name: "Sam Suspended", formerMember: false, suspended: true },
+      createdBy: {
+        id: "u3",
+        name: "Sam Suspended",
+        formerMember: false,
+        suspended: true,
+        deactivated: false,
+      },
+    },
+    {
+      ...existing,
+      id: "k5",
+      label: "Switched off",
+      createdBy: {
+        id: "u4",
+        name: "Dee Deactivated",
+        formerMember: false,
+        suspended: false,
+        deactivated: true,
+      },
     },
   ]);
   await renderPage(<ApiKeysPage organization={owner} />);
@@ -316,6 +340,11 @@ test("lists when each key was last used, who created it, and which keys a depart
   expect(suspended.getAttribute("title")).toBe(i18n.t("organizations.members.creator_suspended_hint"));
   expect(row("Paused").queryByText(formerMember)).toBeNull();
   expect(row("Paused").queryByText(i18n.t("common.disabled"))).toBeNull();
+  // So is the key of a creator whose account the instance deactivated: it waits for the account to be turned back on.
+  const deactivated = row("Switched off").getByText(i18n.t("common.inactive"));
+  expect(deactivated.getAttribute("title")).toBe(i18n.t("workspace.api_keys.creator_deactivated_hint"));
+  expect(row("Switched off").getByText("Dee Deactivated")).toBeTruthy();
+  expect(row("Switched off").queryByText(i18n.t("common.disabled"))).toBeNull();
 
   // The key's dialog says why it stopped working and what to do.
   fireEvent.click(
