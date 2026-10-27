@@ -68,6 +68,8 @@ const (
 	withheldInvalid     = "invalid"
 	withheldOtherUser   = "other_user"
 	withheldGrantFailed = "grant_failed"
+	// withheldTwoFactor is an account with two-factor authentication: the link is one factor, so the user signs in with both instead.
+	withheldTwoFactor = "two_factor_required"
 )
 
 // verifyEmail confirms an address with an emailed token.
@@ -169,8 +171,12 @@ func (s *Service) grantVerificationSession(ctx context.Context, userID uuid.UUID
 			reason = withheldGrantFailed
 			return nil
 		}
-		t, err := s.sessions.create(ctx, tx.db, userID, meta)
-		sess = &t
+		if acc.TwoFactorEnabled {
+			reason = withheldTwoFactor
+			return nil
+		}
+		res, err := s.grantSignIn(ctx, tx, acc, meta, pendingSignInPayload{Method: signInMethodPassword})
+		sess = res.session
 		return err
 	})
 	if err != nil {

@@ -48,6 +48,20 @@ func TestSetAccountActive(t *testing.T) {
 	}
 	exec(`INSERT INTO memberships (user_id, organization_id, role, accepted, suspended_at) VALUES (?, ?, 'member', true, now())`, user, acme)
 	exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, 'member', true)`, user, other)
+	// An MCP client the user authorized: a refresh token and the access token issued with it.
+	exec(`INSERT INTO oauth_clients (client_id, redirect_uris, application_type, token_endpoint_auth_method, grant_types, response_types, scopes, resources)
+		VALUES ('mcp-client', '{http://127.0.0.1:9999/callback}', 'native', 'none', '{authorization_code,refresh_token}', '{code}', '{offline_access,surveys:read}', '{https://mcp.example.com/api/mcp}')`)
+	exec(`INSERT INTO oauth_refresh_tokens (expires_at, token_hash, family_id, client_id, user_id, scopes, resources, auth_time)
+		VALUES (now() + interval '30 days', '\x01', uuidv7(), 'mcp-client', ?, '{offline_access,surveys:read}', '{https://mcp.example.com/api/mcp}', now())`, user)
+	exec(`INSERT INTO oauth_access_tokens (expires_at, client_id, user_id, scopes, resources) VALUES (now() + interval '15 minutes', 'mcp-client', ?, '{offline_access,surveys:read}', '{https://mcp.example.com/api/mcp}')`, user)
+	liveGrants := func() int {
+		t.Helper()
+		var n int
+		if err := db.Raw(`SELECT (SELECT count(*) FROM oauth_refresh_tokens WHERE user_id = ? AND revoked_at IS NULL) + (SELECT count(*) FROM oauth_access_tokens WHERE user_id = ? AND revoked_at IS NULL)`, user, user).Row().Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
 	isActive := func() bool {
 		t.Helper()
 		var v bool
@@ -65,8 +79,12 @@ func TestSetAccountActive(t *testing.T) {
 		return out.String()
 	}
 
-	if out := set(false); isActive() || out != "ada@example.com is now deactivated\n" {
+	// Turning the account off revokes its OAuth grants, so a refresh token does not come back to life with the account.
+	if out := set(false); isActive() || out != "ada@example.com is now deactivated\nRevoked 1 OAuth refresh token(s): its MCP clients must be authorized again.\n" {
 		t.Fatalf("deactivate: active %v, %q", isActive(), out)
+	}
+	if n := liveGrants(); n != 0 {
+		t.Fatalf("%d OAuth tokens survived the deactivation", n)
 	}
 	if out := set(false); isActive() || out != "ada@example.com is already deactivated\n" {
 		t.Fatalf("deactivate again: active %v, %q", isActive(), out)

@@ -195,10 +195,25 @@ func (s *SSO) start(ctx context.Context, providerID, callbackURL string) (string
 	return conf.AuthCodeURL(state, opts...), issuedToken{Value: cookie, ExpiresAt: expires, MaxAge: oauthStateTTL}, nil
 }
 
-// callbackResult is where the callback sends the browser, and the session to set when it signed the browser in.
+// callbackResult is where the callback sends the browser, and the session to set when it signed the browser in, or the pending sign-in to set when the account's second factor must complete it.
 type callbackResult struct {
 	redirect string
 	session  *issuedToken
+	pending  *issuedToken
+}
+
+// signedIn turns a granted sign-in into the callback's outcome: a session goes where the sign-in was headed, and a pending sign-in to the sign-in page's second step, which goes there once the code is accepted.
+func (s *SSO) signedIn(ctx context.Context, userID uuid.UUID, res signInResult, callbackURL string) callbackResult {
+	if res.pending != nil {
+		return callbackResult{redirect: s.twoFactorPage(callbackURL), pending: res.pending}
+	}
+	s.svc.finalizeSignIn(ctx, userID, signInMethodSSO)
+	return callbackResult{redirect: callbackURL, session: res.session}
+}
+
+// twoFactorPage is the sign-in page opened at its second step, heading for callbackURL.
+func (s *SSO) twoFactorPage(callbackURL string) string {
+	return s.pageWithQuery(loginPath, url.Values{"twoFactor": {"1"}, "callbackUrl": {callbackURL}})
 }
 
 // failure sends the browser to the sign-in page with an error code, forma2's errorCallbackURL.
@@ -306,7 +321,7 @@ func (s *SSO) signIn(ctx context.Context, provider string, id ssoIdentity, callb
 	return s.provision(ctx, provider, id, callbackURL, acceptLanguage, meta)
 }
 
-// signInLinked signs in the user an identity is linked to. The provider is authoritative for the display name, re-read on every sign-in; it never rewrites the address, which changes only through the verified email change. An unverified account whose provider now vouches for its address becomes verified.
+// signInLinked signs in the user an identity is linked to, through the account's second factor when it has one: the identity provider is a first factor like a password. The provider is authoritative for the display name, re-read on every sign-in; it never rewrites the address, which changes only through the verified email change. An unverified account whose provider now vouches for its address becomes verified.
 func (s *SSO) signInLinked(ctx context.Context, userID uuid.UUID, id ssoIdentity, callbackURL string, meta clientMeta) (callbackResult, error) {
 	acc, err := s.svc.repo.accountByID(ctx, userID)
 	if err != nil {
@@ -329,12 +344,11 @@ func (s *SSO) signInLinked(ctx context.Context, userID uuid.UUID, id ssoIdentity
 			return callbackResult{}, err
 		}
 	}
-	sess, err := s.svc.sessions.create(ctx, s.svc.repo.db, acc.ID, meta)
+	res, err := s.svc.grantSignIn(ctx, s.svc.repo, acc, meta, pendingSignInPayload{Method: signInMethodSSO})
 	if err != nil {
 		return callbackResult{}, err
 	}
-	s.svc.finalizeSignIn(ctx, acc.ID, signInMethodSSO)
-	return callbackResult{redirect: callbackURL, session: &sess}, nil
+	return s.signedIn(ctx, acc.ID, res, callbackURL), nil
 }
 
 // recoveryPayload is what an SSO recovery link links once redeemed.
@@ -418,7 +432,7 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 	}
 	locale := mailer.MatchLocale(acceptLanguage)
 	var userID uuid.UUID
-	var sess issuedToken
+	var granted signInResult
 	err := s.svc.jobTransaction(ctx, func(tx *Repository, jtx *jobs.Tx) error {
 		var created bool
 		var err error
@@ -434,7 +448,11 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 		if err := tx.insertIdentity(ctx, userID, provider, id.Subject); err != nil {
 			return err
 		}
-		if sess, err = s.svc.sessions.create(ctx, tx.db, userID, meta); err != nil {
+		acc, err := tx.accountByID(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if granted, err = s.svc.grantSignIn(ctx, tx, acc, meta, pendingSignInPayload{Method: signInMethodSSO}); err != nil {
 			return err
 		}
 		// forma2's SSO provisioning added the new user to Brevo whether or not the provider vouched for the address.
@@ -471,8 +489,7 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 	s.svc.delivery.DeliverOrganizations(ctx, organizations, userID)
 	// The sign-in below consumes the attribution; the sign-up reads it first, as forma2 carried it from the create hook to the after hook.
 	captureSignedUp(userID, provider, email, source, joined, attributionProperties(ctx))
-	s.svc.finalizeSignIn(ctx, userID, signInMethodSSO)
-	return callbackResult{redirect: callbackURL, session: &sess}, nil
+	return s.signedIn(ctx, userID, granted, callbackURL), nil
 }
 
 // emailVerifiedOnCreate is forma2's resolveSsoEmailVerifiedForCreate. SAML is its never-attests provider: an assertion cannot carry a verification claim, so there is nothing to honour and the user it creates is verified, as it always was. A linked SAML sign-in reads id.EmailVerified, which SAML never sets, so it never verifies an existing account's address.
@@ -554,19 +571,19 @@ func (s *SSO) resolveDefaultOrganization(ctx context.Context, orgID uuid.UUID, u
 	return existingRole, nil
 }
 
-// completeRecovery redeems an emailed recovery link: it proves the clicker reads the account's mailbox, so the identity is linked and the browser signed in. An account whose address was never proven first loses the password, two-factor authentication and other single sign-on identities set on it, since whoever registered it is held out by nothing once the address is verified; every other session of the account ends, and the owner is told what was removed. Returns where the browser goes next.
-func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMeta) (string, issuedToken, error) {
+// completeRecovery redeems an emailed recovery link: it proves the clicker reads the account's mailbox, so the identity is linked and the browser signed in. Mailbox control is one factor, so an account with two-factor authentication gets a pending sign-in instead, and the identity is linked only once its code is accepted (verifySignIn). An account whose address was never proven first loses the password, two-factor authentication and other single sign-on identities set on it, since whoever registered it is held out by nothing once the address is verified; every other session of the account ends, and the owner is told what was removed. Returns where the browser goes next, or, for a pending sign-in, where it goes once the code is accepted.
+func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMeta) (string, signInResult, error) {
 	if err := s.svc.limiter.ApplyIP(ctx, ratelimit.BASSORecovery); err != nil {
-		return "", issuedToken{}, err
+		return "", signInResult{}, err
 	}
-	failed := func(userID string, details map[string]any, reason string, err error) (string, issuedToken, error) {
+	failed := func(userID string, details map[string]any, reason string, err error) (string, signInResult, error) {
 		s.log.ErrorContext(ctx, "SSO recovery failed", "userId", userID, "failureReason", reason)
 		s.auditRecovery(ctx, audit.ActionSSORecoveryFailed, audit.StatusFailure, userID, withReason(details, reason))
-		return "", issuedToken{}, err
+		return "", signInResult{}, err
 	}
 	v, err := s.svc.repo.findPayloadVerification(ctx, purposeSSORecovery, secret.HashToken(token))
 	if err != nil {
-		return "", issuedToken{}, err
+		return "", signInResult{}, err
 	}
 	if v == nil || v.ConsumedAt.Valid || !v.UserID.Valid {
 		return failed(audit.Unknown, map[string]any{"provider": "unknown"}, "invalid_or_expired_intent", errInvalidToken())
@@ -574,7 +591,7 @@ func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMet
 	userID := v.UserID.UUID
 	var payload recoveryPayload
 	if err := json.Unmarshal(v.Payload, &payload); err != nil {
-		return "", issuedToken{}, err
+		return "", signInResult{}, err
 	}
 	details := map[string]any{"email": v.Email, "provider": payload.Provider, "callbackUrl": payload.CallbackURL}
 	if !v.ExpiresAt.After(s.svc.now()) {
@@ -585,7 +602,7 @@ func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMet
 		return failed(userID.String(), details, "invalid_provider", errAccountNotLinked())
 	}
 
-	var sess issuedToken
+	var granted signInResult
 	var acc *account
 	var reclaimed *reclaimOutcome
 	var sessionsRevoked int64
@@ -625,24 +642,30 @@ func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMet
 				return err
 			}
 			reclaimed = &outcome
-			// Whoever held the account before its address was proven is signed out with it.
-			if sessionsRevoked, err = s.svc.sessions.RevokeAll(ctx, tx.db, acc.ID, uuid.Nil); err != nil {
+			// Whoever held the account before its address was proven is signed out with it, MCP clients included.
+			if sessionsRevoked, err = s.svc.sessions.endOtherAccess(ctx, tx.db, acc.ID, uuid.Nil); err != nil {
 				return err
 			}
+			// The reclaim removed two-factor authentication with everything else the registrant set.
+			acc.TwoFactorEnabled = false
 		}
-		if owner == uuid.Nil {
-			if err := tx.insertIdentity(ctx, acc.ID, provider, payload.Subject); err != nil {
-				return err
-			}
-		}
-		sess, err = s.svc.sessions.create(ctx, tx.db, acc.ID, meta)
+		granted, err = s.svc.grantSignIn(ctx, tx, acc, meta, pendingSignInPayload{Method: signInMethodSSO, Link: &identityLink{Provider: provider, Subject: payload.Subject}})
 		return err
 	})
 	if err != nil {
 		if reason != "" {
 			return failed(userID.String(), details, reason, err)
 		}
-		return "", issuedToken{}, err
+		return "", signInResult{}, err
+	}
+	redirect := validatedCallbackURL(s.cfg.WebAppURL, payload.CallbackURL)
+	if redirect == "" {
+		redirect = s.svc.pageURL("/")
+	}
+	if granted.pending != nil {
+		// Nothing is linked yet: verifySignIn links the identity and records the completion once the code is accepted.
+		s.log.InfoContext(ctx, "SSO recovery is waiting for the second factor", "userId", acc.ID.String(), "provider", provider)
+		return redirect, granted, nil
 	}
 
 	completed := details
@@ -657,11 +680,7 @@ func (s *SSO) completeRecovery(ctx context.Context, token string, meta clientMet
 	s.svc.finalizeSignIn(ctx, acc.ID, signInMethodSSO)
 	s.log.InfoContext(ctx, "SSO recovery completed", "userId", acc.ID.String(), "provider", provider)
 	s.auditRecovery(ctx, audit.ActionSSORecoveryCompleted, audit.StatusSuccess, acc.ID.String(), completed)
-	redirect := validatedCallbackURL(s.cfg.WebAppURL, payload.CallbackURL)
-	if redirect == "" {
-		redirect = s.svc.pageURL("/")
-	}
-	return redirect, sess, nil
+	return redirect, granted, nil
 }
 
 // notifyFactorsRemoved tells the owner what recovery took away (forma2's ENG-2633): correct for someone who registered on another's address, but a silent downgrade for an owner who simply never verified, and nothing distinguishes the two. Best effort: the recovery has already committed.

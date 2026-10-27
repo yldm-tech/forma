@@ -41,8 +41,12 @@ export const signInFailure = (t: TFunction, error: unknown): Failure<"email" | "
   return genericFailure(t, error, ["email", "password"] as const);
 };
 
-// Codes after which the pending sign-in is gone and the cookie cleared, so the user must start again with their password.
-const PENDING_SIGN_IN_GONE = new Set(["too_many_attempts_request_new_code", "invalid_two_factor_cookie"]);
+// Codes after which the pending sign-in is gone and the cookie cleared, so the user must start again. account_not_linked is an SSO recovery whose identity was linked to another account before the code was entered.
+const PENDING_SIGN_IN_GONE = new Set([
+  "too_many_attempts_request_new_code",
+  "invalid_two_factor_cookie",
+  "account_not_linked",
+]);
 
 /** The second step of sign-in. `restart` is set when the pending sign-in no longer exists. The account lock is a 429 with its own explanation, which is shown as the server words it. */
 export const twoFactorFailure = (t: TFunction, error: unknown): { message: string; restart: boolean } => {

@@ -351,6 +351,47 @@ func TestSlackPostsTheMessage(t *testing.T) {
 	}
 }
 
+// A respondent's text reaches Slack as typed: answers, the recall in a label, contact attributes and the survey's name cannot notify the channel, mention anyone, post a disguised link or format the message.
+func TestSlackEscapesHostileAnswers(t *testing.T) {
+	e := newEnv(t)
+	_, ws := e.organization(e.user())
+	sv := e.survey(ws)
+	e.exec(`UPDATE surveys SET name = 'NPS <!here>' WHERE id = ?`, sv)
+	e.fake.reply("POST /slack/api/chat.postMessage", http.StatusOK, `{"ok":true,"channel":"C1","ts":"1"}`)
+	link := SlackLink{LinkBase: base(sv), Elements: elements("q1", "q2"), ChannelID: "C1", ChannelName: "general"}
+	link.IncludeContactAttributes = ptr(true)
+	e.connect(ws, TypeSlack, map[string]any{"access_token": "xoxb-1"}, "", []SlackLink{link})
+
+	data := `{"q1":"<!channel> <https://evil.example/login|Your Forma session expired> *now*","q2":["<@U123>","_x_"]}`
+	if err := e.deliverer.HandleResponse(context.Background(), e.respondWith(ws, sv, data, `{"plan":"@channel"}`)); err != nil {
+		t.Fatal(err)
+	}
+	posts := e.fake.to(http.MethodPost, "/slack/api/chat.postMessage")
+	if len(posts) != 1 {
+		t.Fatalf("posts = %d; log %s", len(posts), e.logs.String())
+	}
+	form, _ := url.ParseQuery(string(posts[0].Body))
+	var blocks []map[string]any
+	if err := json.Unmarshal([]byte(form.Get("blocks")), &blocks); err != nil {
+		t.Fatal(err)
+	}
+	section := func(text string) map[string]any {
+		return map[string]any{"type": "section", "text": map[string]any{"type": "mrkdwn", "text": text}}
+	}
+	const z = "\u200b"
+	want := []map[string]any{
+		section("NPS &lt;!here" + z + "&gt;\n"), {"type": "divider"},
+		section("*Question 1 &lt;@U123" + z + "&gt;, " + z + "_" + z + "x" + z + "_" + z + "*"),
+		section("&lt;!channel" + z + "&gt; &lt;https://evil.example/login|Your Forma session expired" + z + "&gt; " + z + "*" + z + "now" + z + "*" + z + "\n"),
+		section("*Question 2*"), section("&lt;@U123" + z + "&gt;; " + z + "_" + z + "x" + z + "_" + z + "\n"),
+		section("*person.plan*"), section("@" + z + "channel\n"),
+	}
+	if !reflect.DeepEqual(blocks, want) {
+		got, _ := json.Marshal(blocks)
+		t.Errorf("blocks = %s", got)
+	}
+}
+
 // forma2's Notion payloads: picture selections as their URLs (a single one unwrapped for a url column), metadata, the creation time as a date, contact attributes, and getValue's `|| null`.
 func TestNotionCreatesThePage(t *testing.T) {
 	e := newEnv(t)

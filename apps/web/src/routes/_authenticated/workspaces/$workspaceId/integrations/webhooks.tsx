@@ -13,5 +13,11 @@ export const Route = createFileRoute("/_authenticated/workspaces/$workspaceId/in
 function Page() {
   const { workspaceId } = Route.useParams();
   const { data: workspace } = useSuspenseQuery(workspaceQuery(workspaceId));
-  return <WebhooksPage workspaceId={workspaceId} isReadOnly={workspace.access.isReadOnly} />;
+  return (
+    <WebhooksPage
+      workspaceId={workspaceId}
+      isReadOnly={workspace.access.isReadOnly}
+      canManage={workspace.access.canManage}
+    />
+  );
 }

@@ -100,7 +100,13 @@ var ReservedCatalog = []ReservedField{
 		return jsvalue.Undefined
 	}},
 	{Name: "startedAt", DataType: TypeDate, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.CreatedAt }},
-	{Name: "finishedAt", DataType: TypeDate, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any { return r.UpdatedAt }},
+	// When the response was finished: the row's last write, which for a finished response is its submission. An unfinished response has not finished, and its last write is only the last partial save, so it has no value (J6: exports showed it as a finish time).
+	{Name: "finishedAt", DataType: TypeDate, Display: DisplayNone, Privacy: PrivacyKeep, read: func(r ValueResponse) any {
+		if !r.Finished {
+			return jsvalue.Undefined
+		}
+		return r.UpdatedAt
+	}},
 	{Name: "pagePath", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("pagePath")},
 	{Name: "pageReferrer", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyRedactQuery, read: metaField("pageReferrer")},
 	{Name: "utmSource", DataType: TypeString, Display: DisplaySecondary, Privacy: PrivacyKeep, read: metaField("utmSource")},
