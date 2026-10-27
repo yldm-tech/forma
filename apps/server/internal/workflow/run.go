@@ -32,6 +32,8 @@ const (
 	smtpNotConfigured     = "SMTP is not configured; workflow email was not sent"
 	definitionNotRunnable = "Workflow run definition is not executable"
 	stepFailedFallback    = "Workflow step failed"
+	// continuedAfterFailure starts the error of a run that went on past a failed step set to continue on failure.
+	continuedAfterFailure = "Continued after a failed step: "
 	messageIDDomain       = "forma.yldm.ai"
 	emailProvider         = "smtp"
 )
@@ -85,6 +87,8 @@ type StepResult struct {
 	FinishedAt string          `json:"finishedAt,omitempty"`
 	// permanent marks a failure no retry can change; it is not recorded.
 	permanent bool
+	// continued marks a failure the run went on past, its step being set to continue on failure; the step's input records the setting.
+	continued bool
 }
 
 // runDataDoc is the data a run records: its trigger payload and its steps.
@@ -219,8 +223,18 @@ func (r *Runner) execute(ctx context.Context, job *river.Job[RunArgs], run *clai
 		permanent := len(results) > 0 && results[len(results)-1].permanent
 		return &stepFailedError{message: failure, data: data, permanent: permanent}
 	}
-	done := r.db.WithContext(ctx).Exec(`UPDATE workflow_runs SET status = 'completed', finished_at = now(), data = ?::jsonb, updated_at = now() WHERE id = ? AND workspace_id = ? AND status = 'running'`,
-		string(data), run.ID, job.Args.WorkspaceID)
+	// A failed step set to continue on failure did not stop the steps after it, but it still gets the run's retries: while attempts remain and a retry could change it, the run is retried, resuming its succeeded steps without acting again; after that the run completes and records the failure.
+	continued := continuedFailures(results)
+	if len(continued) > 0 && job.Attempt < job.MaxAttempts && slices.ContainsFunc(continued, func(s StepResult) bool { return !s.permanent }) {
+		return &stepFailedError{message: continuedMessage(continued), data: data}
+	}
+	completion := `UPDATE workflow_runs SET status = 'completed', finished_at = now(), data = ?::jsonb, updated_at = now() WHERE id = ? AND workspace_id = ? AND status = 'running'`
+	args := []any{string(data), run.ID, job.Args.WorkspaceID}
+	if len(continued) > 0 {
+		completion = `UPDATE workflow_runs SET status = 'completed', finished_at = now(), data = ?::jsonb, error = ?, last_error_at = now(), updated_at = now() WHERE id = ? AND workspace_id = ? AND status = 'running'`
+		args = []any{string(data), continuedMessage(continued), run.ID, job.Args.WorkspaceID}
+	}
+	done := r.db.WithContext(ctx).Exec(completion, args...)
 	if done.Error != nil {
 		return fmt.Errorf("complete workflow run: %w", done.Error)
 	}
@@ -332,7 +346,7 @@ type stepLog struct {
 	FinishedAt *time.Time
 }
 
-// runSteps runs the steps in order. bail means another delivery owns a step, and the run is left for it to finish; failure is the first failed step's error.
+// runSteps runs the steps in order. bail means another delivery owns a step, and the run is left for it to finish; failure is the error of the first failed step that is not set to continue on failure, which stops the run there. A failed step set to continue is marked continued and the next step runs.
 func (r *Runner) runSteps(ctx context.Context, runID uuid.UUID, steps []Step, ec *emailContext, log *slog.Logger) (results []StepResult, failure string, bail bool, err error) {
 	results = []StepResult{}
 	for i, step := range steps {
@@ -345,16 +359,44 @@ func (r *Runner) runSteps(ctx context.Context, runID uuid.UUID, steps []Step, ec
 			log.WarnContext(ctx, "Workflow step owned by another delivery; bailing", "step_id", step.ID)
 			return nil, "", true, nil
 		}
+		if res.Status == StepFailed && step.Node.ContinueOnFailure {
+			res.continued = true
+			log.InfoContext(ctx, "Workflow step failed; continuing with the next step as the step is set to", "step_id", step.ID, "step_type", step.Type)
+		}
 		results = append(results, *res)
-		if res.Status == StepFailed {
-			msg := res.Error
-			if msg == "" {
-				msg = stepFailedFallback
-			}
-			return results, msg, false, nil
+		if res.Status == StepFailed && !res.continued {
+			return results, stepError(*res), false, nil
 		}
 	}
 	return results, "", false, nil
+}
+
+// stepError is a failed step's error, or a generic one when it recorded none.
+func stepError(s StepResult) string {
+	if s.Error == "" {
+		return stepFailedFallback
+	}
+	return s.Error
+}
+
+// continuedFailures are the failed steps a run went on past.
+func continuedFailures(results []StepResult) []StepResult {
+	var out []StepResult
+	for _, s := range results {
+		if s.continued {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// continuedMessage is the error a run records for the failed steps it went on past: the first one's error, and how many more failed.
+func continuedMessage(failed []StepResult) string {
+	msg := continuedAfterFailure + stepError(failed[0])
+	if len(failed) > 1 {
+		msg += fmt.Sprintf(" (and %d more)", len(failed)-1)
+	}
+	return msg
 }
 
 func isoOrNow(t *time.Time) string {

@@ -8,12 +8,21 @@ import { timeSince } from "../../../../lib/time";
 import { type TWorkflowRunListItem, type TWorkflowRunSummary, getWorkflowApiErrorMessage } from "../../api";
 import { useWorkflowRun } from "../../hooks/queries";
 import { getWorkflowRunStatusBadge, getWorkflowTriggerTypeLabel } from "../../lib/display";
+import { isContinuedFailure } from "../../lib/run-display";
 import { RunJsonCode } from "./run-json-code";
 import { WorkflowRunSteps } from "./workflow-run-steps";
 
-const RunSummarySection = ({ run, locale }: Readonly<{ run: TWorkflowRunSummary; locale: string }>) => {
+const RunSummarySection = ({
+  run,
+  locale,
+  hasContinuedFailures,
+}: Readonly<{ run: TWorkflowRunSummary; locale: string; hasContinuedFailures: boolean }>) => {
   const { t } = useTranslation();
-  const statusBadge = getWorkflowRunStatusBadge(run.status, t);
+  // A run that went on past failed steps set to continue completed, but not cleanly; the badge says so before the steps are read.
+  const statusBadge =
+    run.status === "completed" && hasContinuedFailures
+      ? { label: t("workspace.workflows.run_completed_with_failures"), type: "warning" as const }
+      : getWorkflowRunStatusBadge(run.status, t);
   return (
     <SheetSection className="bg-slate-50">
       <h3 className="mb-4 text-lg font-semibold text-slate-900">{t("common.summary")}</h3>
@@ -106,7 +115,11 @@ export const WorkflowRunDetailDrawer = ({
           </Link>
           <div className="space-y-6">
             {/* The fetched detail once it is there, so the summary cannot show stale list values beside fresh steps. */}
-            <RunSummarySection run={detail ?? run} locale={i18n.language} />
+            <RunSummarySection
+              run={detail ?? run}
+              locale={i18n.language}
+              hasContinuedFailures={detail?.logs.some(isContinuedFailure) ?? false}
+            />
             <SheetSection>
               <h3 className="mb-4 text-lg font-semibold text-slate-900">{t("common.steps")}</h3>
               {steps}

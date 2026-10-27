@@ -646,7 +646,7 @@ func TestDeliverRecordsRefusalExcerpt(t *testing.T) {
 	}
 }
 
-// A step's run log input carries the label its author gave it, which the run detail names the step by.
+// A step's run log input carries the label its author gave it, which the run detail names the step by, and whether the step lets the run go on past its failure.
 func TestStepInputLabel(t *testing.T) {
 	t.Parallel()
 	label := "POST to CRM"
@@ -658,6 +658,13 @@ func TestStepInputLabel(t *testing.T) {
 	step.Node.Label = &blank
 	if _, ok := stepInput(step)["label"]; ok {
 		t.Fatal("a blank label was recorded")
+	}
+	if _, ok := stepInput(step)["continueOnFailure"]; ok {
+		t.Fatal("continueOnFailure was recorded for a step that stops the run")
+	}
+	step.Node.ContinueOnFailure = true
+	if in := stepInput(step); in["continueOnFailure"] != true {
+		t.Fatalf("input %v", in)
 	}
 }
 

@@ -9,6 +9,7 @@ import {
   MessageCircleIcon,
   MoreVerticalIcon,
   PlusIcon,
+  SkipForwardIcon,
   TagIcon,
   Trash2Icon,
   TriangleAlertIcon,
@@ -106,6 +107,12 @@ export const WorkflowCanvasNode = memo(
             ) : (
               <span className="line-clamp-2 text-xs leading-tight text-slate-500">{data.summary}</span>
             )}
+            {data.continueOnFailure ? (
+              <span className="flex items-center gap-1 text-xs leading-tight text-slate-500">
+                <SkipForwardIcon className="size-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{t("workspace.workflows.node_continues_on_failure")}</span>
+              </span>
+            ) : null}
           </div>
           {!isTrigger && canMutate && (
             <DropdownMenu>

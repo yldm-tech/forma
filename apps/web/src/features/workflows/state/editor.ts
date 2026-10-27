@@ -45,6 +45,8 @@ export type TWorkflowNodeData = {
   summary: string;
   isLeaf: boolean;
   issue: TWorkflowNodeIssue | null;
+  /** Whether the step lets the run go on past its failure; only an action can. */
+  continueOnFailure: boolean;
 };
 
 /** A pending "take me to the field that is wrong" jump, raised by the validation problems dialog and consumed by the config form that owns nodeId. */

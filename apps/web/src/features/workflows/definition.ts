@@ -123,8 +123,13 @@ export const ZWorkflowSendEmailActionConfig = z.object({
   includeHiddenFields: z.boolean().optional(),
 });
 
-export const ZWorkflowSendEmailActionNode = ZWorkflowNodeBase.extend({
+/** What every action node has besides its config: continueOnFailure lets the run go on to the next step when this one fails instead of stopping there; the failed step is still retried with the run, which then completes rather than fails. Off unless the author turns it on; the server stores it only when on. */
+const ZWorkflowActionNodeBase = ZWorkflowNodeBase.extend({
   type: z.literal("action"),
+  continueOnFailure: z.boolean().optional(),
+});
+
+export const ZWorkflowSendEmailActionNode = ZWorkflowActionNodeBase.extend({
   actionType: z.literal(WORKFLOW_ACTIONS.SEND_EMAIL),
   config: ZWorkflowSendEmailActionConfig,
 });
@@ -196,16 +201,14 @@ export const ZWorkflowSetContactAttributeActionConfig = z.object({
   value: z.string().max(4000),
 });
 
-export const ZWorkflowHttpRequestActionNode = ZWorkflowNodeBase.extend({
-  type: z.literal("action"),
+export const ZWorkflowHttpRequestActionNode = ZWorkflowActionNodeBase.extend({
   actionType: z.literal(WORKFLOW_ACTIONS.HTTP_REQUEST),
   config: ZWorkflowHttpRequestActionConfig,
 });
 export type TWorkflowHttpRequestActionNode = z.infer<typeof ZWorkflowHttpRequestActionNode>;
 
 const chatActionNode = <TActionType extends TWorkflowChatActionType>(actionType: TActionType) =>
-  ZWorkflowNodeBase.extend({
-    type: z.literal("action"),
+  ZWorkflowActionNodeBase.extend({
     actionType: z.literal(actionType),
     config: ZWorkflowChatMessageActionConfig,
   });
@@ -217,15 +220,13 @@ export type TWorkflowChatMessageActionNode =
   | z.infer<typeof ZWorkflowDiscordMessageActionNode>
   | z.infer<typeof ZWorkflowTeamsMessageActionNode>;
 
-export const ZWorkflowTagResponseActionNode = ZWorkflowNodeBase.extend({
-  type: z.literal("action"),
+export const ZWorkflowTagResponseActionNode = ZWorkflowActionNodeBase.extend({
   actionType: z.literal(WORKFLOW_ACTIONS.TAG_RESPONSE),
   config: ZWorkflowTagResponseActionConfig,
 });
 export type TWorkflowTagResponseActionNode = z.infer<typeof ZWorkflowTagResponseActionNode>;
 
-export const ZWorkflowSetContactAttributeActionNode = ZWorkflowNodeBase.extend({
-  type: z.literal("action"),
+export const ZWorkflowSetContactAttributeActionNode = ZWorkflowActionNodeBase.extend({
   actionType: z.literal(WORKFLOW_ACTIONS.SET_CONTACT_ATTRIBUTE),
   config: ZWorkflowSetContactAttributeActionConfig,
 });
@@ -670,4 +671,12 @@ export const getWorkflowNodeConcreteType = (node: TWorkflowNode): string => {
   if (node.type === "trigger") return node.triggerType;
   if (node.type === "action") return node.actionType;
   return node.type;
+};
+
+/** The action with continueOnFailure turned on or off. Off removes the key, the shape the server stores, so a step turned on and off again is saved as it was. */
+export const withContinueOnFailure = (node: TWorkflowActionNode, on: boolean): TWorkflowActionNode => {
+  const next = { ...node };
+  if (on) next.continueOnFailure = true;
+  else delete next.continueOnFailure;
+  return next;
 };

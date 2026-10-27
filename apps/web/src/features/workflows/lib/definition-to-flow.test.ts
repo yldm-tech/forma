@@ -269,4 +269,20 @@ describe("canvas layout constants", () => {
       summary: "workspace.workflows.send_email_summary",
     });
   });
+
+  test("only an action set to continue on failure is marked so on its card", () => {
+    const base = buildDefinition();
+    expect(workflowDefinitionToFlowNodes(base, t).map((node) => node.data.continueOnFailure)).toEqual([
+      false,
+      false,
+    ]);
+    const def = {
+      ...base,
+      nodes: base.nodes.map((node) => ({ ...node, continueOnFailure: true })),
+    } as TWorkflowDefinition;
+    expect(workflowDefinitionToFlowNodes(def, t).map((node) => node.data.continueOnFailure)).toEqual([
+      false,
+      true,
+    ]);
+  });
 });
