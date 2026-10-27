@@ -1,10 +1,13 @@
 package webui
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -238,8 +241,10 @@ func TestServePublicAssets(t *testing.T) {
 	})
 }
 
-// The SPA's document may compile WebAssembly, which its HEIC conversion needs; the files beside it, the SDK bundles first, keep forma2's policy.
-func TestOnlyTheDocumentAllowsWebAssembly(t *testing.T) {
+// The SPA's document runs only its own bundle and the scripts it names: no inline script, no script from any https host, no plugin (DC-03). It may compile WebAssembly, which its HEIC conversion needs. The files beside it, the SDK bundles first, and the API keep forma2's policy byte for byte.
+func TestTheDocumentHasItsOwnPolicy(t *testing.T) {
+	const legacy = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+	const document = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cal.com/embed.js https://js.stripe.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; frame-ancestors 'self'"
 	h, err := NewFromFS(fstest.MapFS{
 		"index.html":         {Data: []byte(indexHTML)},
 		"assets/app-1a2b.js": {Data: []byte("console.log(1)")},
@@ -250,14 +255,41 @@ func TestOnlyTheDocumentAllowsWebAssembly(t *testing.T) {
 	}
 	r := httpserver.NewEngine(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	h.Register(r)
-	for path, want := range map[string]bool{"/app/": true, "/app/workspaces/1/surveys/2/edit": true, "/app/assets/app-1a2b.js": false, "/js/surveys.umd.cjs": false, "/api/v3/nope": false} {
-		csp := get(r, http.MethodGet, path).Header().Get("Content-Security-Policy")
-		if !strings.HasPrefix(csp, "default-src 'self'; ") {
-			t.Fatalf("%s: Content-Security-Policy = %q, want forma2's policy", path, csp)
+	for path, want := range map[string]string{"/app/": document, "/app/workspaces/1/surveys/2/edit": document, "/app/assets/app-1a2b.js": legacy, "/js/surveys.umd.cjs": legacy, "/api/v3/nope": legacy} {
+		if got := get(r, http.MethodGet, path).Header().Get("Content-Security-Policy"); got != want {
+			t.Errorf("%s: Content-Security-Policy =\n%q\nwant\n%q", path, got, want)
 		}
-		if got := strings.Contains(csp, "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https:;"); got != want {
-			t.Errorf("%s: Content-Security-Policy = %q, allows WebAssembly: %v, want %v", path, csp, got, want)
+	}
+}
+
+// The runtime configuration script is allowed by the hash of exactly what the page carries, and only when the page carries it; the public domain only when PUBLIC_URL sets one; Turnstile's and Plain's scripts only where they are turned on.
+func TestAppPolicyFollowsTheConfiguration(t *testing.T) {
+	scriptSrc := func(policy string) string {
+		for directive := range strings.SplitSeq(policy, "; ") {
+			if rest, ok := strings.CutPrefix(directive, "script-src "); ok {
+				return rest
+			}
 		}
+		t.Fatalf("no script-src in %q", policy)
+		return ""
+	}
+	if got, want := scriptSrc(appPolicy(config.Config{})), "'self' 'wasm-unsafe-eval' https://cal.com/embed.js https://js.stripe.com"; got != want {
+		t.Errorf("script-src without runtime configuration = %q, want %q", got, want)
+	}
+
+	var cfg config.Config
+	cfg.Telemetry.SentryDSN = "https://public@o0.ingest.sentry.io/1"
+	cfg.Telemetry.PostHogKey = "phc_key"
+	cfg.TurnstileSiteKey, cfg.TurnstileSecretKey = "site", "secret"
+	cfg.Plain.AppID = "liveChatApp_1"
+	cfg.PublicURL = &url.URL{Scheme: "https", Host: "surveys.example.com"}
+	page := string(withRuntimeConfig([]byte("<html><head></head><body></body></html>"), cfg))
+	_, rest, _ := strings.Cut(page, `<script id="forma-runtime-config">`)
+	body, _, _ := strings.Cut(rest, "</script>")
+	sum := sha256.Sum256([]byte(body))
+	want := "'self' 'wasm-unsafe-eval' 'sha256-" + base64.StdEncoding.EncodeToString(sum[:]) + "' https://surveys.example.com https://cal.com/embed.js https://js.stripe.com https://challenges.cloudflare.com https://chat.cdn-plain.com"
+	if got := scriptSrc(appPolicy(cfg)); got != want {
+		t.Errorf("script-src = %q, want %q", got, want)
 	}
 }
 
