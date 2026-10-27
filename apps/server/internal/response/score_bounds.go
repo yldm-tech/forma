@@ -3,6 +3,7 @@ package response
 import (
 	"encoding/json"
 	"math"
+	"slices"
 
 	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
@@ -10,13 +11,18 @@ import (
 
 // The total score a respondent's browser sends is kept only when the survey can produce it. The runtime starts the score variable at its declared value and raises it by the score of every choice picked in a block when the block is submitted (packages/types/surveys/scoring.ts applyBlockScore); the server does not recompute it, so a public POST could set any number and the admin's score summary would average it in (NF-04). This file is the minimal guard: the range of totals the survey's static choice scores can reach, checked on every client create and update.
 
-// scoreTolerance absorbs the rounding the runtime applies after every block (roundScore, six decimals), so a total of many fractional scores is not refused for a rounding difference.
-const scoreTolerance = 1e-6
+// roundingError is the most a single roundScore (six decimals) moves a total, and floatSlack the relative error of summing the same float64 scores in another order. The runtime rounds once per block that earns points, so a total reached over n scored blocks can be n*roundingError away from the exact sum of its choice scores (ScoreBounds.Contains).
+const (
+	roundingError = 5e-7
+	floatSlack    = 1e-9
+)
 
 // ScoreBounds is the range of totals a survey's score variable can reach: [Min, Max] around every value the runtime can hold at any point of a response.
 type ScoreBounds struct {
 	VariableID string
 	Min, Max   float64
+	// roundings is the number of blocks with a scored element, each of which the runtime rounds the total after once at most.
+	roundings int
 }
 
 // ScoreBounds is the range the survey's total score can reach, with ok false when the survey has no total score variable or a block logic calculate action writes it, whose result the static choice scores do not bound (that case keeps the client's value).
@@ -53,10 +59,17 @@ func (sv *Survey) ScoreBounds() (ScoreBounds, bool) {
 	for _, s := range seeds[1:] {
 		out.Min, out.Max = min(out.Min, s), max(out.Max, s)
 	}
-	for _, e := range sv.Elements() {
-		lo, hi := elementScoreRange(e)
-		out.Min += lo
-		out.Max += hi
+	for _, b := range sv.blocks {
+		scored := false
+		for _, e := range b.Elements {
+			lo, hi := elementScoreRange(e)
+			out.Min += lo
+			out.Max += hi
+			scored = scored || isScoredElement(e)
+		}
+		if scored {
+			out.roundings++
+		}
 	}
 	return out, true
 }
@@ -86,13 +99,22 @@ func elementScoreRange(e surveydoc.Element) (lo, hi float64) {
 	return lo, hi
 }
 
-// Contains says whether the runtime could have produced v: a finite number within the bounds, give or take the runtime's rounding. Anything else (a string, a number out of range) could only have been written by hand.
+// isScoredElement is packages/types/surveys/scoring.ts isScoredElement: a single choice, multiple choice or picture selection element with at least one choice that has a score, 0 included, so the runtime rounds the total after a block that answers it.
+func isScoredElement(e surveydoc.Element) bool {
+	switch e.Type {
+	case surveydoc.ElementMultipleChoiceSingle, surveydoc.ElementMultipleChoiceMulti, surveydoc.ElementPictureSelection:
+		return slices.ContainsFunc(e.Choices, func(c surveydoc.Choice) bool { return c.Score != nil })
+	}
+	return false
+}
+
+// Contains says whether the runtime could have produced v: a finite number within the bounds, give or take the runtime's rounding, which adds up over the blocks (one roundScore per scored block) on top of a float error relative to the size of the bounds. Anything else (a string, a number out of range) could only have been written by hand.
 func (b ScoreBounds) Contains(v any) bool {
 	n, ok := v.(float64)
 	if !ok || !isFinite(n) {
 		return false
 	}
-	tolerance := scoreTolerance * max(1, math.Abs(b.Min), math.Abs(b.Max))
+	tolerance := roundingError*float64(b.roundings) + floatSlack*max(1, math.Abs(b.Min), math.Abs(b.Max))
 	return n >= b.Min-tolerance && n <= b.Max+tolerance
 }
 

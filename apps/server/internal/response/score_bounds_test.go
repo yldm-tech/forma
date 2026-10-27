@@ -2,6 +2,9 @@ package response
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
+	"strings"
 	"testing"
 
 	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
@@ -135,6 +138,41 @@ func TestElementScoreRange(t *testing.T) {
 	for i, c := range cases {
 		if lo, hi := elementScoreRange(c.element); lo != c.lo || hi != c.hi {
 			t.Errorf("case %d: [%v, %v], want [%v, %v]", i, lo, hi, c.lo, c.hi)
+		}
+	}
+}
+
+// The runtime rounds the total to six decimals after every block that earns points, and those roundings add up: five blocks whose best choice is worth 0.1999996 reach 0.2, 0.4, 0.6, 0.8 and finally 1, though the exact sum the bounds hold is 0.999998. The respondent's real total is kept, a total beyond what the roundings can explain is not.
+func TestScoreBoundsAllowTheRoundingOfEveryBlock(t *testing.T) {
+	var blocks []string
+	for i := range 5 {
+		blocks = append(blocks, fmt.Sprintf(`{"id":"b%[1]d","name":"B%[1]d","elements":[
+			{"id":"q%[1]d","type":"multipleChoiceSingle","headline":{"default":"Q"},"required":true,"choices":[
+				{"id":"best","label":{"default":"Best"},"score":0.1999996},{"id":"none","label":{"default":"None"},"score":0}]}]}`, i))
+	}
+	// A block without a scored element is never rounded after, so it adds no tolerance.
+	blocks = append(blocks, `{"id":"plain","name":"Plain","elements":[{"id":"open","type":"openText","headline":{"default":"O"},"required":false,"inputType":"text"}]}`)
+	sv := scoredSurvey(t, "["+strings.Join(blocks, ",")+"]", `[{"id":"total","name":"score","type":"number","value":0,"isScore":true}]`)
+	b, ok := sv.ScoreBounds()
+	if !ok || b.roundings != 5 {
+		t.Fatalf("bounds %+v", b)
+	}
+	// What packages/types/surveys/scoring.ts applyBlockScore produces, block by block.
+	total := 0.0
+	for range 5 {
+		total = math.Round((total+0.1999996)*1e6) / 1e6
+	}
+	if total != 1 {
+		t.Fatalf("runtime total %v", total)
+	}
+	for _, v := range []float64{total, 0.8, 0} {
+		if !b.Contains(v) {
+			t.Errorf("%v refused, bounds %+v", v, b)
+		}
+	}
+	for _, v := range []float64{1.00001, -0.00001} {
+		if b.Contains(v) {
+			t.Errorf("%v kept, bounds %+v", v, b)
 		}
 	}
 }

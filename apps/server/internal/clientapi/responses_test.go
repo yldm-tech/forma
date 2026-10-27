@@ -724,3 +724,35 @@ func TestResponseScoreOutOfRangeIsDropped(t *testing.T) {
 		t.Fatal("the update did not finish the response")
 	}
 }
+
+// The drop is logged, but an anonymous client's non-numeric score is described by its type and length, never copied into the log line, so a large forged value cannot blow up the log.
+func TestResponseScoreDropLogIsBounded(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws, "blocks", `[{"id":"b1","name":"Quiz","elements":[
+		{"id":"capital","type":"multipleChoiceSingle","headline":{"default":"Capital?"},"required":true,"choices":[
+			{"id":"paris","label":{"default":"Paris"},"score":10},{"id":"rome","label":{"default":"Rome"},"score":0}]}]}]`,
+		"variables", `[{"id":"score","name":"score","type":"number","value":0,"isScore":true}]`)
+	forged := strings.Repeat("A", 200_000)
+	if r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": true, "data": map[string]any{"capital": "Paris"}, "variables": map[string]any{"score": forged}}); r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	if r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": true, "data": map[string]any{"capital": "Paris"}, "variables": map[string]any{"score": 9999}}); r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	var drops []string
+	for line := range strings.SplitSeq(e.logs.String(), "\n") {
+		if strings.Contains(line, "dropped a total score the survey cannot produce") {
+			drops = append(drops, line)
+		}
+	}
+	if len(drops) != 2 {
+		t.Fatalf("drop log lines: %d", len(drops))
+	}
+	if l := drops[0]; len(l) > 1024 || strings.Contains(l, "AAAA") || !strings.Contains(l, `"valueType":"string"`) || !strings.Contains(l, `"valueLength":200000`) {
+		t.Fatalf("string score logged as %d bytes: %.300s", len(l), l)
+	}
+	if l := drops[1]; !strings.Contains(l, `"value":9999`) {
+		t.Fatalf("numeric score not logged: %s", l)
+	}
+}
