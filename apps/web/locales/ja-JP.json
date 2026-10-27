@@ -2401,6 +2401,11 @@
       "upload_contacts_success": "連絡先のアップロードに成功しました",
       "upload_csv": "CSVをアップロード"
     },
+    "custom_scripts_access": {
+      "managers_only": "カスタムスクリプトを変更できるのは、組織のオーナーと管理者のみです。",
+      "requires_public_url": "このインスタンスではカスタムスクリプトが無効です。アンケートページが管理画面と同じドメインで配信されているため、スクリプトがログイン中のユーザーとして操作できてしまいます。管理者が PUBLIC_URL にアンケート用の別ドメインを設定すると有効になります。",
+      "unavailable_cloud": "Forma Cloud ではカスタムスクリプトを利用できません。"
+    },
     "forma_logo": "Formaのロゴ",
     "general": {
       "cannot_delete_only_workspace": "これは唯一のワークスペースのため、削除できません。まず新しいワークスペースを作成してください。",

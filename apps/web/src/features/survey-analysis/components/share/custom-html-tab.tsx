@@ -1,4 +1,5 @@
 import type { TSurvey } from "@forma/types/surveys/types";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangleIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,22 +7,28 @@ import { Alert, AlertDescription } from "../../../../components/ui/alert";
 import { Button } from "../../../../components/ui/button";
 import { Label } from "../../../../components/ui/label";
 import { TabToggle } from "../../../../components/ui/tab-toggle";
+import { customScriptsUnavailableMessage, instanceQuery } from "../../../../lib/queries/instance";
 import { toast } from "../../../../lib/toast";
 import { useUpdateSurveySettings } from "./use-survey-settings";
 
 type ScriptsMode = NonNullable<TSurvey["customHeadScriptsMode"]>;
 
-/** forma2's CustomHtmlTab: HTML for the head of the survey's public page, added to the workspace's or replacing it. */
+/** forma2's CustomHtmlTab: HTML for the head of the survey's public page, added to the workspace's or replacing it. It runs unsanitized there, so like the workspace's scripts only the organization's owners and managers change it, and only on an instance that runs such scripts at all; the server enforces both. */
 export const CustomHtmlTab = ({
   survey,
   workspaceCustomScripts,
-  isReadOnly,
+  isReadOnly: isSurveyReadOnly,
+  isOwnerOrManager,
 }: {
   survey: TSurvey;
   workspaceCustomScripts: string | null;
   isReadOnly: boolean;
+  isOwnerOrManager: boolean;
 }) => {
   const { t } = useTranslation();
+  const { data: instance } = useQuery(instanceQuery);
+  const unavailable = customScriptsUnavailableMessage(t, instance?.customScripts);
+  const isReadOnly = isSurveyReadOnly || !isOwnerOrManager || instance?.customScripts !== "available";
   const updateSurvey = useUpdateSurveySettings(survey);
   const [saved, setSaved] = useState({
     scripts: survey.customHeadScripts ?? "",
@@ -47,6 +54,18 @@ export const CustomHtmlTab = ({
 
   return (
     <div className="px-1">
+      {unavailable ? (
+        <Alert variant="warning" className="mb-6" role="status">
+          <AlertDescription>{unavailable}</AlertDescription>
+        </Alert>
+      ) : (
+        !isSurveyReadOnly &&
+        !isOwnerOrManager && (
+          <Alert variant="warning" className="mb-6" role="status">
+            <AlertDescription>{t("workspace.custom_scripts_access.managers_only")}</AlertDescription>
+          </Alert>
+        )
+      )}
       <form
         onSubmit={(event) => {
           event.preventDefault();
