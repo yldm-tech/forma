@@ -662,6 +662,57 @@ func TestTextSummaryWithoutAProvider(t *testing.T) {
 	}
 }
 
+// AI on but the organization's "Allow AI to read responses" switch off: the card says so, shows no summary, not even one made while the switch was on, and nothing reaches the provider. Turning it on lets a summary be made again.
+func TestTextSummaryNeedsResponseReading(t *testing.T) {
+	e, provider, _ := newTextEnv(t, true)
+	owner, reader := e.user(), e.user()
+	org, ws := e.organization(owner, nil)
+	e.grant(org, ws, reader, "read")
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
+	sv := e.survey(ws, surveyOpts{blocks: textBlocks})
+	lookup, generate := textPaths(sv)
+	e.response(sv, row{at: at(1), finished: true, data: `{"q1":"the price"}`})
+
+	var state TextSummaryState
+	decode(t, e.request(owner, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)), &state)
+	if state.Summary == nil {
+		t.Fatal("no summary with both switches on")
+	}
+
+	e.exec(`UPDATE organizations SET is_ai_response_reading_enabled = false WHERE id = ?`, org)
+	for _, user := range []uuid.UUID{owner, reader} {
+		state = TextSummaryState{}
+		decode(t, e.request(user, http.MethodPost, lookup, textInput("q1", TextTargetAnswers, nil)), &state)
+		if state.Available || state.Reason != ai.ReasonResponseReadingDisabled || state.Summary != nil {
+			t.Errorf("lookup with reading off: %+v", state)
+		}
+	}
+	before, _ := provider.calls()
+	refresh := textInput("q1", TextTargetAnswers, nil)
+	refresh["refresh"] = true
+	for _, in := range []map[string]any{textInput("q1", TextTargetAnswers, nil), refresh} {
+		if rec := e.request(owner, http.MethodPost, generate, in); rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), ai.CodeResponseReadingDisabled) {
+			t.Errorf("generate with reading off: %d %s", rec.Code, rec.Body)
+		}
+	}
+	if after, _ := provider.calls(); len(after) != len(before) {
+		t.Errorf("the provider was called %d times with reading off", len(after)-len(before))
+	}
+
+	// AI itself off is still reported as such, whatever the reading switch says.
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = false WHERE id = ?`, org)
+	decode(t, e.request(owner, http.MethodPost, lookup, textInput("q1", TextTargetAnswers, nil)), &state)
+	if state.Reason != ai.ReasonNotEnabled {
+		t.Errorf("lookup with both off: %+v", state)
+	}
+
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true, is_ai_response_reading_enabled = true WHERE id = ?`, org)
+	decode(t, e.request(owner, http.MethodPost, lookup, textInput("q1", TextTargetAnswers, nil)), &state)
+	if !state.Available || state.Summary == nil {
+		t.Errorf("lookup with reading back on: %+v", state)
+	}
+}
+
 func TestTextSummaryMemberLimit(t *testing.T) {
 	e, _, texts := newTextEnv(t, true)
 	owner, writer := e.user(), e.user()

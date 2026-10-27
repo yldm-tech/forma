@@ -15,12 +15,13 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
-// Error codes, forma2's AI_ERROR_CODES. The first three say AI is unavailable to the organization, the last that its provider is rate limiting it.
+// Error codes, forma2's AI_ERROR_CODES. The first three say AI is unavailable to the organization, the last that its provider is rate limiting it. CodeResponseReadingDisabled, which forma2 did not have, refuses a feature that sends responses to the provider (the open-text summary) while the organization does not allow AI to read them.
 const (
-	CodeFeaturesNotEnabled    = "ai_features_not_enabled"
-	CodeSmartToolsDisabled    = "ai_smart_tools_disabled"
-	CodeInstanceNotConfigured = "ai_instance_not_configured"
-	CodeQuotaExceeded         = "ai_quota_exceeded"
+	CodeFeaturesNotEnabled      = "ai_features_not_enabled"
+	CodeSmartToolsDisabled      = "ai_smart_tools_disabled"
+	CodeInstanceNotConfigured   = "ai_instance_not_configured"
+	CodeResponseReadingDisabled = "ai_response_reading_disabled"
+	CodeQuotaExceeded           = "ai_quota_exceeded"
 )
 
 // Reasons AI is unavailable, forma2's TAIUnavailableReason.
@@ -29,6 +30,8 @@ const (
 	ReasonNotEnabled            = "not_enabled"
 	ReasonInstanceNotConfigured = "instance_not_configured"
 	ReasonReadOnly              = "read_only"
+	// ReasonResponseReadingDisabled is the reason of a feature that reads responses, while the organization's "Allow AI to read responses" switch is off; forma2 had no such switch.
+	ReasonResponseReadingDisabled = "response_reading_disabled"
 )
 
 // QuotaExceededMessage is forma2's wording for a provider that is rate limiting the instance.
@@ -36,20 +39,22 @@ const QuotaExceededMessage = "The AI provider is temporarily rate-limited. Try a
 
 // unavailableMessages are forma2's AI_UNAVAILABLE_DETAILS.
 var unavailableMessages = map[string]string{
-	CodeFeaturesNotEnabled:    "AI smart tools are not available for this organization.",
-	CodeSmartToolsDisabled:    "AI smart tools are disabled for this organization.",
-	CodeInstanceNotConfigured: "AI is not configured for this Forma instance.",
+	CodeFeaturesNotEnabled:      "AI smart tools are not available for this organization.",
+	CodeSmartToolsDisabled:      "AI smart tools are disabled for this organization.",
+	CodeInstanceNotConfigured:   "AI is not configured for this Forma instance.",
+	CodeResponseReadingDisabled: "This organization does not allow AI to read its responses.",
 }
 
 // UnavailableMessage is the message of an unavailable code, empty for any other code.
 func UnavailableMessage(code string) string { return unavailableMessages[code] }
 
-// OrganizationConfig is forma2's TOrganizationAIConfig.
+// OrganizationConfig is forma2's TOrganizationAIConfig, plus the organization's "Allow AI to read responses" switch (IsAIResponseReadingEnabled), which features that send responses to the provider need on top of AI being available.
 type OrganizationConfig struct {
-	OrganizationID         uuid.UUID `json:"organizationId"`
-	IsAISmartToolsEnabled  bool      `json:"isAISmartToolsEnabled"`
-	IsAISmartToolsEntitled bool      `json:"isAISmartToolsEntitled"`
-	IsInstanceConfigured   bool      `json:"isInstanceConfigured"`
+	OrganizationID             uuid.UUID `json:"organizationId"`
+	IsAISmartToolsEnabled      bool      `json:"isAISmartToolsEnabled"`
+	IsAISmartToolsEntitled     bool      `json:"isAISmartToolsEntitled"`
+	IsInstanceConfigured       bool      `json:"isInstanceConfigured"`
+	IsAIResponseReadingEnabled bool      `json:"isAIResponseReadingEnabled"`
 }
 
 // UnavailableReason is forma2's getAISmartToolsUnavailableReason; empty when AI is available.
@@ -84,14 +89,17 @@ func (s *Service) Client() *Client { return s.client }
 
 // OrganizationConfig is forma2's getOrganizationAIConfig. AI smart tools are always entitled: forma2's getIsAISmartToolsEnabled had no plan gate left.
 func (s *Service) OrganizationConfig(ctx context.Context, organizationID uuid.UUID) (*OrganizationConfig, error) {
-	enabled, found, err := s.repo.smartToolsEnabled(ctx, organizationID)
+	sw, err := s.repo.switches(ctx, organizationID)
 	if err != nil {
 		return nil, err
 	}
-	if !found {
+	if sw == nil {
 		return nil, apperr.NotFound("Organization", organizationID.String())
 	}
-	return &OrganizationConfig{OrganizationID: organizationID, IsAISmartToolsEnabled: enabled, IsAISmartToolsEntitled: true, IsInstanceConfigured: s.client.Configured()}, nil
+	return &OrganizationConfig{
+		OrganizationID: organizationID, IsAISmartToolsEnabled: sw.IsAiSmartToolsEnabled, IsAISmartToolsEntitled: true, IsInstanceConfigured: s.client.Configured(),
+		IsAIResponseReadingEnabled: sw.IsAiResponseReadingEnabled,
+	}, nil
 }
 
 // unavailable is forma2's OperationNotAllowedError carrying an AI error code.
@@ -112,6 +120,18 @@ func (s *Service) Assert(ctx context.Context, organizationID uuid.UUID) (*Organi
 		return nil, unavailable(CodeSmartToolsDisabled)
 	case ReasonInstanceNotConfigured:
 		return nil, unavailable(CodeInstanceNotConfigured)
+	}
+	return cfg, nil
+}
+
+// AssertResponseReading is Assert for a feature that sends the organization's responses to the provider: AI available, then the organization's "Allow AI to read responses" switch on.
+func (s *Service) AssertResponseReading(ctx context.Context, organizationID uuid.UUID) (*OrganizationConfig, error) {
+	cfg, err := s.Assert(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	if !cfg.IsAIResponseReadingEnabled {
+		return nil, unavailable(CodeResponseReadingDisabled)
 	}
 	return cfg, nil
 }

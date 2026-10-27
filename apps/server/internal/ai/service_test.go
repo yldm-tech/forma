@@ -267,7 +267,7 @@ func TestServiceAssert(t *testing.T) {
 	ctx := t.Context()
 
 	cfg, err := e.svc.Assert(ctx, on)
-	if err != nil || !reflect.DeepEqual(*cfg, OrganizationConfig{OrganizationID: on, IsAISmartToolsEnabled: true, IsAISmartToolsEntitled: true, IsInstanceConfigured: true}) {
+	if err != nil || !reflect.DeepEqual(*cfg, OrganizationConfig{OrganizationID: on, IsAISmartToolsEnabled: true, IsAISmartToolsEntitled: true, IsInstanceConfigured: true, IsAIResponseReadingEnabled: true}) {
 		t.Fatalf("%+v %v", cfg, err)
 	}
 	e2 := expectCode(t, func() error { _, err := e.svc.Assert(ctx, off); return err }(), http.StatusForbidden, CodeSmartToolsDisabled)
@@ -279,6 +279,36 @@ func TestServiceAssert(t *testing.T) {
 	expectCode(t, err, http.StatusForbidden, CodeSmartToolsDisabled)
 	if len(e.provider.requests()) != 0 {
 		t.Fatal("a refused organization reached the provider")
+	}
+}
+
+// AssertResponseReading is Assert plus the organization's "Allow AI to read responses" switch; Assert alone does not read it, so the AI tools that send no responses keep working with it off.
+func TestServiceAssertResponseReading(t *testing.T) {
+	e := newServiceEnv(t, nil)
+	owner := e.user()
+	on, _ := e.organization(owner, true)
+	off, _ := e.organization(owner, false)
+	ctx := t.Context()
+
+	if _, err := e.svc.AssertResponseReading(ctx, on); err != nil {
+		t.Fatalf("both switches on: %v", err)
+	}
+	e.exec(`UPDATE organizations SET is_ai_response_reading_enabled = false WHERE id IN (?, ?)`, on, off)
+	refused := expectCode(t, func() error { _, err := e.svc.AssertResponseReading(ctx, on); return err }(), http.StatusForbidden, CodeResponseReadingDisabled)
+	if refused.Message != "This organization does not allow AI to read its responses." {
+		t.Fatalf("message %q", refused.Message)
+	}
+	if cfg, err := e.svc.Assert(ctx, on); err != nil || cfg.IsAIResponseReadingEnabled {
+		t.Fatalf("Assert with reading off: %+v %v", cfg, err)
+	}
+	// AI off is reported first.
+	expectCode(t, func() error { _, err := e.svc.AssertResponseReading(ctx, off); return err }(), http.StatusForbidden, CodeSmartToolsDisabled)
+	a, err := e.svc.ResponseReadingAvailability(ctx, on)
+	if err != nil || *a != (Availability{Reason: ReasonResponseReadingDisabled}) {
+		t.Fatalf("availability with reading off: %+v %v", a, err)
+	}
+	if a, err := e.svc.ResponseReadingAvailability(ctx, off); err != nil || *a != (Availability{Reason: ReasonNotEnabled}) {
+		t.Fatalf("availability with both off: %+v %v", a, err)
 	}
 }
 
@@ -562,7 +592,7 @@ func TestAvailabilityAndTranslationRoutes(t *testing.T) {
 
 	var orgAI OrganizationAvailability
 	e.ok(e.do(reader, http.MethodGet, "/api/app/organizations/"+org.String()+"/ai", nil), &orgAI)
-	if !reflect.DeepEqual(orgAI, OrganizationAvailability{OrganizationConfig: OrganizationConfig{OrganizationID: org, IsAISmartToolsEntitled: true, IsInstanceConfigured: true}, Availability: Availability{Reason: ReasonNotEnabled}}) {
+	if !reflect.DeepEqual(orgAI, OrganizationAvailability{OrganizationConfig: OrganizationConfig{OrganizationID: org, IsAISmartToolsEntitled: true, IsInstanceConfigured: true, IsAIResponseReadingEnabled: true}, Availability: Availability{Reason: ReasonNotEnabled}}) {
 		t.Fatalf("%+v", orgAI)
 	}
 	e.fails(e.do(outsider, http.MethodGet, "/api/app/organizations/"+org.String()+"/ai", nil), http.StatusForbidden, apperr.CodeForbidden)

@@ -223,7 +223,9 @@ type UpdateInput struct {
 	// SurveySchedulingTimeZone is set when the request names the field; a nil Value means the instance's zone.
 	SurveySchedulingTimeZone *TimeZone
 	IsAISmartToolsEnabled    *bool
-	TwoFactorRequirement     *TwoFactorRequirement
+	// IsAIResponseReadingEnabled is the "Allow AI to read responses" switch.
+	IsAIResponseReadingEnabled *bool
+	TwoFactorRequirement       *TwoFactorRequirement
 }
 
 // TimeZone is a time zone change.
@@ -246,7 +248,7 @@ const CodeEnableTwoFactorFirst = "enable_two_factor_first"
 // CodeAIInstanceNotConfigured is forma2's ai_instance_not_configured refusal.
 const CodeAIInstanceNotConfigured = "ai_instance_not_configured"
 
-// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone and the AI smart tools toggle organization.manage (owners and managers). The two-factor requirement needs organization.write (owners only), and an owner who signs in with a password must use two-factor authentication before requiring it. The survey scheduling time zone, which forma2 did not have, needs organization.manage too; changing it moves the organization's scheduled publish and close dates to the same calendar days in the new zone. Enabling AI smart tools needs an AI provider configured on the instance (forma2's assertOrganizationAISettingsUpdateAllowed); disabling is always allowed.
+// Update is forma2's three organization settings actions: renaming needs organization.write (owners only), the display time zone, the AI smart tools toggle and the "Allow AI to read responses" switch organization.manage (owners and managers). The two-factor requirement needs organization.write (owners only), and an owner who signs in with a password must use two-factor authentication before requiring it. The survey scheduling time zone, which forma2 did not have, needs organization.manage too; changing it moves the organization's scheduled publish and close dates to the same calendar days in the new zone. Enabling AI smart tools needs an AI provider configured on the instance (forma2's assertOrganizationAISettingsUpdateAllowed); disabling is always allowed.
 func (s *Service) Update(ctx context.Context, userID, organizationID uuid.UUID, in UpdateInput) (*Organization, error) {
 	old, o, err := s.update(ctx, userID, organizationID, in)
 	s.record(ctx, audit.ActionUpdated, audit.TargetOrganization, organizationID.String(), organizationID.String(), err, old, o)
@@ -260,12 +262,12 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 			return nil, nil, err
 		}
 	}
-	if in.DisplayTimeZone != nil || in.SurveySchedulingTimeZone != nil || in.IsAISmartToolsEnabled != nil {
+	if in.DisplayTimeZone != nil || in.SurveySchedulingTimeZone != nil || in.IsAISmartToolsEnabled != nil || in.IsAIResponseReadingEnabled != nil {
 		if err := s.authz.Require(ctx, actor, authz.OrganizationManage, resource); err != nil {
 			return nil, nil, err
 		}
 	}
-	if in.Name == nil && in.DisplayTimeZone == nil && in.SurveySchedulingTimeZone == nil && in.IsAISmartToolsEnabled == nil && in.TwoFactorRequirement == nil {
+	if in.Name == nil && in.DisplayTimeZone == nil && in.SurveySchedulingTimeZone == nil && in.IsAISmartToolsEnabled == nil && in.IsAIResponseReadingEnabled == nil && in.TwoFactorRequirement == nil {
 		if err := s.authz.Require(ctx, actor, authz.OrganizationRead, resource); err != nil {
 			return nil, nil, err
 		}
@@ -292,6 +294,9 @@ func (s *Service) update(ctx context.Context, userID, organizationID uuid.UUID, 
 	}
 	if in.IsAISmartToolsEnabled != nil {
 		columns = append(columns, column{"is_ai_smart_tools_enabled", *in.IsAISmartToolsEnabled})
+	}
+	if in.IsAIResponseReadingEnabled != nil {
+		columns = append(columns, column{"is_ai_response_reading_enabled", *in.IsAIResponseReadingEnabled})
 	}
 	if r := in.TwoFactorRequirement; r != nil {
 		var enforcedAt *time.Time
