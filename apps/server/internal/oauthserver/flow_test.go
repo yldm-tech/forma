@@ -229,7 +229,7 @@ func TestRevocation(t *testing.T) {
 	}
 }
 
-// auth.RevokeOAuthGrants, which a password reset or change, signing out other sessions, a two-factor change and deactivation run: the user's refresh tokens stop working at the token endpoint and their access tokens at introspection, another user's keep working, and the consent stays, so the client is back after one sign-in without the consent page.
+// auth.RevokeOAuthGrants, which a password reset or change, signing out other sessions, a two-factor change and deactivation run: the user's refresh tokens stop working at the token endpoint and their access tokens at introspection, a code they were issued but had not redeemed is refused, another user's keep working, and the consent stays, so the client is back after one sign-in without the consent page.
 func TestRevokingAUsersGrants(t *testing.T) {
 	e := newEnv(t)
 	user, other := e.user("ada@example.com"), e.user("bob@example.com")
@@ -237,6 +237,11 @@ func TestRevokingAUsersGrants(t *testing.T) {
 	first := e.tokens(clientID, user, "offline_access surveys:read")
 	second := e.tokens(clientID, user, "offline_access surveys:read")
 	bobs := e.tokens(clientID, other, "offline_access surveys:read")
+	// A code issued before the change and kept unredeemed must not mint a new grant after it.
+	held := newPKCE()
+	heldCode := e.code(authorizeQuery(clientID, held, "offline_access surveys:read"), user)
+	bobsHeld := newPKCE()
+	bobsHeldCode := e.code(authorizeQuery(clientID, bobsHeld, "offline_access surveys:read"), other)
 
 	revoked, err := auth.RevokeOAuthGrants(t.Context(), e.db, user)
 	if err != nil || revoked != 2 {
@@ -255,6 +260,15 @@ func TestRevokingAUsersGrants(t *testing.T) {
 	}
 	if status, out := refresh(bobs["refresh_token"].(string)); status != http.StatusOK {
 		t.Fatalf("another user's refresh: %d %v", status, out)
+	}
+	redeem := func(code string, p pkce) (int, map[string]any) {
+		return e.token(url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {redirectURI}, "client_id": {clientID}, "code_verifier": {p.verifier}, "resource": {resource}})
+	}
+	if status, out := redeem(heldCode, held); status != http.StatusBadRequest || out["error"] != "invalid_grant" {
+		t.Fatalf("a code issued before the revocation: %d %v", status, out)
+	}
+	if status, out := redeem(bobsHeldCode, bobsHeld); status != http.StatusOK {
+		t.Fatalf("another user's code: %d %v", status, out)
 	}
 	if next := e.startAuthorization(authorizeQuery(clientID, newPKCE(), "surveys:read"), user); next.Path == consentPagePath {
 		t.Fatal("the consent was dropped with the tokens")

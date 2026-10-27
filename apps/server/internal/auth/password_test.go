@@ -320,31 +320,47 @@ func TestPasswordChangeRetiresOtherResetLinks(t *testing.T) {
 	e.browser().signIn("ada@example.com", "Changed-Pass-13")
 }
 
-// auth:forgot:account: past three requests an hour for one address, whichever client addresses send them, the request still answers success and sends no mail; another address is not affected.
+// maxLiveResetLinks: while an account holds three working reset links, a forgot-password request for it, whichever client address sends it, still answers success and sends no mail; another address is not affected. The cap counts links that still work, so once they expire the owner gets a new one even within the hour, and a send that failed takes no place under it.
 func TestForgotPasswordAccountLimit(t *testing.T) {
 	e := newEnv(t)
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
 	e.seedUser("bob@example.com", strongPassword, userOpts{})
 	e.enableRateLimits()
-	for i, ip := range []string{"198.51.100.1", "198.51.100.2", "198.51.100.3", "198.51.100.4", "198.51.100.5"} {
+	ip := 0
+	request := func(email string) {
+		t.Helper()
+		ip++
 		b := e.browser()
-		b.ip = ip
-		r := forgot(b, "ADA@example.com")
+		b.ip = fmt.Sprintf("198.51.100.%d", ip)
+		r := forgot(b, email)
 		expectStatus(t, r, http.StatusOK, "")
 		if r.Body.String() != `{"success":true}` {
-			t.Fatalf("request %d: %s", i+1, r.Body.String())
+			t.Fatalf("request %d: %s", ip, r.Body.String())
 		}
+	}
+	// A failed send is not counted.
+	e.mail.Err = errors.New("smtp down")
+	request("ada@example.com")
+	e.mail.Err = nil
+	for range 5 {
+		request("ADA@example.com")
 	}
 	if n := len(e.sent("ada@example.com")); n != 3 {
 		t.Fatalf("%d reset mails to one address, want 3", n)
 	}
-	b := e.browser()
-	b.ip = "198.51.100.5"
-	expectStatus(t, forgot(b, "bob@example.com"), http.StatusOK, "")
+	if n := len(e.auditEvents(audit.ActionPasswordReset)); n != 3 {
+		t.Fatalf("%d password reset audit events, want one per mail sent", n)
+	}
+	request("bob@example.com")
 	if len(e.sent("bob@example.com")) != 1 {
 		t.Fatal("another address was limited too")
 	}
-	// The links already sent still work: the limit holds the owner's mail back, never their recovery.
+	// Once the links expire, still within the hour, the owner can get a new one.
+	e.advance(time.Duration(e.cfg.PasswordResetTokenLifetimeMinutes)*time.Minute + time.Second)
+	request("ada@example.com")
 	links := e.tokens("ada@example.com", subjectReset)
-	expectStatus(t, e.browser().post("/auth/password/reset", map[string]string{"token": links[0], "password": newPassword}), http.StatusOK, "")
+	if len(links) != 4 {
+		t.Fatalf("%d reset mails after the links expired, want 4", len(links))
+	}
+	expectStatus(t, e.browser().post("/auth/password/reset", map[string]string{"token": links[3], "password": newPassword}), http.StatusOK, "")
 }
