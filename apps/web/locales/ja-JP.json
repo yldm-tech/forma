@@ -1,4 +1,14 @@
 {
+  "account": {
+    "unsubscribe_page": {
+      "confirm_alert": "{survey}の新しい回答メールの配信を停止しますか？",
+      "confirm_auto_subscribe": "{organization}の新しいフォームから回答メールが自動で届かないようにしますか？",
+      "confirm_weekly_summary": "{organization}の週間サマリーの配信を停止しますか？",
+      "invalid_link": "この配信停止リンクは無効です",
+      "invalid_link_description": "メールのリンクを最後までコピーするか、ログインして通知設定を変更してください。",
+      "link_no_longer_applies_description": "リンク先のフォームまたは組織は、通知設定にもうありません。"
+    }
+  },
   "auth": {
     "continue_with_azure": "Microsoftで続行",
     "continue_with_email": "メールアドレスで続行",

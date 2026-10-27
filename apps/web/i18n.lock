@@ -1,6 +1,12 @@
 version: 1
 checksums:
   55dc377b5e931bfc64e4add83e35d9ea:
+    account/unsubscribe_page/confirm_alert: 5e851bde8c52255e3af3aa40d77a3156
+    account/unsubscribe_page/confirm_auto_subscribe: 48182288eb280748b50666bbb11669b6
+    account/unsubscribe_page/confirm_weekly_summary: 2c5f00ba0ae9c839058e559e46c11cc8
+    account/unsubscribe_page/invalid_link: af88845bc2442ceccc9cd0f9d169577e
+    account/unsubscribe_page/invalid_link_description: b5aa898298c190edcfbdcf564d2797c2
+    account/unsubscribe_page/link_no_longer_applies_description: 8036febc5163986861bc8f5af9cde18e
     auth/continue_with_azure: cbe83e6a317329bc7df5cf461ce63e47
     auth/continue_with_email: ffa84b192fae5cd6611815ba61582f24
     auth/continue_with_github: 38afe2cfdd9c3d85474eb9a4319313f5

@@ -37,6 +37,7 @@ export const PAGE_TITLES: Record<string, TitleSource> = {
   "/auth/forgot-password/reset/": { key: "auth.forgot-password.reset_password" },
   "/invite": { key: "common.invite" },
   "/results": { key: "workspace.analysis.result_shares.shared_results" },
+  "/unsubscribe": { key: "workspace.settings.notifications.unsubscribe_page.unsubscribe" },
   "/setup/intro": { key: "setup.intro.welcome_to_forma" },
   "/setup/signup": { key: "setup.signup.create_administrator" },
   "/_authenticated/setup/organization/create": { key: "setup.organization.create.title" },

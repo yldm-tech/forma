@@ -1,3 +1,5 @@
+import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ApiError, api } from "./api";
 import type { NotificationOrganization, NotificationSurvey, NotificationType } from "./queries/auth";
 
 /** An email's unsubscribe link: /account/settings/notifications?type=alert|unsubscribedOrganizationIds|unsubscribedWeeklySummaryOrganizationIds&elementId=<id>. */
@@ -63,3 +65,31 @@ export const alertRows = (surveys: readonly NotificationSurvey[]): NotificationS
       collator.compare(a.name, b.name) ||
       collator.compare(a.id, b.id)
   );
+
+/** Where an email's signed unsubscribe link is read and redeemed: GET ?token= says which switch it names, POST {token, enabled} switches it. No session is needed; the token names the user. */
+const UNSUBSCRIBE_API = "/api/unsubscribe";
+
+/** The switch a signed unsubscribe link names, as the server reads it for the user in its token. Reading it never changes it, so the query can run as the page opens. */
+export const unsubscribeTokenQuery = (token: string) =>
+  queryOptions({
+    queryKey: ["unsubscribe", token] as const,
+    queryFn: ({ signal }) =>
+      api.get<UnsubscribeSubject>(`${UNSUBSCRIBE_API}?${new URLSearchParams({ token }).toString()}`, {
+        signal,
+      }),
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+/** Turns the switch a signed unsubscribe link names off or back on, and keeps the answer, the switch as it now is, as the query's data. */
+export const useSetUnsubscribeToken = (token: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) => api.post<UnsubscribeSubject>(UNSUBSCRIBE_API, { token, enabled }),
+    onSuccess: (subject) => queryClient.setQueryData(unsubscribeTokenQuery(token).queryKey, subject),
+  });
+};
+
+/** The token's switch is not this instance's, or was cut short when the link was copied. */
+export const isInvalidUnsubscribeToken = (error: unknown): boolean =>
+  error instanceof ApiError && error.code === "invalid_token";

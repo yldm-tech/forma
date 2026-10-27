@@ -20,6 +20,7 @@ import (
 
 	"sync/atomic"
 
+	"github.com/yldm-tech/forma/apps/server/internal/notification"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
@@ -312,13 +313,23 @@ func TestNotificationEmails(t *testing.T) {
 		t.Fatal(err)
 	}
 	sent := map[string]string{}
+	userOf := map[string]uuid.UUID{"owner@example.com": owner, "manager@example.com": manager, "team@example.com": teamMember, "unsubscribed@example.com": unsubscribedOrg}
 	for _, m := range e.mail.Messages() {
 		sent[m.To] = m.Subject
 		if m.ReplyTo != "respondent@example.com" {
 			t.Errorf("reply-to = %q", m.ReplyTo)
 		}
-		if (m.To != "unsubscribed@example.com" && !strings.Contains(m.HTML, "View 1 more responses")) || !strings.Contains(m.HTML, "/workspaces/"+f.ws.String()+"/settings/notifications?type=alert&amp;elementId="+f.survey.String()) {
-			t.Errorf("email to %s lacks the count or the unsubscribe link", m.To)
+		// Each recipient's unsubscribe links are signed for them: the survey's alert and the organization's auto-subscription on the public page, and the alert as RFC 8058's one-click header.
+		survey, err1 := notification.NewUnsubscribeLinks(e.cfg, userOf[m.To], notification.KindAlert, f.survey)
+		org, err2 := notification.NewUnsubscribeLinks(e.cfg, userOf[m.To], notification.KindAutoSubscribe, f.org)
+		if err1 != nil || err2 != nil {
+			t.Fatal(err1, err2)
+		}
+		if (m.To != "unsubscribed@example.com" && !strings.Contains(m.HTML, "View 1 more responses")) || !strings.Contains(m.HTML, `href="`+survey.Page+`"`) || !strings.Contains(m.HTML, `href="`+org.Page+`"`) {
+			t.Errorf("email to %s lacks the count or the unsubscribe links", m.To)
+		}
+		if m.Headers["List-Unsubscribe"] != "<"+survey.OneClick+">" || m.Headers["List-Unsubscribe-Post"] != "List-Unsubscribe=One-Click" {
+			t.Errorf("email to %s has unsubscribe headers %v", m.To, m.Headers)
 		}
 		if !strings.Contains(m.HTML, `src="https://surveys.example.com/storage/ws/public/logo.png"`) {
 			t.Errorf("email to %s lacks the organization logo", m.To)

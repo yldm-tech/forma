@@ -75,6 +75,10 @@ func (s *smtpTransport) Send(ctx context.Context, msg Message) error {
 // newMsg builds the MIME message of msg.
 func newMsg(msg Message) (*gomail.Msg, error) {
 	m := gomail.NewMsg()
+	// First, so the fields set below win over a header of the same name.
+	for name, value := range msg.Headers {
+		m.SetGenHeader(gomail.Header(name), value)
+	}
 	if err := m.From(msg.From); err != nil {
 		return nil, fmt.Errorf("from address: %w", err)
 	}
