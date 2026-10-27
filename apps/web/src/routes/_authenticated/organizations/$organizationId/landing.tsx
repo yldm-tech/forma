@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateOrganizationModal } from "../../../../components/shell/create-organization-modal";
 import { CreateWorkspaceModal } from "../../../../components/shell/create-workspace-modal";
+import { useIsPhone } from "../../../../components/shell/no-mobile-overlay";
 import { OrganizationBreadcrumb } from "../../../../components/shell/organization-breadcrumb";
 import { RoutePending } from "../../../../components/shell/route-states";
 import { SwitcherDropdownBody } from "../../../../components/shell/switcher-dropdown-body";
@@ -27,7 +28,7 @@ import {
   organizationsQuery,
 } from "../../../../lib/queries/organizations";
 
-// forma2's landing page, for a member who can open no workspace in the organization; anyone who can is sent to their first workspace instead. It offers the two ways forward the page names, a workspace when the member may create one and an organization of their own, and opens on a phone: an invited member often signs in there first.
+// forma2's landing page, for a member who can open no workspace in the organization; anyone who can is sent to their first workspace instead. It offers the two ways forward the page names, a workspace when the member may create one and an organization of their own, and opens on a phone, where an invited member often signs in first; there, as everywhere on a phone, no workspace is created, so it offers only the organization.
 export const Route = createFileRoute("/_authenticated/organizations/$organizationId/landing")({
   staticData: PHONE_READY,
   loader: async ({ context: { queryClient }, params, location }) => {
@@ -46,6 +47,8 @@ function Landing() {
   const { t } = useTranslation();
   const { organizationId } = Route.useParams();
   const navigation = Route.useLoaderData();
+  const isPhone = useIsPhone();
+  const canCreateWorkspace = navigation.canCreateWorkspace && !isPhone;
   const { data: me } = useSuspenseQuery(meQuery);
   const { data: organization } = useSuspenseQuery(organizationQuery(organizationId));
   const [createOpen, setCreateOpen] = useState(false);
@@ -62,6 +65,7 @@ function Landing() {
                 organizationId={organization.id}
                 organizationName={organization.name}
                 isLastCrumb
+                isPhone={isPhone}
               />
             </BreadcrumbList>
           </Breadcrumb>
@@ -81,7 +85,7 @@ function Landing() {
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            {navigation.canCreateWorkspace && (
+            {canCreateWorkspace && (
               <Button type="button" onClick={() => setCreateOpen(true)}>
                 <PlusIcon />
                 {t("common.create_workspace")}
@@ -89,7 +93,7 @@ function Landing() {
             )}
             <Button
               type="button"
-              variant={navigation.canCreateWorkspace ? "secondary" : "default"}
+              variant={canCreateWorkspace ? "secondary" : "default"}
               onClick={() => setCreateOrganizationOpen(true)}>
               <Building2Icon />
               {t("workspace.settings.general.create_new_organization")}
@@ -97,7 +101,9 @@ function Landing() {
           </div>
         </main>
       </div>
-      <CreateWorkspaceModal open={createOpen} setOpen={setCreateOpen} organizationId={organization.id} />
+      {canCreateWorkspace && (
+        <CreateWorkspaceModal open={createOpen} setOpen={setCreateOpen} organizationId={organization.id} />
+      )}
       <CreateOrganizationModal open={createOrganizationOpen} setOpen={setCreateOrganizationOpen} />
     </div>
   );

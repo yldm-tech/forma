@@ -205,7 +205,7 @@
       "not_enabled": "此組織已停用 AI 智慧工具。",
       "not_in_plan": "你目前的方案無法使用 AI 智慧工具。",
       "read_only": "你需要此工作區的編輯權限才能使用 AI 智慧工具。",
-      "response_reading_disabled": "此組織不允許 AI 讀取回應。擁有者或管理員可以在組織設定中開啟「允許 AI 讀取回應」。",
+      "response_reading_disabled": "此組織不允許 AI 讀取回應。擁有者或管理者可以在組織設定中開啟「允許 AI 讀取回應」。",
       "unknown": "AI 智慧工具目前無法使用。"
     },
     "all": "全部",

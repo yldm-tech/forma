@@ -205,7 +205,7 @@
       "not_enabled": "此组织已禁用 AI 智能工具。",
       "not_in_plan": "你当前的套餐不包含 AI 智能工具。",
       "read_only": "你需要此工作区的编辑权限才能使用 AI 智能工具。",
-      "response_reading_disabled": "此组织不允许 AI 读取回答。所有者或管理者可以在组织设置中开启“允许 AI 读取回答”。",
+      "response_reading_disabled": "此组织不允许 AI 读取回答。所有者或管理员可以在组织设置中开启“允许 AI 读取回答”。",
       "unknown": "AI 智能工具不可用。"
     },
     "all": "全部",

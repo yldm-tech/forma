@@ -7,7 +7,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test
 import { initI18n } from "../../../../lib/i18n";
 import { routeTree } from "../../../../routeTree.gen";
 
-// The landing page of a member who can open no workspace: it names both ways forward and offers both, on a phone too.
+// The landing page of a member who can open no workspace: it names both ways forward and offers both; a phone opens it but, being read-only, offers only an organization of their own.
 
 let i18n: I18n;
 
@@ -111,5 +111,12 @@ describe("the organization landing page", () => {
     await renderLanding({ canCreateWorkspace: false, phone: true });
     const button = await createOrganization();
     expect(button.closest("[inert]")).toBeNull();
+  });
+
+  test("on a phone, a member who may create a workspace is offered only an organization", async () => {
+    await renderLanding({ canCreateWorkspace: true, phone: true });
+    const button = await createOrganization();
+    expect(button.closest("[inert]")).toBeNull();
+    expect(screen.queryByRole("button", { name: i18n.t("common.create_workspace") })).toBeNull();
   });
 });
