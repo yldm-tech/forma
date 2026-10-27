@@ -227,13 +227,16 @@ type view struct {
 	r       *renderer
 }
 
-// Logo is the organization logo that replaces Forma's, or "" for Forma's (forma2's EmailTemplate treats its own logo URL as no custom logo).
+// Logo is the organization logo that replaces Forma's, or "" for Forma's (forma2's EmailTemplate treats its own logo URL as no custom logo, and stored settings may carry it with or without the version query).
 func (v view) Logo() string {
-	if b, ok := v.Content.(brandedContent); ok && b.logo() != formaLogoURL {
+	if b, ok := v.Content.(brandedContent); ok && b.logo() != formaLogoURL && b.logo() != formaLogoPathURL {
 		return b.logo()
 	}
 	return ""
 }
+
+// FormaLogo is the URL of Forma's own logo, drawn when the email carries no organization logo.
+func (v view) FormaLogo() string { return formaLogoURL }
 
 // Button is the call to action for the shared "button" template, in the colour of whoever's logo the email carries.
 func (v view) Button(href, label string) button {
@@ -256,8 +259,11 @@ func (v view) LightOnly() bool {
 	return light
 }
 
-// formaLogoURL is the default logo of every email.
-const formaLogoURL = "https://forma.yldm.ai/logo-transparent.png"
+// formaLogoPathURL is where apps/web/public/logo-transparent.png is served; formaLogoURL, the default logo of every email, adds a version query (the first 8 hex digits of the file's SHA-256, pinned by TestRenderFormaLogoSize) so that mail image proxies and client caches, which key on the URL and do not reliably revalidate, fetch a replaced file instead of drawing a stale copy into the template's fixed box. Ingress Exact path matches ignore the query, so the routing of /logo-transparent.png is unchanged.
+const (
+	formaLogoPathURL = "https://forma.yldm.ai/logo-transparent.png"
+	formaLogoURL     = formaLogoPathURL + "?v=219574d1"
+)
 
 // T translates an "emails." key in the view's locale and interpolates {name} placeholders from name/value pairs. A key missing from the locale falls back to en-US, and one missing there renders as the key, as i18next does.
 func (v view) T(key string, pairs ...any) string {
