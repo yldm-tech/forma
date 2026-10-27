@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -61,12 +62,94 @@ func assertEmbeddedFields(t *testing.T, raw any, want ...string) {
 	}
 }
 
+// followUpTo is a follow-up of the editor's shape sending to `to`.
+func followUpTo(id, to string) map[string]any {
+	return map[string]any{"id": id, "name": "Mail", "trigger": map[string]any{"type": "response", "properties": nil},
+		"action": map[string]any{"type": "send-email", "properties": map[string]any{"to": to, "from": "noreply@example.com", "replyTo": []any{}, "subject": "New", "body": "<p>Hi</p>", "attachResponseData": true}}}
+}
+
+// A follow-up mails each finished response to its recipient, so one addressed by literal address may only name someone with access to the workspace, as a workflow's send_email may, whoever saves it: an editor or an API key cannot route responses to an outside account. A recipient a save does not change is not checked again, so a survey holding one forma2 accepted can still be saved.
+func TestFollowUpRecipients(t *testing.T) {
+	e := newEnv(t)
+	owner, contributor := e.user(), e.user()
+	org, ws := e.organization(owner)
+	e.member(org, contributor, "member")
+	e.grant(org, ws, contributor, "readWrite")
+	colleague := e.insert(`INSERT INTO users (name, email) VALUES ('Colleague', 'colleague@example.com') RETURNING id`)
+	e.member(org, colleague, "member")
+	e.grant(org, ws, colleague, "read")
+	e.member(org, e.insert(`INSERT INTO users (name, email) VALUES ('Elsewhere', 'elsewhere@example.com') RETURNING id`), "member")
+	id := e.createLink(owner, ws)
+	outside := "The action in follow up 1 sends to %s, who cannot access this workspace. A follow-up may only address someone with access to this workspace or a respondent field."
+
+	for _, user := range []uuid.UUID{contributor, owner} {
+		sv := e.editorSurvey(user, id)
+		sv["followUps"] = []any{followUpTo(uuid.NewString(), "outsider@elsewhere.example")}
+		e.fails(e.do(user, http.MethodPut, appPath(id, ""), sv), http.StatusBadRequest, apperr.CodeValidation, fmt.Sprintf(outside, "outsider@elsewhere.example"))
+		sv["updatedAt"] = nil
+		e.fails(e.do(user, http.MethodPut, appPath(id, "/draft"), sv), http.StatusBadRequest, apperr.CodeValidation, fmt.Sprintf(outside, "outsider@elsewhere.example"))
+		// An organization member without access to the workspace is outside it too.
+		sv["followUps"] = []any{followUpTo(uuid.NewString(), "elsewhere@example.com")}
+		e.fails(e.do(user, http.MethodPut, appPath(id, ""), sv), http.StatusBadRequest, apperr.CodeValidation, fmt.Sprintf(outside, "elsewhere@example.com"))
+	}
+	if n := e.count(`SELECT count(*) FROM survey_follow_ups WHERE survey_id = ?`, id); n != 0 {
+		t.Fatalf("%d follow-ups saved", n)
+	}
+
+	sv := e.editorSurvey(contributor, id)
+	sv["followUps"] = []any{followUpTo(uuid.NewString(), "Colleague@Example.com"), followUpTo(uuid.NewString(), "plan")}
+	e.ok(e.do(contributor, http.MethodPut, appPath(id, ""), sv), http.StatusOK, nil)
+
+	legacy := uuid.NewString()
+	e.exec(`INSERT INTO survey_follow_ups (id, survey_id, name, trigger, action) VALUES (?, ?, 'Legacy', '{"type":"response","properties":null}', ?::jsonb)`, legacy, id,
+		`{"type":"send-email","properties":{"to":"legacy@elsewhere.example","from":"noreply@example.com","replyTo":[],"subject":"Old","body":"<p>Old</p>","attachResponseData":true}}`)
+	sv = e.editorSurvey(contributor, id)
+	sv["name"] = "Renamed"
+	e.ok(e.do(contributor, http.MethodPut, appPath(id, ""), sv), http.StatusOK, nil)
+	for _, f := range sv["followUps"].([]any) {
+		if f := f.(map[string]any); f["id"] == legacy {
+			f["action"].(map[string]any)["properties"].(map[string]any)["to"] = "another@elsewhere.example"
+		}
+	}
+	body := e.fails(e.do(contributor, http.MethodPut, appPath(id, ""), sv), http.StatusBadRequest, apperr.CodeValidation, "")
+	if !strings.Contains(body.Message, "sends to another@elsewhere.example, who cannot access this workspace") {
+		t.Fatalf("changed legacy recipient %q", body.Message)
+	}
+
+	// The v1 API's create and update hold a write key to the same rule.
+	e.apiKey(org, ws, "write")
+	key := APIKeyCaller(e.insert(`SELECT id FROM api_keys WHERE organization_id = ?`, org))
+	e.authz.Deliver(t)
+	// CreateV1 rewrites the body it is given, so each call gets its own.
+	create := func(to string) map[string]any {
+		return map[string]any{"name": "Via API", "questions": []any{map[string]any{"id": "q1", "type": "openText", "headline": map[string]any{"default": "Q"}, "required": false, "inputType": "text", "charLimit": map[string]any{"enabled": false}}},
+			"followUps": []any{followUpTo(uuid.NewString(), to)}}
+	}
+	var invalid *V1Invalid
+	if _, err := e.svc.CreateV1(t.Context(), key, ws, create("outsider@elsewhere.example")); !errors.As(err, &invalid) || invalid.Issues[0].Message != fmt.Sprintf(outside, "outsider@elsewhere.example") {
+		t.Fatalf("v1 create to an outsider = %v", err)
+	}
+	created, err := e.svc.CreateV1(t.Context(), key, ws, create("colleague@example.com"))
+	if err != nil {
+		t.Fatalf("v1 create to a member = %v", err)
+	}
+	stored, err := e.svc.Load(t.Context(), created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.UpdateV1(t.Context(), key, stored, map[string]any{"followUps": []any{followUpTo(uuid.NewString(), "outsider@elsewhere.example")}}); !errors.As(err, &invalid) || invalid.Issues[0].Message != fmt.Sprintf(outside, "outsider@elsewhere.example") {
+		t.Fatalf("v1 update to an outsider = %v", err)
+	}
+}
+
 func TestEditorSave(t *testing.T) {
 	e := newEnv(t)
 	owner, reader := e.user(), e.user()
 	org, ws := e.organization(owner)
 	e.member(org, reader, "member")
 	e.grant(org, ws, reader, "read")
+	// A follow-up's literal recipient must be able to access the workspace.
+	e.member(org, e.insert(`INSERT INTO users (name, email) VALUES ('Boss', 'boss@example.com') RETURNING id`), "manager")
 	id := e.createLink(owner, ws)
 
 	sv := e.editorSurvey(owner, id)

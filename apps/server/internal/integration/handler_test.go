@@ -137,10 +137,23 @@ func TestSaveLinks(t *testing.T) {
 	if rec := e.do(http.MethodPut, path, asUser(o.user), map[string]any{"data": []any{link}}); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"field":"data[0].channelId"`) {
 		t.Errorf("a link without a channel: %d %s", rec.Code, rec.Body)
 	}
-	reader := e.user()
+	reader, contributor, manager := e.user(), e.user(), e.user()
 	e.grant(org, o.ws, reader, "read")
+	e.grant(org, o.ws, contributor, "readWrite")
+	e.grant(org, o.ws, manager, "manage")
 	if rec := e.do(http.MethodPut, path, asUser(reader), map[string]any{"data": []any{}}); rec.Code != http.StatusForbidden {
 		t.Errorf("a read-only member saved: %d", rec.Code)
+	}
+	// Which surveys' responses an integration sends, and where, is a workspace manager's decision, as a webhook's is.
+	if rec := e.do(http.MethodPut, path, asUser(contributor), map[string]any{"data": []any{}}); rec.Code != http.StatusForbidden {
+		t.Errorf("a contributor who cannot manage the workspace saved: %d", rec.Code)
+	}
+	if e.linksOf(id) == `{"data": []}` {
+		t.Fatal("a refused save changed the links")
+	}
+	link["channelId"] = "C1"
+	if rec := e.do(http.MethodPut, path, asUser(manager), map[string]any{"data": []any{link}}); rec.Code != http.StatusOK {
+		t.Errorf("a workspace manager saved: %d %s", rec.Code, rec.Body)
 	}
 	if rec := e.do(http.MethodPut, "/api/app/workspaces/"+o.ws.String()+"/integrations/n8n", asUser(o.user), map[string]any{"data": []any{}}); rec.Code != http.StatusNotFound {
 		t.Errorf("an unknown type: %d", rec.Code)
@@ -309,6 +322,11 @@ func TestConnectThroughAppAPI(t *testing.T) {
 	}
 	if rec := e.do(http.MethodPost, "/api/app/workspaces/"+uuid.NewString()+"/integrations/slack/connect", asUser(o.user), nil); rec.Code != http.StatusForbidden {
 		t.Errorf("another workspace: %d", rec.Code)
+	}
+	contributor := e.user()
+	e.grant(o.org, o.ws, contributor, "readWrite")
+	if rec := e.do(http.MethodPost, "/api/app/workspaces/"+o.ws.String()+"/integrations/slack/connect", reqHeaders{testUserHeader: contributor.String(), testSessionHeader: uuid.NewString()}, nil); rec.Code != http.StatusForbidden {
+		t.Errorf("a contributor who cannot manage the workspace connected: %d %s", rec.Code, rec.Body)
 	}
 }
 

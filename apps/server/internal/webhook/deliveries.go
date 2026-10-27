@@ -331,7 +331,7 @@ func (s *Service) Deliveries(ctx context.Context, userID, webhookID uuid.UUID) (
 	return s.repo.deliveries(ctx, webhookID)
 }
 
-// Resend sends a delivery again, now, to the webhook as it is: its current URL and secret, with the body and the webhook-id of the original, so a receiver that already has it can tell. It needs workspace.write on the webhook's workspace, as the endpoint test does, and counts against the state-mutation limit. The attempt is recorded like a retry, and the answer is the delivery after it, whether the endpoint accepted it or not.
+// Resend sends a delivery again, now, to the webhook as it is: its current URL and secret, with the body and the webhook-id of the original, so a receiver that already has it can tell. It needs workspace.write on the webhook's workspace, as deleting it does: it sends what was already sent to the URL a manager chose. It counts against the state-mutation limit. The attempt is recorded like a retry, and the answer is the delivery after it, whether the endpoint accepted it or not.
 func (s *Service) Resend(ctx context.Context, userID, webhookID, deliveryID uuid.UUID) (*DeliveryView, error) {
 	w, err := s.owned(ctx, userID, webhookID, authz.WorkspaceWrite)
 	if err != nil {
@@ -376,13 +376,13 @@ func (s *Service) deliverer() *Deliverer {
 	return &Deliverer{repo: s.repo, guard: s.guard, now: s.now}
 }
 
-// RegenerateSecret replaces a webhook's signing secret with a new one and returns it, the only time it is shown: workspace.write on the webhook's workspace and the state-mutation limit. Every delivery from then on is signed with it, the retries of earlier events included. A webhook an automation platform subscribed keeps its secret, which the platform received when it subscribed.
+// RegenerateSecret replaces a webhook's signing secret with a new one and returns it, the only time it is shown: workspace.manage on the webhook's workspace, as creating one needs, and the state-mutation limit. Every delivery from then on is signed with it, the retries of earlier events included. A webhook an automation platform subscribed keeps its secret, which the platform received when it subscribed.
 func (s *Service) RegenerateSecret(ctx context.Context, userID, id uuid.UUID) (*SecretView, error) {
 	var before, after *Webhook
 	secret := GenerateSecret()
 	err := func() error {
 		var err error
-		if before, err = s.owned(ctx, userID, id, authz.WorkspaceWrite); err != nil {
+		if before, err = s.owned(ctx, userID, id, authz.WorkspaceManage); err != nil {
 			return err
 		}
 		if err := s.limiter.Apply(ctx, ratelimit.ActionStateMutation, before.WorkspaceID.String()); err != nil {

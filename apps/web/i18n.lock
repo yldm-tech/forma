@@ -2514,6 +2514,7 @@ checksums:
     workspace/integrations/webhooks/endpoint_pinged: 3b1fce00e61d4b9d2bdca390649c58b6
     workspace/integrations/webhooks/endpoint_pinged_error: 96c312fe8214757c4a934cdfbe177027
     workspace/integrations/webhooks/endpoint_service_unavailable_error: f9d4874c322f2963f5afaede354c9416
+    workspace/integrations/webhooks/managers_only: bfe007f0d9fa634a5e2af5689faf042d
     workspace/integrations/webhooks/no_triggers: 6b68cddfc45b3f7e20644a24a1bbea69
     workspace/integrations/webhooks/please_check_console: 7b1787e82a0d762df02c011ebb1650ea
     workspace/integrations/webhooks/please_enter_a_url: c24c74d0ce7ed3a6b858aadbc82108fe

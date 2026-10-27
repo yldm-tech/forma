@@ -521,6 +521,13 @@ func (s *Service) CreateV1(ctx context.Context, caller Caller, workspaceID uuid.
 	if len(docIssues) > 0 {
 		return nil, &V1Invalid{Issues: docIssues}
 	}
+	recipientIssues, err := s.recipientIssues(ctx, workspaceID, nil, followUps)
+	if err != nil {
+		return nil, err
+	}
+	if len(recipientIssues) > 0 {
+		return nil, &V1Invalid{Issues: recipientIssues}
+	}
 	if recaptchaEnabled(body["recaptcha"]) && !s.cfg.RecaptchaConfigured() {
 		return nil, apperr.OperationNotAllowed("Spam protection is not enabled for this organization")
 	}
