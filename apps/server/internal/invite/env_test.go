@@ -106,7 +106,7 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	}
 
 	e := &env{t: t, cfg: cfg, db: db, mail: transport, logs: logs, delivery: authz.NewDelivery(db, client, log), authorizer: authz.NewAuthorizer(cfg, db, client)}
-	e.svc = NewService(cfg, NewRepository(db), e.authorizer, limiter, m, audit.New(cfg, log), log)
+	e.svc = NewService(cfg, NewRepository(db), e.authorizer, e.delivery, limiter, m, audit.New(cfg, log), log)
 	r := gin.New()
 	r.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
 	group := r.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())

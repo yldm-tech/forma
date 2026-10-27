@@ -154,6 +154,7 @@ func (s *Service) changeRole(ctx context.Context, userID, organizationID, target
 	if err := s.repo.serializable(ctx, write); err != nil {
 		return old, nil, nil, err
 	}
+	s.delivery.DeliverMemberships(ctx, targetUserID)
 	return old, updated, disabled, nil
 }
 
@@ -221,6 +222,7 @@ func (s *Service) removeMember(ctx context.Context, userID, organizationID, targ
 	if err != nil {
 		return target, nil, err
 	}
+	s.delivery.DeliverMemberships(ctx, targetUserID)
 	return target, disabled, nil
 }
 
@@ -341,6 +343,7 @@ func (s *Service) leave(ctx context.Context, userID, organizationID uuid.UUID) (
 	if err != nil {
 		return m, nil, err
 	}
+	s.delivery.DeliverMemberships(ctx, userID)
 	return m, disabled, nil
 }
 

@@ -161,6 +161,7 @@ func (h *Handler) v2CreateTeam(c *gin.Context) {
 		h.v2Unexpected(c, err)
 		return
 	}
+	h.delivery.DeliverTeam(c.Request.Context(), created.ID)
 	h.v2Record(c, created.ID.String(), nil, created)
 	v2Created(c, created)
 }
@@ -236,6 +237,7 @@ func (h *Handler) v2DeleteTeam(c *gin.Context) {
 		v2Error(c, http.StatusNotFound, detail("team", "not found"))
 		return
 	}
+	h.delivery.DeliverTeam(c.Request.Context(), teamID)
 	h.v2Record(c, "", deleted, nil)
 	v2OK(c, deleted, nil)
 }
@@ -399,6 +401,7 @@ func (h *Handler) v2CreateUser(c *gin.Context) {
 		h.v2Unexpected(c, err)
 		return
 	}
+	h.delivery.DeliverMemberships(ctx, created.ID)
 	created.Teams = []string{}
 	for _, name := range in.teams {
 		if _, ok := teams[name]; ok && !contains(created.Teams, name) {
@@ -514,6 +517,7 @@ func (h *Handler) v2UpdateUser(c *gin.Context) {
 		h.v2Unexpected(c, err)
 		return
 	}
+	h.delivery.DeliverMemberships(ctx, current.ID)
 	updated, err := h.repo.orgUserByID(ctx, organizationID, current.ID)
 	if err != nil || updated == nil {
 		if err == nil {
@@ -660,6 +664,7 @@ func (h *Handler) v2CreateWorkspaceTeam(c *gin.Context) {
 		h.v2Unexpected(c, err)
 		return
 	}
+	h.delivery.DeliverTeam(c.Request.Context(), in.teamID)
 	h.v2Record(c, "", nil, created)
 	v2OK(c, created, nil)
 }
@@ -694,6 +699,7 @@ func (h *Handler) v2UpdateWorkspaceTeam(c *gin.Context) {
 		v2Error(c, http.StatusNotFound, detail("workspaceTeam", "not found"))
 		return
 	}
+	h.delivery.DeliverTeam(ctx, in.teamID)
 	h.v2Record(c, "", old, updated)
 	v2OK(c, updated, nil)
 }
@@ -724,6 +730,7 @@ func (h *Handler) v2DeleteWorkspaceTeam(c *gin.Context) {
 		v2Error(c, http.StatusNotFound, detail("workspaceTeam", "not found"))
 		return
 	}
+	h.delivery.DeliverTeam(c.Request.Context(), teamID)
 	h.v2Record(c, "", deleted, nil)
 	v2OK(c, deleted, nil)
 }
