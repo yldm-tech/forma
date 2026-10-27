@@ -121,11 +121,16 @@ type Worker struct {
 	log             *slog.Logger
 }
 
-func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.Logger) (*Worker, error) {
-	concurrency := cfg.WorkerConcurrency
-	if concurrency == 0 {
-		concurrency = config.DefaultWorkerConcurrency()
+// Concurrency is how many jobs the worker's default queue runs at once: WORKER_CONCURRENCY, or DefaultWorkerConcurrency when it is 0.
+func Concurrency(cfg config.Config) int {
+	if cfg.WorkerConcurrency == 0 {
+		return config.DefaultWorkerConcurrency()
 	}
+	return cfg.WorkerConcurrency
+}
+
+func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.Logger) (*Worker, error) {
+	concurrency := Concurrency(cfg)
 	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Logger:                      log,
 		Workers:                     reg.workers,

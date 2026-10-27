@@ -266,7 +266,7 @@ func (e *env) deliver() {
 	}
 	defer cleanup()
 	reg := jobs.NewRegistry(e.log)
-	webhook.RegisterJobs(reg, e.hooks, e.log)
+	webhook.RegisterJobs(reg, e.hooks, jobs.Concurrency(e.cfg), e.log)
 	worker, err := jobs.NewWorker(e.cfg, pool, reg, e.log)
 	if err != nil {
 		e.t.Fatal(err)

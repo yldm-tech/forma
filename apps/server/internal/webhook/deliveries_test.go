@@ -37,10 +37,10 @@ func (e *env) response(survey uuid.UUID) uuid.UUID {
 	return e.insert(`INSERT INTO responses (survey_id, finished) VALUES (?, true) RETURNING id`, survey)
 }
 
-// worker is the webhook.deliver worker over the env's database, sending through a guard that reaches local receivers.
+// worker is the webhook.deliver worker of a queue of 8 slots, as production runs, over the env's database, sending through a guard that reaches local receivers.
 func (e *env) worker() *deliverWorker {
 	guard := ssrf.New(config.Config{DangerouslyAllowWebhookInternalURLs: true})
-	return newDeliverWorker(NewDeliverer(NewRepository(e.db), guard), slog.New(slog.NewJSONHandler(e.logs, nil)))
+	return newDeliverWorker(NewDeliverer(NewRepository(e.db), guard), 8, slog.New(slog.NewJSONHandler(e.logs, nil)))
 }
 
 // work runs the attempt-th attempt of the delivery job.

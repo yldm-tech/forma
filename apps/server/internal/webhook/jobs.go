@@ -59,13 +59,14 @@ type deliverWorker struct {
 	log     *slog.Logger
 }
 
-func newDeliverWorker(deliverer *Deliverer, log *slog.Logger) *deliverWorker {
-	return &deliverWorker{deliverer: deliverer, breaker: newBreaker(), log: log}
+// newDeliverWorker is the delivery worker of a queue that runs concurrency jobs at once.
+func newDeliverWorker(deliverer *Deliverer, concurrency int, log *slog.Logger) *deliverWorker {
+	return &deliverWorker{deliverer: deliverer, breaker: newBreaker(hookSlots(concurrency)), log: log}
 }
 
-// RegisterJobs adds the webhook delivery worker to `forma worker`.
-func RegisterJobs(reg *jobs.Registry, deliverer *Deliverer, log *slog.Logger) {
-	jobs.Add(reg, newDeliverWorker(deliverer, log))
+// RegisterJobs adds the webhook delivery worker to `forma worker`, whose queue runs concurrency jobs at once (jobs.Concurrency).
+func RegisterJobs(reg *jobs.Registry, deliverer *Deliverer, concurrency int, log *slog.Logger) {
+	jobs.Add(reg, newDeliverWorker(deliverer, concurrency, log))
 }
 
 // NextRetry follows retrySchedule instead of the queue's default backoff of seconds.
@@ -100,6 +101,8 @@ func (w *deliverWorker) Work(ctx context.Context, job *river.Job[DeliverArgs]) e
 			log.InfoContext(ctx, "Webhook circuit stays open: the probe failed", "open_for", breakerOpenFor.String())
 		case transitionClosed:
 			log.InfoContext(ctx, "Webhook circuit closed: its endpoint answers again")
+		case transitionReset:
+			log.InfoContext(ctx, "Webhook circuit dropped: the webhook was deleted or no longer subscribes to the event")
 		case transitionNone:
 		}
 	}()
@@ -118,6 +121,7 @@ func (w *deliverWorker) Work(ctx context.Context, job *river.Job[DeliverArgs]) e
 	messageID := MessageID(a.JobKey, a.WebhookID, a.Event)
 	i := slices.IndexFunc(hooks, func(h *Webhook) bool { return h.ID == a.WebhookID })
 	if i < 0 {
+		result = outcomeGone
 		log.InfoContext(ctx, "Webhook delivery skipped: the webhook was deleted or no longer subscribes to the event")
 		if err := w.deliverer.repo.abandon(ctx, a.WebhookID, messageID); err != nil {
 			log.ErrorContext(ctx, "Failed to record the end of a webhook delivery's retries", "err", err)
