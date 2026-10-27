@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
@@ -461,10 +462,13 @@ func (s *SSO) provision(ctx context.Context, provider string, id ssoIdentity, ca
 		source = "invite"
 	}
 	var joined *uuid.UUID
+	var organizations authz.Organizations
 	if hasDefaultOrg {
-		s.joinDefaultOrganization(ctx, defaultOrg, userID, name)
+		organizations = s.joinDefaultOrganization(ctx, defaultOrg, userID, name)
 		joined = &defaultOrg
 	}
+	// The new user, and the organization they joined (created with its workspace when they are the first), reach SpiceDB before the browser lands on its first page.
+	s.svc.delivery.DeliverOrganizations(ctx, organizations, userID)
 	// The sign-in below consumes the attribution; the sign-up reads it first, as forma2 carried it from the create hook to the after hook.
 	captureSignedUp(userID, provider, email, source, joined, attributionProperties(ctx))
 	s.svc.finalizeSignIn(ctx, userID, signInMethodSSO)
@@ -495,25 +499,31 @@ var emailLocalSeparators = regexp.MustCompile(`[._+]+`)
 // defaultMembershipAttempts is how often the membership write is tried before it is given up and logged (forma2's MAX_ATTEMPTS).
 const defaultMembershipAttempts = 2
 
-// joinDefaultOrganization is forma2's ensureDefaultOrganization and membership write. The sign-up that creates the organization makes its user the owner, so someone can administer it; later sign-ups get AUTH_SSO_DEFAULT_ORGANIZATION_ROLE, manager when unset. The user already exists, so nothing here fails the sign-in: a failure leaves the user without the organization and is logged for an operator to reconcile.
-func (s *SSO) joinDefaultOrganization(ctx context.Context, orgID, userID uuid.UUID, userName string) {
+// joinDefaultOrganization is forma2's ensureDefaultOrganization and membership write. The sign-up that creates the organization makes its user the owner, so someone can administer it; later sign-ups get AUTH_SSO_DEFAULT_ORGANIZATION_ROLE, manager when unset. The user already exists, so nothing here fails the sign-in: a failure leaves the user without the organization and is logged for an operator to reconcile. It returns the organization it joined, for the projection's delivery.
+func (s *SSO) joinDefaultOrganization(ctx context.Context, orgID, userID uuid.UUID, userName string) authz.Organizations {
 	role, err := s.resolveDefaultOrganization(ctx, orgID, userName)
 	if err != nil {
 		s.log.ErrorContext(ctx, "Failed to resolve AUTH_SSO_DEFAULT_ORGANIZATION_ID for a new SSO user; the user was created without an organization", "err", err, "organizationId", orgID.String(), "userId", userID.String())
-		return
+		return authz.Organizations{}
 	}
+	var joined authz.Organizations
 	for attempt := 1; attempt <= defaultMembershipAttempts; attempt++ {
 		err = s.svc.repo.transaction(ctx, func(tx *Repository) error {
 			if err := tx.addMembership(ctx, userID, orgID, role); err != nil {
 				return err
 			}
-			return tx.unsubscribeOrganizationAlerts(ctx, userID, orgID)
+			if err := tx.unsubscribeOrganizationAlerts(ctx, userID, orgID); err != nil {
+				return err
+			}
+			joined, err = authz.ReadOrganizations(ctx, tx.db, orgID)
+			return err
 		})
 		if err == nil {
-			return
+			return joined
 		}
 	}
 	s.log.ErrorContext(ctx, "SSO provisioning: failed to assign new SSO user to its organization", "err", err, "organizationId", orgID.String(), "userId", userID.String())
+	return authz.Organizations{}
 }
 
 // resolveDefaultOrganization finds or creates the default organization and returns the role its new member gets. The organization and its workspace are created in one transaction, so a failure leaves neither behind; a concurrent first sign-up that wins the race is read back as an existing organization.

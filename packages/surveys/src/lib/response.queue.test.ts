@@ -8,7 +8,7 @@ import {
 import { TResponseUpdate } from "@forma/types/responses";
 import { TResponseErrorCodesEnum } from "@/types/response-error-codes";
 import type { PendingResponseEntry } from "./offline-storage";
-import { RECOVERY_BASE_DELAY_MS, ResponseQueue, delay } from "./response-queue";
+import { RECOVERY_BASE_DELAY_MS, ResponseQueue, delay, isSameRespondent } from "./response-queue";
 import { SurveyState } from "./survey-state";
 
 // Suppress noisy console output from retry logic during tests
@@ -44,6 +44,8 @@ const getSurveyState: () => SurveyState = () => ({
   surveyId: "survey1",
   singleUseId: "single1",
   pinAuthToken: null,
+  verifyToken: null,
+  verifyTokenHash: null,
   shouldCreateResponseFromState: false,
   responseAcc: { finished: false, data: {}, ttc: {}, variables: {} },
   updateResponseId: vi.fn(),
@@ -1600,5 +1602,66 @@ describe("answers stored by an earlier page", () => {
     expect(api.updateResponse).toHaveBeenCalledWith(expect.objectContaining({ responseId: "response-A" }));
     expect(removePendingResponseStrict).toHaveBeenCalledWith(1);
     expect(live.responseId).toBeNull();
+  });
+
+  // NF-01: in one browser, respondent B opened B's own verification link after A left progress on A's.
+  test("a row stored from another verification link goes to its own response, without this page's token", async () => {
+    const { getPendingResponsesStrict } = await import("./offline-storage");
+    const snapshotA = { responseId: "response-A", displayId: "display-A", verifyTokenHash: "hash-A" };
+    vi.mocked(getPendingResponsesStrict).mockResolvedValueOnce([
+      storedRow(1, snapshotA, { data: { q1: "A-private" }, finished: false }),
+    ]);
+    const live = new SurveyState("s1");
+    live.verifyToken = "token-B";
+    live.verifyTokenHash = "hash-B";
+    const { queue, api } = makeQueue(live);
+
+    await queue.syncPersistedResponses();
+
+    expect(api.updateResponse).toHaveBeenCalledTimes(1);
+    const sent = api.updateResponse.mock.calls[0][0];
+    expect(sent).toMatchObject({ responseId: "response-A", data: { q1: "A-private" } });
+    expect(sent.verifyToken).toBeUndefined();
+    expect(live.responseId).toBeNull();
+  });
+
+  test("this page's own updates carry its verification token, and what it stores records the token's hash", async () => {
+    const { addPendingResponse } = await import("./offline-storage");
+    const live = new SurveyState("s1");
+    live.updateResponseId("response-B");
+    live.verifyToken = "token-B";
+    live.verifyTokenHash = "hash-B";
+    const { queue, api } = makeQueue(live);
+
+    queue.add({ data: { q1: "B" }, finished: false });
+    await vi.waitFor(() => expect(api.updateResponse).toHaveBeenCalled());
+
+    expect(api.updateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ responseId: "response-B", verifyToken: "token-B" })
+    );
+    expect(vi.mocked(addPendingResponse).mock.calls[0][0].surveyStateSnapshot).toMatchObject({
+      verifyTokenHash: "hash-B",
+    });
+  });
+});
+
+describe("isSameRespondent", () => {
+  const ids = { singleUseId: null, contactId: null, userId: null };
+
+  test("tells verification links apart", () => {
+    expect(
+      isSameRespondent({ ...ids, verifyTokenHash: "hash-A" }, { ...ids, verifyTokenHash: "hash-A" })
+    ).toBe(true);
+    expect(
+      isSameRespondent({ ...ids, verifyTokenHash: "hash-A" }, { ...ids, verifyTokenHash: "hash-B" })
+    ).toBe(false);
+    expect(isSameRespondent({ ...ids, verifyTokenHash: "hash-A" }, { ...ids, verifyTokenHash: null })).toBe(
+      false
+    );
+  });
+
+  test("a snapshot stored before the link was recorded matches a page without one, and no page with one", () => {
+    expect(isSameRespondent(ids, { ...ids, verifyTokenHash: null })).toBe(true);
+    expect(isSameRespondent(ids, { ...ids, verifyTokenHash: "hash-A" })).toBe(false);
   });
 });

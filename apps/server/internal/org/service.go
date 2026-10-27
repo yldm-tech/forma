@@ -32,6 +32,7 @@ type Service struct {
 	workspaces *workspace.Repository
 	navigation *workspace.Service
 	authz      *authz.Authorizer
+	delivery   *authz.Delivery
 	limiter    *ratelimit.Limiter
 	audit      *audit.Emitter
 	billing    *billing.Lifecycle
@@ -39,8 +40,8 @@ type Service struct {
 	log        *slog.Logger
 }
 
-func NewService(cfg config.Config, repo *Repository, workspaces *workspace.Repository, navigation *workspace.Service, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, lifecycle *billing.Lifecycle, m *mailer.Mailer, log *slog.Logger) *Service {
-	return &Service{cfg: cfg, repo: repo, workspaces: workspaces, navigation: navigation, authz: authorizer, limiter: limiter, audit: emitter, billing: lifecycle, mailer: m, log: log}
+func NewService(cfg config.Config, repo *Repository, workspaces *workspace.Repository, navigation *workspace.Service, authorizer *authz.Authorizer, delivery *authz.Delivery, limiter *ratelimit.Limiter, emitter *audit.Emitter, lifecycle *billing.Lifecycle, m *mailer.Mailer, log *slog.Logger) *Service {
+	return &Service{cfg: cfg, repo: repo, workspaces: workspaces, navigation: navigation, authz: authorizer, delivery: delivery, limiter: limiter, audit: emitter, billing: lifecycle, mailer: m, log: log}
 }
 
 // record emits forma2's audit event for a mutation, a failure included, as withAuditLogging did for every error its handler threw.
@@ -90,6 +91,9 @@ func (s *Service) create(ctx context.Context, userID uuid.UUID, name string, tim
 	if err != nil {
 		return nil, err
 	}
+	// The creator's ownership and the first workspace reach SpiceDB before the answer instead of waiting for the worker (see authz.Delivery.DeliverMemberships on what that promises under minimize_latency). The organization's own event projects nothing for a row that exists.
+	s.delivery.DeliverMemberships(ctx, userID)
+	s.delivery.DeliverWorkspace(ctx, workspaceID)
 	// forma2 set up the Stripe customer and Hobby subscription after the organization existed.
 	s.billing.OrganizationCreated(ctx, orgID)
 	o, err := s.repo.byID(ctx, orgID, s.cfg.IsFormaCloud)
@@ -377,9 +381,15 @@ func (s *Service) delete(ctx context.Context, userID, organizationID uuid.UUID) 
 	if old == nil {
 		return nil, apperr.NotFound("Organization", organizationID.String())
 	}
+	// What the deletion takes with it is read first: once the rows are gone, nothing says which of the revocations it queues are its own.
+	contents, err := authz.ReadOrganizations(ctx, s.repo.db, organizationID)
+	if err != nil {
+		return old, err
+	}
 	if err := s.repo.delete(ctx, organizationID); err != nil {
 		return old, err
 	}
+	s.delivery.DeliverOrganizations(ctx, contents)
 	s.billing.OrganizationDeleted(ctx, old.Billing.StripeCustomerID)
 	return old, nil
 }

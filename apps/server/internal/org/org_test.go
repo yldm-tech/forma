@@ -373,6 +373,24 @@ func TestDeleteOrganization(t *testing.T) {
 	}
 }
 
+// Deleting an organization revokes a relationship for every member, team, workspace and API key in it. They reach SpiceDB before the request answers, with no worker running: left to a worker that may be minutes behind, they would pass the freshness window and stop every authorization check in the deployment.
+func TestDeletingAnOrganizationIsProjectedBeforeItAnswers(t *testing.T) {
+	e := newEnv(t)
+	owner, member := e.user(), e.user()
+	c := e.organization(owner, "Acme")
+	e.member(c.ID, member, RoleMember)
+	team := e.team(c.ID)
+	e.teamMember(team, member)
+	e.workspaceTeam(c.WorkspaceID, team, "read")
+	key := e.insert(`INSERT INTO api_keys (organization_id, label, hashed_key, lookup_hash) VALUES (?, 'key', 'h', ?) RETURNING id`, c.ID, uuid.NewString())
+	e.exec(`INSERT INTO api_key_workspaces (api_key_id, workspace_id, permission) VALUES (?, ?, 'read')`, key, c.WorkspaceID)
+
+	e.ok(e.do(owner, http.MethodDelete, orgPath(c.ID, ""), nil), http.StatusNoContent, nil)
+	if n := e.count(`SELECT count(*) FROM authz_projection_outbox WHERE processed_at IS NULL`); n != 0 {
+		t.Fatalf("%d events left for the worker after deleting the organization", n)
+	}
+}
+
 func TestValidTimeZone(t *testing.T) {
 	cases := map[string]bool{"UTC": true, "Europe/Berlin": true, "America/Argentina/Buenos_Aires": true, "Etc/GMT+5": true, "": false, "Local": false, "Nowhere/City": false, "../etc/passwd": false}
 	for tz, want := range cases {

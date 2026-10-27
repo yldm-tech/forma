@@ -848,6 +848,8 @@
     "enter_pin": "此問卷已受保護。請在下方輸入 PIN 碼。",
     "invalid_email": "請輸入有效的電子郵件地址",
     "just_curious": "只是好奇？",
+    "link_in_use_heading": "此連結已被使用",
+    "link_in_use_with_other_email": "已有人用此連結開始填寫，且使用的不是您驗證的電子郵件地址。只有開始填寫的人才能繼續。",
     "link_invalid": "此問卷只能透過邀請填寫。",
     "paused": "此問卷暫停收集回覆。",
     "paused_heading": "問卷已暫停",

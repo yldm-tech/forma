@@ -789,6 +789,8 @@ checksums:
     s/enter_pin: 90bccdc2e51ee2550842287d1f02c999
     s/invalid_email: 8de4bc8832b11b380bc4cbcedc16e48b
     s/just_curious: d5e5c40e97fcfdab563707ab0de10862
+    s/link_in_use_heading: c06da08f901a92c01457a2e0c5946f6a
+    s/link_in_use_with_other_email: 5be8e9b9974aedc2c3da24380062bfa7
     s/link_invalid: bd63a73fa5eecad2dfd0687cfed02114
     s/paused: 65ec150837ca033f5a0fb5d4482e0e4b
     s/paused_heading: 6cb6b1a4a29435b582e9b10e57e240e6

@@ -341,6 +341,51 @@ func TestNotificationEmails(t *testing.T) {
 	}
 }
 
+// A member the organization refuses in the app is not mailed the response either: once the two-factor grace period is over, a member who signs in with a password and has not enrolled gets nothing, like a suspended one; an enrolled member and one who can only sign in through SSO (exempt) still get the email.
+func TestNotificationEmailsSkipMembersTheOrganizationRefuses(t *testing.T) {
+	e := newEnv(t, Handoffs{})
+	f := e.fixture()
+	password := func(user uuid.UUID) {
+		e.exec(`INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES (?, 'credential', ?, '$2a$10$hash')`, user, user.String())
+	}
+	unenrolled := e.user("unenrolled@example.com", f.survey)
+	password(unenrolled)
+	enrolled := e.user("enrolled@example.com", f.survey)
+	password(enrolled)
+	e.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, '\x00', '\x00', true)`, enrolled)
+	ssoOnly := e.user("sso@example.com", f.survey)
+	e.exec(`INSERT INTO user_identities (user_id, provider, issuer, subject) VALUES (?, 'saml', 'https://idp.example.com', ?)`, ssoOnly, ssoOnly.String())
+	suspended := e.user("suspended@example.com", f.survey)
+	for _, u := range []uuid.UUID{unenrolled, enrolled, ssoOnly, suspended} {
+		e.member(f.org, u, "owner")
+	}
+	e.exec(`UPDATE memberships SET suspended_at = now() WHERE user_id = ?`, suspended)
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() - interval '1 minute' WHERE id = ?`, f.org)
+
+	recipients := func() []string {
+		t.Helper()
+		before := len(e.mail.Messages())
+		r := e.respond(f, true, `{}`)
+		if err := e.work(job(response.EventResponseFinished, f, r, 1)); err != nil {
+			t.Fatal(err)
+		}
+		var to []string
+		for _, m := range e.mail.Messages()[before:] {
+			to = append(to, m.To)
+		}
+		slices.Sort(to)
+		return to
+	}
+	if got, want := recipients(), []string{"enrolled@example.com", "sso@example.com"}; !slices.Equal(got, want) {
+		t.Errorf("after the grace period, sent to %v, want %v", got, want)
+	}
+	// In the grace period the requirement refuses no one yet.
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() + interval '1 day' WHERE id = ?`, f.org)
+	if got, want := recipients(), []string{"enrolled@example.com", "sso@example.com", "unenrolled@example.com"}; !slices.Equal(got, want) {
+		t.Errorf("in the grace period, sent to %v, want %v", got, want)
+	}
+}
+
 // forma2's auto-complete: the survey closes once its finished responses reach the limit, guarded on the status this job read, and the change is audited as the system's.
 func TestAutoComplete(t *testing.T) {
 	e := newEnv(t, Handoffs{})

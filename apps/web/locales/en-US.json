@@ -848,6 +848,8 @@
     "enter_pin": "This survey is protected. Enter the PIN below.",
     "invalid_email": "Please enter a valid email address",
     "just_curious": "Just curious?",
+    "link_in_use_heading": "This link is already in use",
+    "link_in_use_with_other_email": "A response to this link has already been started, and not with the email address you verified. Only the person who started it can continue.",
     "link_invalid": "This survey can only be taken by invitation.",
     "paused": "This survey is temporarily paused.",
     "paused_heading": "Survey paused",

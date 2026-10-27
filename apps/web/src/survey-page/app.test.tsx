@@ -241,6 +241,19 @@ describe("SurveyPageApp", () => {
       cta: false,
       logo: true,
     },
+    {
+      inactive: {
+        status: "link in use",
+        isScheduled: false,
+        surveyClosedMessage: null,
+        workspace: { linkSurveyBranding: false },
+      },
+      heading: "This link is already in use",
+      description:
+        "A response to this link has already been started, and not with the email address you verified. Only the person who started it can continue.",
+      cta: false,
+      logo: false,
+    },
   ] as const)(
     "inactive: $inactive.status, scheduled $inactive.isScheduled",
     ({ inactive, heading, description, cta, logo }) => {

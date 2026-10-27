@@ -613,3 +613,37 @@ func TestV2UsersUnchangedRoleKeepsTheCreatorsKeys(t *testing.T) {
 		}
 	}
 }
+
+// The v2 team, user and workspace-team writes reach SpiceDB before they answer, with no worker running, so /api/v3, MCP and the app do not wait for the worker to see them and no revocation waits on a worker that may be minutes behind.
+func TestV2AccessWritesAreProjectedBeforeTheyAnswer(t *testing.T) {
+	e := newEnv(t)
+	s := e.seedRecording()
+	org, ws, key := s.bound["<id:organization>"], s.bound["<id:workspace>"], s.bound["<api-key:manage>"]
+	pending := func(step string) {
+		t.Helper()
+		var n int64
+		if err := e.db.Raw(`SELECT count(*) FROM authz_projection_outbox WHERE processed_at IS NULL`).Scan(&n).Error; err != nil {
+			t.Fatal(err)
+		}
+		if n != 0 {
+			t.Fatalf("%s: %d events left for the worker", step, n)
+		}
+	}
+	base := "/api/v2/organizations/" + org
+
+	body := expectStatus(t, "create a team", e.do("POST", base+"/teams", map[string]any{"name": "Team"}, "x-api-key", key), 201)
+	team := body["data"].(map[string]any)["id"].(string)
+	pending("create a team")
+	expectStatus(t, "create a user", e.do("POST", base+"/users", map[string]any{"name": "New", "email": "new@example.com", "role": "member", "teams": []string{"Team"}}, "x-api-key", key), 201)
+	pending("create a user")
+	expectStatus(t, "grant the team", e.do("POST", base+"/workspace-teams", map[string]any{"teamId": team, "workspaceId": ws, "permission": "read"}, "x-api-key", key), 200)
+	pending("grant the team")
+	expectStatus(t, "raise the grant", e.do("PUT", base+"/workspace-teams", map[string]any{"teamId": team, "workspaceId": ws, "permission": "manage"}, "x-api-key", key), 200)
+	pending("raise the grant")
+	expectStatus(t, "remove the user's teams", e.do("PATCH", base+"/users", map[string]any{"email": "new@example.com", "teams": []string{}}, "x-api-key", key), 200)
+	pending("remove the user's teams")
+	expectStatus(t, "revoke the grant", e.do("DELETE", base+"/workspace-teams?teamId="+team+"&workspaceId="+ws, nil, "x-api-key", key), 200)
+	pending("revoke the grant")
+	expectStatus(t, "delete the team", e.do("DELETE", base+"/teams/"+team, nil, "x-api-key", key), 200)
+	pending("delete the team")
+}
