@@ -62,6 +62,7 @@ import { SURVEY_INSTRUCTIONS_ID, getSurveyPagePosition, hasSurveyInstructions } 
 import { SurveyState } from "@/lib/survey-state";
 import { useOnlineStatus } from "@/lib/use-online-status";
 import { cn, findBlockByElementId, getDefaultLanguageCode, getElementsFromSurveyBlocks } from "@/lib/utils";
+import { hashVerifyToken } from "@/lib/verify-token";
 import { TResponseErrorCodesEnum } from "@/types/response-error-codes";
 
 const restoreSurveyStateFromSnapshot = (
@@ -91,11 +92,15 @@ const restoreSurveyStateFromSnapshot = (
 // How long a respondent's progress is kept in the browser.
 const PROGRESS_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-/** Whether stored progress was left by the respondent this page is for: the same single-use link, personal (contact) link and user id. */
+/** Whether stored progress was left by the respondent this page is for: the same single-use link, personal (contact) link, user id and email verification link. Progress stored without a snapshot names no respondent; only a page opened from a verification link does not take it, since that respondent can only go on where their own link left off. */
 const isProgressOfThisRespondent = (
   snapshot: SerializedSurveyState | undefined,
   surveyState: SurveyState | null
-): boolean => !snapshot || !surveyState || isSameRespondent(snapshot, surveyState);
+): boolean => {
+  if (!surveyState) return true;
+  if (!snapshot) return !surveyState.verifyTokenHash;
+  return isSameRespondent(snapshot, surveyState);
+};
 
 export function Survey({
   appUrl,
@@ -137,6 +142,7 @@ export function Survey({
   singleUseId,
   singleUseResponseId,
   pinAuthToken,
+  verifyToken,
   isWebEnvironment = true,
   getRecaptchaToken,
   isSpamProtectionEnabled,
@@ -163,11 +169,12 @@ export function Survey({
 
   const surveyState = useMemo(() => {
     if (appUrl && workspaceId) {
-      if (mode === "inline") {
-        return new SurveyState(survey.id, singleUseId, singleUseResponseId, userId, contactId, pinAuthToken);
-      }
-
-      return new SurveyState(survey.id, null, null, userId, contactId, pinAuthToken);
+      const state =
+        mode === "inline"
+          ? new SurveyState(survey.id, singleUseId, singleUseResponseId, userId, contactId, pinAuthToken)
+          : new SurveyState(survey.id, null, null, userId, contactId, pinAuthToken);
+      state.verifyToken = verifyToken ?? null;
+      return state;
     }
     return null;
   }, [
@@ -180,6 +187,7 @@ export function Survey({
     singleUseResponseId,
     contactId,
     pinAuthToken,
+    verifyToken,
   ]);
 
   // Update the responseQueue to use the stored responseId
@@ -631,6 +639,10 @@ export function Survey({
     let cancelled = false;
 
     const restore = async () => {
+      // Known before the stored progress is compared with this page's respondent, and recorded by every snapshot stored from now on.
+      if (surveyState) {
+        surveyState.verifyTokenHash = verifyToken ? await hashVerifyToken(verifyToken) : null;
+      }
       const progress = await getSurveyProgress(survey.id);
 
       if (cancelled || !progress) {
@@ -638,7 +650,7 @@ export function Survey({
         return;
       }
 
-      // Discard stale progress (older than 24 hours), and progress another respondent left in this browser: a different single-use link, personal link or user id for the same survey starts afresh instead of going on in someone else's response.
+      // Discard stale progress (older than 24 hours), and progress another respondent left in this browser: a different single-use link, personal link, user id or email verification link for the same survey starts afresh instead of going on in someone else's response. Answers that respondent left unsent still go to their own response (isolateEarlierResponses), without this page's verification token.
       if (
         Date.now() - progress.updatedAt > PROGRESS_MAX_AGE_MS ||
         !isProgressOfThisRespondent(progress.surveyStateSnapshot, surveyState)
@@ -1326,6 +1338,7 @@ export function Survey({
           singleUseId: surveyState?.singleUseId ?? null,
           userId: surveyState?.userId ?? null,
           contactId: surveyState?.contactId ?? null,
+          verifyTokenHash: surveyState?.verifyTokenHash ?? null,
           responseAcc: surveyState?.responseAcc ?? { finished: false, data: {}, ttc: {}, variables: {} },
         },
         updatedAt: Date.now(),

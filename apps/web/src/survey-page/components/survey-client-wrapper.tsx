@@ -141,6 +141,9 @@ export const SurveyClientWrapper = ({
     () => (survey.isVerifyEmailEnabled && verifiedEmail ? { verifiedEmail } : null),
     [survey.isVerifyEmailEnabled, verifiedEmail]
   );
+  // The link's token is the respondent's identity for the progress the runtime keeps; only a token the server verified (it then names the address) is passed on.
+  const verifyToken =
+    survey.isVerifyEmailEnabled && verifiedEmail ? (searchParams.get("verify") ?? undefined) : undefined;
   const surveyHiddenFields = useMemo(
     () => ({ ...hiddenFieldsRecord, ...verifiedEmailField }),
     [hiddenFieldsRecord, verifiedEmailField]
@@ -263,6 +266,7 @@ export const SurveyClientWrapper = ({
           singleUseId={singleUseId}
           singleUseResponseId={singleUseResponseId}
           pinAuthToken={pinAuthToken}
+          verifyToken={verifyToken}
           getSetIsResponseSendingFinished={getSetIsResponseSendingFinished}
           contactId={contactId}
           userId={userId}
