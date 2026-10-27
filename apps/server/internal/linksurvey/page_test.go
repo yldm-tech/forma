@@ -386,6 +386,46 @@ func TestSurveyPageSingleUse(t *testing.T) {
 	}
 }
 
+// A single-use link of a survey that verifies emails, whose unfinished response another address started: the runtime would continue that response by its id and the client API refuses the update (response.CheckVerifiedEmail), so the page says the link is in use instead of letting the respondent answer into a 403. The address that started it goes on, compared case-insensitively.
+func TestSurveyPageSingleUseVerifiedByAnotherEmail(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace("link_survey_branding", "false")
+	id := e.survey(ws, "is_verify_email_enabled", true, "single_use", `{"enabled":true,"isEncrypted":false}`)
+	suToken := survey.SingleUseSignature(string(e.cfg.EncryptionKeyText), id.String(), "su-1")
+	link := func(email string) string {
+		t.Helper()
+		token, err := newEmailToken(e.cfg, id, email, e.now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return "/s/" + id.String() + "?suId=su-1&suToken=" + suToken + "&verify=" + token
+	}
+	if p := e.page(link("b@example.com")); p.view() != viewSurvey || p.sub("survey")["singleUseResponseId"] != nil {
+		t.Fatalf("no response yet: view %q survey %v", p.view(), p.sub("survey"))
+	}
+	started := e.response(id, false, "single_use_id", "su-1", "data", `{"verifiedEmail": "A@example.com"}`)
+	p := e.page(link("b@example.com"))
+	if p.view() != viewInactive || p.sub("inactive")["status"] != inactiveLinkInUse || p.sub("inactive", "workspace")["linkSurveyBranding"] != false || strings.Contains(p.Body, started.String()) {
+		t.Fatalf("another address: view %q inactive %v", p.view(), p.sub("inactive"))
+	}
+	if p = e.page(link("a@example.com")); p.view() != viewSurvey || p.sub("survey")["singleUseResponseId"] != started.String() || p.sub("survey")["verifiedEmail"] != "a@example.com" {
+		t.Fatalf("the address that started it: view %q survey %v", p.view(), p.sub("survey"))
+	}
+	// A response the link started before the survey verified emails records no address, and the update refuses every verified one.
+	e.exec(`UPDATE responses SET data = '{}' WHERE id = ?`, started)
+	if p = e.page(link("a@example.com")); p.view() != viewInactive || p.sub("inactive")["status"] != inactiveLinkInUse {
+		t.Fatalf("no recorded address: view %q inactive %v", p.view(), p.sub("inactive"))
+	}
+	// Still the verification gate without a token, and the completed screen once the response is finished.
+	if p = e.page("/s/" + id.String() + "?suId=su-1&suToken=" + suToken); p.view() != viewVerifyEmail {
+		t.Fatalf("no token: view %q", p.view())
+	}
+	e.exec(`UPDATE responses SET finished = true WHERE id = ?`, started)
+	if p = e.page(link("b@example.com")); p.view() != viewCompleted {
+		t.Fatalf("finished: view %q", p.view())
+	}
+}
+
 func linkValueSealedSingleUseID(t *testing.T) string {
 	sealed, err := secret.EncryptLinkValue("clsingleuseaaaaaaaaaaaaa1", bytes.Repeat([]byte{7}, 32))
 	if err != nil {

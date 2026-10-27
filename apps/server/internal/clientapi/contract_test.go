@@ -52,6 +52,8 @@ var replayOrder = []string{
 	"v2-responses-create-partial", "v1-responses-update-options", "v1-display-response-found", "v2-responses-create-contact", "v1-responses-create-userid",
 	"v1-responses-update-finish", "v1-responses-update-already-finished", "v1-responses-update-invalid-body",
 	"v1-responses-update-malformed-id", "v1-responses-update-unknown",
+	"v2-responses-create-verified-email", "v1-responses-update-verified-email-other-address",
+	"v1-responses-update-verified-email-no-token", "v1-responses-update-verified-email-own-address",
 	"v2-responses-create-finished", "v2-responses-create-required-element-omitted", "v2-responses-create-rating-out-of-range",
 	"v2-responses-create-missing-required", "v2-responses-create-invalid-body", "v2-responses-create-invalid-meta-action",
 	"v2-responses-create-malformed-json", "v2-responses-create-paused-survey", "v2-responses-create-archived-survey",
@@ -119,6 +121,8 @@ func (e *env) seedRecording(t *testing.T) map[string]string {
 	upload := e.survey(ws, "name", "Upload", "blocks", `[{"id":"clblockuploadaaaaaaaaaa1","name":"Main","elements":[
 		{"id":"attachment","type":"fileUpload","headline":{"default":"Attach a file"},"required":false,"allowMultipleFiles":false,"allowedFileExtensions":["png","pdf"],"maxSizeInMB":5}]}]`)
 	unused := e.insert(`INSERT INTO displays (survey_id) VALUES (?) RETURNING id`, link)
+	verified := e.survey(ws, "name", "Verified email")
+	e.exec(`UPDATE surveys SET is_verify_email_enabled = true WHERE id = ?`, verified)
 
 	// The encrypted suId of a single-use link: the id sealed under ENCRYPTION_KEY for its survey, as the survey editor issues it.
 	sealed, err := e.cipher.Seal([]byte(singleUseID), []byte("survey-single-use:"+singleUse.String()))
@@ -132,6 +136,7 @@ func (e *env) seedRecording(t *testing.T) map[string]string {
 		"<id:survey:link>": link.String(), "<id:quota>": quota.String(), "<id:survey:paused>": paused.String(),
 		"<id:survey:archived>": archived.String(), "<id:survey:singleUse>": singleUse.String(), "<id:survey:upload>": upload.String(),
 		"<id:display:anonymous-unused>": unused.String(), "<id:singleUse>": singleUseID, "<single-use-token>": url.QueryEscape(token),
+		"<id:survey:verified>": verified.String(), "<verify-token:a>": e.emailToken(t, verified, "a@example.com"), "<verify-token:b>": e.emailToken(t, verified, "b@example.com"),
 		"<webapp-url>": webAppURL, "<s3-endpoint>": "http://localhost:9000",
 	}
 }

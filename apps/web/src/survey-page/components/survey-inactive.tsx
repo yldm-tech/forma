@@ -9,7 +9,7 @@ const CREATE_YOUR_OWN_URL =
 const POWERED_BY_URL =
   "https://forma.yldm.ai?utm_source=forma-app&utm_medium=survey&utm_campaign=powered_by_badge";
 
-/** forma2's SurveyInactive: a paused, scheduled or closed survey, an invalid or expired link, or a contact, verified email or browser that already answered. */
+/** forma2's SurveyInactive: a paused, scheduled or closed survey, an invalid or expired link, or a contact, verified email or browser that already answered, or a single-use link another verified address started. */
 export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, workspace }: TInactiveState) => {
   const { t } = useTranslation();
   const icons = {
@@ -20,6 +20,7 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
     "link expired": <CalendarClockIcon className="size-20" />,
     "email responded": <CheckCircle2Icon className="size-20" />,
     "browser responded": <CheckCircle2Icon className="size-20" />,
+    "link in use": <HelpCircleIcon className="size-20" />,
   };
   const descriptions = {
     paused: isScheduled ? t("s.scheduled") : t("s.paused"),
@@ -29,6 +30,7 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
     "link expired": t("c.link_expired_description"),
     "email responded": t("s.already_responded_with_email"),
     "browser responded": t("s.already_responded_in_browser"),
+    "link in use": t("s.link_in_use_with_other_email"),
   };
   const headings = {
     paused: isScheduled ? t("common.survey_scheduled") : t("s.paused_heading"),
@@ -39,6 +41,7 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
     "link expired": t("c.link_expired"),
     "email responded": t("s.survey_already_answered_heading"),
     "browser responded": t("s.survey_already_answered_heading"),
+    "link in use": t("s.link_in_use_heading"),
   };
 
   const title =
@@ -51,6 +54,7 @@ export const SurveyInactive = ({ status, isScheduled, surveyClosedMessage, works
     status !== "response submitted" &&
     status !== "email responded" &&
     status !== "browser responded" &&
+    status !== "link in use" &&
     ((status !== "paused" && status !== "completed") || workspace?.linkSurveyBranding || !workspace) &&
     !(status === "completed" && surveyClosedMessage);
 

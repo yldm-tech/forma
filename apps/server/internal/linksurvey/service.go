@@ -57,6 +57,8 @@ const (
 	inactiveResponseSubmitted = "response submitted"
 	// inactiveEmailResponded is a verification link whose address already finished a response to a survey that takes one response per verified email.
 	inactiveEmailResponded = "email responded"
+	// inactiveLinkInUse is a single-use link of a survey that verifies emails whose unfinished response was started under another address (or under none) than the one the verification link proves: the client API refuses that respondent's updates (response.CheckVerifiedEmail), so the page stops them before they answer.
+	inactiveLinkInUse = "link in use"
 )
 
 // page is one rendered survey page: its status, head and the state the bundle renders.
@@ -323,6 +325,13 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 				state.Inactive = &inactiveState{Status: inactiveEmailResponded, SurveyClosedMessage: json.RawMessage("null"), Workspace: ws}
 				return page{Status: http.StatusOK, State: state}, nil
 			}
+		}
+		// The runtime continues a single-use link's unfinished response by its id, whoever opens the link; another verified address would only get 403s from the update, after typing its answers. Addresses compare case-insensitively, as response.CheckVerifiedEmail reads them.
+		if verified != "" && in.singleUseResponse != nil && !strings.EqualFold(in.singleUseResponse.VerifiedEmail, verified) {
+			state.View = viewInactive
+			state.BrowserLimit = nil
+			state.Inactive = &inactiveState{Status: inactiveLinkInUse, SurveyClosedMessage: json.RawMessage("null"), Workspace: ws}
+			return page{Status: http.StatusOK, State: state}, nil
 		}
 		if verified == "" && !isPreview {
 			gated := public
