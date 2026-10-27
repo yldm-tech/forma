@@ -1,4 +1,4 @@
-// Package retention is forma2's retention sweep (apps/web/lib/jobs/retention): once a day, each organization's own retention windows are applied to its terminal workflow runs and to the survey impressions (displays) that never became a response. A window is configuration on the organization, null (keep forever) until its owner sets one (the Data retention card), so an upgrade deletes nothing by itself. The instance's RETENTION_SWEEP_DRY_RUN, on by default, makes every sweep count instead of delete; each organization's last sweep is kept for its owner to read (organization_retention_sweeps).
+// Package retention is forma2's retention sweep (apps/web/lib/jobs/retention): once a day, each organization's own retention windows are applied to its terminal workflow runs and to the survey impressions (displays) that never became a response, except impressions of identified users, which are their targeting history. A window is configuration on the organization, null (keep forever) until its owner sets one (the Data retention card), so an upgrade deletes nothing by itself. The instance's RETENTION_SWEEP_DRY_RUN, on by default, makes every sweep count instead of delete; each organization's last sweep is kept for its owner to read (organization_retention_sweeps).
 package retention
 
 import (
@@ -255,7 +255,7 @@ func (s *Sweeper) sweepWorkflowRuns(ctx context.Context, organizationID uuid.UUI
 	return result, nil
 }
 
-// sweepDisplays walks the organization's surveys in id order, a page at a time, so each statement stays on the (survey_id, created_at) index. An impression that became a response is kept: the response would otherwise silently lose its display (ON DELETE SET NULL).
+// sweepDisplays walks the organization's surveys in id order, a page at a time, so each statement stays on the anonymous impressions' (survey_id, created_at) index (migration 00032). An impression that became a response is kept: the response would otherwise silently lose its display (ON DELETE SET NULL). An impression of an identified user (one linked to a contact) is kept as well, whatever its age and whatever the survey's type: every display of a contact is that contact's targeting history, which the SDK decides show once, display limits and waiting periods by (clientapi userState, lastDisplayAt over all of them) and segments' haveSeen and haveNotSeen filters read (contact evaluate), so deleting one would show surveys to that user again or move them between segments. It goes with its contact or its survey. Anonymous impressions are swept.
 func (s *Sweeper) sweepDisplays(ctx context.Context, organizationID uuid.UUID, cutoff time.Time, dryRun bool) (PassResult, error) {
 	var result PassResult
 	after := uuid.Nil
@@ -270,7 +270,7 @@ func (s *Sweeper) sweepDisplays(ctx context.Context, organizationID uuid.UUID, c
 			surveyID := row.ID
 			if dryRun {
 				var n int64
-				err := s.db.WithContext(ctx).Raw(`SELECT count(*) FROM displays d WHERE d.survey_id = ? AND d.created_at < ?
+				err := s.db.WithContext(ctx).Raw(`SELECT count(*) FROM displays d WHERE d.survey_id = ? AND d.created_at < ? AND d.contact_id IS NULL
 					AND NOT EXISTS (SELECT 1 FROM responses r WHERE r.display_id = d.id)`, surveyID, cutoff).Scan(&n).Error
 				if err != nil {
 					return result, fmt.Errorf("count expired displays: %w", err)
@@ -281,7 +281,7 @@ func (s *Sweeper) sweepDisplays(ctx context.Context, organizationID uuid.UUID, c
 			deleted, capped, err := drain(func() (int64, error) {
 				res := s.db.WithContext(ctx).Exec(`
 					WITH expired AS (
-						SELECT d.id FROM displays d WHERE d.survey_id = ? AND d.created_at < ?
+						SELECT d.id FROM displays d WHERE d.survey_id = ? AND d.created_at < ? AND d.contact_id IS NULL
 							AND NOT EXISTS (SELECT 1 FROM responses r WHERE r.display_id = d.id)
 						ORDER BY d.created_at LIMIT ?
 					)

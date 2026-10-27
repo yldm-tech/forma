@@ -714,7 +714,7 @@ checksums:
     organizations/retention/deleted_runs: e144243640e0e02a0cf6ef4d2c0a9f93
     organizations/retention/deleting_description: db49f55841aca1e9e0453b34633ffbb7
     organizations/retention/deleting_title: d45048f4aeddae06c83321ac022fb85f
-    organizations/retention/displays_description: 1f12df5ecbdeadf227d2593391f76b99
+    organizations/retention/displays_description_identified_kept: ccf025066e09247aca279de43b315d71
     organizations/retention/displays_label: e155702451bedaa308ab0b397266fa7a
     organizations/retention/dry_run_description: 506c3e789bee22e46a6b98c3fe7cef57
     organizations/retention/dry_run_description_cloud: bcd2196a7be5ecd77c25508a7100877c

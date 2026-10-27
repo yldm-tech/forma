@@ -129,7 +129,7 @@ const RetentionForm = ({
       <WindowSelect
         id="retention-displays"
         label={t("organizations.retention.displays_label")}
-        description={t("organizations.retention.displays_description")}
+        description={t("organizations.retention.displays_description_identified_kept")}
         value={windows.displayRetentionDays}
         onChange={(days) => setWindows((w) => ({ ...w, displayRetentionDays: days }))}
       />
