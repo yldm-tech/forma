@@ -204,7 +204,7 @@ func (s *Service) Update(ctx context.Context, caller Caller, in UpdateInput, dra
 	if nameIssue := editorNameIssue(in.Name); !draft && nameIssue != nil {
 		err = ValidationError([]surveydoc.Issue{*nameIssue})
 	} else {
-		updated, err = s.update(ctx, current, &in, draft)
+		updated, err = s.update(ctx, caller, current, &in, draft)
 	}
 	org := s.organizationOf(ctx, current.WorkspaceID)
 	s.record(ctx, caller, audit.ActionUpdated, audit.TargetSurvey, in.ID.String(), org, err, current, updated)
@@ -227,7 +227,7 @@ func draftVersionConflict(stored *Survey, in *UpdateInput, draft bool) error {
 }
 
 // update is forma2's updateSurveyInternal for one stored survey. Everything the save depends on in the stored row (its archive stamp, version, status, declared fields, segment, slug and every column the save does not carry) is read again under a row lock in the transaction that writes it, so a concurrent change is neither overwritten nor bypassed; current is the unlocked snapshot the request was authorized against.
-func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, skipValidation bool) (*Survey, error) {
+func (s *Service) update(ctx context.Context, caller Caller, current *Survey, in *UpdateInput, skipValidation bool) (*Survey, error) {
 	langIDs := make([]uuid.UUID, len(in.Languages))
 	for i, l := range in.Languages {
 		langIDs[i] = l.Language.ID
@@ -286,6 +286,9 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		return nil
 	}
 	if err := storedAllows(current); err != nil {
+		return nil, err
+	}
+	if err := s.checkCustomScripts(ctx, caller, current.WorkspaceID, current, in.customScripts()); err != nil {
 		return nil, err
 	}
 	if in.Segment != nil {
@@ -368,7 +371,11 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		if in.IsSingleResponsePerEmailEnabled != nil {
 			rec.IsSingleResponsePerEmailEnabled = *in.IsSingleResponsePerEmailEnabled
 		}
-		rec.Pin, rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.Pin, in.CustomHeadScripts, in.CustomHeadScriptsMode
+		rec.Pin = in.Pin
+		// A save that leaves the custom head scripts as the request found them keeps what is stored now, so it never reverts a change made since by someone it could not have made it as (checkCustomScripts).
+		if in.customScripts().changes(current) {
+			rec.CustomHeadScripts, rec.CustomHeadScriptsMode = in.CustomHeadScripts, in.CustomHeadScriptsMode
+		}
 		storedStatus := stored.Status
 		if rec.PublishOn, rec.CloseOn, err = normalizeDates(schedule, pickedIn(schedule, in.SchedulingTimeZone), &storedStatus, in.Status, scheduledDates{in.PublishOn, in.CloseOn}, scheduledDates{stored.PublishOn, stored.CloseOn}, in.SchedulingExactTimes); err != nil {
 			return err

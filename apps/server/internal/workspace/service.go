@@ -276,9 +276,9 @@ func (s *Service) update(ctx context.Context, userID, workspaceID uuid.UUID, in 
 		return nil, nil, err
 	}
 	if in.CustomHeadScripts != nil {
-		// Custom head scripts run unsanitized on the public survey pages, so forma2's settings page offered them only to owners and managers of a self-hosted instance. The same rule is enforced here rather than left to the page.
+		// Custom head scripts run unsanitized on the public survey pages, so forma2's settings page offered them only to owners and managers of a self-hosted instance. The same rule is enforced here rather than left to the page, and the instance must give the survey pages an origin of their own (config.CustomScripts). Forma Cloud refuses even a clear, as before; elsewhere clearing stays possible, so stored scripts the pages no longer run can be removed.
 		if s.cfg.IsFormaCloud {
-			return nil, nil, apperr.OperationNotAllowed("Custom head scripts are not available on Forma Cloud")
+			return nil, nil, apperr.OperationNotAllowed(s.cfg.CustomScriptsRefusal())
 		}
 		org, err := s.repo.organizationOf(ctx, workspaceID)
 		if err != nil {
@@ -289,6 +289,9 @@ func (s *Service) update(ctx context.Context, userID, workspaceID uuid.UUID, in 
 		}
 		if err := s.authz.Require(ctx, actor, authz.OrganizationManage, authz.Organization(*org)); err != nil {
 			return nil, nil, err
+		}
+		if v := in.CustomHeadScripts.Value; v != nil && *v != "" && s.cfg.CustomScripts() != config.CustomScriptsAvailable {
+			return nil, nil, apperr.OperationNotAllowed(s.cfg.CustomScriptsRefusal())
 		}
 	}
 

@@ -3,6 +3,7 @@ package workspace
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -187,7 +188,7 @@ func TestWorkspaceSurveyScheduling(t *testing.T) {
 }
 
 func TestUpdateWorkspace(t *testing.T) {
-	e := newEnv(t)
+	e := newEnv(t, withSurveyDomain)
 	owner, manageTeam, writer := e.user(), e.user(), e.user()
 	org, ws := e.organization(owner)
 	other, _ := e.organization(e.user())
@@ -270,11 +271,37 @@ func TestUpdateWorkspace(t *testing.T) {
 	}
 }
 
+// withSurveyDomain gives the instance a PUBLIC_URL of its own, which custom head scripts need.
+func withSurveyDomain(c *config.Config) {
+	c.PublicURL, _ = url.Parse("http://surveys.example.com")
+}
+
 func TestCustomHeadScriptsAreSelfHostedOnly(t *testing.T) {
-	e := newEnv(t, func(c *config.Config) { c.IsFormaCloud = true })
+	e := newEnv(t, withSurveyDomain, func(c *config.Config) { c.IsFormaCloud = true })
 	owner := e.user()
 	_, ws := e.organization(owner)
 	e.fails(e.do(owner, http.MethodPatch, wsPath(ws, ""), map[string]any{"customHeadScripts": "<script></script>"}), http.StatusForbidden, apperr.CodeOperationNotAllowed, "")
+}
+
+// Without a PUBLIC_URL on a host of its own the survey pages share the admin origin, so a script there would act as every signed-in visitor: the instance refuses to set one, even for an owner, and tells the operator what to change. Clearing stays possible.
+func TestCustomHeadScriptsNeedASeparateSurveyDomain(t *testing.T) {
+	for name, configure := range map[string]func(*config.Config){
+		"no PUBLIC_URL":                func(*config.Config) {},
+		"PUBLIC_URL on the admin host": func(c *config.Config) { c.PublicURL, _ = url.Parse(webApp) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, configure)
+			owner := e.user()
+			_, ws := e.organization(owner)
+			e.exec(`UPDATE workspaces SET custom_head_scripts = '<script>stored()</script>' WHERE id = ?`, ws)
+			e.fails(e.do(owner, http.MethodPatch, wsPath(ws, ""), map[string]any{"customHeadScripts": "<script></script>"}), http.StatusForbidden, apperr.CodeOperationNotAllowed, "Custom head scripts are turned off on this instance: its survey pages are served on the admin domain, where a script could act as any signed-in user who opens the survey. The operator can turn them on by setting PUBLIC_URL to a separate domain for surveys.")
+			var got Workspace
+			e.ok(e.do(owner, http.MethodPatch, wsPath(ws, ""), map[string]any{"customHeadScripts": nil}), http.StatusOK, &got)
+			if got.CustomHeadScripts != nil {
+				t.Fatalf("clearing left %q", *got.CustomHeadScripts)
+			}
+		})
+	}
 }
 
 func TestDeleteWorkspace(t *testing.T) {

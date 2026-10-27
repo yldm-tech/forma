@@ -352,7 +352,7 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		mcpHandler,
 		billing.NewHandler(nil, sessions),
 		billing.NewWebhookHandler(nil, log),
-		instance.NewHandler(nil, nil, sessions),
+		instance.NewHandler(cfg, nil, nil, sessions),
 		web,
 		unsplash.NewHandler(nil, sessions),
 		contactsurvey.NewHandler(nil, sessions),

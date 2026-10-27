@@ -941,3 +941,42 @@ func TestAppURL(t *testing.T) {
 		})
 	}
 }
+
+func TestCustomScripts(t *testing.T) {
+	parse := func(raw string) *url.URL {
+		if raw == "" {
+			return nil
+		}
+		u, err := url.Parse(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return u
+	}
+	cases := []struct {
+		name           string
+		webApp, public string
+		cloud          bool
+		want           CustomScripts
+	}{
+		{"no PUBLIC_URL: the survey pages share the admin origin", "https://forma.example.com", "", false, CustomScriptsNeedPublicURL},
+		{"PUBLIC_URL on the admin host", "https://forma.example.com", "https://FORMA.example.com/", false, CustomScriptsNeedPublicURL},
+		{"PUBLIC_URL on its own host", "https://forma.example.com", "https://surveys.example.com", false, CustomScriptsAvailable},
+		{"PUBLIC_URL on another port", "http://localhost:3000", "http://localhost:3001", false, CustomScriptsAvailable},
+		{"Forma Cloud, even with its own survey host", "https://forma.example.com", "https://surveys.example.com", true, CustomScriptsFormaCloud},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := Config{WebAppURL: parse(tc.webApp), PublicURL: parse(tc.public), IsFormaCloud: tc.cloud}
+			if got := cfg.CustomScripts(); got != tc.want {
+				t.Errorf("CustomScripts = %q, want %q", got, tc.want)
+			}
+			if refusal := cfg.CustomScriptsRefusal(); (refusal == "") != (tc.want == CustomScriptsAvailable) {
+				t.Errorf("CustomScriptsRefusal = %q for %q", refusal, tc.want)
+			}
+		})
+	}
+	if msg := (Config{WebAppURL: parse("https://forma.example.com")}).CustomScriptsRefusal(); !strings.Contains(msg, "PUBLIC_URL") {
+		t.Errorf("the refusal without PUBLIC_URL does not tell the operator what to set: %q", msg)
+	}
+}
