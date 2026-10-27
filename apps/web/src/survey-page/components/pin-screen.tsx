@@ -1,5 +1,5 @@
 import { getReadableTextColor } from "@forma/types/colors";
-import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
+import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/card-layout";
 import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OTPInput } from "../../components/ui/otp-input";

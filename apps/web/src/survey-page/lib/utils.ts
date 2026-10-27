@@ -2,7 +2,7 @@ import { TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { TSurveyBlock } from "@forma/types/surveys/blocks";
 import { TSurveyElement } from "@forma/types/surveys/elements";
 import { TSurvey } from "@forma/types/surveys/types";
-import { TUserLocale, ZUserLocale } from "@forma/types/user";
+import { type TUserLocale, USER_LOCALES } from "@forma/types/user-locale";
 
 export function isRTL(text: string): boolean {
   const rtlCharRegex = /[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/;
@@ -116,7 +116,7 @@ export const resolveWebAppLocale = (
 
   // An exact locale first, so a survey language that already names one ("pt-PT") keeps its variant
   // instead of collapsing into the base language's default ("pt" -> "pt-BR").
-  const exactLocale = ZUserLocale.options.find((locale) => locale.toLowerCase() === codeToMapLower);
+  const exactLocale = USER_LOCALES.find((locale) => locale.toLowerCase() === codeToMapLower);
   if (exactLocale) return exactLocale;
 
   return (
