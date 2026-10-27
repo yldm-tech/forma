@@ -16,6 +16,8 @@ func TestRules(t *testing.T) {
 		{AuthLogin, "auth:login", 900 * time.Second, 10},
 		{AuthSignup, "auth:signup", 3600 * time.Second, 30},
 		{AuthForgotPassword, "auth:forgot", 3600 * time.Second, 5},
+		{AuthSignInAccountIP, "auth:sign-in:account-ip", 900 * time.Second, 10},
+		{AuthSignInAccountIPDaily, "auth:sign-in:account-ip:day", 86400 * time.Second, 50},
 		{AuthResetPassword, "auth:reset-password", 3600 * time.Second, 5},
 		{AuthVerifyEmail, "auth:verify", 3600 * time.Second, 10},
 		{AuthEmailToken, "auth:email-token", 3600 * time.Second, 10},

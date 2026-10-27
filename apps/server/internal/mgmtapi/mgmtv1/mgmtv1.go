@@ -227,7 +227,12 @@ func (w *Wrapper) Can(c *gin.Context, method string, workspaceID uuid.UUID) (boo
 
 // Authorize is Can answering for the handler: 401 unauthorized when refused, 500 when the decision failed. It reports whether the handler may go on.
 func (w *Wrapper) Authorize(c *gin.Context, method string, workspaceID uuid.UUID) bool {
-	allowed, err := w.Can(c, method, workspaceID)
+	return w.AuthorizeAction(c, authz.WorkspaceActionForMethod(method), workspaceID)
+}
+
+// AuthorizeAction is Authorize for a route whose action is not the one its method maps to.
+func (w *Wrapper) AuthorizeAction(c *gin.Context, action authz.Action, workspaceID uuid.UUID) bool {
+	allowed, err := w.authz.Can(c.Request.Context(), CallerOf(c).Actor(), action, authz.Workspace(workspaceID))
 	if err != nil {
 		w.Unexpected(c, err, MessageUnexpected)
 		return false
@@ -273,6 +278,11 @@ func rawWorkspaceID(c *gin.Context, body map[string]any) (string, bool) {
 
 // ResolveWorkspace is forma2's resolveBodyIds: the workspace the body names by workspaceId or its alias environmentId (404 Workspace naming the id sent), authorized for the method's action (401 when refused). On success the body's workspaceId is the canonical id.
 func (w *Wrapper) ResolveWorkspace(c *gin.Context, body map[string]any, method string) (*workspace.ClientWorkspace, bool) {
+	return w.ResolveWorkspaceFor(c, body, authz.WorkspaceActionForMethod(method))
+}
+
+// ResolveWorkspaceFor is ResolveWorkspace for a route whose action is not the one its method maps to.
+func (w *Wrapper) ResolveWorkspaceFor(c *gin.Context, body map[string]any, action authz.Action) (*workspace.ClientWorkspace, bool) {
 	raw, ok := rawWorkspaceID(c, body)
 	if !ok {
 		return nil, false
@@ -286,7 +296,7 @@ func (w *Wrapper) ResolveWorkspace(c *gin.Context, body map[string]any, method s
 		v1api.NotFound(c, "Workspace", raw, false)
 		return nil, false
 	}
-	if !w.Authorize(c, method, ws.ID) {
+	if !w.AuthorizeAction(c, action, ws.ID) {
 		return nil, false
 	}
 	body["workspaceId"] = ws.ID.String()

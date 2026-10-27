@@ -16,20 +16,27 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
-// TokenVerifier checks access tokens for /api/mcp, the resource server half of forma2's oauthProviderResourceClient.verifyBearerToken: the signature against the authorization server's keys, the at+jwt type, the issuer, the expiry, and an audience naming the MCP resource. It never reads the token tables, so a revoked token stays valid until it expires.
+// TokenVerifier checks access tokens for /api/mcp, the resource server half of forma2's oauthProviderResourceClient.verifyBearerToken: the signature against the authorization server's keys, the at+jwt type, the issuer, the expiry, and an audience naming the MCP resource. It never reads the token tables; whether a token was revoked is for the caller to check when IssuedHere.
 type TokenVerifier struct {
-	urls URLs
-	keys oidc.KeySet
-	now  func() time.Time
+	urls  URLs
+	keys  oidc.KeySet
+	now   func() time.Time
+	local bool
 }
 
 // NewTokenVerifier verifies against the keys in the database, or against the JWKS at MCP_OAUTH_JWKS_URL when it is set.
 func NewTokenVerifier(cfg config.Config, keys *Keys) *TokenVerifier {
-	v := &TokenVerifier{urls: NewURLs(cfg), keys: keys, now: time.Now}
+	v := &TokenVerifier{urls: NewURLs(cfg), keys: keys, now: time.Now, local: true}
 	if cfg.MCPOAuthJWKSURL != nil {
 		v.keys = oidc.NewRemoteKeySet(context.Background(), cfg.MCPOAuthJWKSURL.String())
+		v.local = false
 	}
 	return v
+}
+
+// IssuedHere reports whether the tokens it accepts are signed with this database's keys, so each was issued by this instance's authorization server and has its row in oauth_access_tokens (the token's jti). Against another instance's JWKS the rows live in that instance's database.
+func (v *TokenVerifier) IssuedHere() bool {
+	return v.local
 }
 
 // ErrKeysUnavailable is a verification that failed because the signing keys could not be fetched, forma2's failureSource "jwks_fetch".

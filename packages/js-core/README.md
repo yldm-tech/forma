@@ -4,7 +4,7 @@ The SDK that shows Forma's website and in-app surveys on your own pages. Every F
 
 ## Install
 
-Copy the snippet from your workspace in Forma, under **Integrations → Web & Mobile SDK**, which fills in your workspace ID and your instance's URL. It looks like this:
+Copy the snippet from your workspace in Forma, under **Integrations → Web SDK**, which fills in your workspace ID and your instance's URL. It looks like this:
 
 ```html
 <!-- START Forma Surveys -->
@@ -121,7 +121,7 @@ window.forma.logout();
 
 The workspace ID in the snippet is public, so anyone can call the SDK's API with any user ID. Forma therefore trusts the browser only so far:
 
-- The SDK never writes an attribute marked as protected. Mark the attributes your own systems own (a plan, a role, an account tier) in the **Identity verification** card of the workspace's **Web & Mobile SDK** page in Forma (under Integrations), and set them through the Management API, a CSV import or the contact page.
+- The SDK never writes an attribute marked as protected. Mark the attributes your own systems own (a plan, a role, an account tier) in the **Identity verification** card of the workspace's **Web SDK** page in Forma (under Integrations), and set them through the Management API, a CSV import or the contact page.
 - The SDK writes the email only for a verified user.
 - The user state the SDK receives names neither the contact nor any survey by ID.
 

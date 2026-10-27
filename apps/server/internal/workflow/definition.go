@@ -15,6 +15,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/userinput"
+	"github.com/yldm-tech/forma/apps/server/internal/recipient"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
@@ -283,7 +284,7 @@ func BlankContentFields(c SendEmailConfig) []string {
 
 // IsLiteralRecipient is forma2's isLiteralEmailRecipient: a `to` that is itself an address, as opposed to the id of the element whose answer holds the respondent's. Literal recipients must be able to access the workspace.
 func IsLiteralRecipient(to string) bool {
-	return userinput.ValidEmailFormat(to)
+	return recipient.IsLiteral(to)
 }
 
 // parser walks a decoded document the way the zod schemas did, collecting issues with their paths. aborted records a type-level issue, after which zod skipped refinements.

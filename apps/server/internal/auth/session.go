@@ -235,6 +235,37 @@ func (s *Sessions) RevokeAll(ctx context.Context, tx *gorm.DB, userID, keep uuid
 	return res.RowsAffected, nil
 }
 
+// RevokeOAuthGrants revokes every OAuth refresh and access token issued to the user, the MCP clients' grants, deletes the authorization requests the user approved, and returns how many live refresh tokens it revoked; expired tokens are left to the cleanup job. Every change that ends the user's other sessions calls it in the same transaction (pass it as tx): a refresh token is a session too, one that rotates for thirty days, so an attacker's MCP client would otherwise outlive the password reset, the sign-out or the second factor meant to shut them out. An approved request is a grant in waiting: its code, kept unredeemed until after the change, would mint a fresh refresh token. Revoking an access token stops /api/mcp, introspection and userinfo from accepting it. The user's consents stay, so a legitimate client is back after one sign-in and approval.
+func RevokeOAuthGrants(ctx context.Context, tx *gorm.DB, userID uuid.UUID) (int64, error) {
+	if err := tx.WithContext(ctx).Exec(`DELETE FROM oauth_authorization_requests WHERE user_id = ?`, userID).Error; err != nil {
+		return 0, fmt.Errorf("delete oauth authorization requests: %w", err)
+	}
+	res := tx.WithContext(ctx).Exec(`UPDATE oauth_refresh_tokens SET revoked_at = now() WHERE user_id = ? AND revoked_at IS NULL AND expires_at > now()`, userID)
+	if res.Error != nil {
+		return 0, fmt.Errorf("revoke oauth refresh tokens: %w", res.Error)
+	}
+	if err := tx.WithContext(ctx).Exec(`UPDATE oauth_access_tokens SET revoked_at = now() WHERE user_id = ? AND revoked_at IS NULL AND expires_at > now()`, userID).Error; err != nil {
+		return 0, fmt.Errorf("revoke oauth access tokens: %w", err)
+	}
+	return res.RowsAffected, nil
+}
+
+// endOtherAccess ends everything that signs the user in except keep: their other sessions (uuid.Nil keeps none) and every OAuth grant. tx is the transaction of the change that requires it. It returns how many sessions it ended.
+func (s *Sessions) endOtherAccess(ctx context.Context, tx *gorm.DB, userID, keep uuid.UUID) (int64, error) {
+	revoked, err := s.RevokeAll(ctx, tx, userID, keep)
+	if err != nil {
+		return 0, err
+	}
+	grants, err := RevokeOAuthGrants(ctx, tx, userID)
+	if err != nil {
+		return 0, err
+	}
+	if grants > 0 {
+		s.log.InfoContext(ctx, "Revoked user OAuth grants", "userId", userID.String(), "refreshTokens", grants)
+	}
+	return revoked, nil
+}
+
 // authenticate reads the session cookie and, for a valid session, records the actor and re-sends the cookie when the session was extended.
 func (s *Sessions) authenticate(c *gin.Context) (bool, error) {
 	// A missing cookie reads as the empty token, which validate treats as no session.

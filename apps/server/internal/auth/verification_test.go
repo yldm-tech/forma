@@ -88,6 +88,38 @@ func TestVerifyWithholdsTheSessionFromOtherBrowsers(t *testing.T) {
 	}
 }
 
+// A verification link is one factor: the sign-up browser of an account that has two-factor authentication by then is not signed in by it, and signs in with both factors instead (AUTH-03).
+func TestVerifyWithholdsTheSessionFromATwoFactorAccount(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	b, token := e.signUp("grace@example.com", strongPassword)
+	acc, err := e.svc.repo.accountByEmail(e.t.Context(), "grace@example.com")
+	if err != nil || acc == nil {
+		t.Fatalf("account: %v", err)
+	}
+	e.enrolTOTP(acc.ID, true)
+	r := b.post("/auth/verification/verify", map[string]string{"token": token})
+	expectStatus(t, r, http.StatusOK, "")
+	if r.json()["signedIn"] != false || b.has(sessionCookieName) {
+		t.Fatalf("the link signed in past the second factor: %s", r.Body.String())
+	}
+	if !e.emailVerified("grace@example.com") {
+		t.Fatal("email not verified")
+	}
+	if got := withheldReasons(e); len(got) != 1 || got[0] != withheldTwoFactor {
+		t.Fatalf("withheld reasons %v", got)
+	}
+	if e.count(`SELECT count(*) FROM sessions`) != 0 {
+		t.Fatal("a session was created")
+	}
+	r = b.post("/auth/sign-in", credentials("grace@example.com", strongPassword))
+	expectStatus(t, r, http.StatusOK, "")
+	if r.json()["status"] != "two_factor_required" {
+		t.Fatalf("sign-in: %s", r.Body.String())
+	}
+	expectStatus(t, verifyTOTP(b, e.totpCode(acc.ID, 0)), http.StatusOK, "")
+}
+
 func TestVerifyClassifiesTheIntent(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t, openSignup)

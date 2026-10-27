@@ -188,6 +188,8 @@ type updateRequest struct {
 	DisplayTimeZone          nullableString `json:"displayTimeZone"`
 	SurveySchedulingTimeZone nullableString `json:"surveySchedulingTimeZone"`
 	IsAISmartToolsEnabled    *bool          `json:"isAISmartToolsEnabled"`
+	// IsAIResponseReadingEnabled is the "Allow AI to read responses" switch.
+	IsAIResponseReadingEnabled *bool `json:"isAIResponseReadingEnabled"`
 	// RequireTwoFactor turns the two-factor requirement on or off; TwoFactorGracePeriodDays, the days members have to turn it on, comes with true and only with it.
 	RequireTwoFactor         *bool `json:"requireTwoFactor"`
 	TwoFactorGracePeriodDays *int  `json:"twoFactorGracePeriodDays"`
@@ -230,7 +232,7 @@ func (h *Handler) update(c *gin.Context) {
 	if !bind(c, req) {
 		return
 	}
-	in := UpdateInput{Name: req.Name, IsAISmartToolsEnabled: req.IsAISmartToolsEnabled}
+	in := UpdateInput{Name: req.Name, IsAISmartToolsEnabled: req.IsAISmartToolsEnabled, IsAIResponseReadingEnabled: req.IsAIResponseReadingEnabled}
 	if req.RequireTwoFactor != nil {
 		in.TwoFactorRequirement = &TwoFactorRequirement{Required: *req.RequireTwoFactor}
 		if req.TwoFactorGracePeriodDays != nil {

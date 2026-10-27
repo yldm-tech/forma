@@ -174,3 +174,50 @@ func TestAKeyOfASuspendedCreatorWaitsForTheRestore(t *testing.T) {
 		t.Fatalf("creator after the restore = %+v", k.CreatedBy)
 	}
 }
+
+// A key whose creator's account the instance's operator deactivated (forma user deactivate) stops authenticating while the account is off, without being disabled, and works again once it is reactivated, as a suspension does; the list says why (AUTH-02).
+func TestAKeyOfADeactivatedCreatorWaitsForTheReactivation(t *testing.T) {
+	e := newAppEnv(t)
+	org, owner, manager := e.org(), e.user(), e.user()
+	e.member(org, owner, "owner")
+	e.member(org, manager, "manager")
+	e.exec(`UPDATE users SET name = 'Grace' WHERE id = ?`, manager)
+	ws := e.workspace(org, "Growth")
+	e.drain()
+	ownerToken, managerToken := e.session(owner), e.session(manager)
+
+	res := e.do(http.MethodPost, keysPath(org), managerToken, createBody("Manager key", readAccess, grant(ws, PermissionRead)))
+	if res.status != http.StatusCreated {
+		t.Fatalf("create = %d %s", res.status, res.body)
+	}
+	var created Created
+	res.decode(t, &created)
+	if e.authenticate(map[string]string{"X-Api-Key": created.Key}, Options{}) == nil {
+		t.Fatal("the key does not authenticate")
+	}
+
+	e.exec(`UPDATE users SET is_active = false WHERE id = ?`, manager)
+	for _, opts := range []Options{{}, {AllowOrganizationOnly: true}} {
+		if e.authenticate(map[string]string{"X-Api-Key": created.Key}, opts) != nil {
+			t.Fatal("a deactivated creator's key authenticates")
+		}
+		if e.authenticate(map[string]string{"Authorization": "Bearer " + created.Key}, opts) != nil {
+			t.Fatal("a deactivated creator's key authenticates as a bearer token")
+		}
+	}
+	if warned := e.logs.records(t, "An API key of a deactivated user was used"); len(warned) == 0 || warned[0]["apiKeyId"] != created.ID.String() {
+		t.Fatalf("no warning names the key: %v", warned)
+	}
+	k := e.listed(org, created.ID, ownerToken)
+	if k.CreatedBy == nil || *k.CreatedBy != (Creator{ID: manager, Name: "Grace", Deactivated: true}) || k.DisabledAt != nil {
+		t.Fatalf("key of a deactivated creator = %+v, creator %+v", k, k.CreatedBy)
+	}
+
+	e.exec(`UPDATE users SET is_active = true WHERE id = ?`, manager)
+	if e.authenticate(map[string]string{"X-Api-Key": created.Key}, Options{}) == nil {
+		t.Fatal("the key does not authenticate after the reactivation")
+	}
+	if k := e.listed(org, created.ID, ownerToken); k.CreatedBy == nil || k.CreatedBy.Deactivated {
+		t.Fatalf("creator after the reactivation = %+v", k.CreatedBy)
+	}
+}

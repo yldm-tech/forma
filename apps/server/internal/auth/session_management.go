@@ -33,9 +33,14 @@ func (s *Service) revokeSession(ctx context.Context, actor httpapi.Actor, id uui
 	return nil
 }
 
-// revokeOtherSessions ends every session of the signed-in user except the caller's own and returns how many it ended.
+// revokeOtherSessions ends every session of the signed-in user except the caller's own, and every OAuth grant (an MCP client signed in elsewhere is another session), and returns how many sessions it ended.
 func (s *Service) revokeOtherSessions(ctx context.Context, actor httpapi.Actor) (int64, error) {
-	revoked, err := s.sessions.RevokeAll(ctx, nil, actor.UserID, actor.SessionID)
+	var revoked int64
+	err := s.repo.transaction(ctx, func(tx *Repository) error {
+		var err error
+		revoked, err = s.sessions.endOtherAccess(ctx, tx.db, actor.UserID, actor.SessionID)
+		return err
+	})
 	if err != nil {
 		return 0, err
 	}
