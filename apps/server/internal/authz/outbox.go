@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -82,10 +83,11 @@ func claimOutbox(ctx context.Context, db *gorm.DB, owner string, limit int) ([]o
 	return claim(ctx, db, owner, limit, nil)
 }
 
-// aggregate names one root object's events: its own row and the pair rows whose first id is that object, such as an API key and its workspace grants.
+// aggregate names one root object's events: the rows of targetTypes whose first id is the object, such as an API key and its workspace grants, and the pair rows of secondaryTypes whose second id is the object, such as the workspace grants that name a team.
 type aggregate struct {
-	targetTypes []string
-	primaryID   string
+	targetTypes    []string
+	primaryID      string
+	secondaryTypes []string
 }
 
 // claimAggregate is claimOutbox narrowed to one aggregate, for a request that delivers its own write before it answers. Events another lease holds are left to that lease.
@@ -107,8 +109,16 @@ func claim(ctx context.Context, db *gorm.DB, owner string, limit int, scope *agg
 	// The scope is a fixed fragment with bound values; the pending set it filters is what the partial claim index holds.
 	filter, args := "", []any{}
 	if scope != nil {
-		filter = "AND target_type IN ? AND primary_id = ?"
-		args = append(args, scope.targetTypes, scope.primaryID)
+		var match []string
+		if len(scope.targetTypes) > 0 {
+			match = append(match, "(target_type IN ? AND primary_id = ?)")
+			args = append(args, scope.targetTypes, scope.primaryID)
+		}
+		if len(scope.secondaryTypes) > 0 {
+			match = append(match, "(target_type IN ? AND secondary_id = ?)")
+			args = append(args, scope.secondaryTypes, scope.primaryID)
+		}
+		filter = "AND (" + strings.Join(match, " OR ") + ")"
 	}
 	args = append(args, limit, outboxLease.Milliseconds(), owner)
 	err := db.WithContext(ctx).Raw(`

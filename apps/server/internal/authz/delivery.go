@@ -357,6 +357,32 @@ func (d *Delivery) DeliverAPIKey(ctx context.Context, id uuid.UUID) {
 	d.deliverAggregate(ctx, aggregate{targetTypes: []string{targetAPIKey, targetAPIKeyWorkspace}, primaryID: id.String()})
 }
 
+// The methods below are DeliverAPIKey for the writes that change people's access: they are called once the write has committed, so a revocation reaches SpiceDB before the request answers instead of waiting for the worker. An undelivered revocation older than revocationMaxAge stops every authorization check in the deployment, so leaving one to a worker whose queue is backed up turns one membership change into a 500 for every organization. A failure is handled as DeliverAPIKey's is: the events stay in the outbox for the worker and the request still succeeds.
+
+// DeliverMemberships projects the pending changes to one user's access: their organization and team memberships, in every organization (a role change, a removal, leaving, the teams they were given or lost), and their own row (a user just created).
+func (d *Delivery) DeliverMemberships(ctx context.Context, userID uuid.UUID) {
+	if d == nil {
+		return
+	}
+	d.deliverAggregate(ctx, aggregate{targetTypes: []string{targetUser}, primaryID: userID.String(), secondaryTypes: []string{targetMembership, targetTeamMembership}})
+}
+
+// DeliverTeam projects the pending changes to one team: the team itself (created, deleted), its members, and the workspace grants that name it.
+func (d *Delivery) DeliverTeam(ctx context.Context, teamID uuid.UUID) {
+	if d == nil {
+		return
+	}
+	d.deliverAggregate(ctx, aggregate{targetTypes: []string{targetTeam, targetTeamMembership}, primaryID: teamID.String(), secondaryTypes: []string{targetWorkspaceTeam}})
+}
+
+// DeliverWorkspace projects the pending changes to one workspace: the workspace itself (created, deleted), the team grants on it, and the API key grants on it.
+func (d *Delivery) DeliverWorkspace(ctx context.Context, workspaceID uuid.UUID) {
+	if d == nil {
+		return
+	}
+	d.deliverAggregate(ctx, aggregate{targetTypes: []string{targetWorkspace, targetWorkspaceTeam}, primaryID: workspaceID.String(), secondaryTypes: []string{targetAPIKeyWorkspace}})
+}
+
 func (d *Delivery) deliverAggregate(ctx context.Context, a aggregate) {
 	// Detached from the request, so a client that goes away mid-request cannot leave the claimed events leased for a whole outboxLease; bounded instead by the deadlines below, so the request never waits on the outbox backlog (the claim filters the whole pending set) or on a stalled SpiceDB.
 	ctx = context.WithoutCancel(ctx)

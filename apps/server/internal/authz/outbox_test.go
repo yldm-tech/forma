@@ -93,6 +93,39 @@ func TestClaimAggregateLeasesOnlyThatAggregatesFreeEvents(t *testing.T) {
 	}
 }
 
+func TestClaimAggregateMatchesThePairsThatNameTheObjectSecond(t *testing.T) {
+	e := newDBEnv(t)
+	team, ws, user := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	enqueue := func(targetType, primary string, secondary *string) uuid.UUID {
+		return e.insert(`INSERT INTO authz_projection_outbox (target_type, primary_id, secondary_id) VALUES (?, ?, ?) RETURNING id`, targetType, primary, secondary)
+	}
+	root := enqueue(targetTeam, team, nil)
+	member := enqueue(targetTeamMembership, team, &user)
+	grant := enqueue(targetWorkspaceTeam, ws, &team)
+	// The workspace's own row and a membership whose second id is the user are other aggregates.
+	enqueue(targetWorkspace, ws, nil)
+	enqueue(targetMembership, uuid.NewString(), &user)
+	// A pair type matched by its second id does not match by its first.
+	enqueue(targetWorkspaceTeam, team, &ws)
+
+	events, err := claimAggregate(e.ctx, e.db, "request", aggregate{targetTypes: []string{targetTeam, targetTeamMembership}, primaryID: team, secondaryTypes: []string{targetWorkspaceTeam}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sameIDs(eventIDs(events), []uuid.UUID{root, member, grant}) {
+		t.Fatalf("claimAggregate = %+v, want the team, its member and the grant naming it", events)
+	}
+
+	// An aggregate of pairs only: every membership and team membership naming the user second.
+	events, err = claimAggregate(e.ctx, e.db, "user", aggregate{primaryID: user, secondaryTypes: []string{targetMembership, targetTeamMembership}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].TargetType != targetMembership {
+		t.Fatalf("claimAggregate = %+v, want the user's free membership (the team membership is leased)", events)
+	}
+}
+
 func TestClaimDeadLettersAnEventThatNamesNothingDeliverable(t *testing.T) {
 	e := newDBEnv(t)
 	valid := e.enqueue(targetUser, false, 0)

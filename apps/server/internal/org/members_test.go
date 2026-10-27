@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
@@ -254,5 +255,53 @@ func TestLeave(t *testing.T) {
 	events := e.auditEvents()
 	if last := events[len(events)-1]; last["action"] != "deleted" || last["target"].(map[string]any)["type"] != "membership" || last["status"] != "success" {
 		t.Fatalf("audit event %v", last)
+	}
+}
+
+// Membership changes reach SpiceDB before the request answers, with no worker running: the creator of an organization opens it at once, and a role change, a removal or leaving leaves no revocation for a worker that may be minutes behind, where it would stop every authorization check once it passed the freshness window.
+func TestMembershipWritesAreProjectedBeforeTheyAnswer(t *testing.T) {
+	e := newEnv(t)
+	owner, member, leaver := e.user(), e.user(), e.user()
+	pending := func() int {
+		return e.count(`SELECT count(*) FROM authz_projection_outbox WHERE processed_at IS NULL AND target_type <> 'organization'`)
+	}
+	can := func(user uuid.UUID, action authz.Action, resource authz.Resource) bool {
+		ok, err := e.authz.Authorizer.Can(t.Context(), authz.User(user), action, resource)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ok
+	}
+
+	c := e.organization(owner, "Acme")
+	if n := pending(); n != 0 {
+		t.Fatalf("%d events left for the worker after creating the organization", n)
+	}
+	if !can(owner, authz.OrganizationManage, authz.Organization(c.ID)) || !can(owner, authz.WorkspaceManage, authz.Workspace(c.WorkspaceID)) {
+		t.Fatal("the new organization was not projected before the answer")
+	}
+
+	e.member(c.ID, member, RoleMember)
+	e.member(c.ID, leaver, RoleMember)
+	e.organization(leaver, "Own")
+	team := e.team(c.ID)
+	e.teamMember(team, member)
+	e.teamMember(team, leaver)
+
+	e.ok(e.do(owner, http.MethodPatch, memberPath(c.ID, member), map[string]string{"role": RoleManager}), http.StatusOK, nil)
+	if n := pending(); n != 0 || !can(member, authz.OrganizationManage, authz.Organization(c.ID)) {
+		t.Fatalf("the promotion was not projected before the answer (%d events pending)", n)
+	}
+	e.ok(e.do(owner, http.MethodPatch, memberPath(c.ID, member), map[string]string{"role": RoleMember}), http.StatusOK, nil)
+	if n := pending(); n != 0 || can(member, authz.OrganizationManage, authz.Organization(c.ID)) {
+		t.Fatalf("the demotion was not projected before the answer (%d events pending)", n)
+	}
+	e.ok(e.do(owner, http.MethodDelete, memberPath(c.ID, member), nil), http.StatusNoContent, nil)
+	if n := pending(); n != 0 || can(member, authz.OrganizationRead, authz.Organization(c.ID)) {
+		t.Fatalf("the removal was not projected before the answer (%d events pending)", n)
+	}
+	e.ok(e.do(leaver, http.MethodPost, orgPath(c.ID, "/leave"), nil), http.StatusNoContent, nil)
+	if n := pending(); n != 0 || can(leaver, authz.OrganizationRead, authz.Organization(c.ID)) {
+		t.Fatalf("leaving was not projected before the answer (%d events pending)", n)
 	}
 }

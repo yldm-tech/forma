@@ -117,6 +117,62 @@ func TestDeliverAPIKeyProjectsThatKeyBeforeTheWorker(t *testing.T) {
 	(*Delivery)(nil).DeliverAPIKey(e.ctx, other)
 }
 
+// The revocations an owner makes in the app reach SpiceDB before the request answers: none is left for a worker whose queue may be minutes behind, where it would pass the freshness window and stop every check in the deployment.
+func TestDeliverMembershipsTeamAndWorkspaceProjectRevocationsBeforeTheWorker(t *testing.T) {
+	e := newTestEnv(t)
+	org, owner, member, bystander := e.org(), e.user(), e.user(), e.user()
+	e.member(org, owner, "owner")
+	e.member(org, member, "member")
+	e.member(org, bystander, "member")
+	team, other := e.team(org), e.team(org)
+	ws := e.workspace(org)
+	e.teamMember(team, member, "contributor")
+	e.teamMember(other, bystander, "contributor")
+	e.workspaceTeam(ws, team, "manage")
+	e.workspaceTeam(ws, other, "read")
+	key := e.apiKey(org, false, false)
+	e.apiKeyWorkspace(key, ws, "read")
+	e.drain()
+	revocations := func() int { return e.countOutbox(`is_revocation AND processed_at IS NULL`) }
+
+	// Removing a member takes their team seats with them, as org.Repository.deleteMembership does.
+	e.exec(`DELETE FROM team_members WHERE user_id = ?`, member)
+	e.exec(`DELETE FROM memberships WHERE organization_id = ? AND user_id = ?`, org, member)
+	// Another aggregate's revocation is left to the worker.
+	e.exec(`DELETE FROM team_members WHERE team_id = ? AND user_id = ?`, other, bystander)
+	e.delivery.DeliverMemberships(e.ctx, member)
+	if n := e.countOutbox(`secondary_id = ? AND processed_at IS NULL`, member.String()); n != 0 {
+		t.Fatalf("%d of the member's events are still pending", n)
+	}
+	e.expect(User(member), Organization(org), map[Action]bool{OrganizationRead: false})
+	e.expect(User(member), Workspace(ws), map[Action]bool{WorkspaceRead: false})
+	if revocations() != 1 {
+		t.Fatalf("%d revocations pending, want only the other team's", revocations())
+	}
+
+	e.exec(`DELETE FROM teams WHERE id = ?`, other)
+	e.delivery.DeliverTeam(e.ctx, other)
+	if revocations() != 0 {
+		t.Fatalf("%d revocations pending after the team's delivery", revocations())
+	}
+	e.expect(User(bystander), Workspace(ws), map[Action]bool{WorkspaceRead: false})
+
+	e.exec(`DELETE FROM workspaces WHERE id = ?`, ws)
+	e.delivery.DeliverWorkspace(e.ctx, ws)
+	if revocations() != 0 {
+		t.Fatalf("%d revocations pending after the workspace's delivery", revocations())
+	}
+	if rels := e.relationships("workspace", ws); len(rels) != 0 {
+		t.Fatalf("the deleted workspace kept %d relationships", len(rels))
+	}
+	e.expect(User(owner), Organization(org), map[Action]bool{OrganizationRead: true})
+
+	// Nil is AuthZed disabled: nothing to project, nothing to fail.
+	(*Delivery)(nil).DeliverMemberships(e.ctx, owner)
+	(*Delivery)(nil).DeliverTeam(e.ctx, team)
+	(*Delivery)(nil).DeliverWorkspace(e.ctx, ws)
+}
+
 func TestDeliverAPIKeyFallsBackToTheOutboxWhenSpiceDBIsDown(t *testing.T) {
 	e := newTestEnv(t)
 	down, err := NewClient(config.AuthzConfig{Enabled: true, Endpoint: "127.0.0.1:1", Token: "x", Insecure: true, Consistency: "fully_consistent"}, RequestProfile, discardLog())
