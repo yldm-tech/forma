@@ -10,6 +10,9 @@ var (
 	AuthSignup = Rule{Namespace: "auth:signup", Window: time.Hour, Limit: 30}
 	// AuthForgotPassword is per client IP.
 	AuthForgotPassword = Rule{Namespace: "auth:forgot", Window: time.Hour, Limit: 5}
+	// AuthSignInAccountIP and AuthSignInAccountIPDaily are per account and client IP (the normalized address a sign-in names, whether or not an account has it, with the address it comes from), charged only by a rejected password, on top of the per-IP BASignIn. The short window lets an owner mistype a few times; the daily one caps how many guesses one source gets at one account, 50 a day where BASignIn alone allows 7,200. Neither is keyed by the account alone: a limit anyone can spend would let anyone lock the owner out of their account.
+	AuthSignInAccountIP      = Rule{Namespace: "auth:sign-in:account-ip", Window: 15 * time.Minute, Limit: 10}
+	AuthSignInAccountIPDaily = Rule{Namespace: "auth:sign-in:account-ip:day", Window: 24 * time.Hour, Limit: 50}
 	// AuthResetPassword is per client IP, separate from AuthForgotPassword so requesting reset mails cannot exhaust the budget to redeem one.
 	AuthResetPassword = Rule{Namespace: "auth:reset-password", Window: time.Hour, Limit: 5}
 	// AuthVerifyEmail is per client IP, shared by resending a verification mail and confirming an email change.
