@@ -166,7 +166,7 @@ describe("SurveyPageApp", () => {
         surveyClosedMessage: null,
         workspace: { linkSurveyBranding: true },
       },
-      heading: "Survey Paused",
+      heading: "Survey paused",
       description: "This survey is temporarily paused.",
       cta: true,
       logo: true,
@@ -185,7 +185,7 @@ describe("SurveyPageApp", () => {
     },
     {
       inactive: { status: "completed", isScheduled: false, surveyClosedMessage: null, workspace: null },
-      heading: "Survey Completed",
+      heading: "Survey closed",
       description: "This survey is closed.",
       cta: true,
       logo: true,

@@ -42,6 +42,42 @@ func TestRedactContactDetails(t *testing.T) {
 		{"tel（03）1234ー5678まで", "tel[phone]まで"},
 		{"call 090‐1234‐5678 or 090–1234–5678", "call [phone] or [phone]"},
 		{"手机　138 1234 5678", "手机　[phone]"},
+		// Full-width ＠ and full-width addresses, as a Japanese or Chinese input method types them.
+		{"taro＠example.com", "[email]"},
+		{"ｔａｒｏ＠ｅｘａｍｐｌｅ．ｃｏｍ", "[email]"},
+		{"連絡先：ｔａｒｏ＠ｅｘａｍｐｌｅ．ｃｏｍ、０９０－１２３４－５６７８", "連絡先：[email]、[phone]"},
+		// Only the address is replaced: the full-width punctuation around it stays as written.
+		{"价格不透明，邮箱ｗａｎｇ＠ｅｘａｍｐｌｅ．ｃｎ，电话０９０－１２３４－５６７８", "价格不透明，邮箱[email]，电话[phone]"},
+		{"taro﹫example.com", "[email]"},
+		// A match is replaced over every rune it was folded from: ℡ folds to TEL, which the address takes in.
+		{"℡taro@example.com まで", "[email] まで"},
+		{"\xff taro@example.com", "\xff [email]"},
+		// An ASCII address written into CJK text without spaces is redacted alone.
+		{"メールはtaro＠example.co.jpです", "メールは[email]です"},
+		{"请发到zhang.san@example.com谢谢", "请发到[email]谢谢"},
+		// Internationalized addresses: Unicode local parts, domains and top-level domains.
+		{"张三@例子.公司", "[email]"},
+		{"请联系 张三@例子.公司 or zhang@例子.中国", "请联系 [email] or [email]"},
+		{"taro@例え.jp and taro@mail.例え.テスト", "[email] and [email]"},
+		{"उपयोगकर्ता@उदाहरण.भारत", "[email]"},
+		{"jörg@bücher.de", "[email]"},
+		{"jo\u0308rg@bu\u0308cher.de", "[email]"},
+		{"Grüße, jörg@example.com!", "Grüße, [email]!"},
+		{"пишите иван@пример.рф или ivan@example.ru", "пишите [email] или [email]"},
+		// The ideographic full stop a Chinese or Japanese input method types for '.', full-width (。) or half-width (｡), is a dot in a domain; elsewhere it stays as written.
+		{"連絡は taro＠example。co。jp までお願いします", "連絡は [email] までお願いします"},
+		{"请回复到我的QQ邮箱：12345678@qq。com，谢谢", "请回复到我的QQ邮箱：[email]，谢谢"},
+		{"ｔａｒｏ＠ｅｘａｍｐｌｅ。ｃｏｍ", "[email]"},
+		{"taro@example｡com", "[email]"},
+		{"taro@例子。中国", "[email]"},
+		{"です。taro@example.com。ありがとう", "です。[email]。ありがとう"},
+		// A local part that mixes scripts is redacted whole when a '.', '_', '+', '-' or '%' joins its runs.
+		{"张三.zhang@example.com 是我的邮箱", "[email] 是我的邮箱"},
+		{"иван.ivanov@mail.ru", "[email]"},
+		{"邮箱 李_li＠example．com", "邮箱 [email]"},
+		// Not addresses: an @ without a domain and a dot, and an answer with nothing to redact keeps its full-width forms.
+		{"＠channel 5＠100円", "＠channel 5＠100円"},
+		{"ＡＢＣ社のサービスに満足", "ＡＢＣ社のサービスに満足"},
 		// 4-2-4 numbers are not dates.
 		{"0166-12-3456 and 0120-12-3456", "[phone] and [phone]"},
 		// Numbers written next to each other are redacted, not kept as one number too long to be a phone; dates among them stay.
@@ -623,6 +659,57 @@ func TestTextSummaryWithoutAProvider(t *testing.T) {
 	}
 	if rec := e.request(owner, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)); rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), ai.CodeInstanceNotConfigured) {
 		t.Errorf("generate %d %s", rec.Code, rec.Body)
+	}
+}
+
+// AI on but the organization's "Allow AI to read responses" switch off: the card says so, shows no summary, not even one made while the switch was on, and nothing reaches the provider. Turning it on lets a summary be made again.
+func TestTextSummaryNeedsResponseReading(t *testing.T) {
+	e, provider, _ := newTextEnv(t, true)
+	owner, reader := e.user(), e.user()
+	org, ws := e.organization(owner, nil)
+	e.grant(org, ws, reader, "read")
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
+	sv := e.survey(ws, surveyOpts{blocks: textBlocks})
+	lookup, generate := textPaths(sv)
+	e.response(sv, row{at: at(1), finished: true, data: `{"q1":"the price"}`})
+
+	var state TextSummaryState
+	decode(t, e.request(owner, http.MethodPost, generate, textInput("q1", TextTargetAnswers, nil)), &state)
+	if state.Summary == nil {
+		t.Fatal("no summary with both switches on")
+	}
+
+	e.exec(`UPDATE organizations SET is_ai_response_reading_enabled = false WHERE id = ?`, org)
+	for _, user := range []uuid.UUID{owner, reader} {
+		state = TextSummaryState{}
+		decode(t, e.request(user, http.MethodPost, lookup, textInput("q1", TextTargetAnswers, nil)), &state)
+		if state.Available || state.Reason != ai.ReasonResponseReadingDisabled || state.Summary != nil {
+			t.Errorf("lookup with reading off: %+v", state)
+		}
+	}
+	before, _ := provider.calls()
+	refresh := textInput("q1", TextTargetAnswers, nil)
+	refresh["refresh"] = true
+	for _, in := range []map[string]any{textInput("q1", TextTargetAnswers, nil), refresh} {
+		if rec := e.request(owner, http.MethodPost, generate, in); rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), ai.CodeResponseReadingDisabled) {
+			t.Errorf("generate with reading off: %d %s", rec.Code, rec.Body)
+		}
+	}
+	if after, _ := provider.calls(); len(after) != len(before) {
+		t.Errorf("the provider was called %d times with reading off", len(after)-len(before))
+	}
+
+	// AI itself off is still reported as such, whatever the reading switch says.
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = false WHERE id = ?`, org)
+	decode(t, e.request(owner, http.MethodPost, lookup, textInput("q1", TextTargetAnswers, nil)), &state)
+	if state.Reason != ai.ReasonNotEnabled {
+		t.Errorf("lookup with both off: %+v", state)
+	}
+
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true, is_ai_response_reading_enabled = true WHERE id = ?`, org)
+	decode(t, e.request(owner, http.MethodPost, lookup, textInput("q1", TextTargetAnswers, nil)), &state)
+	if !state.Available || state.Summary == nil {
+		t.Errorf("lookup with reading back on: %+v", state)
 	}
 }
 

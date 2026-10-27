@@ -129,7 +129,7 @@
     "value_must_equal": "値は{value}と等しい必要があります",
     "value_must_not_contain": "値に{value}を含めることはできません",
     "value_must_not_equal": "値は{value}と等しくない必要があります",
-    "x_questions_need_an_answer": "{count, plural, other {{count}件の質問に回答が必要です}}"
+    "x_questions_need_an_answer": "{count, plural, other {{count}件の質問を確認してください}}"
   },
   "file_upload": {
     "allowed_hint": "{formats}・最大{maxSizeInMB}MB",

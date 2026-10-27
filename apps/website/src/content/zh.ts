@@ -118,12 +118,12 @@ export const zh: SiteContent = {
       },
       act: {
         title: "让每条回答都有下文",
-        body: "用 Webhook 把回答推送到任意地址；私有化部署还可以同步到 Slack、Notion、Airtable 或 Google Sheets。Workflows（Beta）会在回答提交完成后自动发邮件，还可以只针对你选定的结束页触发。",
+        body: "用 Webhook 把回答推送到任意地址；私有化部署还可以同步到 Slack、Notion、Airtable 或 Google Sheets。Workflows（Beta）会在回答提交完成后自动执行：发送邮件、调用 HTTP 接口、发消息到 Slack、Discord 或 Microsoft Teams、给回答打标签、设置联系人属性，还可以只针对你选定的结束页触发。",
         link: "查看集成 →",
       },
       ai: {
         title: "AI 按需开启",
-        body: "用一段话描述需求，就能生成可编辑的问卷草稿；一键把问卷翻译成已启用的语言；还能生成示例回答，提前看看分析效果。AI 默认关闭，只有组织的所有者或管理者才能开启。",
+        body: "用一段话描述需求，就能生成可编辑的问卷草稿；一键把问卷翻译成已启用的语言；还能生成示例回答，提前看看分析效果。同时开启“允许 AI 读取回答”后，成员还可以让 AI 把开放题的回答归纳成主题和情绪；这些回答会先移除电子邮件地址和电话号码，再发送给你配置的 AI 服务商。AI 默认关闭，只有组织的所有者或管理者才能开启。",
       },
       developers: {
         title: "为接入而设计",
@@ -236,7 +236,7 @@ export const zh: SiteContent = {
       meta: {
         title: "集成与工作流 · Forma",
         description:
-          "用 Webhook 推送回答，私有化部署还可以同步到 Slack、Notion、Airtable、Google Sheets，并用 Workflows（Beta）在回答完成后自动发邮件。",
+          "用 Webhook 推送回答，私有化部署还可以同步到 Slack、Notion、Airtable、Google Sheets，并用 Workflows（Beta）在回答完成后自动发邮件、发送 HTTP 请求、发消息到 Slack、Discord 和 Teams、打标签或设置联系人属性。",
       },
       title: "集成与工作流",
       sub: "回答只有被看到才有价值。把它们送到团队工作的地方。",
@@ -254,7 +254,7 @@ export const zh: SiteContent = {
       },
       workflows: {
         title: "工作流（Workflows）",
-        body: "触发条件：回答提交完成。筛选：只针对你选定的结束页。动作：发送邮件。每次运行都会记录状态和各步骤日志。",
+        body: "触发条件：回答提交完成。筛选：只针对你选定的结束页。动作：发送邮件、调用 HTTP 接口、发消息到 Slack、Discord 或 Microsoft Teams、给回答打标签、设置联系人属性。每次运行都会记录状态和各步骤日志。",
         badgeNote: "Beta：触发条件和动作会陆续增加。",
       },
     },
@@ -349,7 +349,7 @@ export const zh: SiteContent = {
       sub: "一个 script 标签即可展示网站问卷和应用内问卷，其余操作都是对 `window.forma` 的调用。",
       install: {
         title: "安装",
-        body: "在 Forma 的“集成 → Web 和移动 SDK”中复制代码片段（已填好你的工作区 ID 和实例 URL），粘贴到每个页面的 `<head>` 中。使用 Google Tag Manager 时，将其粘贴到触发条件为“所有页面”的自定义 HTML 代码中。",
+        body: "在 Forma 的“集成 → Web SDK”中复制代码片段（已填好你的工作区 ID 和实例 URL），粘贴到每个页面的 `<head>` 中。使用 Google Tag Manager 时，将其粘贴到触发条件为“所有页面”的自定义 HTML 代码中。",
         frameworks:
           'React 和 Vue：粘贴到 `index.html`。Next.js：用 `next/script` 并设置 `strategy="beforeInteractive"` 渲染同一段 JavaScript，这样 `window.forma` 会在组件的 effect 运行前就已存在：App Router 放在根 `app/layout.tsx` 中，Pages Router 直接放在 `pages/_document.tsx` 中。无需路由 hook。SDK 尚未发布到 npm，移动端 SDK 和 WordPress 插件也暂未提供。',
         queue:
@@ -371,7 +371,7 @@ export const zh: SiteContent = {
             },
             {
               term: "身份验证",
-              body: "工作区 ID 是公开的，因此 SDK 不会写入在 Forma 中标记为受保护的属性，邮箱也只为已验证的用户写入。要验证用户，请在“集成 → Web 和移动 SDK”中生成身份验证密钥，在你的服务器上用它计算用户 ID 的 HMAC-SHA256（十六进制），并作为 `userHash` 传入。开启“要求身份验证”后，没有有效哈希的识别请求会被拒绝。",
+              body: "工作区 ID 是公开的，因此 SDK 不会写入在 Forma 中标记为受保护的属性，邮箱也只为已验证的用户写入。要验证用户，请在“集成 → Web SDK”中生成身份验证密钥，在你的服务器上用它计算用户 ID 的 HMAC-SHA256（十六进制），并作为 `userHash` 传入。开启“要求身份验证”后，没有有效哈希的识别请求会被拒绝。",
             },
             {
               term: "setLanguage(language)",
