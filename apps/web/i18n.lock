@@ -2309,6 +2309,9 @@ checksums:
     workspace/contacts/upload_contacts_result: 481ff0b3d6b563f54484d59ccfa8daeb
     workspace/contacts/upload_contacts_success: cd5d6b6d587586dd4f944868c92835bc
     workspace/contacts/upload_csv: 005161df751789288efc93f0651669dc
+    workspace/custom_scripts_access/managers_only: 1f43ce2ab4e131b740b1328da40446b0
+    workspace/custom_scripts_access/requires_public_url: a0cd2c0e3015ba27d06ba0bbd36cb2f3
+    workspace/custom_scripts_access/unavailable_cloud: 6af83350bed8fc062ea979bec00737d1
     workspace/forma_logo: de1b721f2b7664df15cc54d664430473
     workspace/general/cannot_delete_only_workspace: 853f32a75d92b06eaccc0d43d767c183
     workspace/general/cooldown_period_updated_successfully: 55ff7f3874ea30a1961107c495407696
