@@ -1,13 +1,17 @@
 package workspace
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/repotest"
 )
 
 func languagesPath(ws uuid.UUID, rest string) string {
@@ -180,4 +184,40 @@ func TestLanguageAliasesFollowTheBaseLanguageRule(t *testing.T) {
 	// A legacy code is the same language as its canonical one.
 	e.exec(`INSERT INTO languages (workspace_id, code) VALUES (?, 'de')`, ws)
 	e.fails(create("de-DE", nil), http.StatusConflict, apperr.CodeConflict, "Language de-DE already exists in this workspace")
+}
+
+// The cases the web form's rule runs too (apps/web/src/lib/workspace-languages.test.ts), so the form refuses exactly what the server refuses: codes outside the table name a language only when they name their region, as langcode.Normalize reads them (jpn, eng and zh-SG name none).
+func TestLanguageAliasRuleMatchesTheWebForm(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join(repotest.Root(t), "apps/web/src/lib/workspace-language-alias-cases.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture struct {
+		Cases []struct {
+			Name     string
+			Existing []struct {
+				Code  string
+				Alias *string
+			}
+			Code  string
+			Alias *string
+			OK    bool
+		}
+	}
+	if err := json.Unmarshal(raw, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	if len(fixture.Cases) == 0 {
+		t.Fatal("no cases")
+	}
+	for _, c := range fixture.Cases {
+		existing := make([]*Language, len(c.Existing))
+		for i, l := range c.Existing {
+			existing[i] = &Language{ID: uuid.New(), Code: l.Code, Alias: l.Alias}
+		}
+		problem := newLanguageProblem(c.Code, trimmedAlias(c.Alias), existing)
+		if (problem == nil) != c.OK {
+			t.Errorf("%s: adding %s with alias %v gives %v, want ok=%v", c.Name, c.Code, c.Alias, problem, c.OK)
+		}
+	}
 }

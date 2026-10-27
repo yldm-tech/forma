@@ -219,6 +219,16 @@ describe("ShareResultsDialog", () => {
     expect(row.textContent).toContain("filters by a segment that was deleted");
   });
 
+  test("a link from an older server, without missingSegmentIds, is listed unmarked", async () => {
+    // During a rolling deploy the new bundle can be answered by a pod that predates the field.
+    const { missingSegmentIds: _absent, ...older } = existing;
+    stubApi(older as ResultShare);
+    renderDialog();
+    const row = await screen.findByTestId("result-share");
+    expect(within(row).getByText("Board")).toBeTruthy();
+    expect(within(row).queryByText("Segment deleted")).toBeNull();
+  });
+
   test("a new link whose filter names a deleted segment is refused in the user's words", async () => {
     stubApi(existing, {
       status: 400,
@@ -230,7 +240,7 @@ describe("ShareResultsDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create link" }));
     await waitFor(() =>
       expect(toast.getSnapshot().map((shown) => shown.message)).toContain(
-        "The filter uses a segment that no longer exists. Remove it from the filter and try again."
+        "The filter uses a segment that no longer exists, or one that uses a deleted segment. Remove it from the filter and try again."
       )
     );
     expect(screen.getAllByTestId("result-share")).toHaveLength(1);

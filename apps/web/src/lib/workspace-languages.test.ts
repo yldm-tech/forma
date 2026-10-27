@@ -1,5 +1,12 @@
 import { expect, test } from "vite-plus/test";
-import { defaultLanguageOptions, isDefaultSurveyLanguage, languagesError } from "./workspace-languages";
+import aliasCases from "./workspace-language-alias-cases.json";
+import {
+  aliasRuleLanguageCode,
+  defaultLanguageOptions,
+  isDefaultSurveyLanguage,
+  languageWrites,
+  languagesError,
+} from "./workspace-languages";
 
 const row = (code: string, alias: string | null = null, id = code) => ({ id, code, alias });
 
@@ -100,4 +107,69 @@ test("default-language options collapse legacy codes and list runtime languages 
   const options = defaultLanguageOptions([row("de"), row("de-DE"), row("en-US")], "en-US");
   expect(options.map((option) => option.code).sort()).toEqual(["de-DE", "en-US"]);
   expect(options.every((option) => option.isSelectable)).toBe(true);
+});
+
+test("the alias rule is the server's, case by case", () => {
+  // The same cases run in apps/server/internal/workspace/language_test.go.
+  expect(aliasCases.cases.length).toBeGreaterThan(0);
+  for (const testCase of aliasCases.cases) {
+    const existing = testCase.existing.map((stored, index) => row(stored.code, stored.alias, `s${index}`));
+    const problem = languagesError([...existing, row(testCase.code, testCase.alias, NEW)], existing);
+    expect({ name: testCase.name, ok: problem === null }).toEqual({ name: testCase.name, ok: testCase.ok });
+  }
+});
+
+test("a code names a language through the table or its own region, never CLDR", () => {
+  expect(aliasRuleLanguageCode("JA")).toBe("ja-JP");
+  expect(aliasRuleLanguageCode("zh_TW")).toBe("zh-Hant-TW");
+  expect(aliasRuleLanguageCode("fr-lu")).toBe("fr-LU");
+  expect(aliasRuleLanguageCode("zh-hant-sg")).toBe("zh-Hant-SG");
+  for (const unnamed of ["jpn", "eng", "ara", "sh", "zh-SG", "english", "x", "ja-JP-x-?"]) {
+    expect({ unnamed, code: aliasRuleLanguageCode(unnamed) }).toEqual({ unnamed, code: null });
+  }
+});
+
+test("an alias moved to an earlier row is given up before it is taken", () => {
+  const stored = [row("en-US", null, "en"), row("ar-EG", "arab", "ar")];
+  const languages = [row("en-US", "arab", "en"), row("ar-EG", null, "ar")];
+  expect(languagesError(languages, stored)).toBeNull();
+  expect(languageWrites(languages, stored)).toEqual([
+    { kind: "update", row: row("ar-EG", null, "ar") },
+    { kind: "update", row: row("en-US", "arab", "en") },
+  ]);
+});
+
+test("a legacy alias is cleared before the language it names is added", () => {
+  const stored = [row("en-US", "nl", "en")];
+  const languages = [row("en-US", null, "en"), row("nl-NL", null, NEW)];
+  expect(languagesError(languages, stored)).toBeNull();
+  expect(languageWrites(languages, stored).map((write) => write.kind)).toEqual(["update", "create"]);
+});
+
+test("a removal goes first only when a write waits for it", () => {
+  const stored = [row("en-US", null, "en"), row("de-DE", "main", "de"), row("fr-FR", null, "fr")];
+  // The alias of the removed German row moves to English.
+  expect(languageWrites([row("en-US", "main", "en"), row("fr-FR", null, "fr")], stored)).toEqual([
+    { kind: "delete", id: "de" },
+    { kind: "update", row: row("en-US", "main", "en") },
+  ]);
+  // Otherwise the writes go first and removals last.
+  expect(languageWrites([row("en-US", "english", "en"), row("de-DE", "main", "de")], stored)).toEqual([
+    { kind: "update", row: row("en-US", "english", "en") },
+    { kind: "delete", id: "fr" },
+  ]);
+});
+
+test("aliases exchanged between rows are refused, since no order of single writes passes", () => {
+  const stored = [row("en-US", "a", "en"), row("de-DE", "b", "de")];
+  expect(languagesError([row("en-US", "b", "en"), row("de-DE", "a", "de")], stored)).toEqual({
+    kind: "aliases_exchanged",
+    language: "en-US",
+    other: "de-DE",
+  });
+  // Passed round three rows too.
+  const three = [...stored, row("fr-FR", "c", "fr")];
+  expect(
+    languagesError([row("en-US", "b", "en"), row("de-DE", "c", "de"), row("fr-FR", "a", "fr")], three)
+  ).toMatchObject({ kind: "aliases_exchanged" });
 });

@@ -29,8 +29,8 @@ export interface ResultShare {
   revealedElementIds: string[];
   expiresAt: string | null;
   creator: ResultShareCreator | null;
-  /** The segments the frozen filter names that no longer exist: the link no longer shows the responses it was created for. */
-  missingSegmentIds: string[];
+  /** The segments the frozen filter names that no longer exist, or that use one that no longer exists: the link no longer shows the responses it was created for. Absent from an older server's answer. */
+  missingSegmentIds?: string[];
 }
 
 /** What a card that lists individual answers shows: an element's answers, the values typed into a choice element's Other option, or a hidden field's values. */

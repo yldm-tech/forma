@@ -458,7 +458,7 @@ const SegmentActivityTab = ({
 };
 
 /** forma2's SegmentSettings: edit the title, description and filters, or delete the segment when no survey uses it. */
-const SegmentSettings = ({
+export const SegmentSettings = ({
   workspaceId,
   segment,
   segments,
@@ -489,6 +489,8 @@ const SegmentSettings = ({
     enabled: confirmDelete && !isReadOnly,
   });
   const linkedShares = resultShares.data ?? [];
+  // Deleting waits for the list, so it is never confirmed before the links it breaks are shown.
+  const checkingLinks = confirmDelete && !isReadOnly && resultShares.isPending;
 
   const save = async () => {
     if (!title) {
@@ -557,7 +559,7 @@ const SegmentSettings = ({
             <DialogTitle>{t("workspace.segments.delete_segment")}</DialogTitle>
             <DialogDescription>{t("workspace.general.this_action_cannot_be_undone")}</DialogDescription>
           </DialogHeader>
-          {(usedBy.length > 0 || linkedShares.length > 0) && (
+          {(usedBy.length > 0 || linkedShares.length > 0 || resultShares.isError) && (
             <DialogBody className="space-y-4">
               {usedBy.length > 0 && (
                 <div>
@@ -591,6 +593,11 @@ const SegmentSettings = ({
                   </ul>
                 </div>
               )}
+              {resultShares.isError && (
+                <p data-testid="segment-result-shares-unchecked">
+                  {t("workspace.analysis.result_shares.segment_delete_links_unchecked")}
+                </p>
+              )}
             </DialogBody>
           )}
           <DialogFooter>
@@ -599,7 +606,7 @@ const SegmentSettings = ({
             </Button>
             <Button
               variant="destructive"
-              disabled={usedBy.length > 0}
+              disabled={usedBy.length > 0 || checkingLinks}
               loading={remove.isPending}
               onClick={() => void deleteSegment()}>
               {t("common.delete")}

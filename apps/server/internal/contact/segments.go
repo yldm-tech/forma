@@ -315,7 +315,7 @@ func (s *Service) assertInteractionSurveys(ctx context.Context, tree Filters, wo
 	return nil
 }
 
-// SegmentResultShare is a survey's results link whose frozen filter names a segment, which deleting the segment leaves showing no responses for it.
+// SegmentResultShare is a survey's results link whose frozen filter names a segment, or a segment that uses it, which deleting the segment leaves showing no responses for it.
 type SegmentResultShare struct {
 	ID         uuid.UUID `json:"id"`
 	Name       string    `json:"name"`
@@ -323,7 +323,7 @@ type SegmentResultShare struct {
 	SurveyName string    `json:"surveyName"`
 }
 
-// SegmentResultShares lists the results links whose filter names the segment, for those who may change the segment (workspace write, who may also manage the links), so deleting it can warn about them. Deleting it is not refused: a link whose segment is gone is marked on its list and on its page.
+// SegmentResultShares lists the results links whose filter names the segment, or a segment that uses it however deep (deleting it empties those too, as the links' filters evaluate them), for those who may change the segment (workspace write, who may also manage the links), so deleting it can warn about them. Deleting it is not refused: a link whose segment is gone is marked on its list and on its page.
 func (s *Service) SegmentResultShares(ctx context.Context, userID, segmentID uuid.UUID) ([]SegmentResultShare, error) {
 	seg, err := s.repo.segment(ctx, segmentID)
 	if err != nil {
@@ -335,7 +335,11 @@ func (s *Service) SegmentResultShares(ctx context.Context, userID, segmentID uui
 	if err := s.authz.Require(ctx, authz.User(userID), authz.WorkspaceWrite, authz.Workspace(seg.WorkspaceID)); err != nil {
 		return nil, err
 	}
-	return s.repo.segmentResultShares(ctx, seg.WorkspaceID, segmentID)
+	users, err := s.repo.segmentUsers(ctx, seg.WorkspaceID, segmentID)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.segmentResultShares(ctx, seg.WorkspaceID, users)
 }
 
 // DeleteSegment is forma2's deleteSegmentAction: a segment no survey targets.

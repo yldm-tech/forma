@@ -214,7 +214,7 @@ describe("SharedResultsPage", () => {
     expect(await screen.findByRole("heading", { name: "CSAT 2026" })).toBeTruthy();
     expect(
       screen.getByText(
-        "This link filters by a segment that no longer exists, so these results may not be the ones that were shared."
+        "This link filters by a segment that no longer exists, or by one that uses a segment that no longer exists, so these results may not be the ones that were shared."
       )
     ).toBeTruthy();
   });

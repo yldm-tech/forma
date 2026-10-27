@@ -208,6 +208,39 @@ func TestSegmentResultSharesListTheLinksFilteringByIt(t *testing.T) {
 	}
 }
 
+// A segment nesting the deleted one holds nobody afterwards either, so the links filtering by it, however deep the nesting, are listed too; links on segments that do not use it are not.
+func TestSegmentResultSharesListTheLinksOfSegmentsUsingIt(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	inner, other := e.segmentRow(ws, "Inner", false, `[]`), e.segmentRow(ws, "Other", false, `[]`)
+	middle := e.segmentOf(ws, segmentRef(inner))
+	outer := e.segmentOf(ws, segmentRef(middle))
+	e.segmentOf(ws, segmentRef(other))
+	alpha := e.insert(`INSERT INTO surveys (workspace_id, name, status) VALUES (?, 'Alpha', 'inProgress') RETURNING id`, ws)
+	beta := e.insert(`INSERT INTO surveys (workspace_id, name, status) VALUES (?, 'Beta', 'inProgress') RETURNING id`, ws)
+	link := func(survey uuid.UUID, name, criteria string) uuid.UUID {
+		return e.insert(`INSERT INTO survey_result_shares (survey_id, share_key, name, filter_criteria) VALUES (?, ?, ?, ?::jsonb) RETURNING id`,
+			survey, strings.Repeat(string(name[0]), 43), name, criteria)
+	}
+	segmentFilter := func(segment uuid.UUID) string { return `{"segments":{"` + segment.String() + `":{"op":"userIsIn"}}}` }
+	direct := link(beta, "Direct", segmentFilter(inner))
+	nested := link(alpha, "Nested", segmentFilter(outer))
+	link(alpha, "Unrelated", segmentFilter(other))
+	link(alpha, "Everyone", `{}`)
+
+	var got []SegmentResultShare
+	e.ok(e.do(owner, http.MethodGet, segmentPath(inner, "/result-shares"), nil), http.StatusOK, &got)
+	want := []SegmentResultShare{{ID: nested, Name: "Nested", SurveyID: alpha, SurveyName: "Alpha"}, {ID: direct, Name: "Direct", SurveyID: beta, SurveyName: "Beta"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("links of the inner segment %+v, want %+v", got, want)
+	}
+	e.ok(e.do(owner, http.MethodGet, segmentPath(middle, "/result-shares"), nil), http.StatusOK, &got)
+	if want := []SegmentResultShare{{ID: nested, Name: "Nested", SurveyID: alpha, SurveyName: "Alpha"}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("links of the middle segment %+v, want %+v", got, want)
+	}
+}
+
 func TestCloneSegment(t *testing.T) {
 	e := newEnv(t)
 	owner, outsider := e.user(), e.user()

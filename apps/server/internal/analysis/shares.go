@@ -72,7 +72,7 @@ type ResultShare struct {
 	RevealedElementIDs []string            `json:"revealedElementIds"`
 	ExpiresAt          *time.Time          `json:"expiresAt"`
 	Creator            *ResultShareCreator `json:"creator"`
-	// MissingSegmentIDs are the segments the frozen filter names that no longer exist, sorted: the link counts nobody as in them, so it no longer shows the responses it was created for.
+	// MissingSegmentIDs are the segments the frozen filter names that no longer exist, or that nest one that no longer exists, sorted: the link counts nobody as in them, so it no longer shows the responses it was created for.
 	MissingSegmentIDs []string `json:"missingSegmentIds"`
 	// revealed are the cards the link reveals, as stored: the survey may since have dropped some (keepOffered).
 	revealed []Revealable

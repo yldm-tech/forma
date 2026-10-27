@@ -272,7 +272,8 @@ const ResultShareRow = ({
   const expired = isResultShareExpired(share);
   const formatDate = new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, { dateStyle: "medium" });
   const name = share.name || t("workspace.analysis.result_shares.untitled_link");
-  const segmentMissing = share.missingSegmentIds.length > 0;
+  // An older server sends no missingSegmentIds (a rolling deploy can answer from one).
+  const segmentMissing = (share.missingSegmentIds ?? []).length > 0;
   return (
     <li className="space-y-2 rounded-lg border border-slate-200 p-3" data-testid="result-share">
       <div className="flex flex-wrap items-center justify-between gap-2">

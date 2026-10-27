@@ -145,3 +145,31 @@ test("changing one alias writes only that row", async () => {
   ]);
   expect(within(document.body).queryByText(/doesn’t have/)).toBeNull();
 });
+
+test("an alias moved to an earlier row is given up by its row before it is taken", async () => {
+  // The server checks each request against the rows stored when it arrives, so taking "arab" before Arabic gives it up would be refused while the clearing still went through.
+  const requests = stubServer();
+  renderPage([language("l-en", "en-US"), language("l-ar", "ar-EG", "arab")]);
+  fireEvent.click(screen.getByRole("button", { name: "Edit languages" }));
+  fireEvent.change(aliasInputs()[0]!, { target: { value: "arab" } });
+  fireEvent.change(aliasInputs()[1]!, { target: { value: "" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  await waitFor(() => expect(toastMessages()).toContain("Languages updated successfully"));
+  expect(requests.filter((request) => request.method !== "GET")).toEqual([
+    { method: "PATCH", path: `/api/app/workspaces/${WS}/languages/l-ar`, body: { alias: "" } },
+    { method: "PATCH", path: `/api/app/workspaces/${WS}/languages/l-en`, body: { alias: "arab" } },
+  ]);
+});
+
+test("aliases exchanged between two rows are refused before anything is written", () => {
+  const requests = stubServer();
+  renderPage([language("l-en", "en-US", "a"), language("l-de", "de-DE", "b")]);
+  fireEvent.click(screen.getByRole("button", { name: "Edit languages" }));
+  fireEvent.change(aliasInputs()[0]!, { target: { value: "b" } });
+  fireEvent.change(aliasInputs()[1]!, { target: { value: "a" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(toastMessages()).toEqual([
+    "English and German would exchange aliases, which can’t be saved in one step. Give one of them a different alias first, save, then finish the exchange.",
+  ]);
+  expect(requests).toEqual([]);
+});
