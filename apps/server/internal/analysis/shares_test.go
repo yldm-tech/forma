@@ -428,3 +428,60 @@ func TestResultShareKeepsItsExpiryWhenEdited(t *testing.T) {
 		t.Errorf("another past expiry: %d %s", rec.Code, rec.Body)
 	}
 }
+
+// A segment filter is evaluated when the link is read, so a segment that does not exist would make the link show nobody (or everybody) without a word: a new link refuses one, and a link whose segment is deleted later is marked for its managers and its readers.
+func TestResultShareRefusesAndMarksMissingSegments(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	org, ws := e.organization(owner, nil)
+	sv := e.survey(ws, surveyOpts{blocks: shareBlocks})
+	pro := e.contact(ws, "plan", "pro")
+	e.response(sv, row{at: at(1), finished: true, contact: &pro, data: `{"nps":10}`})
+	e.response(sv, row{at: at(2), finished: true, data: `{"nps":3}`})
+	proTree := `[{"id":"n1","connector":null,"resource":{"id":"l1","root":{"type":"attribute","contactAttributeKey":"plan"},"value":"pro","qualifier":{"operator":"equals"}}}]`
+	segment := e.insert(`INSERT INTO segments (workspace_id, title, is_private, filters) VALUES (?, 'Pro customers', false, ?::jsonb) RETURNING id`, ws, proTree)
+	elsewhere := e.insert(`INSERT INTO segments (workspace_id, title, is_private, filters) VALUES (?, 'Elsewhere', false, '[]'::jsonb) RETURNING id`,
+		e.insert(`INSERT INTO workspaces (organization_id, name) VALUES (?, 'Other') RETURNING id`, org))
+	path := "/api/app/surveys/" + sv.String() + "/result-shares"
+	inSegment := func(key string) map[string]any {
+		return map[string]any{"name": "Pro", "filterCriteria": map[string]any{"segments": map[string]any{key: map[string]any{"op": "userIsIn"}}}}
+	}
+
+	for _, key := range []string{"undefined", uuid.NewString(), elsewhere.String()} {
+		rec := e.request(owner, http.MethodPost, path, inSegment(key))
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), CodeResultShareSegmentNotFound) || !strings.Contains(rec.Body.String(), key) {
+			t.Errorf("segment %q: %d %s", key, rec.Code, rec.Body)
+		}
+	}
+	if n := e.count(`SELECT count(*) FROM survey_result_shares WHERE survey_id = ?`, sv); n != 0 {
+		t.Fatalf("%d links created for missing segments", n)
+	}
+
+	var share ResultShare
+	createShare(t, e.request(owner, http.MethodPost, path, inSegment(segment.String())), &share)
+	if share.MissingSegmentIDs == nil || len(share.MissingSegmentIDs) != 0 {
+		t.Errorf("created %+v", share)
+	}
+	var got sharedResultsBody
+	decode(t, e.public("/api/app/shared-results/summary", map[string]any{"token": share.Key}), &got)
+	if got.Link.SegmentMissing || got.Summary.Meta.TotalResponses != 1 {
+		t.Errorf("link %+v meta %+v", got.Link, got.Summary.Meta)
+	}
+
+	// Deleting the segment keeps the link and marks it.
+	e.exec(`DELETE FROM segments WHERE id = ?`, segment)
+	var listed ResultShares
+	decode(t, e.request(owner, http.MethodGet, path, nil), &listed)
+	if len(listed.Shares) != 1 || !reflect.DeepEqual(listed.Shares[0].MissingSegmentIDs, []string{segment.String()}) {
+		t.Errorf("listed %+v", listed.Shares)
+	}
+	decode(t, e.public("/api/app/shared-results/summary", map[string]any{"token": share.Key}), &got)
+	if !got.Link.SegmentMissing || got.Summary.Meta.TotalResponses != 0 {
+		t.Errorf("link after the segment was deleted %+v meta %+v", got.Link, got.Summary.Meta)
+	}
+	var updated ResultShare
+	decode(t, e.request(owner, http.MethodPut, path+"/"+share.ID.String(), map[string]any{"name": "Pro (old)", "revealedElementIds": []string{}}), &updated)
+	if !reflect.DeepEqual(updated.MissingSegmentIDs, []string{segment.String()}) {
+		t.Errorf("updated %+v", updated)
+	}
+}

@@ -1,0 +1,105 @@
+{
+  "description": "Adding a language with an alias beside the workspace's languages: whether the alias rule lets it in. The web form (workspace-languages.test.ts) and the server (apps/server/internal/workspace/language_test.go) both run every case, so the two rules cannot drift. A code or alias names a language only through the static table or a well-formed tag naming its region (Chinese also its script), never through CLDR likely subtags.",
+  "cases": [
+    {
+      "name": "an alias naming its own language",
+      "existing": [],
+      "code": "ja-JP",
+      "alias": "ja",
+      "ok": true
+    },
+    {
+      "name": "an alias naming no language",
+      "existing": [],
+      "code": "en-US",
+      "alias": "english",
+      "ok": true
+    },
+    {
+      "name": "an ISO 639-2 code is no language without CLDR",
+      "existing": [{ "code": "ja-JP", "alias": null }],
+      "code": "de-DE",
+      "alias": "jpn",
+      "ok": true
+    },
+    { "name": "ara names no language", "existing": [], "code": "ko-KR", "alias": "ara", "ok": true },
+    { "name": "eng names no language", "existing": [], "code": "de-DE", "alias": "eng", "ok": true },
+    {
+      "name": "sh names no language",
+      "existing": [{ "code": "sr-RS", "alias": null }],
+      "code": "hr-HR",
+      "alias": "sh",
+      "ok": true
+    },
+    {
+      "name": "Chinese without its script names no language",
+      "existing": [{ "code": "zh-Hans-CN", "alias": null }],
+      "code": "zh-Hant-TW",
+      "alias": "zh-SG",
+      "ok": true
+    },
+    {
+      "name": "a base code naming another language",
+      "existing": [{ "code": "ja-JP", "alias": null }],
+      "code": "de-DE",
+      "alias": "ja",
+      "ok": false
+    },
+    {
+      "name": "a base code naming a language the workspace lacks",
+      "existing": [],
+      "code": "ja-JP",
+      "alias": "fr",
+      "ok": false
+    },
+    {
+      "name": "a region tag outside the table naming another language",
+      "existing": [{ "code": "fr-FR", "alias": null }],
+      "code": "de-DE",
+      "alias": "fr-LU",
+      "ok": false
+    },
+    {
+      "name": "a region tag outside the table naming a language the workspace lacks",
+      "existing": [],
+      "code": "de-DE",
+      "alias": "fr-LU",
+      "ok": false
+    },
+    {
+      "name": "a region tag outside the table naming its own language",
+      "existing": [],
+      "code": "fr-FR",
+      "alias": "fr-LU",
+      "ok": true
+    },
+    {
+      "name": "zh is Simplified Chinese",
+      "existing": [{ "code": "zh-Hans-CN", "alias": null }],
+      "code": "zh-Hant-TW",
+      "alias": "zh",
+      "ok": false
+    },
+    {
+      "name": "an alias used twice, whatever its case",
+      "existing": [{ "code": "de-DE", "alias": "X" }],
+      "code": "en-US",
+      "alias": "x",
+      "ok": false
+    },
+    {
+      "name": "a stored alias naming the new language",
+      "existing": [{ "code": "en-US", "alias": "nl" }],
+      "code": "nl-NL",
+      "alias": null,
+      "ok": false
+    },
+    {
+      "name": "a language already in the workspace under its legacy code",
+      "existing": [{ "code": "de", "alias": null }],
+      "code": "de-DE",
+      "alias": null,
+      "ok": false
+    }
+  ]
+}

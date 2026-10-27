@@ -17,6 +17,15 @@ export const ZCardArrangement = z.object({
   linkSurveys: ZLinkSurveyCardArrangementOptions,
   appSurveys: ZAppSurveyCardArrangementOptions,
 });
+export type TCardArrangement = z.infer<typeof ZCardArrangement>;
+
+/**
+ * The card arrangement a survey takes when neither it nor its workspace stored one. It is what respondents have always seen (the runtime in packages/surveys falls back to it), so the admin shows and saves the same value: the Appearance page, the survey editor's "Add custom styles" and the survey page around the runtime all read it from here. Changing it changes how every live survey without a stored arrangement looks.
+ */
+export const DEFAULT_CARD_ARRANGEMENT: Readonly<TCardArrangement> = Object.freeze({
+  linkSurveys: "straight",
+  appSurveys: "straight",
+});
 
 export const ZLinkSurveyCardWidthOptions = z.enum(["narrow", "default", "wide"]);
 export type TLinkSurveyCardWidthOptions = z.infer<typeof ZLinkSurveyCardWidthOptions>;

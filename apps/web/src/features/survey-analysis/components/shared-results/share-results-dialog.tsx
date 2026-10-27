@@ -27,12 +27,14 @@ import {
   apiKeyExpiry,
   firstCustomExpiryDay,
 } from "../../../../lib/api-key-form";
+import { ApiError } from "../../../../lib/api";
 import { copyText } from "../../../../lib/clipboard";
 import { errorMessage } from "../../../../lib/errors";
 import { getLocalizedValue } from "../../../../lib/survey/i18n";
 import { toast } from "../../../../lib/toast";
 import { getElementsFromBlocks } from "../../../survey-editor/lib/client-utils";
 import {
+  RESULT_SHARE_SEGMENT_NOT_FOUND,
   type ResultShare,
   type Revealable,
   invalidateResultShares,
@@ -270,12 +272,17 @@ const ResultShareRow = ({
   const expired = isResultShareExpired(share);
   const formatDate = new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, { dateStyle: "medium" });
   const name = share.name || t("workspace.analysis.result_shares.untitled_link");
+  // An older server sends no missingSegmentIds (a rolling deploy can answer from one).
+  const segmentMissing = (share.missingSegmentIds ?? []).length > 0;
   return (
     <li className="space-y-2 rounded-lg border border-slate-200 p-3" data-testid="result-share">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <p className="truncate font-medium text-slate-900">{name}</p>
           {expired && <Badge type="error" size="tiny" text={t("common.expired")} />}
+          {segmentMissing && (
+            <Badge type="warning" size="tiny" text={t("workspace.analysis.result_shares.segment_missing")} />
+          )}
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -337,6 +344,12 @@ const ResultShareRow = ({
           .filter(Boolean)
           .join(" · ")}
       </p>
+      {segmentMissing && (
+        <p className="flex items-start gap-2 text-xs text-amber-700">
+          <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+          {t("workspace.analysis.result_shares.segment_missing_description")}
+        </p>
+      )}
     </li>
   );
 };
@@ -373,7 +386,11 @@ export const ShareResultsDialog = ({
       // The new link heads the list below, with its Copy button: the clipboard is not written here, since a browser may refuse a write this long after the click.
       toast.success(t("workspace.analysis.result_shares.created"));
     } catch (error) {
-      toast.error(errorMessage(t, error));
+      toast.error(
+        error instanceof ApiError && error.code === RESULT_SHARE_SEGMENT_NOT_FOUND
+          ? t("workspace.analysis.result_shares.segment_not_found")
+          : errorMessage(t, error)
+      );
     }
   };
 

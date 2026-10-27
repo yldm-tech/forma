@@ -1,4 +1,5 @@
 // https://github.com/airbnb/javascript/#naming--uppercase
+import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
 import { TWorkspaceStyling } from "@forma/types/workspace";
 import { DEFAULT_BRAND_COLOR } from "./brand-color";
 import { ensureReadable, getReadableTextColor, mixColor } from "./colors";
@@ -108,8 +109,8 @@ export const STYLE_DEFAULTS: TWorkspaceStyling = {
   highlightBorderColor: { light: _colors["highlightBorderColor.light"] },
   isDarkModeEnabled: false,
   roundness: 8,
-  // Link surveys default to the cardless layout; "cardless" is link-only, so app surveys keep "simple".
-  cardArrangement: { linkSurveys: "cardless", appSurveys: "simple" },
+  // What respondents see when nothing is stored (D8): turning on "Add custom styles" alone must not change the layout.
+  cardArrangement: { ...DEFAULT_CARD_ARRANGEMENT },
   linkSurveyCardWidth: "default",
 
   // Headlines & Descriptions

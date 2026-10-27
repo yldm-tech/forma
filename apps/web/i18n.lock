@@ -2042,6 +2042,13 @@ checksums:
     workspace/analysis/result_shares/revoke_link: 404ebbf8d79e05784d107b7d7e8ed741
     workspace/analysis/result_shares/revoke_title: cb00a8d29776b6b2b624ccbe19064943
     workspace/analysis/result_shares/revoked: d538e774261f9130891ddfab277fa14a
+    workspace/analysis/result_shares/segment_delete_links_unchecked: f30a2f4ba1a2d9e4d8978d0a2752c94e
+    workspace/analysis/result_shares/segment_delete_links_warning: d7c87e4a249275a07e2ae40e3b0a06a1
+    workspace/analysis/result_shares/segment_link_in_survey: 5de8a987c7bfa737ae5fcb9fb69f2004
+    workspace/analysis/result_shares/segment_missing: 48ebc70ed3930cf0bf9077eaee58fb3f
+    workspace/analysis/result_shares/segment_missing_description: cf89d2bb2467e650fca84b9650349a1a
+    workspace/analysis/result_shares/segment_missing_notice: 183b0bd268b71e612cb8900b23731d98
+    workspace/analysis/result_shares/segment_not_found: c6a8e98fce5938012bf9e0289340c7a5
     workspace/analysis/result_shares/shared_results: dfe34bd966c4308aa8d29d72a4a6aa17
     workspace/analysis/result_shares/title: 5db5f8ec8f0897c6da369e4d5e56f2e0
     workspace/analysis/result_shares/unavailable_description: 6422a2735feab85736a32679571d7c2a
@@ -2549,7 +2556,11 @@ checksums:
     workspace/integrations/zapier_integration_description: f1e7ea38943c3e3b599fc1a33c9f64b8
     workspace/languages/add_language: bf0407850be7b8a56901533bceb4bc64
     workspace/languages/alias: 87e592cc48d819d7fdcf4597c1c63e7a
+    workspace/languages/alias_names_missing_language: 5ede6bb7c435da25e84acdd2bddcf91f
+    workspace/languages/alias_names_other_language: 0709cfbd443477abf3e3a30e5c30f2e8
     workspace/languages/alias_tooltip: 0f681269a71d46a2d988eedaff31515a
+    workspace/languages/alias_used_twice: 73d515430cc90f17ec988bfadb522209
+    workspace/languages/aliases_exchanged: 09c87a29aeb720694bd4dbabbb7e1953
     workspace/languages/cannot_remove_default_survey_language_warning: 3bb355cf0679222b3d483df72ea6360e
     workspace/languages/cannot_remove_language_warning: 24f18b6c2e127b5d967f36229f983089
     workspace/languages/conflict_between_identifier_and_alias: e1ebeb085c7f336bb17717765392cd9f
@@ -2563,6 +2574,7 @@ checksums:
     workspace/languages/edit_languages: c9d36f6b28557cc7d54e87c37dc18fdd
     workspace/languages/identifier: 5867ea73dfa80c16a57c0f3495ff6708
     workspace/languages/language: 277fd1a41cc237a437cd1d5e4a80463b
+    workspace/languages/language_added_twice: 1b5ab2c8abcba124cf002506642b5c72
     workspace/languages/language_deleted_successfully: 4a805d030491f3fe608d2371b0cfcd83
     workspace/languages/languages_updated_successfully: 60de474c99c5059c0458cddd0b016c15
     workspace/languages/multi_language_surveys: f4f98855fca2b6e9b72959247adb1bec
