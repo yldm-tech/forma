@@ -83,9 +83,11 @@ type Invitee struct {
 }
 
 type Service struct {
-	cfg         config.Config
-	repo        *Repository
-	authz       *authz.Authorizer
+	cfg   config.Config
+	repo  *Repository
+	authz *authz.Authorizer
+	// delivery projects an accepted invite's membership into SpiceDB before the request answers; nil with AuthZed disabled.
+	delivery    *authz.Delivery
 	limiter     *ratelimit.Limiter
 	inviteLimit ratelimit.Rule
 	mailer      *mailer.Mailer
@@ -94,13 +96,13 @@ type Service struct {
 	now         func() time.Time
 }
 
-func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, log *slog.Logger) *Service {
+func NewService(cfg config.Config, repo *Repository, authorizer *authz.Authorizer, delivery *authz.Delivery, limiter *ratelimit.Limiter, mail *mailer.Mailer, emitter *audit.Emitter, log *slog.Logger) *Service {
 	rule := ratelimit.ActionInviteMember
 	rule.Limit = cfg.InviteRateLimitPer24Hours
 	if cfg.IsFormaCloud {
 		rule.Limit = cloudInviteLimit
 	}
-	return &Service{cfg: cfg, repo: repo, authz: authorizer, limiter: limiter, inviteLimit: rule, mailer: mail, audit: emitter, log: log, now: time.Now}
+	return &Service{cfg: cfg, repo: repo, authz: authorizer, delivery: delivery, limiter: limiter, inviteLimit: rule, mailer: mail, audit: emitter, log: log, now: time.Now}
 }
 
 // record emits an audited operation's event, a failure when err is set, as forma2's withAuditLogging did for every outcome of the actions it wrapped.
@@ -827,8 +829,9 @@ func (s *Service) grant(ctx context.Context, tx *Repository, inv *linked, userID
 	return &acceptance{inviteID: inv.ID, organizationID: inv.OrganizationID, creatorID: inv.CreatorID, role: role}, nil
 }
 
-// accepted tells the inviter, in their language, that the invitee joined, and records the new membership. Neither may fail an acceptance that has committed.
+// accepted delivers the new membership and team seats to SpiceDB, so the invitee's first page does not wait for the worker, then tells the inviter, in their language, that the invitee joined, and records the new membership. None of it may fail an acceptance that has committed.
 func (s *Service) accepted(ctx context.Context, a *acceptance, userID uuid.UUID, inviteeName string) {
+	s.delivery.DeliverMemberships(ctx, userID)
 	s.record(ctx, audit.Event{
 		Action: audit.ActionCreated, TargetType: audit.TargetMembership, TargetID: userID.String() + "-" + a.organizationID.String(),
 		ActorID: userID.String(), OrganizationID: a.organizationID.String(), NewObject: map[string]any{"role": a.role, "accepted": true, "inviteId": a.inviteID.String()},

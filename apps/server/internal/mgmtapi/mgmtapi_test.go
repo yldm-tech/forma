@@ -614,7 +614,7 @@ func TestV2UsersUnchangedRoleKeepsTheCreatorsKeys(t *testing.T) {
 	}
 }
 
-// The v2 team, user and workspace-team writes reach SpiceDB before they answer, with no worker running, so /api/v3, MCP and the app see them at once and no revocation waits on a worker that may be minutes behind.
+// The v2 team, user and workspace-team writes reach SpiceDB before they answer, with no worker running, so /api/v3, MCP and the app do not wait for the worker to see them and no revocation waits on a worker that may be minutes behind.
 func TestV2AccessWritesAreProjectedBeforeTheyAnswer(t *testing.T) {
 	e := newEnv(t)
 	s := e.seedRecording()

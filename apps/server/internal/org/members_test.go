@@ -258,7 +258,7 @@ func TestLeave(t *testing.T) {
 	}
 }
 
-// Membership changes reach SpiceDB before the request answers, with no worker running: the creator of an organization opens it at once, and a role change, a removal or leaving leaves no revocation for a worker that may be minutes behind, where it would stop every authorization check once it passed the freshness window.
+// Membership changes reach SpiceDB before the request answers, with no worker running: the creator of an organization is not left waiting for the worker, and a role change, a removal or leaving leaves no revocation for a worker that may be minutes behind, where it would stop every authorization check once it passed the freshness window.
 func TestMembershipWritesAreProjectedBeforeTheyAnswer(t *testing.T) {
 	e := newEnv(t)
 	owner, member, leaver := e.user(), e.user(), e.user()

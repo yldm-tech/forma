@@ -112,7 +112,7 @@ func (s *Service) Create(ctx context.Context, userID, organizationID uuid.UUID, 
 	if !created {
 		return uuid.Nil, errNameTakenInput()
 	}
-	// The team's organization reaches SpiceDB before the answer, so its creator can open it at once.
+	// The team's organization reaches SpiceDB before the answer instead of waiting for the worker (see authz.Delivery.DeliverMemberships on what that promises under minimize_latency).
 	s.delivery.DeliverTeam(ctx, id)
 	ev.TargetID = id.String()
 	details, err := s.repo.details(ctx, id, false)

@@ -91,7 +91,7 @@ func (s *Service) create(ctx context.Context, userID uuid.UUID, name string, tim
 	if err != nil {
 		return nil, err
 	}
-	// The creator's ownership and the first workspace reach SpiceDB before the answer, so the SPA can open the organization at once. The organization's own event projects nothing for a row that exists.
+	// The creator's ownership and the first workspace reach SpiceDB before the answer instead of waiting for the worker (see authz.Delivery.DeliverMemberships on what that promises under minimize_latency). The organization's own event projects nothing for a row that exists.
 	s.delivery.DeliverMemberships(ctx, userID)
 	s.delivery.DeliverWorkspace(ctx, workspaceID)
 	// forma2 set up the Stripe customer and Hobby subscription after the organization existed.
@@ -376,9 +376,15 @@ func (s *Service) delete(ctx context.Context, userID, organizationID uuid.UUID) 
 	if old == nil {
 		return nil, apperr.NotFound("Organization", organizationID.String())
 	}
+	// What the deletion takes with it is read first: once the rows are gone, nothing says which of the revocations it queues are its own.
+	contents, err := authz.ReadOrganizations(ctx, s.repo.db, organizationID)
+	if err != nil {
+		return old, err
+	}
 	if err := s.repo.delete(ctx, organizationID); err != nil {
 		return old, err
 	}
+	s.delivery.DeliverOrganizations(ctx, contents)
 	s.billing.OrganizationDeleted(ctx, old.Billing.StripeCustomerID)
 	return old, nil
 }

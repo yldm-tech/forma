@@ -79,7 +79,7 @@ func (s *Service) create(ctx context.Context, userID, organizationID uuid.UUID, 
 	if err != nil {
 		return nil, err
 	}
-	// The workspace's organization and team grants reach SpiceDB before the answer, so its creator can open it at once.
+	// The workspace's organization and team grants reach SpiceDB before the answer instead of waiting for the worker (see authz.Delivery.DeliverMemberships on what that promises under minimize_latency).
 	s.delivery.DeliverWorkspace(ctx, id)
 	ws, err := s.repo.byID(ctx, id)
 	if err == nil && ws != nil {

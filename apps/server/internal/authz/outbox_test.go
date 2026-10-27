@@ -78,7 +78,7 @@ func TestClaimAggregateLeasesOnlyThatAggregatesFreeEvents(t *testing.T) {
 	// Another target type with the same primary id is not part of the aggregate.
 	enqueue(targetTeam, key, nil)
 
-	events, err := claimAggregate(e.ctx, e.db, "request", aggregate{targetTypes: []string{targetAPIKey, targetAPIKeyWorkspace}, primaryID: key})
+	events, err := claimAggregate(e.ctx, e.db, "request", aggregate{{targetTypes: []string{targetAPIKey, targetAPIKeyWorkspace}, ids: []string{key}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestClaimAggregateMatchesThePairsThatNameTheObjectSecond(t *testing.T) {
 	// A pair type matched by its second id does not match by its first.
 	enqueue(targetWorkspaceTeam, team, &ws)
 
-	events, err := claimAggregate(e.ctx, e.db, "request", aggregate{targetTypes: []string{targetTeam, targetTeamMembership}, primaryID: team, secondaryTypes: []string{targetWorkspaceTeam}})
+	events, err := claimAggregate(e.ctx, e.db, "request", aggregate{{targetTypes: []string{targetTeam, targetTeamMembership}, ids: []string{team}}, {targetTypes: []string{targetWorkspaceTeam}, ids: []string{team}, bySecond: true}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,12 +117,37 @@ func TestClaimAggregateMatchesThePairsThatNameTheObjectSecond(t *testing.T) {
 	}
 
 	// An aggregate of pairs only: every membership and team membership naming the user second.
-	events, err = claimAggregate(e.ctx, e.db, "user", aggregate{primaryID: user, secondaryTypes: []string{targetMembership, targetTeamMembership}})
+	events, err = claimAggregate(e.ctx, e.db, "user", aggregate{{targetTypes: []string{targetMembership, targetTeamMembership}, ids: []string{user}, bySecond: true}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(events) != 1 || events[0].TargetType != targetMembership {
 		t.Fatalf("claimAggregate = %+v, want the user's free membership (the team membership is leased)", events)
+	}
+}
+
+// A match lists any number of objects, and an aggregate whose matches name none claims nothing rather than the whole outbox.
+func TestClaimAggregateMatchesManyObjectsAndNothingWhenEmpty(t *testing.T) {
+	e := newDBEnv(t)
+	a, b, c := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	enqueue := func(targetType, primary string) uuid.UUID {
+		return e.insert(`INSERT INTO authz_projection_outbox (target_type, primary_id) VALUES (?, ?) RETURNING id`, targetType, primary)
+	}
+	first, second := enqueue(targetWorkspace, a), enqueue(targetWorkspace, b)
+	enqueue(targetWorkspace, c)
+
+	for _, empty := range []aggregate{nil, {}, {{targetTypes: []string{targetWorkspace}}}, {{ids: []string{a}}}} {
+		events, err := claimAggregate(e.ctx, e.db, "empty", empty)
+		if err != nil || len(events) != 0 {
+			t.Fatalf("claimAggregate(%+v) = %+v, %v; want nothing", empty, events, err)
+		}
+	}
+	events, err := claimAggregate(e.ctx, e.db, "request", aggregate{{targetTypes: []string{targetWorkspace}, ids: []string{a, b}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sameIDs(eventIDs(events), []uuid.UUID{first, second}) {
+		t.Fatalf("claimAggregate = %+v, want the two named workspaces", events)
 	}
 }
 
