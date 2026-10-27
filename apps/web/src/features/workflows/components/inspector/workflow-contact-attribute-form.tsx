@@ -10,10 +10,7 @@ import { attributeKeysQuery } from "../../../../lib/queries/contacts";
 import { sdkIdentityQuery } from "../../../../lib/queries/workspaces";
 import { type TWorkflowSetContactAttributeActionNode, getWorkflowActionProblems } from "../../definition";
 import { useWorkflowNodeFieldFocus } from "../../hooks/use-workflow-node-field-focus";
-import {
-  isRespondentSourcedValue,
-  writesProtectedAttributeFromResponse,
-} from "../../lib/protected-attributes";
+import { isRespondentSourcedValue, needsProtectedWriteConfirmation } from "../../lib/protected-attributes";
 import { workflowAtom } from "../../state/editor";
 import { WorkflowTemplateTextarea } from "./workflow-action-fields";
 import { WorkflowFieldError, WorkflowFieldLabel } from "./workflow-field";
@@ -36,15 +33,12 @@ export const WorkflowContactAttributeForm = ({
   const identity = useQuery({ ...sdkIdentityQuery(workspaceId), enabled: workspaceId !== "" });
   const protectedKeys = identity.data?.protectedAttributeKeys ?? [];
   const { config } = node;
-  // A change that makes the step write a protected attribute from the response waits here for the confirmation; one that keeps an already confirmed (or saved) write as it is goes straight through.
+  // A change that makes the step write a protected attribute from the response, or moves such a write to another protected attribute, waits here for the confirmation; one that keeps an already confirmed (or saved) write on the same attribute goes straight through.
   const [pendingConfig, setPendingConfig] = useState<TWorkflowSetContactAttributeActionNode["config"] | null>(
     null
   );
   const changeConfig = (next: TWorkflowSetContactAttributeActionNode["config"]) => {
-    if (
-      writesProtectedAttributeFromResponse(next, protectedKeys) &&
-      !writesProtectedAttributeFromResponse(config, protectedKeys)
-    ) {
+    if (needsProtectedWriteConfirmation(config, next, protectedKeys)) {
       setPendingConfig(next);
       return;
     }
@@ -115,9 +109,11 @@ export const WorkflowContactAttributeForm = ({
           <WorkflowFieldError id="workflow-contact-attribute-key-error">{keyError}</WorkflowFieldError>
         ) : null}
         {isSelectedProtected ? (
-          <Alert variant={isRespondentSourcedValue(config.value) ? "warning" : "info"} size="small">
+          <Alert
+            variant={isRespondentSourcedValue(config.value, protectedKeys) ? "warning" : "info"}
+            size="small">
             <AlertDescription className="whitespace-normal">
-              {isRespondentSourcedValue(config.value)
+              {isRespondentSourcedValue(config.value, protectedKeys)
                 ? t("workspace.workflows.contact_attribute_protected_from_response", {
                     key: config.attributeKey,
                   })
