@@ -2617,6 +2617,7 @@
         "endpoint_pinged": "耶！我們能夠 ping Webhook！",
         "endpoint_pinged_error": "無法 ping Webhook！",
         "endpoint_service_unavailable_error": "服務無法使用 (503)：服務暫時無法使用",
+        "managers_only": "只有管理此工作區的成員才能新增 Webhook 或變更其傳送回應的目標。",
         "no_triggers": "無觸發條件",
         "please_check_console": "請檢查主控台以取得更多詳細資料",
         "please_enter_a_url": "請輸入網址",

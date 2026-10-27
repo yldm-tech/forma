@@ -51,8 +51,17 @@ import { WebhookDeliveriesSheet, WebhookHealthBadge, WebhookHealthSummary } from
 
 type SurveyOption = { id: string; name: string };
 
-/** forma2's webhooks page: the workspace's webhooks, newest first, each with its delivery health, and adding one when the caller may write to the workspace. A webhook's delivery log opens from its overview. */
-export const WebhooksPage = ({ workspaceId, isReadOnly }: { workspaceId: string; isReadOnly: boolean }) => {
+/** forma2's webhooks page: the workspace's webhooks, newest first, each with its delivery health, and adding one when the caller may manage the workspace: where its responses go is a manager's decision, as a workflow's HTTP request step is, and the server refuses everyone else. A webhook's delivery log opens from its overview. */
+export const WebhooksPage = ({
+  workspaceId,
+  isReadOnly,
+  canManage,
+}: {
+  workspaceId: string;
+  isReadOnly: boolean;
+  /** The member may manage the workspace, which adding a webhook, changing where it sends what, testing it and replacing its secret need. */
+  canManage: boolean;
+}) => {
   const { t } = useTranslation();
   const { data } = useSuspenseQuery(webhooksQuery(workspaceId));
   const surveys = useQuery(webhookSurveysQuery(workspaceId)).data ?? [];
@@ -68,7 +77,7 @@ export const WebhooksPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
       <PageHeader
         pageTitle={t("common.webhooks")}
         cta={
-          !isReadOnly && (
+          canManage && (
             <Button size="sm" onClick={() => setIsAddOpen(true)}>
               <WebhookIcon className="mr-2 size-5 text-white" />
               {t("workspace.integrations.webhooks.add_webhook")}
@@ -76,6 +85,9 @@ export const WebhooksPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
           )
         }
       />
+      {!canManage && (
+        <p className="mb-4 text-sm text-slate-500">{t("workspace.integrations.webhooks.managers_only")}</p>
+      )}
       {data.webhooks.length === 0 ? (
         <EmptyState text={t("workspace.integrations.webhooks.empty_webhook_message")} />
       ) : (
@@ -103,6 +115,7 @@ export const WebhooksPage = ({ workspaceId, isReadOnly }: { workspaceId: string;
           webhook={active}
           surveys={surveys}
           isReadOnly={isReadOnly}
+          canManage={canManage}
           allowInternalUrls={data.allowInternalUrls}
           onClose={() => setActive(null)}
           onShowDeliveries={() => {
@@ -585,6 +598,7 @@ export const WebhookDetailModal = ({
   webhook,
   surveys,
   isReadOnly,
+  canManage,
   allowInternalUrls,
   onClose,
   onShowDeliveries,
@@ -592,6 +606,7 @@ export const WebhookDetailModal = ({
   webhook: Webhook;
   surveys: readonly SurveyOption[];
   isReadOnly: boolean;
+  canManage: boolean;
   allowInternalUrls: boolean;
   onClose: () => void;
   /** Closes the modal and opens the webhook's delivery log. */
@@ -640,6 +655,7 @@ export const WebhookDetailModal = ({
                 webhook={webhook}
                 surveys={surveys}
                 isReadOnly={isReadOnly}
+                canManage={canManage}
                 allowInternalUrls={allowInternalUrls}
                 onClose={onClose}
               />
@@ -730,17 +746,19 @@ const WebhookOverview = ({
   );
 };
 
-/** forma2's WebhookSettingsTab: edit (the endpoint is tested again, signed with the stored secret), delete, or replace the signing secret. A webhook a third party created keeps its URL, triggers, surveys and secret. */
+/** forma2's WebhookSettingsTab: edit (the endpoint is tested again, signed with the stored secret), delete, or replace the signing secret. A webhook a third party created keeps its URL, triggers, surveys and secret. Editing, testing and replacing the secret need manage access to the workspace; a member who can only write to it can still delete the webhook. */
 const WebhookSettings = ({
   webhook,
   surveys,
   isReadOnly,
+  canManage,
   allowInternalUrls,
   onClose,
 }: {
   webhook: Webhook;
   surveys: readonly SurveyOption[];
   isReadOnly: boolean;
+  canManage: boolean;
   allowInternalUrls: boolean;
   onClose: () => void;
 }) => {
@@ -755,7 +773,7 @@ const WebhookSettings = ({
   const [allSurveys, setAllSurveys] = useState(webhook.allSurveys);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const isThirdParty = webhook.source !== "user";
-  const allowChanges = !isThirdParty && !isReadOnly;
+  const allowChanges = !isThirdParty && canManage;
 
   const save = async () => {
     if (triggers.length === 0) {
@@ -812,7 +830,7 @@ const WebhookSettings = ({
             id="webhook-name"
             className="mt-1"
             value={name}
-            disabled={isReadOnly}
+            disabled={!canManage}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("workspace.integrations.webhooks.webhook_name_placeholder")}
           />
@@ -825,14 +843,14 @@ const WebhookSettings = ({
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              readOnly={isReadOnly || isThirdParty}
+              readOnly={!canManage || isThirdParty}
               className={cn(
-                (isReadOnly || isThirdParty) && "cursor-not-allowed bg-slate-100 text-slate-500",
+                (!canManage || isThirdParty) && "cursor-not-allowed bg-slate-100 text-slate-500",
                 endpointClass(endpoint.accessible)
               )}
               placeholder={t("workspace.integrations.webhooks.webhook_url_placeholder")}
             />
-            {!isReadOnly && (
+            {canManage && (
               <Button
                 type="button"
                 variant="secondary"
@@ -875,14 +893,18 @@ const WebhookSettings = ({
               </Button>
             )}
           </div>
-          {!isReadOnly && (
+          {canManage && (
             <Button type="submit" loading={update.isPending}>
               {t("common.save_changes")}
             </Button>
           )}
         </div>
       </form>
-      {!isReadOnly && <SigningSecretSection webhook={webhook} />}
+      {canManage ? (
+        <SigningSecretSection webhook={webhook} />
+      ) : (
+        <p className="mt-4 text-sm text-slate-500">{t("workspace.integrations.webhooks.managers_only")}</p>
+      )}
       <DeleteDialog
         open={isDeleteOpen}
         setOpen={setIsDeleteOpen}
