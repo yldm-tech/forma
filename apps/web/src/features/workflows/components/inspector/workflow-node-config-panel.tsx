@@ -104,7 +104,14 @@ export const WorkflowNodeConfigPanel = ({ isEditable }: Readonly<{ isEditable: b
               <AlertDescription>{blockedReason}</AlertDescription>
             </Alert>
           )}
-          {ConfigForm ? (
+          {selectedNode.type === "if_else" ? (
+            // Branches are stored but never run; the trigger's ending filter is how a workflow acts on some responses only.
+            <Alert variant="warning" size="small">
+              <AlertDescription className="whitespace-normal">
+                {t("workspace.workflows.if_else_not_runnable_description")}
+              </AlertDescription>
+            </Alert>
+          ) : ConfigForm ? (
             // Keyed by node, so switching nodes remounts the form with fresh local state.
             <ConfigForm
               key={selectedNode.id}

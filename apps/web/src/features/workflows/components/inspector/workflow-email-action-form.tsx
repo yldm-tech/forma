@@ -2,6 +2,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { ArrowRightIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertDescription } from "../../../../components/ui/alert";
 import { Button } from "../../../../components/ui/button";
 import { Editor } from "../../../../components/ui/editor";
 import { Input } from "../../../../components/ui/input";
@@ -19,8 +20,10 @@ import {
 } from "../../definition";
 import { useWorkflowNodeFieldFocus } from "../../hooks/use-workflow-node-field-focus";
 import { resolveBoundTriggerSurvey } from "../../lib/authoring-context";
+import { insertAtSelection } from "../../lib/template-variables";
 import { openWorkflowNodeConfigModalAtom, workflowDefinitionAtom } from "../../state/editor";
 import { useWorkflowEmailAuthoringContext } from "../workflow-email-authoring-context";
+import { WorkflowTemplateVariablePicker } from "./workflow-action-fields";
 import { WorkflowEmailRecipientField } from "./workflow-email-recipient-field";
 import { WorkflowFieldError, WorkflowFieldLabel } from "./workflow-field";
 
@@ -44,6 +47,9 @@ const containsHtmlTag = (value: string): boolean => {
 
 const escapeHtml = (value: string): string =>
   value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
+/** Whether a body holds a `{{` placeholder, which the body never fills: it is written with recall (@), and only the subject takes `{{ }}`. */
+export const hasTemplatePlaceholder = (body: string): boolean => body.includes("{{");
 
 /** The body as the recall editor loads it, which takes HTML of block nodes only: a body that is already HTML passes through, a plain-text one (written through the API) is escaped and wrapped in paragraphs. */
 export const toEditorHtml = (body: string): string => {
@@ -88,6 +94,7 @@ export const WorkflowEmailActionForm = ({
   );
 
   const bodyWrapperRef = useRef<HTMLDivElement>(null);
+  const subjectRef = useRef<HTMLInputElement>(null);
 
   // Stable, since the editor re-registers its listener when this changes. Having had content is what touches the body: its serialized value keeps the paragraph even when blank.
   const handleBodyEmptyChange = useCallback(
@@ -99,6 +106,23 @@ export const WorkflowEmailActionForm = ({
 
   const updateConfig = (next: Partial<TWorkflowSendEmailActionNode["config"]>) =>
     onChange({ ...node, config: { ...node.config, ...next } });
+
+  // A picked variable goes where the caret was in the subject, which keeps the focus.
+  const insertIntoSubject = (token: string) => {
+    const element = subjectRef.current;
+    const selection = element
+      ? {
+          start: element.selectionStart ?? node.config.subject.length,
+          end: element.selectionEnd ?? node.config.subject.length,
+        }
+      : null;
+    const next = insertAtSelection(node.config.subject, token, selection);
+    updateConfig({ subject: next.value });
+    requestAnimationFrame(() => {
+      subjectRef.current?.focus();
+      subjectRef.current?.setSelectionRange(next.caret, next.caret);
+    });
+  };
 
   const invalidFields = new Set(
     getBlankSendEmailContentFields(node.config).filter((field) => touchedFields[field])
@@ -212,6 +236,7 @@ export const WorkflowEmailActionForm = ({
           {t("workspace.workflows.email_subject_label")}
         </WorkflowFieldLabel>
         <Input
+          ref={subjectRef}
           id="workflow-email-subject"
           value={node.config.subject}
           disabled={!isEditable}
@@ -227,6 +252,7 @@ export const WorkflowEmailActionForm = ({
             {t("workspace.workflows.email_subject_required")}
           </WorkflowFieldError>
         ) : null}
+        {isEditable ? <WorkflowTemplateVariablePicker onInsert={insertIntoSubject} /> : null}
       </div>
 
       {/* Four lines of body by default rather than the editor's two. */}
@@ -255,6 +281,13 @@ export const WorkflowEmailActionForm = ({
           <WorkflowFieldError id="workflow-email-body-error">
             {t("workspace.workflows.email_body_required")}
           </WorkflowFieldError>
+        ) : null}
+        {hasTemplatePlaceholder(node.config.body) ? (
+          <Alert variant="warning" size="small">
+            <AlertDescription className="whitespace-normal">
+              {t("workspace.workflows.email_body_placeholder_warning", { example: "{{answers.nps}}" })}
+            </AlertDescription>
+          </Alert>
         ) : null}
       </div>
 
