@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/pr
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import type { TJsWorkspaceStateSurvey } from "@forma/types/js";
 import { TSurveyElementTypeEnum } from "@forma/types/surveys/constants";
+import { hashVerifyToken } from "@/lib/verify-token";
 import { Survey } from "./survey";
 
 const apiClientMocks = vi.hoisted(() => ({
@@ -676,6 +677,97 @@ describe("Survey progress persistence", () => {
     await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalled());
     expect(offlineStorageMocks.getSurveyProgress).not.toHaveBeenCalled();
     expect(offlineStorageMocks.saveSurveyProgress).not.toHaveBeenCalled();
+  });
+
+  // NF-01: respondent A verified, answered the first card and left; respondent B then opens B's own verification link in the same browser.
+  describe("of a survey that verifies emails", () => {
+    const progressOf = async (token: string | null, snapshot: Record<string, unknown> = {}) =>
+      makeProgress({
+        surveyStateSnapshot: {
+          ...makeProgress().surveyStateSnapshot,
+          responseId: "response-A",
+          ...(token === null ? {} : { verifyTokenHash: await hashVerifyToken(token) }),
+          ...snapshot,
+        },
+      });
+
+    test("goes on where the same verification link left off, and sends the link's token with each update", async () => {
+      offlineStorageMocks.getSurveyProgress.mockResolvedValue(await progressOf("token-A"));
+
+      renderWith({ persistProgress: true, verifyToken: "token-A" });
+
+      fireEvent.click(await screen.findByTestId("submit-block-2"));
+      await waitFor(() =>
+        expect(apiClientMocks.updateResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            responseId: "response-A",
+            data: { q2: "block-2-answer" },
+            verifyToken: "token-A",
+          })
+        )
+      );
+      expect(apiClientMocks.createDisplay).not.toHaveBeenCalled();
+      expect(apiClientMocks.createResponse).not.toHaveBeenCalled();
+    });
+
+    test("starts afresh from the first card when the progress was left by another verification link", async () => {
+      offlineStorageMocks.getSurveyProgress.mockResolvedValue(await progressOf("token-A"));
+      const store = storeRows([
+        earlierRow(
+          { responseId: "response-A", verifyTokenHash: await hashVerifyToken("token-A") },
+          { q1: "A-private" }
+        ),
+      ]);
+
+      renderWith({ persistProgress: true, verifyToken: "token-B" });
+
+      await waitFor(() =>
+        expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id)
+      );
+      await waitFor(() => expect(apiClientMocks.createDisplay).toHaveBeenCalled());
+      // A's unsent answer still reaches A's response, without B's token.
+      await waitFor(() => expect(store.rows).toHaveLength(0));
+      expect(apiClientMocks.updateResponse).toHaveBeenCalledTimes(1);
+      expect(apiClientMocks.updateResponse.mock.calls[0][0]).toMatchObject({ responseId: "response-A" });
+      expect(apiClientMocks.updateResponse.mock.calls[0][0].verifyToken).toBeUndefined();
+
+      // B is on the first card, with none of A's answers.
+      expect(screen.queryByTestId("submit-block-2")).toBeNull();
+      fireEvent.click(await screen.findByTestId("submit-block-1"));
+      await waitFor(() =>
+        expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+          expect.objectContaining({ displayId: "display-created", data: { q1: "block-1-answer" } })
+        )
+      );
+      expect(offlineStorageMocks.saveSurveyProgress).toHaveBeenCalledWith(
+        expect.objectContaining({
+          responseData: { q1: "block-1-answer" },
+          surveyStateSnapshot: expect.objectContaining({ verifyTokenHash: await hashVerifyToken("token-B") }),
+        })
+      );
+    });
+
+    test("does not go on with progress stored before the link was recorded", async () => {
+      offlineStorageMocks.getSurveyProgress.mockResolvedValue(await progressOf(null));
+
+      renderWith({ persistProgress: true, verifyToken: "token-B" });
+
+      await waitFor(() =>
+        expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id)
+      );
+      expect(await screen.findByTestId("submit-block-1")).toBeTruthy();
+    });
+
+    test("a page without a verification link does not go on with a verified respondent's progress", async () => {
+      offlineStorageMocks.getSurveyProgress.mockResolvedValue(await progressOf("token-A"));
+
+      renderWith({ persistProgress: true });
+
+      await waitFor(() =>
+        expect(offlineStorageMocks.clearSurveyProgress).toHaveBeenCalledWith(baseSurvey.id)
+      );
+      expect(await screen.findByTestId("submit-block-1")).toBeTruthy();
+    });
   });
 });
 

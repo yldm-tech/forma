@@ -312,6 +312,14 @@ func (h *Handler) verifiedEmailGate(sv *response.Survey, data map[string]any, me
 	return nil
 }
 
+// verifiedEmail is the address an update's verification token proves for the survey, "" without a token, for a survey that does not verify emails, or when the token proves none.
+func (h *Handler) verifiedEmail(sv *response.Survey, token *string) string {
+	if !sv.IsVerifyEmailEnabled || token == nil || *token == "" {
+		return ""
+	}
+	return linksurvey.VerifyEmailToken(h.cfg, *token, sv.ID, h.now())
+}
+
 // validateAnswers is forma2's validateResponseData with the v1 error format: 400 "Validation failed" with each failing element's messages. When reported is not nil, only the elements it carries can fail: an update checks the answers merged over the stored ones but refuses only for the answers it sends, so a stored answer that a later, stricter rule no longer accepts (the phone check narrowed to 7 to 15 digits) does not make every further update of an unfinished response fail.
 func (h *Handler) validateAnswers(sv *response.Survey, data map[string]any, language *string, reported map[string]any) error {
 	lang := "en"
@@ -338,7 +346,7 @@ func (h *Handler) validateAnswers(sv *response.Survey, data map[string]any, lang
 	return badRequest("Validation failed", details)
 }
 
-// updateResponse is forma2's response update (v1, re-exported by v2): the workspace, the body (ZResponseUpdateInput), the response and its survey (404 Response when either is not the workspace's), the PIN, the ingest contract, the survey's status and the response's, the uploads and the answers merged over the stored ones, then the write. The update never re-checks single-use, reCAPTCHA or the display and never changes meta or the contact.
+// updateResponse is forma2's response update (v1, re-exported by v2): the workspace, the body (ZResponseUpdateInput), the response and its survey (404 Response when either is not the workspace's), the PIN, the verification token when the body carries one (response.CheckVerifiedEmail), the ingest contract, the survey's status and the response's, the uploads and the answers merged over the stored ones, then the write. The update never re-checks single-use, reCAPTCHA or the display and never changes meta or the contact.
 func (h *Handler) updateResponse(c *gin.Context) {
 	ctx := c.Request.Context()
 	responseID := c.Param("responseId")
@@ -363,6 +371,8 @@ func (h *Handler) updateResponse(c *gin.Context) {
 	update.TTC = is.ttc("ttc", in.get("ttc"), rawMember(text, "ttc"))
 	update.Language = is.optString("language", in.get("language"), optional)
 	pinAuthToken := is.optString("pinAuthToken", in.get("pinAuthToken"), nullish)
+	// Not in forma2's schema: the link survey page sends the token it was opened with since the runtime binds saved progress to it. Optional, so every body forma2's schema took is taken as before.
+	verifyToken := is.optString("verifyToken", in.get("verifyToken"), nullish)
 	if is.failed() {
 		writeError(c, badRequest(msgInvalidFields, is.details))
 		return
@@ -374,6 +384,10 @@ func (h *Handler) updateResponse(c *gin.Context) {
 		return
 	}
 	if err := h.checkPin(sv, pinAuthToken); err != nil {
+		h.fail(c, err, msgGeneric)
+		return
+	}
+	if err := response.CheckVerifiedEmail(sv, existing, h.verifiedEmail(sv, verifyToken)); err != nil {
 		h.fail(c, err, msgGeneric)
 		return
 	}
