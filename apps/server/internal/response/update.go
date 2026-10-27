@@ -121,7 +121,7 @@ func (s *Service) Update(ctx context.Context, sv *Survey, rawID string, in Updat
 				}
 			}
 		}
-		row, data, variables, ttc, meta, err := applyUpdate(ctx, tx, current, currentFlags, in)
+		row, data, variables, ttc, meta, err := s.applyUpdate(ctx, tx, sv, current, currentFlags, in)
 		if err != nil {
 			return err
 		}
@@ -175,8 +175,8 @@ func decodeObject(raw json.RawMessage) (map[string]any, error) {
 	return out, nil
 }
 
-// applyUpdate is forma2's updateResponse with the ingest flags: it writes the merged row and returns it with the decoded columns quotas read.
-func applyUpdate(ctx context.Context, tx *jobs.Tx, current *Response, currentFlags []embeddeddata.Flag, in UpdateInput) (row Response, data, variables map[string]any, ttc map[string]float64, meta map[string]any, err error) {
+// applyUpdate is forma2's updateResponse with the ingest flags: it writes the merged row and returns it with the decoded columns quotas read. A client update stores the total score the server recomputes from the merged response (recomputeScore); the management API's writes are the workspace's own and keep the variables they send.
+func (s *Service) applyUpdate(ctx context.Context, tx *jobs.Tx, sv *Survey, current *Response, currentFlags []embeddeddata.Flag, in UpdateInput) (row Response, data, variables map[string]any, ttc map[string]float64, meta map[string]any, err error) {
 	if data, err = decodeObject(current.Data); err != nil {
 		return
 	}
@@ -208,6 +208,9 @@ func applyUpdate(ctx context.Context, tx *jobs.Tx, current *Response, currentFla
 	}
 	if language := normalizeLanguage(in.Language); language != nil {
 		row.Language = language
+	}
+	if !in.Management {
+		s.recomputeScore(ctx, sv, &row.ID, valueResponse(row, data, variables, ttc, meta), ttc, variables, in.Variables)
 	}
 	if row.Data, err = json.Marshal(data); err != nil {
 		return
