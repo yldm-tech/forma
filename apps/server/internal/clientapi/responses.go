@@ -273,7 +273,7 @@ func (h *Handler) writeNewResponse(c *gin.Context, sv *response.Survey, workspac
 	writeData(c, result, noStore)
 }
 
-// dropUnreachableScore keeps a response's total score only when the survey can produce it (response.Survey.DropUnreachableScore): a score out of range is removed from the variables written, the rest of the response is taken as sent, and the drop is logged with the value (a bounded description of it, response.ScoreValueAttrs) so a survey whose scores were edited mid-collection can be told apart from a forged submission. A survey that has its score recomputed (response.Survey.RecomputesScore) is left to the response service, which replaces the client's value whatever it is. responseID is nil on a create.
+// dropUnreachableScore keeps a response's total score only when the survey can produce it (response.Survey.DropUnreachableScore): a score out of range is removed from the variables written, the rest of the response is taken as sent, and the drop is logged with the value (a bounded description of it, response.ScoreValueAttrs) so a survey whose scores were edited mid-collection can be told apart from a forged submission. A survey that has its score recomputed (response.Survey.RecomputesScore) is left to the response service, which replaces the client's value whatever it is and applies this range check to its own value. responseID is nil on a create.
 func (h *Handler) dropUnreachableScore(ctx context.Context, sv *response.Survey, responseID *uuid.UUID, variables map[string]any) {
 	if sv.RecomputesScore() {
 		return

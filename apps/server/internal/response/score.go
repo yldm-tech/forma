@@ -14,7 +14,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveylogic"
 )
 
-// The server's own total score (NF-04, decision D3). For a survey whose block logic has no calculate action, the score is a function of the answers alone, so the client API recomputes it from the response's data on every create and update, finished or partial, and stores that instead of the number the browser sent. A survey with a calculate action keeps the client's value within the range ScoreBounds allows (score_bounds.go): reproducing calculations would need a second calculation engine.
+// The server's own total score (NF-04, decision D3). For a survey whose block logic has no calculate action, the score is a function of the answers alone, so the client API recomputes it from the response's data on every create and update, finished or partial, and stores that instead of the number the browser sent, unless it is out of the range ScoreBounds allows, which only answers the runtime never sends can reach and which drops it. A survey with a calculate action keeps the client's value within the range ScoreBounds allows (score_bounds.go): reproducing calculations would need a second calculation engine.
 //
 // The recomputation is the runtime's, step for step: packages/types/surveys/scoring.ts scores the answers and packages/surveys/src/components/general/survey.tsx (evaluateLogicAndGetNextBlockId) walks the blocks. testdata/score_parity.json is the table both are held to; packages/surveys/src/lib/score.parity.test.ts runs the runtime's functions over the same cases.
 
@@ -35,7 +35,7 @@ func (sv *Survey) RecomputesScore() bool {
 	return true
 }
 
-// ScoreInput is what RecomputeScore reads of a response: its merged data and ttc, the language as quotas read it ("default" for the survey's default language) and the reserved values its logic conditions read (embeddeddata.ServerValues).
+// ScoreInput is what RecomputeScore reads of a response: its merged data and ttc, the language as quotas read it ("default" for the survey's default language) and the reserved values its logic conditions read: those the runtime reads mid-survey (embeddeddata.ClientValues), as recomputedScore passes them.
 type ScoreInput struct {
 	Data     map[string]any
 	TTC      map[string]float64
@@ -236,21 +236,39 @@ func roundScore(n float64) float64 {
 	return out
 }
 
-// recomputeScore writes the survey's recomputed total score (RecomputeScore) into variables, the variables about to be stored, for a survey that recomputes it; sent are the variables the client sent with this create or update. A sent score the answers do not add up to is logged with the value (a bounded description of it, ScoreValueAttrs), so a forged submission, a survey edited while a respondent answered it, or a runtime that drifted from this replay can be found. responseID is nil on a create.
-func (s *Service) recomputeScore(ctx context.Context, sv *Survey, responseID *uuid.UUID, r embeddeddata.ValueResponse, ttc map[string]float64, variables, sent map[string]any) {
+// recomputedScore is RecomputeScore over a response as a create or an update is about to store it: the language as quotas read it and, for the logic conditions, the reserved values the runtime can read mid-survey (embeddeddata.ClientValues), never the ones only the server knows (the geo-IP country, the parsed user agent, the response row's columns), which the runtime reads as unset.
+func (sv *Survey) recomputedScore(r embeddeddata.ValueResponse, ttc map[string]float64) (variableID string, score float64, ok bool) {
 	language := "default"
 	if r.Language != nil && *r.Language != "" && *r.Language != sv.DefaultLanguage {
 		language = *r.Language
 	}
-	id, score, _, ok := sv.RecomputeScore(ScoreInput{
+	variableID, score, _, ok = sv.RecomputeScore(ScoreInput{
 		Data: r.Data, TTC: ttc, Language: language,
-		Reserved: embeddeddata.ServerValues(r, sv.Fields, sv.ElementIDs()),
+		Reserved: embeddeddata.ClientValues(r, sv.Fields, sv.ElementIDs()),
 	})
+	return variableID, score, ok
+}
+
+// recomputeScore writes the survey's recomputed total score (recomputedScore) into variables, the variables about to be stored, for a survey that recomputes it; sent are the variables the client sent with this create or update. A sent score the answers do not add up to is logged with the value (a bounded description of it, ScoreValueAttrs), so a forged submission, a survey edited while a respondent answered it, or a runtime that drifted from this replay can be found. The range check (ScoreBounds) stays behind the recomputation: answers the runtime never sends, such as several labels for a single choice element, which answer validation takes as the runtime's validateChoiceMembership does, add up to a total no respondent can reach, and that total is removed from the variables written and logged instead of stored. responseID is nil on a create.
+func (s *Service) recomputeScore(ctx context.Context, sv *Survey, responseID *uuid.UUID, r embeddeddata.ValueResponse, ttc map[string]float64, variables, sent map[string]any) {
+	id, score, ok := sv.recomputedScore(r, ttc)
 	if !ok {
 		return
 	}
 	// Read before the write: on a create, variables can be the very map the client sent.
 	value, present := sent[id]
+	if bounds, bounded := sv.ScoreBounds(); bounded && !bounds.Contains(score) {
+		delete(variables, id)
+		attrs := []any{"surveyId", sv.ID, "variableId", id, "recomputed", score, "min", bounds.Min, "max", bounds.Max}
+		if present {
+			attrs = append(attrs, ScoreValueAttrs(value)...)
+		}
+		if responseID != nil {
+			attrs = append(attrs, "responseId", *responseID)
+		}
+		s.log.WarnContext(ctx, "dropped a recomputed total score the survey cannot produce", attrs...)
+		return
+	}
 	variables[id] = score
 	if !present || value == score {
 		return

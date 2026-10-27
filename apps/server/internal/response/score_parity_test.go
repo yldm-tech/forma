@@ -35,6 +35,7 @@ type scoreParity struct {
 		} `json:"embeddedFields"`
 		Data  map[string]any     `json:"data"`
 		TTC   map[string]float64 `json:"ttc"`
+		Meta  map[string]any     `json:"meta"`
 		Path  []string           `json:"path"`
 		Score float64            `json:"score"`
 	} `json:"surveys"`
@@ -79,7 +80,7 @@ func TestRecomputeScoreParity(t *testing.T) {
 					StorageKey: f.Link.StorageKey, Name: f.Field.Name, Source: f.Field.Source, DataType: f.Field.DataType, DefaultValue: f.Field.DefaultValue,
 				}})
 			}
-			id, score, path, ok := sv.RecomputeScore(ScoreInput{Data: c.Data, TTC: c.TTC, Language: "default", Reserved: map[string]any{}})
+			id, score, path, ok := sv.RecomputeScore(ScoreInput{Data: c.Data, TTC: c.TTC, Language: "default", Reserved: embeddeddata.ClientValues(embeddeddata.ValueResponse{Data: c.Data, Meta: c.Meta}, sv.Fields, sv.ElementIDs())})
 			if !ok || id != surveydoc.ScoreVariable(c.Variables).ID {
 				t.Fatalf("recomputed %q %v", id, ok)
 			}

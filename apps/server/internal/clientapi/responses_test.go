@@ -855,3 +855,53 @@ func TestResponseScoreRecomputeLogIsBounded(t *testing.T) {
 		t.Fatalf("numeric score not logged: %s", l)
 	}
 }
+
+// Answer validation takes several labels for a single choice element, as the runtime's validateChoiceMembership does, though the runtime never sends them, and the recomputation would add every one of them up: a total over what the survey can reach (this quiz scores 0 to 10) is dropped and logged, on a create and on an update, instead of stored.
+func TestResponseRecomputedScoreOutOfRangeIsDropped(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws, "blocks", `[{"id":"b1","name":"Quiz","elements":[
+		{"id":"capital","type":"multipleChoiceSingle","headline":{"default":"Capital?"},"required":true,"choices":[
+			{"id":"paris","label":{"default":"Paris"},"score":10},{"id":"lyon","label":{"default":"Lyon"},"score":4},{"id":"rome","label":{"default":"Rome"},"score":0}]}]}]`,
+		"variables", branchingQuizVariables)
+	forged := []any{"Paris", "Lyon", "Rome"}
+	r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": true, "data": map[string]any{"capital": forged}, "variables": map[string]any{"score": 14, "note": "kept"}})
+	if r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	if v := e.responseVariables(t, r.data(t)["id"]); v["score"] != nil || v["note"] != "kept" {
+		t.Fatalf("create: variables %v", v)
+	}
+
+	r = e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{"capital": "Paris"}})
+	if r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	id := r.data(t)["id"].(string)
+	if v := e.responseVariables(t, id); v["score"] != 10.0 {
+		t.Fatalf("partial create: variables %v", v)
+	}
+	e.clock.nextWindow()
+	if r := e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+id, map[string]any{"data": map[string]any{"capital": forged}, "finished": true}); r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	if v := e.responseVariables(t, id); v["score"] != nil {
+		t.Fatalf("update: variables %v", v)
+	}
+
+	var dropped []string
+	for line := range strings.SplitSeq(e.logs.String(), "\n") {
+		if strings.Contains(line, "dropped a recomputed total score the survey cannot produce") {
+			dropped = append(dropped, line)
+		}
+	}
+	if len(dropped) != 2 {
+		t.Fatalf("drop log lines: %d", len(dropped))
+	}
+	if l := dropped[0]; !strings.Contains(l, `"recomputed":14`) || !strings.Contains(l, `"max":10`) || !strings.Contains(l, `"value":14`) {
+		t.Fatalf("drop not logged with its values: %s", l)
+	}
+	if l := dropped[1]; !strings.Contains(l, `"responseId":"`+id+`"`) {
+		t.Fatalf("update drop without its response: %s", l)
+	}
+}

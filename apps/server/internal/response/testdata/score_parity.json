@@ -1,5 +1,5 @@
 {
-  "_comment": "The total score parity table: the survey runtime (packages/types/surveys/scoring.ts, walked as packages/surveys/src/components/general/survey.tsx walks blocks) and the server's recomputation (score.go) are both run over these cases, by packages/surveys/src/lib/score.parity.test.ts and score_parity_test.go. elements: what one answer earns, null when the element is not scored. surveys: the blocks a response walks and the total it ends with; startAt is the element a link opened the survey at, which only the runtime is told (the server starts at the first block the response holds an answer or a time for).",
+  "_comment": "The total score parity table: the survey runtime (packages/types/surveys/scoring.ts, walked as packages/surveys/src/components/general/survey.tsx walks blocks) and the server's recomputation (score.go) are both run over these cases, by packages/surveys/src/lib/score.parity.test.ts and score_parity_test.go. elements: what one answer earns, null when the element is not scored. surveys: the blocks a response walks and the total it ends with; startAt is the element a link opened the survey at, which only the runtime is told (the server starts at the first block the response holds an answer or a time for). meta is the response meta the reserved values logic conditions read are projected from: only the entries the runtime can read mid-survey, as it projects them.",
   "elements": [
     {
       "name": "single choice: the picked choice's score",
@@ -2868,6 +2868,225 @@
         "b3"
       ],
       "score": 9.85
+    },
+    {
+      "name": "a condition on a reserved field only the server knows (country) reads as unset, as in the browser",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 1
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "reserved",
+                      "value": "country"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "JP"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "end1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 10
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "total",
+          "type": "number",
+          "value": 0,
+          "isScore": true
+        }
+      ],
+      "embeddedFields": [],
+      "data": {
+        "q1": "A",
+        "q2": "A"
+      },
+      "ttc": {},
+      "meta": {
+        "source": "link",
+        "country": "JP",
+        "userAgent": {
+          "browser": "Chrome",
+          "os": "macOS",
+          "device": "desktop"
+        }
+      },
+      "path": [
+        "b1",
+        "b2"
+      ],
+      "score": 11
+    },
+    {
+      "name": "a condition on a reserved field the browser knows (source) reads the response meta",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 1
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "reserved",
+                      "value": "source"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "link"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "end1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 10
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "total",
+          "type": "number",
+          "value": 0,
+          "isScore": true
+        }
+      ],
+      "embeddedFields": [],
+      "data": {
+        "q1": "A",
+        "q2": "A"
+      },
+      "ttc": {},
+      "meta": {
+        "source": "link",
+        "country": "JP",
+        "userAgent": {
+          "browser": "Chrome",
+          "os": "macOS",
+          "device": "desktop"
+        }
+      },
+      "path": [
+        "b1"
+      ],
+      "score": 1
     }
   ]
 }

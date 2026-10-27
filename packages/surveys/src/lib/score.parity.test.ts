@@ -1,12 +1,18 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vite-plus/test";
 import {
+  RESERVED_FIELD_CATALOG,
   type TLinkedEmbeddedField,
   coerceToEmbeddedDataType,
+  dropShadowedReservedEntries,
   getComputedEmbeddedFields,
+  getSurveyEmbeddedFields,
+  listShadowingNames,
+  mergeReservedValues,
+  projectClientReservedValues,
 } from "@forma/types/embedded-data-resolver";
 import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
-import type { TResponseData, TResponseDataValue, TResponseVariables } from "@forma/types/responses";
+import type { TResponseData, TResponseDataValue, TResponseMeta, TResponseVariables } from "@forma/types/responses";
 import type { TSurveyBlock } from "@forma/types/surveys/blocks";
 import type { TSurveyElement } from "@forma/types/surveys/elements";
 import { applyBlockScore, getElementScore, getScoreVariable } from "@forma/types/surveys/scoring";
@@ -29,6 +35,7 @@ interface TSurveyCase {
   embeddedFields: TLinkedEmbeddedField[];
   data: TResponseData;
   ttc: Record<string, number>;
+  meta?: TResponseMeta;
   startAt?: string;
   path: string[];
   score: number;
@@ -60,6 +67,27 @@ const walk = (parityCase: TSurveyCase): { path: string[]; variables: TResponseVa
     return acc;
   }, {});
   const blocks = parityCase.blocks;
+  // The reserved values survey.tsx hands its logic: the entries a browser can read mid-survey (projectClientReservedValues over the catalog without the names the survey declares), with the response data over them.
+  const reservedValues = mergeReservedValues(
+    projectClientReservedValues(
+      dropShadowedReservedEntries(
+        RESERVED_FIELD_CATALOG,
+        listShadowingNames(
+          getSurveyEmbeddedFields(survey),
+          blocks.flatMap((block) => block.elements.map((element) => element.id))
+        )
+      ),
+      {
+        surveyId: survey.id,
+        language: null,
+        data: parityCase.data,
+        variables,
+        ttc: parityCase.ttc,
+        meta: parityCase.meta ?? {},
+      }
+    ),
+    parityCase.data
+  );
   let index = parityCase.startAt
     ? blocks.findIndex((block) => block.elements.some((element) => element.id === parityCase.startAt))
     : 0;
@@ -70,7 +98,7 @@ const walk = (parityCase: TSurveyCase): { path: string[]; variables: TResponseVa
     variables = applyBlockScore(parityCase.variables, block.elements, parityCase.data, variables);
     let jumpTarget: string | undefined;
     for (const logic of block.logic ?? []) {
-      if (!evaluateLogic(survey, parityCase.data, variables, logic.conditions, "default", {})) continue;
+      if (!evaluateLogic(survey, parityCase.data, variables, logic.conditions, "default", reservedValues)) continue;
       const result = performActions(survey, logic.actions, parityCase.data, variables);
       variables = { ...variables, ...result.calculations };
       jumpTarget = jumpTarget || result.jumpTarget;
