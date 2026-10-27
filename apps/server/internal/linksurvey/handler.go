@@ -46,10 +46,34 @@ type Handler struct {
 	scriptPath string
 	// localePaths are the runtime's translation files by language tag (webui.SurveyLocalePaths).
 	localePaths map[string]string
+	// policy is the pages' Content-Security-Policy (pagePolicy).
+	policy string
 }
 
 func NewHandler(cfg config.Config, svc *Service, limiter *ratelimit.Limiter, web *webui.Handler, log *slog.Logger) *Handler {
-	return &Handler{cfg: cfg, svc: svc, limiter: limiter, shell: newShell(web.SurveyShell()), log: log, scriptPath: web.VersionedPath(surveysScript), localePaths: web.SurveyLocalePaths()}
+	return &Handler{cfg: cfg, svc: svc, limiter: limiter, shell: newShell(web.SurveyShell()), log: log, scriptPath: web.VersionedPath(surveysScript), localePaths: web.SurveyLocalePaths(), policy: pagePolicy(cfg)}
+}
+
+// Script sources a survey page loads beside the page bundle: Cal.com's embed for a scheduling question, and Google reCAPTCHA (api.js, which loads its release from gstatic) where RECAPTCHA_* lets a survey turn on spam protection. Paths are part of the sources, so the rest of www.google.com stays out.
+const calEmbedScript = "https://cal.com/embed.js"
+
+var recaptchaScripts = []string{"https://www.google.com/recaptcha/", "https://www.gstatic.com/recaptcha/"}
+
+// pagePolicy is the survey pages' Content-Security-Policy (httpserver.DocumentPolicy): the page bundle from its own origin, the respondent runtime from the public domain the page names it on (PUBLIC_URL, else WEBAPP_URL), and the scripts above. A page that runs custom head scripts keeps the policy every response gets (page.CustomScripts).
+func pagePolicy(cfg config.Config) string {
+	var sources []string
+	domain := cfg.WebAppURL
+	if cfg.PublicURL != nil {
+		domain = cfg.PublicURL
+	}
+	if domain != nil && domain.Host != "" {
+		sources = append(sources, domain.Scheme+"://"+domain.Host)
+	}
+	sources = append(sources, calEmbedScript)
+	if cfg.RecaptchaConfigured() {
+		sources = append(sources, recaptchaScripts...)
+	}
+	return httpserver.DocumentPolicy(cfg, sources...)
 }
 
 // Register mounts the pages and the OG image. The PIN and email verification endpoints live under the survey's own path, where forma2's server actions were posted, so the public domain serves them with the page.
@@ -124,7 +148,8 @@ func (h *Handler) writePage(c *gin.Context, p page, err error, viewport string) 
 	if p.State.View == viewSurvey {
 		// forma2 rendered the runtime's script tag into the document, so the browser fetches and runs it alongside the page bundle instead of after it.
 		src := html.EscapeString(p.State.Survey.PublicDomain + h.scriptPath)
-		extra = `<link rel="preload" href="` + src + `" as="script" fetchpriority="high"><script async src="` + src + `"></script>`
+		// data-forma-survey-page tells the runtime it runs on this page, the one document where it may set zod jitless for the whole page (packages/surveys/src/lib/zod-jitless.ts): the runtime can run before the page bundle that sets it, and the policy here refuses the eval probe zod would otherwise make.
+		extra = `<link rel="preload" href="` + src + `" as="script" fetchpriority="high"><script async src="` + src + `" data-forma-survey-page></script>`
 		// The runtime carries only English and fetches the survey's language once it runs; fetching it alongside the runtime saves that round trip. crossorigin matches the runtime's fetch, a CORS request with same-origin credentials, so the browser reuses this response.
 		if locale, ok := runtimeLocalePath(h.localePaths, p.RuntimeLanguage); ok {
 			extra += `<link rel="preload" href="` + html.EscapeString(p.State.Survey.PublicDomain+locale) + `" as="fetch" crossorigin="anonymous">`
@@ -135,6 +160,9 @@ func (h *Handler) writePage(c *gin.Context, p page, err error, viewport string) 
 		h.log.ErrorContext(c.Request.Context(), "encode survey page state", "err", err)
 		c.Status(http.StatusInternalServerError)
 		return
+	}
+	if !p.CustomScripts {
+		httpserver.SetDocumentPolicy(c, h.policy)
 	}
 	c.Header("Cache-Control", pageCacheControl)
 	c.Header("Vary", pageVary)

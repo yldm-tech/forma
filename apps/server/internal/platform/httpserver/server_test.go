@@ -114,39 +114,39 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 }
 
-// forma2's next.config.mjs headers() policy, byte for byte. In production it allows https and wss connections only, so an http S3 endpoint stays blocked; in development and under E2E_TESTING it adds the loopback origins (any port on localhost and 127.0.0.1, plus WEBAPP_URL, NEXTAUTH_URL and S3_ENDPOINT_URL when they are loopback) to img-src and connect-src, so the browser can upload to a local RustFS. Only a response that calls AllowWebAssembly, the admin SPA's document, may compile WebAssembly, which its in-browser HEIC conversion needs; the frozen APIs and the public survey pages (/s, /c, /p) keep forma2's script-src.
+// forma2's next.config.mjs headers() policy, byte for byte, on every response but the HTML documents that replace it with DocumentPolicy. In production it allows https and wss connections only, so an http S3 endpoint stays blocked; in development and under E2E_TESTING it adds the loopback origins (any port on localhost and 127.0.0.1, plus WEBAPP_URL, NEXTAUTH_URL and S3_ENDPOINT_URL when they are loopback) to img-src and connect-src, so the browser can upload to a local RustFS. A document's policy (here the SPA's at /workspaces/... and a survey page's at /s/...) runs scripts from its own origin and the sources it names only, never inline and never from any https host, and embeds no plugin; the frozen APIs, the SDK bundles and any other response keep forma2's script-src.
 func TestContentSecurityPolicy(t *testing.T) {
 	const (
 		production    = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
-		productionSPA = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+		productionDoc = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cal.com/embed.js; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:"
 		e2eLoopback   = "http://localhost:* http://127.0.0.1:* http://localhost:3000 http://127.0.0.1:3000 http://127.0.0.1:9000 http://localhost:9000"
 		e2e           = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + e2eLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + e2eLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
-		e2eSPA        = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + e2eLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + e2eLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+		e2eDoc        = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cal.com/embed.js; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + e2eLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + e2eLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:"
 		devLoopback   = "http://localhost:* http://127.0.0.1:* https://localhost:8443 https://127.0.0.1:8443 https://127.0.0.1 https://localhost"
 		dev           = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + devLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + devLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
-		devSPA        = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + devLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + devLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+		devDoc        = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cal.com/embed.js; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: " + devLoopback + " https:; font-src 'self' data: https:; connect-src 'self' " + devLoopback + " https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:"
 	)
 	httpS3 := config.S3Config{BucketName: "forma", EndpointURL: &url.URL{Scheme: "http", Host: "127.0.0.1:9000"}}
 	cases := []struct {
 		name string
 		cfg  config.Config
-		// want maps a path to its policy, without the frame-ancestors directive the path adds. /workspaces/... is the admin SPA's document.
+		// want maps a path to its policy, without the frame-ancestors directive the path adds. /workspaces/... and /s/doc are documents.
 		want map[string]string
 	}{
 		{
 			name: "production with an http S3 endpoint",
 			cfg:  config.Config{WebAppURL: &url.URL{Scheme: "http", Host: "localhost:3000"}, S3: httpS3},
-			want: map[string]string{"/workspaces/1/surveys/2/edit": productionSPA, "/api/v1/client/1/environment": production, "/js/surveys.umd.cjs": production, "/s/abc": production, "/c/abc": production, "/p/abc": production},
+			want: map[string]string{"/workspaces/1/surveys/2/edit": productionDoc, "/s/doc": productionDoc, "/api/v1/client/1/environment": production, "/js/surveys.umd.cjs": production, "/s/abc": production, "/c/abc": production, "/p/abc": production},
 		},
 		{
 			name: "production under NODE_ENV=production",
 			cfg:  config.Config{WebAppURL: &url.URL{Scheme: "http", Host: "localhost:3000"}, S3: httpS3, Telemetry: config.TelemetryConfig{NodeEnv: "production"}},
-			want: map[string]string{"/workspaces/1": productionSPA, "/api/v1/client/1/environment": production, "/s/abc": production},
+			want: map[string]string{"/workspaces/1": productionDoc, "/api/v1/client/1/environment": production, "/s/abc": production},
 		},
 		{
 			name: "E2E_TESTING with the CI stack's loopback RustFS",
 			cfg:  config.Config{WebAppURL: &url.URL{Scheme: "http", Host: "localhost:3000"}, S3: httpS3, E2ETesting: true},
-			want: map[string]string{"/workspaces/1/surveys/2/edit": e2eSPA, "/api/v1/management/storage": e2e, "/s/abc": e2e, "/c/abc": e2e, "/p/abc": e2e},
+			want: map[string]string{"/workspaces/1/surveys/2/edit": e2eDoc, "/s/doc": e2eDoc, "/api/v1/management/storage": e2e, "/s/abc": e2e, "/c/abc": e2e, "/p/abc": e2e},
 		},
 		{
 			// A host other than localhost and 127.0.0.1 is never added, an https loopback origin is added in both spellings, a default port is dropped as the URL parser drops it, and duplicates are listed once.
@@ -157,16 +157,18 @@ func TestContentSecurityPolicy(t *testing.T) {
 				S3:        config.S3Config{BucketName: "forma", EndpointURL: &url.URL{Scheme: "http", Host: "minio.internal:9000"}},
 				Telemetry: config.TelemetryConfig{NodeEnv: "development"},
 			},
-			want: map[string]string{"/workspaces/1": devSPA, "/api/app/me": dev, "/s/abc": dev},
+			want: map[string]string{"/workspaces/1": devDoc, "/api/app/me": dev, "/s/abc": dev},
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := NewEngine(tc.cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
-			r.GET("/workspaces/*path", func(c *gin.Context) {
-				AllowWebAssembly(c)
+			document := func(c *gin.Context) {
+				SetDocumentPolicy(c, DocumentPolicy(tc.cfg, "'wasm-unsafe-eval'", "https://cal.com/embed.js"))
 				c.String(http.StatusOK, "<!DOCTYPE html>")
-			})
+			}
+			r.GET("/workspaces/*path", document)
+			r.GET("/s/doc", document)
 			r.NoRoute(func(c *gin.Context) { c.String(http.StatusOK, "{}") })
 			for path, want := range tc.want {
 				rec := httptest.NewRecorder()
@@ -180,6 +182,20 @@ func TestContentSecurityPolicy(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A handler run without securityHeaders, as a unit test may run one, gets no policy from SetDocumentPolicy rather than one without frame-ancestors.
+func TestSetDocumentPolicyNeedsTheSecurityHeaders(t *testing.T) {
+	r := gin.New()
+	r.GET("/", func(c *gin.Context) {
+		SetDocumentPolicy(c, DocumentPolicy(config.Config{}))
+		c.String(http.StatusOK, "<!DOCTYPE html>")
+	})
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if got := rec.Header().Get("Content-Security-Policy"); got != "" {
+		t.Errorf("Content-Security-Policy = %q, want none", got)
 	}
 }
 

@@ -68,6 +68,8 @@ type page struct {
 	State  pageState
 	// RuntimeLanguage is the survey language code the respondent runtime renders a survey view in (its getI18nLanguage): LanguageCode, with "default" read as the default language's code. The handler preloads the runtime's translations for it.
 	RuntimeLanguage string
+	// CustomScripts reports whether the page runs the workspace's or the survey's custom head scripts (CustomScriptsInjector), arbitrary HTML that their owner may write inline or load from any host; the handler then keeps the permissive policy every response gets instead of the survey pages' own (Handler.policy).
+	CustomScripts bool
 }
 
 // pageState is the document the survey page bundle reads. Locale is the locale the page's own chrome is translated in: forma2's root layout locale, negotiated from Accept-Language.
@@ -390,7 +392,24 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 		props.Locale = gate
 		state.View = viewPin
 	}
-	return page{Status: http.StatusOK, State: state, RuntimeLanguage: runtimeLanguage(languageCode, sv.Languages)}, nil
+	return page{Status: http.StatusOK, State: state, RuntimeLanguage: runtimeLanguage(languageCode, sv.Languages), CustomScripts: runsCustomScripts(props, public)}, nil
+}
+
+// runsCustomScripts mirrors the survey page's CustomScriptsInjector: off on Forma Cloud and in a preview, otherwise on when the workspace's scripts in the page state or the survey's in the public survey (which a PIN-gated page receives once the PIN is entered) are not blank. It reads what the browser is given, so whatever keeps the scripts from a page keeps this policy exception from it too.
+func runsCustomScripts(props *surveyState, public json.RawMessage) bool {
+	if props.IsFormaCloud || props.IsPreview {
+		return false
+	}
+	var sv struct {
+		CustomHeadScripts *string `json:"customHeadScripts"`
+	}
+	_ = json.Unmarshal(public, &sv)
+	for _, scripts := range []*string{props.Workspace.CustomHeadScripts, sv.CustomHeadScripts} {
+		if scripts != nil && strings.TrimSpace(*scripts) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // runtimeLanguage is the respondent runtime's getI18nLanguage (packages/surveys/src/lib/i18n-utils.ts) for the codes a page passes it: a stored survey language code as it is, and "default" as the default language's code, or "en" when the survey has none.

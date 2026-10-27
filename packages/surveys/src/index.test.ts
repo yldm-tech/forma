@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { render } from "preact";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { config as zodConfig } from "zod";
 import { type SurveyContainerProps } from "@forma/types/forma-surveys";
 import { loadSurveyLanguage } from "@/lib/i18n.config";
 import { LANGUAGE_WAIT_MS, renderSurvey } from "./index";
@@ -149,4 +150,9 @@ describe("renderSurvey with a language that is still being fetched", () => {
     await finish();
     expect(render).not.toHaveBeenCalled();
   });
+});
+
+// zod keeps its config on globalThis, shared with every zod copy on the page. Loaded outside Forma's survey page (here, as on a customer's site the SDK appends it to), the runtime must leave it as the page had it; lib/zod-jitless.test.ts covers the survey page.
+test("loading the runtime leaves zod's page-wide config alone", () => {
+  expect(zodConfig().jitless).toBeUndefined();
 });
