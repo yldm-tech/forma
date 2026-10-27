@@ -202,7 +202,7 @@ type notificationsResponse struct {
 }
 
 func (h *Handler) notifications(c *gin.Context) {
-	orgs, err := h.svc.notifications(c.Request.Context(), actor(c))
+	orgs, err := h.svc.notifications(c.Request.Context(), actor(c).UserID)
 	if err != nil {
 		httpapi.Fail(c, err)
 		return
@@ -223,7 +223,7 @@ func (h *Handler) setNotification(c *gin.Context) {
 		httpapi.Fail(c, err)
 		return
 	}
-	if err := h.svc.setNotification(c.Request.Context(), actor(c), req.Type, req.ID, *req.Enabled); err != nil {
+	if err := h.svc.setNotification(c.Request.Context(), actor(c).UserID, req.Type, req.ID, *req.Enabled); err != nil {
 		httpapi.Fail(c, err)
 		return
 	}

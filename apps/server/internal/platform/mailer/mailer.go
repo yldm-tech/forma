@@ -10,7 +10,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
-// Message is one email. HTML is the complete document; From defaults to MAIL_FROM_NAME <MAIL_FROM>; ReplyTo is one address or a comma-separated list. MessageID, in its <id@domain> form, replaces the random Message-ID a send otherwise gets, so a message sent again for the same reason carries the same id.
+// Message is one email. HTML is the complete document; From defaults to MAIL_FROM_NAME <MAIL_FROM>; ReplyTo is one address or a comma-separated list. MessageID, in its <id@domain> form, replaces the random Message-ID a send otherwise gets, so a message sent again for the same reason carries the same id. Headers are further header fields, written as given (OneClickUnsubscribe builds the List-Unsubscribe pair); they cannot replace the fields above.
 type Message struct {
 	To        string
 	From      string
@@ -18,6 +18,15 @@ type Message struct {
 	Subject   string
 	HTML      string
 	MessageID string
+	Headers   map[string]string
+}
+
+// OneClickUnsubscribe is the List-Unsubscribe and List-Unsubscribe-Post pair of RFC 8058 for an HTTPS unsubscribe URL that turns the subscription off when posted List-Unsubscribe=One-Click: mail clients then offer their own unsubscribe button. Nil without a URL.
+func OneClickUnsubscribe(url string) map[string]string {
+	if url == "" {
+		return nil
+	}
+	return map[string]string{"List-Unsubscribe": "<" + url + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
 }
 
 // Transport delivers a message. The SMTP transport is the production one; mailertest.Transport captures messages for tests.

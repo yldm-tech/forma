@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Fails when a browser bundle every respondent downloads grows past its committed gzip budget.
 //
-// Three files are in scope, and only three: `surveys.umd.cjs` (the survey runtime), `forma.umd.cjs` (the embed SDK) and `embed.js` (the embed script that frames link surveys). They are the whole of what a person answering a survey on a customer's site pays for, the builds of packages/surveys, packages/js-core and packages/embed copy them into `apps/web/public/js/` (the Go server embeds and serves them at `/js/*`), and nothing else watches them: a dependency added three packages away could double the runtime and no check would say so. The SPA's own chunks are out of scope: their names are Rolldown's, so a budget on them would break on a bundler upgrade rather than on a regression.
+// Three files are in scope: `surveys.umd.cjs` (the survey runtime), `forma.umd.cjs` (the embed SDK) and `embed.js` (the embed script that frames link surveys). They are the whole of what a person answering a survey on a customer's site pays for, the builds of packages/surveys, packages/js-core and packages/embed copy them into `apps/web/public/js/` (the Go server embeds and serves them at `/js/*`), and nothing else watches them: a dependency added three packages away could double the runtime and no check would say so.
+//
+// So is one page: the public survey page (/s, /c and /p), whose own bundle a respondent of a link survey downloads beside the runtime. Its chunks are named by Rolldown, so a budget on any one of them would break on a bundler upgrade rather than on a regression; the budget is on the page instead, every script, module preload and stylesheet the built `apps/web/dist/survey.html` loads before its first screen, each gzipped on its own as it is served. The rest of the admin SPA is out of scope.
 //
 // Runs in CI after the build (the TypeScript workspace job in `.github/workflows/pr.yml`), not as part of `pnpm check`: the artifacts exist only after `pnpm build`, and a check on a clean checkout would report both as missing.
 //
@@ -28,8 +30,8 @@ export const GZIP_LEVEL = 9;
 export const BUDGETS = [
   {
     path: "apps/web/public/js/surveys.umd.cjs",
-    maxGzipBytes: 260_400,
-    measuredBytes: 248_033, // 2026-10-25, after the 24 non-English locales moved out of the bundle into /js/surveys-locales/
+    maxGzipBytes: 234_800,
+    measuredBytes: 223_579, // 2026-10-27, after zod left the runtime (the values it read moved into zod-free modules of @forma/types); main measured 250_771 just before
     builtBy: "pnpm --filter @forma/surveys build",
   },
   {
@@ -44,7 +46,32 @@ export const BUDGETS = [
     measuredBytes: 3_006, // 2026-10-26, when the embed script was added (standard, popup, slider and side tab)
     builtBy: "pnpm --filter @forma/embed build",
   },
+  {
+    path: "apps/web/dist/survey.html",
+    page: true,
+    maxGzipBytes: 161_700,
+    measuredBytes: 154_015, // 2026-10-27, when the page got its budget, after zod's schemas left it; main measured about 180_300 just before
+    builtBy: "pnpm --filter @forma/web build",
+  },
 ];
+
+// The path the SPA build is served under (APP_BASE_PATH in apps/web/src/lib/base-path.ts); the built HTML names its assets below it.
+const APP_BASE = "/app/";
+
+const TAG = /<(script|link)\b([^>]*)>/g;
+const ATTRIBUTE = /\b(rel|src|href)="([^"]*)"/g;
+
+/** The asset URLs a built page loads before its first screen: its scripts, module preloads and stylesheets, by the URL the build wrote. Lazy chunks (another screen's, a language's catalogue) are not in the HTML and are not counted. */
+export const pageAssets = (html) =>
+  [...html.matchAll(TAG)].flatMap(([, tag, attributeText]) => {
+    const attributes = Object.fromEntries(
+      [...attributeText.matchAll(ATTRIBUTE)].map(([, name, value]) => [name, value])
+    );
+    if (tag === "script") return attributes.src ? [attributes.src] : [];
+    return ["modulepreload", "stylesheet"].includes(attributes.rel) && attributes.href
+      ? [attributes.href]
+      : [];
+  });
 
 /** Gzipped size of a file in bytes, or null when the file is not there. */
 export const measureGzipBytes = (relativePath, root = REPO_ROOT) => {
@@ -54,15 +81,36 @@ export const measureGzipBytes = (relativePath, root = REPO_ROOT) => {
 };
 
 /**
- * Compare every budget against a measurement. `measure` returns the gzipped size, or null when the
- * artifact is absent — which is a `missing` result, never an implicit pass.
+ * Gzipped size of a built page: the sum of its up-front assets (pageAssets), each gzipped on its own as the server sends it, or null when the page or any of its assets is not there. An asset outside the SPA's base path is a failure too: the budget would no longer know what it weighs.
+ */
+export const measurePageGzipBytes = (relativePath, root = REPO_ROOT) => {
+  const absolute = join(root, relativePath);
+  if (!existsSync(absolute)) return null;
+  const assets = pageAssets(readFileSync(absolute, "utf8"));
+  if (assets.length === 0) return null;
+  let total = 0;
+  for (const url of assets) {
+    if (!url.startsWith(APP_BASE)) return null;
+    const bytes = measureGzipBytes(join(dirname(relativePath), url.slice(APP_BASE.length)), root);
+    if (bytes === null) return null;
+    total += bytes;
+  }
+  return total;
+};
+
+/** The measurement a budget entry takes: a page's or a file's. */
+export const measureBudget = (budget, root = REPO_ROOT) =>
+  budget.page ? measurePageGzipBytes(budget.path, root) : measureGzipBytes(budget.path, root);
+
+/**
+ * Compare every budget against a measurement. `measure(path, budget)` returns the gzipped size, or null when the artifact is absent — which is a `missing` result, never an implicit pass.
  */
 export const evaluateBudgets = (budgets, measure) => {
   if (budgets.length === 0) {
     throw new Error("check-bundle-budget has no budgets to check — refusing to report success.");
   }
   return budgets.map((budget) => {
-    const gzipBytes = measure(budget.path);
+    const gzipBytes = measure(budget.path, budget);
     if (gzipBytes === null) return { ...budget, gzipBytes: null, status: "missing" };
     return { ...budget, gzipBytes, status: gzipBytes > budget.maxGzipBytes ? "over" : "ok" };
   });
@@ -84,7 +132,7 @@ export const formatResult = (result) => {
 };
 
 const main = () => {
-  const results = evaluateBudgets(BUDGETS, (path) => measureGzipBytes(path));
+  const results = evaluateBudgets(BUDGETS, (_path, budget) => measureBudget(budget));
   for (const result of results) console.log(formatResult(result));
 
   const missing = results.filter((r) => r.status === "missing");
@@ -117,8 +165,10 @@ const main = () => {
     console.error(
       `  grew before raising the budget: \`ANALYZE=true pnpm --filter @forma/surveys build\` writes`
     );
-    console.error(`  packages/surveys/stats.html. A new top-level import of a locale table, a validation`);
-    console.error(`  library or a Node-only parser is the usual cause.`);
+    console.error(`  packages/surveys/stats.html for the runtime, and the survey page's chunks carry source`);
+    console.error(`  maps (apps/web/dist/assets/*.js.map) that name every module in them. A new top-level`);
+    console.error(`  import of a locale table, a validation library (zod: import the zod-free modules of`);
+    console.error(`  @forma/types, such as card-layout.ts) or a Node-only parser is the usual cause.`);
     console.error(
       `\n  If the growth is intended, re-baseline BUDGETS in tooling/scripts/check-bundle-budget.mjs and`
     );

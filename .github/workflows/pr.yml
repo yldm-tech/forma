@@ -240,7 +240,7 @@ jobs:
       - name: Verify the TanStack Router route tree is committed
         run: git diff --exit-code -- apps/web/src/routeTree.gen.ts
 
-      # The two bundles every respondent downloads, weighed right after the build that produced them (tooling/scripts/check-bundle-budget.mjs).
+      # The bundles and the survey page every respondent downloads, weighed right after the build that produced them (tooling/scripts/check-bundle-budget.mjs).
       - name: Check the SDK bundle budgets
         run: vp run bundle:check
 

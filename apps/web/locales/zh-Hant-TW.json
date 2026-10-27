@@ -1,4 +1,14 @@
 {
+  "account": {
+    "unsubscribe_page": {
+      "confirm_alert": "不再接收{survey}的新回應郵件？",
+      "confirm_auto_subscribe": "{organization}中的新問卷不再自動寄送回應郵件給您？",
+      "confirm_weekly_summary": "不再接收{organization}的每週摘要？",
+      "invalid_link": "此取消訂閱連結無效",
+      "invalid_link_description": "請從郵件中複製完整連結，或登入後變更通知設定。",
+      "link_no_longer_applies_description": "連結中的問卷或組織已不在您的通知設定中。"
+    }
+  },
   "auth": {
     "continue_with_azure": "繼續使用 Microsoft",
     "continue_with_email": "使用電子郵件繼續",
