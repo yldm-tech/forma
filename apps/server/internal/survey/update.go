@@ -15,6 +15,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/recipient"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
 )
 
@@ -263,6 +264,13 @@ func (s *Service) update(ctx context.Context, current *Survey, in *UpdateInput, 
 		}
 		parsed = doc
 	}
+	recipientIssues, err := s.recipientIssues(ctx, current.WorkspaceID, current.FollowUps, in.FollowUps)
+	if err != nil {
+		return nil, err
+	}
+	if len(recipientIssues) > 0 {
+		return nil, ValidationError(recipientIssues)
+	}
 
 	incoming, err := declared(in.Variables, in.HiddenFields)
 	if err != nil {
@@ -494,6 +502,51 @@ func followUpWrites(in []surveydoc.FollowUpInput) ([]followUpWrite, error) {
 		out = append(out, followUpWrite{ID: id, Name: f.Name, Trigger: f.Trigger, Action: f.Action, Deleted: f.Deleted})
 	}
 	return out, nil
+}
+
+// followUpRecipient is the `to` of a follow-up's action, empty when the action has none or is malformed, which the document rules report.
+func followUpRecipient(action json.RawMessage) string {
+	var a struct {
+		Properties struct {
+			To string `json:"to"`
+		} `json:"properties"`
+	}
+	if json.Unmarshal(action, &a) != nil {
+		return ""
+	}
+	return a.Properties.To
+}
+
+// recipientIssues refuses a save whose follow-ups address, by literal address, someone who cannot access the workspace, the rule of a workflow's send_email step (package recipient); forma2 accepted any address. Only a follow-up that is new to stored, or whose recipient changed, is checked, so a survey that still holds a recipient forma2 accepted can be saved; its follow-up is not sent.
+func (s *Service) recipientIssues(ctx context.Context, workspaceID uuid.UUID, stored []FollowUp, in []surveydoc.FollowUpInput) ([]surveydoc.Issue, error) {
+	before := make(map[uuid.UUID]string, len(stored))
+	for _, f := range stored {
+		before[f.ID] = followUpRecipient(f.Action)
+	}
+	var issues []surveydoc.Issue
+	var allowed map[string]bool
+	index := 0
+	for _, f := range in {
+		if f.Deleted {
+			continue
+		}
+		index++
+		to := followUpRecipient(f.Action)
+		id, _ := uuid.Parse(f.ID)
+		if was, ok := before[id]; !recipient.IsLiteral(to) || ok && was == to {
+			continue
+		}
+		if allowed == nil {
+			var err error
+			if allowed, err = recipient.Allowlist(ctx, s.repo.db, workspaceID); err != nil {
+				return nil, err
+			}
+		}
+		if !allowed[recipient.Normalize(to)] {
+			issues = append(issues, surveydoc.Issue{Path: []any{"followUps"}, Message: fmt.Sprintf("The action in follow up %d sends to %s, who cannot access this workspace. A follow-up may only address someone with access to this workspace or a respondent field.", index, to)})
+		}
+	}
+	return issues, nil
 }
 
 // stripIsDraft is forma2's stripIsDraftFromBlocks: the editor's draft marker on elements is never stored.

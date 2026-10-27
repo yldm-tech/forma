@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -26,10 +27,11 @@ type env struct {
 	db     *gorm.DB
 	mail   *mailertest.Transport
 	sender *Sender
+	org    uuid.UUID
 	survey uuid.UUID
 }
 
-// newEnv is a sender on a fresh database with a survey of one email question, a mail transport that records (nil for an instance without SMTP), and the real follow-up limit.
+// newEnv is a sender on a fresh database with a survey of one email question, a mail transport that records (nil for an instance without SMTP), the real follow-up limit, and teammate@example.com and other@example.com as managers of the survey's organization.
 func newEnv(t *testing.T, smtp bool) *env {
 	t.Helper()
 	app, _ := url.Parse("https://app.example.com")
@@ -50,10 +52,23 @@ func newEnv(t *testing.T, smtp bool) *env {
 	limiter := ratelimit.New(cfg, valkeytest.Client(t), log).WithClock(func() time.Time { return frozen })
 	e.sender = NewSender(cfg, db, m, limiter, log)
 	org := e.insert(`INSERT INTO organizations (name) VALUES ('Acme') RETURNING id`)
+	e.org = org
 	ws := e.insert(`INSERT INTO workspaces (organization_id, name) VALUES (?, 'Main') RETURNING id`, org)
+	e.member("teammate@example.com", "manager")
+	e.member("other@example.com", "manager")
 	e.survey = e.insert(`INSERT INTO surveys (workspace_id, name, blocks) VALUES (?, 'Feedback', ?::jsonb) RETURNING id`, ws,
 		`[{"id":"b1","name":"B","elements":[{"id":"email","type":"openText","headline":{"default":"Email"},"required":false,"inputType":"email"},{"id":"contact","type":"contactInfo","headline":{"default":"Contact"},"required":false}]}]`)
 	return e
+}
+
+// member adds a user with email to the survey's organization in role; an owner or manager can access every workspace of it.
+func (e *env) member(email, role string) uuid.UUID {
+	e.t.Helper()
+	user := e.insert(`INSERT INTO users (name, email) VALUES ('Teammate', ?) RETURNING id`, email)
+	if err := e.db.Exec(`INSERT INTO memberships (user_id, organization_id, role, accepted) VALUES (?, ?, ?, true)`, user, e.org, role).Error; err != nil {
+		e.t.Fatal(err)
+	}
+	return user
 }
 
 func (e *env) insert(query string, args ...any) uuid.UUID {
@@ -177,6 +192,49 @@ func TestSendFailures(t *testing.T) {
 	none := newEnv(t, true)
 	if results, err := none.sender.Send(context.Background(), none.respond(`{}`, nil), ""); err != nil || len(results) != 0 {
 		t.Errorf("no follow-ups = %+v, %v", results, err)
+	}
+}
+
+// A literal recipient must be able to access the survey's workspace, as a workflow's send_email recipient must: an outside address, an organization member without access to the workspace, and a manager who was suspended get nothing, while respondent fields still resolve to any address. Matching ignores case and surrounding spaces.
+func TestSendOnlyToWorkspaceMembers(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t, true)
+	body := `"<p>Hi</p>"`
+	outside := e.followUp("outsider@elsewhere.example", nil, body)
+	e.member("plain@example.com", "member")
+	noAccess := e.followUp("plain@example.com", nil, body)
+	suspended := e.member("gone@example.com", "manager")
+	if err := e.db.Exec(`UPDATE memberships SET suspended_at = now() WHERE user_id = ?`, suspended).Error; err != nil {
+		t.Fatal(err)
+	}
+	gone := e.followUp("gone@example.com", nil, body)
+	teammate := e.followUp("Teammate@Example.com", nil, body)
+	respondent := e.followUp("email", nil, body)
+	r := e.respond(`{"email":"jane@elsewhere.example"}`, nil)
+
+	results, err := e.sender.Send(context.Background(), r, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := byID(results)
+	for id, want := range map[uuid.UUID]Result{
+		outside:    {Status: StatusError, Error: "Recipient outsider@elsewhere.example cannot access this workspace"},
+		noAccess:   {Status: StatusError, Error: "Recipient plain@example.com cannot access this workspace"},
+		gone:       {Status: StatusError, Error: "Recipient gone@example.com cannot access this workspace"},
+		teammate:   {Status: StatusSuccess},
+		respondent: {Status: StatusSuccess},
+	} {
+		if res := got[id.String()]; res.Status != want.Status || res.Error != want.Error {
+			t.Errorf("follow-up %s = %+v, want %+v", id, res, want)
+		}
+	}
+	var to []string
+	for _, m := range e.mail.Messages() {
+		to = append(to, m.To)
+	}
+	slices.Sort(to)
+	if !slices.Equal(to, []string{"Teammate@Example.com", "jane@elsewhere.example"}) {
+		t.Errorf("sent to %v", to)
 	}
 }
 
