@@ -11,6 +11,12 @@ let i18n: I18n;
 
 beforeAll(async () => {
   i18n = await initI18n("en-US");
+  // The spam protection threshold is a Radix slider, which measures its thumb; jsdom lays nothing out.
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 });
 
 afterEach(() => {
@@ -39,7 +45,13 @@ const survey = (overrides: Partial<TSurvey> = {}): TSurvey =>
   }) as unknown as TSurvey;
 
 /** The card with the survey it edits held in state; the stored setting is printed beside it. */
-const Harness = ({ initial }: { initial: TSurvey }) => {
+const Harness = ({
+  initial,
+  spamProtectionAllowed,
+}: {
+  initial: TSurvey;
+  spamProtectionAllowed: boolean;
+}) => {
   const [localSurvey, setLocalSurvey] = useState(initial);
   return (
     <>
@@ -47,7 +59,7 @@ const Harness = ({ initial }: { initial: TSurvey }) => {
         localSurvey={localSurvey}
         setLocalSurvey={setLocalSurvey}
         finishedResponseCount={0}
-        isSpamProtectionAllowed={false}
+        isSpamProtectionAllowed={spamProtectionAllowed}
         surveySchedulingConfig={{ timeZone: "UTC", localHour: 0, localMinute: 0 }}
         locale="en-US"
       />
@@ -56,14 +68,15 @@ const Harness = ({ initial }: { initial: TSurvey }) => {
       <output data-testid="perEmail">{String(localSurvey.isSingleResponsePerEmailEnabled)}</output>
       <output data-testid="publishOn">{localSurvey.publishOn?.toISOString() ?? ""}</output>
       <output data-testid="closeOn">{localSurvey.closeOn?.toISOString() ?? ""}</output>
+      <output data-testid="recaptcha">{JSON.stringify(localSurvey.recaptcha)}</output>
     </>
   );
 };
 
-const renderCard = (initial: TSurvey) =>
+const renderCard = (initial: TSurvey, spamProtectionAllowed = false) =>
   render(
     <I18nextProvider i18n={i18n}>
-      <Harness initial={initial} />
+      <Harness initial={initial} spamProtectionAllowed={spamProtectionAllowed} />
     </I18nextProvider>
   );
 
@@ -189,5 +202,42 @@ describe("publish and close times", () => {
     expect(
       screen.getByText("The survey is closed on the selected date and time in the UTC time zone")
     ).toBeTruthy();
+  });
+});
+
+const spamSwitch = () => screen.getByRole("switch", { name: /^Spam protection/ });
+const storedRecaptcha = () => screen.getByTestId("recaptcha").textContent;
+
+describe("spam protection", () => {
+  test("is not offered when the instance has no reCAPTCHA keys", () => {
+    renderCard(survey());
+    expect(screen.queryByRole("switch", { name: /^Spam protection/ })).toBeNull();
+  });
+
+  test("turns on and off when the instance has reCAPTCHA keys, with translated slider labels", () => {
+    renderCard(survey(), true);
+    fireEvent.click(spamSwitch());
+    expect(storedRecaptcha()).toBe(JSON.stringify({ enabled: true, threshold: 0.1 }));
+    expect(screen.getByText(i18n.t("workspace.surveys.edit.spam_protection_lenient"))).toBeTruthy();
+    expect(screen.getByText(i18n.t("workspace.surveys.edit.spam_protection_strict"))).toBeTruthy();
+    expect(
+      screen.getByText(i18n.t("workspace.surveys.edit.spam_protection_threshold_range_description"))
+    ).toBeTruthy();
+    expect(screen.getByText(i18n.t("workspace.surveys.edit.spam_protection_web_note"))).toBeTruthy();
+
+    fireEvent.click(spamSwitch());
+    expect(storedRecaptcha()).toBe(JSON.stringify({ enabled: false, threshold: 0.1 }));
+  });
+
+  // A survey saved with it on while the instance had keys: the server refuses to save it on once the keys are gone, so the editor must still let it be turned off.
+  test("a survey saved with it on stays switchable off after the instance loses its keys", () => {
+    renderCard(survey({ recaptcha: { enabled: true, threshold: 0.5 } } as Partial<TSurvey>));
+    expect(spamSwitch().getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText(i18n.t("workspace.surveys.edit.spam_protection_unavailable"))).toBeTruthy();
+
+    fireEvent.click(spamSwitch());
+    expect(storedRecaptcha()).toBe(JSON.stringify({ enabled: false, threshold: 0.1 }));
+    // It cannot be turned back on without keys, so the switch goes away.
+    expect(screen.queryByRole("switch", { name: /^Spam protection/ })).toBeNull();
   });
 });

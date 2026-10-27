@@ -2197,7 +2197,7 @@ checksums:
     workspace/app-connection/loader_wordpress_description: 640062dffce7231151d9fdb299afb41b
     workspace/app-connection/receiving_data: 9f2a48c0b0278861add70b526061264c
     workspace/app-connection/recheck: f95f2bbe6990a123d60255c87bdd59f7
-    workspace/app-connection/staging_workspace_description: 1ba5124e3ee0f4a15c154110ce0bd391
+    workspace/app-connection/staging_workspace_description: 729c057229e6312b505fcc0fd7fdb82a
     workspace/app-connection/staging_workspace_title: ad57e7198f7bd9f5f8768638a48b95f4
     workspace/app-connection/webapp_url: d64d8cc3c4c4ecce780d94755f7e4de9
     workspace/app-connection/workspace_details: 92b9d4c1844951bdc9835571311c753e
@@ -3864,9 +3864,14 @@ checksums:
     workspace/surveys/edit/slider_step_must_divide_range: 51473416dce6da11c5529c64556b3625
     workspace/surveys/edit/slider_too_many_steps: fea89932ab82f8c2f23ecdfe9c92cf1e
     workspace/surveys/edit/smiley: e68e3b28fc3c04255e236c6a0feb662b
+    workspace/surveys/edit/spam_protection_lenient: 79807f186c16f8dd2eaadbcee3e677e6
     workspace/surveys/edit/spam_protection_note: 94059310d07c30f6704e216297036d05
+    workspace/surveys/edit/spam_protection_strict: 29da483cde561e8502db87a3620c1016
     workspace/surveys/edit/spam_protection_threshold_description: ed8b8c9c583077a88bf5dd3ec8b59e60
     workspace/surveys/edit/spam_protection_threshold_heading: 29f9a8b00c5bcbb43aedc48138a5cf9c
+    workspace/surveys/edit/spam_protection_threshold_range_description: ae060422d1a21f7af27b3872dc6ac1c2
+    workspace/surveys/edit/spam_protection_unavailable: 4fb4ba9719132d273cc127c7ee1b60a4
+    workspace/surveys/edit/spam_protection_web_note: 70ad0283622877bb3aa16f2cbfc22df9
     workspace/surveys/edit/star: 0586c1c76e8a0367c0a7b93adf598cb7
     workspace/surveys/edit/starts_with: f6673c17475708313c6a0f245b561781
     workspace/surveys/edit/state: 118de561d4525b14f9bb29ac9e86161d
