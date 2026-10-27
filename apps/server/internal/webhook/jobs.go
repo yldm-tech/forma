@@ -36,8 +36,9 @@ var retrySchedule = []time.Duration{5 * time.Second, 5 * time.Minute, 30 * time.
 // deliveryAttempts is the first attempt and every retry of retrySchedule.
 var deliveryAttempts = len(retrySchedule) + 1
 
+// InsertOpts puts deliveries on the webhooks queue, so a slow endpoint takes the slots of other deliveries and workflow runs, not those of the response pipeline, emails or authorization.
 func (DeliverArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{MaxAttempts: deliveryAttempts, UniqueOpts: river.UniqueOpts{ByArgs: true}}
+	return river.InsertOpts{Queue: jobs.QueueWebhooks, MaxAttempts: deliveryAttempts, UniqueOpts: river.UniqueOpts{ByArgs: true}}
 }
 
 // Enqueue queues the delivery of event to each of hooks inside tx. jobKey is the pipeline job's key, responseID the response the event is about and data the event's encoded data.

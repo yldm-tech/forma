@@ -161,6 +161,84 @@ func (w *recordWorker) Work(ctx context.Context, job *river.Job[recordArgs]) err
 	return nil
 }
 
+type holdArgs struct{}
+
+func (holdArgs) Kind() string { return "test.hold" }
+
+// holdWorker keeps every job it takes running until release is closed, as a slow webhook endpoint or a long sweep does.
+type holdWorker struct {
+	river.WorkerDefaults[holdArgs]
+	release chan struct{}
+}
+
+func (w *holdWorker) Work(ctx context.Context, _ *river.Job[holdArgs]) error {
+	select {
+	case <-w.release:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func insertOn(t *testing.T, pool *pgxpool.Pool, args river.JobArgs, queue string) int64 {
+	t.Helper()
+	inserter, err := jobs.NewInserter(pool, discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := inserter.Insert(context.Background(), args, &river.InsertOpts{Queue: queue})
+	if err != nil {
+		t.Fatalf("insert %s on %s: %v", args.Kind(), queue, err)
+	}
+	return res.Job.ID
+}
+
+// Each queue has slots of its own: jobs that hold every slot of one queue, a backlog behind them included, delay nothing queued on another. WORKER_CONCURRENCY sizes the default and the webhooks queue each; the authz queue has two slots, one for each of its periodic singletons, and the ai queue two.
+func TestEachQueueHasSlotsOfItsOwn(t *testing.T) {
+	cfg := testConfig(pgtest.DSN(t))
+	pool := openPool(t, cfg)
+	reg := jobs.NewRegistry(discard)
+	hold := &holdWorker{release: make(chan struct{})}
+	jobs.Add(reg, hold)
+	startWorker(t, cfg, pool, reg)
+	// Deferred calls run before the worker's cleanup, so the held jobs finish before it stops.
+	defer close(hold.release)
+
+	count := func(state string) (n int) {
+		if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM river_job WHERE kind = 'test.hold' AND state = $1", state).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	fill := func(queue string, slots int) {
+		t.Helper()
+		before := count("running")
+		for range slots + 1 {
+			insertOn(t, pool, holdArgs{}, queue)
+		}
+		waitFor(t, "the "+queue+" queue's slots to fill", func() bool { return count("running") == before+slots })
+	}
+	works := func(queue string) {
+		t.Helper()
+		id := insertOn(t, pool, jobs.TestLogArgs{Message: "on " + queue}, queue)
+		waitFor(t, "the "+queue+" job to complete behind the other queues' backlog", func() bool { return jobState(t, pool, id) == "completed" })
+	}
+
+	fill(jobs.QueueWebhooks, cfg.WorkerConcurrency)
+	works(jobs.QueueDefault)
+	works(jobs.QueueAuthz)
+	fill(jobs.QueueDefault, cfg.WorkerConcurrency)
+	works(jobs.QueueAuthz)
+	works(jobs.QueueAI)
+	fill(jobs.QueueAuthz, 2)
+	works(jobs.QueueAI)
+	fill(jobs.QueueAI, 2)
+	// Every queue is now full and has one job waiting beyond its slots: none of them took another queue's slot.
+	if n := count("available"); n != 4 {
+		t.Fatalf("%d held jobs wait for a slot, want one on each of the four queues", n)
+	}
+}
+
 func TestRegistryRunsModuleWorkersAndPeriodicJobs(t *testing.T) {
 	cfg := testConfig(pgtest.DSN(t))
 	pool := openPool(t, cfg)

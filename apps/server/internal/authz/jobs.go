@@ -58,10 +58,13 @@ func (w *auditWorker) Work(ctx context.Context, _ *river.Job[AuditArgs]) error {
 	return w.audit.Run(ctx)
 }
 
-// singleton keeps one pending or running instance of a periodic job, so a slow run is not stacked behind more of itself.
+// singleton keeps one pending or running instance of a periodic job, so a slow run is not stacked behind more of itself. Both run on the authz queue, where a backlog of responses, emails or slow webhooks cannot hold back the delivery the freshness guard waits on.
+//
+// Uniqueness is per queue. Without ByQueue, River's unique key leaves the queue out, so the one instance allowed would be shared with a release from before the split, which queues these jobs on default and works only default. After a rollback to such a release, a job this release left waiting on authz (the leader queues a delivery every five seconds, and a stopping worker does not drain jobs it has not fetched) would skip every insert of the earlier release for good: delivery would stop, and the next revocation would fail every authorization check once the freshness window passed. Per queue, the leftover only waits; in the other direction, a job the earlier release left on default does not hold back the first one queued on authz. While both releases run during a rollout, a delivery on each queue can overlap; Drain claims with leases and SKIP LOCKED, so the two take disjoint events.
 var singleton = &river.InsertOpts{
+	Queue:       jobs.QueueAuthz,
 	MaxAttempts: 1,
-	UniqueOpts: river.UniqueOpts{ByState: []rivertype.JobState{
+	UniqueOpts: river.UniqueOpts{ByQueue: true, ByState: []rivertype.JobState{
 		rivertype.JobStateAvailable, rivertype.JobStatePending, rivertype.JobStateRunning, rivertype.JobStateRetryable, rivertype.JobStateScheduled,
 	}},
 }
