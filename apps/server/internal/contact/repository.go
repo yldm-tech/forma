@@ -582,6 +582,18 @@ func (r *Repository) linkSurveys(ctx context.Context, segmentID, workspaceID uui
 	return nil
 }
 
+// segmentResultShares lists the workspace's results links whose frozen filter names the segment, by survey name and then newest first.
+func (r *Repository) segmentResultShares(ctx context.Context, workspaceID, segmentID uuid.UUID) ([]SegmentResultShare, error) {
+	out := []SegmentResultShare{}
+	if err := r.db.WithContext(ctx).Raw(`SELECT rs.id, rs.name, s.id AS survey_id, s.name AS survey_name
+		FROM survey_result_shares rs JOIN surveys s ON s.id = rs.survey_id
+		WHERE s.workspace_id = ? AND rs.filter_criteria -> 'segments' -> ? IS NOT NULL
+		ORDER BY s.name, rs.created_at DESC, rs.id`, workspaceID, segmentID.String()).Scan(&out).Error; err != nil {
+		return nil, fmt.Errorf("read segment result shares: %w", err)
+	}
+	return out, nil
+}
+
 func (r *Repository) deleteSegment(ctx context.Context, id uuid.UUID) error {
 	if err := r.db.WithContext(ctx).Exec(`DELETE FROM segments WHERE id = ?`, id).Error; err != nil {
 		return fmt.Errorf("delete segment: %w", err)

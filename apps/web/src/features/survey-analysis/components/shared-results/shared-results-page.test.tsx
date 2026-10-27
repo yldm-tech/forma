@@ -58,7 +58,7 @@ const elements = {
 };
 
 const sharedResults = {
-  link: { name: "Board", expiresAt: null, filtered: true },
+  link: { name: "Board", expiresAt: null, filtered: true, segmentMissing: false },
   survey: {
     id: "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0e",
     name: "CSAT 2026",
@@ -176,6 +176,7 @@ describe("SharedResultsPage", () => {
     expect(await screen.findByRole("heading", { name: "CSAT 2026" })).toBeTruthy();
     expect(screen.getByText("Board")).toBeTruthy();
     expect(screen.getByText("Filtered view")).toBeTruthy();
+    expect(screen.queryByText(/segment that no longer exists/)).toBeNull();
     expect(calls[0]).toEqual({ path: "/api/app/shared-results/summary", body: { token: TOKEN } });
 
     // The revealed answers are listed without a user column.
@@ -205,6 +206,17 @@ describe("SharedResultsPage", () => {
       token: TOKEN,
     });
     expect(screen.queryByRole("button", { name: "Download trend" })).toBeNull();
+  });
+
+  test("a link whose segment was deleted says its results may not be the ones shared", async () => {
+    stubLink(() => json({ ...sharedResults, link: { ...sharedResults.link, segmentMissing: true } }));
+    await renderPage(TOKEN);
+    expect(await screen.findByRole("heading", { name: "CSAT 2026" })).toBeTruthy();
+    expect(
+      screen.getByText(
+        "This link filters by a segment that no longer exists, so these results may not be the ones that were shared."
+      )
+    ).toBeTruthy();
   });
 
   test("a link that expired, was revoked or never existed says so", async () => {

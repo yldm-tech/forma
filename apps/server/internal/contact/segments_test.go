@@ -3,6 +3,7 @@ package contact
 import (
 	"encoding/json"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -170,6 +171,40 @@ func TestDeleteSegment(t *testing.T) {
 		if e.count(`SELECT count(*) FROM segments WHERE id = ?`, id) != 0 {
 			t.Fatal("not deleted")
 		}
+	}
+}
+
+// Deleting a segment is not refused for the results links whose frozen filter names it, but the people who may delete it can list them first, so the dialog can say which links stop showing what they were created for.
+func TestSegmentResultSharesListTheLinksFilteringByIt(t *testing.T) {
+	e := newEnv(t)
+	owner, reader := e.user(), e.user()
+	org, ws := e.organization(owner)
+	e.grant(org, ws, reader)
+	seg, other := e.segmentRow(ws, "Pro", false, `[]`), e.segmentRow(ws, "Free", false, `[]`)
+	alpha := e.insert(`INSERT INTO surveys (workspace_id, name, status) VALUES (?, 'Alpha', 'inProgress') RETURNING id`, ws)
+	beta := e.insert(`INSERT INTO surveys (workspace_id, name, status) VALUES (?, 'Beta', 'completed') RETURNING id`, ws)
+	link := func(survey uuid.UUID, name, criteria string) uuid.UUID {
+		return e.insert(`INSERT INTO survey_result_shares (survey_id, share_key, name, filter_criteria) VALUES (?, ?, ?, ?::jsonb) RETURNING id`,
+			survey, strings.Repeat(string(name[0]), 43), name, criteria)
+	}
+	board := link(beta, "Board", `{"segments":{"`+seg.String()+`":{"op":"userIsNotIn"}}}`)
+	team := link(alpha, "Team", `{"finished":true,"segments":{"`+seg.String()+`":{"op":"userIsIn"},"`+other.String()+`":{"op":"userIsIn"}}}`)
+	link(alpha, "Everyone", `{}`)
+	link(alpha, "Free", `{"segments":{"`+other.String()+`":{"op":"userIsIn"}}}`)
+
+	var got []SegmentResultShare
+	e.ok(e.do(owner, http.MethodGet, segmentPath(seg, "/result-shares"), nil), http.StatusOK, &got)
+	want := []SegmentResultShare{{ID: team, Name: "Team", SurveyID: alpha, SurveyName: "Alpha"}, {ID: board, Name: "Board", SurveyID: beta, SurveyName: "Beta"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("links %+v, want %+v", got, want)
+	}
+	e.fails(e.do(reader, http.MethodGet, segmentPath(seg, "/result-shares"), nil), http.StatusForbidden, "forbidden", "")
+	e.fails(e.do(owner, http.MethodGet, segmentPath(uuid.New(), "/result-shares"), nil), http.StatusNotFound, "not_found", "")
+
+	// The links stay when the segment goes.
+	e.ok(e.do(owner, http.MethodDelete, segmentPath(seg, ""), nil), http.StatusOK, nil)
+	if n := e.count(`SELECT count(*) FROM survey_result_shares WHERE id IN (?, ?)`, board, team); n != 2 {
+		t.Errorf("%d links left", n)
 	}
 }
 
