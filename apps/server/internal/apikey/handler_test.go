@@ -17,6 +17,9 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	if os.Getenv(farZoneEnv) != "" {
+		time.Local = time.FixedZone("UTC+14", 14*60*60)
+	}
 	gin.SetMode(gin.TestMode)
 	os.Exit(m.Run())
 }

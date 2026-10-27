@@ -1,0 +1,47 @@
+{
+  "case": "v1-responses-update-verified-email-own-address",
+  "description": "Update finishing a@example.com's response from a page opened with a@example.com's verification link.",
+  "request": {
+    "method": "PUT",
+    "path": "/api/v1/client/<id:workspace>/responses/<id:response:verified>",
+    "query": {},
+    "headers": {
+      "origin": "https://customer.example",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "content-type": "application/json"
+    },
+    "body": {
+      "finished": true,
+      "endingId": null,
+      "data": {},
+      "ttc": {
+        "q1": 2600,
+        "_total": 2600
+      },
+      "variables": {},
+      "language": "default",
+      "verifyToken": "<verify-token:a>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cache-Control",
+      "access-control-allow-methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+      "access-control-allow-origin": "*",
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "data": {
+        "id": "<id:response:verified>",
+        "quotaFull": false
+      }
+    }
+  }
+}

@@ -100,7 +100,7 @@ describe("prerendered pages", () => {
     }
   });
 
-  // The app's Web & Mobile SDK page links here (apps/web/src/lib/sdk-snippets.ts sdkReferenceUrl), and so does the developers page.
+  // The app's Web SDK page links here (apps/web/src/lib/sdk-snippets.ts sdkReferenceUrl), and so does the developers page.
   it("renders the SDK reference at the path the app links to, linked from the developers page", async () => {
     for (const locale of LOCALES) {
       const sdk = ROUTES.find((r) => r.locale === locale && r.page === "sdk");

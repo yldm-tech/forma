@@ -317,6 +317,61 @@ func TestRunRecipientAllowlistAndRetries(t *testing.T) {
 	}
 }
 
+// A member the organization's two-factor requirement refuses (the grace period is over, they sign in with a password and have not enrolled) is neither listed in the recipient picker nor mailed by a run, like a suspended one; an enrolled member and one who can only sign in through SSO still are.
+func TestMembersLeaveOutMembersTheOrganizationRefuses(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	password := func(user uuid.UUID) {
+		e.exec(`INSERT INTO user_identities (user_id, provider, subject, password_hash) VALUES (?, 'credential', ?, '$2a$10$hash')`, user, user.String())
+	}
+	unenrolled := e.user("unenrolled@example.com")
+	password(unenrolled)
+	enrolled := e.user("enrolled@example.com")
+	password(enrolled)
+	e.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, '\x00', '\x00', true)`, enrolled)
+	suspended := e.user("suspended@example.com")
+	for _, u := range []uuid.UUID{unenrolled, enrolled, suspended} {
+		e.member(f.org, u, "manager")
+	}
+	e.exec(`UPDATE memberships SET suspended_at = now() WHERE user_id = ?`, suspended)
+	wf := e.enabled(f, "To the unenrolled manager", definition(f.survey, "unenrolled@example.com"))
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() - interval '1 minute' WHERE id = ?`, f.org)
+
+	emails := func() []string {
+		t.Helper()
+		members, err := Members(context.Background(), e.db, f.ws)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, m := range members {
+			out = append(out, m.Email)
+		}
+		slices.Sort(out)
+		return out
+	}
+	// The fixture's owner has no sign-in method at all, which counts as SSO-only.
+	if got, want := emails(), []string{"enrolled@example.com", "owner@example.com"}; !slices.Equal(got, want) {
+		t.Errorf("after the grace period, members %v, want %v", got, want)
+	}
+	r := e.respond(f.survey, true, `{"q1":"jane@example.com"}`, nil)
+	if err := e.enqueuer.EnqueueResponseCompleted(context.Background(), e.event(f, r)); err != nil {
+		t.Fatal(err)
+	}
+	run := e.runFor(wf, r.ID)
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err == nil || err.Error() != "Recipient unenrolled@example.com cannot access this workspace" {
+		t.Fatalf("run to a refused member: %v", err)
+	}
+	if len(e.mails("unenrolled@example.com")) != 0 {
+		t.Fatalf("sent %+v", e.mail.Messages())
+	}
+	// In the grace period the requirement refuses no one yet.
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() + interval '1 day' WHERE id = ?`, f.org)
+	if got, want := emails(), []string{"enrolled@example.com", "owner@example.com", "unenrolled@example.com"}; !slices.Equal(got, want) {
+		t.Errorf("in the grace period, members %v, want %v", got, want)
+	}
+}
+
 func TestRunStepOwnership(t *testing.T) {
 	e := newEnv(t)
 	f := e.fixture()

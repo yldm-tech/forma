@@ -239,6 +239,16 @@ describe("TextSummaryPanel", () => {
     expect(screen.queryByText(/to the AI provider configured for this instance/)).toBeNull();
   });
 
+  // Decision D1: AI is on, but the organization has not allowed it to read responses.
+  test("says the organization does not allow AI to read responses, and where that is decided", async () => {
+    stubServer({ available: false, reason: "response_reading_disabled", summary: null });
+    await renderPanel(panel());
+    const button = await screen.findByRole("button", { name: "Summarize answers" });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/does not allow AI to read responses/)).toBeTruthy();
+    expect(screen.getByText(/Allow AI to read responses/)).toBeTruthy();
+  });
+
   test("a results link and a question nobody answered ask nothing", async () => {
     const requests = stubServer({ available: true, summary: null });
     await renderPanel(panel(), true);

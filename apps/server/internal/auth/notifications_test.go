@@ -197,3 +197,44 @@ func TestNotificationsWeeklySummary(t *testing.T) {
 		expectStatus(t, set(id, false), http.StatusNotFound, apperr.CodeNotFound)
 	}
 }
+
+// An organization that refuses the user, by a suspension or, once its grace period is over, by its two-factor requirement (the user signs in with a password and has not enrolled), is left off the page with its workspaces and surveys, and its switches are refused: the app refuses the user its workspaces, and its alerts and weekly summary are not sent to them.
+func TestNotificationsLeaveOutOrganizationsThatRefuseTheUser(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t)
+	f := e.seedNotifications()
+	b := e.sessionFor(f.user)
+	set := func(kind string, id uuid.UUID) response {
+		return b.patch("/auth/me/notifications", map[string]any{"type": kind, "id": id, "enabled": true})
+	}
+	ids := func() []uuid.UUID {
+		t.Helper()
+		var out []uuid.UUID
+		for _, o := range b.notifications().Organizations {
+			out = append(out, o.ID)
+		}
+		return out
+	}
+
+	// In the grace period the requirement refuses no one yet.
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() + interval '1 day' WHERE id = ?`, f.teamOrg)
+	if got := ids(); len(got) != 2 || got[0] != f.owned || got[1] != f.teamOrg {
+		t.Fatalf("in the grace period %v", got)
+	}
+
+	e.exec(`UPDATE organizations SET two_factor_enforced_at = now() - interval '1 minute' WHERE id = ?`, f.teamOrg)
+	e.exec(`UPDATE memberships SET suspended_at = now() WHERE user_id = ? AND organization_id = ?`, f.user, f.owned)
+	if got := ids(); len(got) != 0 {
+		t.Fatalf("refused organizations listed: %v", got)
+	}
+	expectStatus(t, set(notificationAlert, f.teamSurvey), http.StatusNotFound, apperr.CodeNotFound)
+	expectStatus(t, set(notificationAlert, f.ownedSurvey), http.StatusNotFound, apperr.CodeNotFound)
+	expectStatus(t, set(notificationOrganizationAutoAlert, f.teamOrg), http.StatusNotFound, apperr.CodeNotFound)
+	expectStatus(t, set(NotificationWeeklySummary, f.teamOrg), http.StatusNotFound, apperr.CodeNotFound)
+
+	// Once the user enrols, the requirement no longer refuses them.
+	e.exec(`INSERT INTO user_totp (user_id, secret_ciphertext, backup_codes_ciphertext, verified) VALUES (?, '\x00', '\x00', true)`, f.user)
+	if got := ids(); len(got) != 1 || got[0] != f.teamOrg {
+		t.Fatalf("after enrolling %v", got)
+	}
+}

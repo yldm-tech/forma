@@ -143,15 +143,16 @@ func (r *Repository) responseCount(ctx context.Context, surveyID uuid.UUID) (int
 	return n, nil
 }
 
-// existingResponse is a response's id and whether it is finished.
+// existingResponse is a response's id, whether it is finished and, for the single-use lookup, the address its email verification recorded ("" when none).
 type existingResponse struct {
-	ID       uuid.UUID
-	Finished bool
+	ID            uuid.UUID
+	Finished      bool
+	VerifiedEmail string
 }
 
-// responseBySingleUseID is forma2's getResponseBySingleUseId, never cached.
+// responseBySingleUseID is forma2's getResponseBySingleUseId, never cached, with the address the response's email verification recorded.
 func (r *Repository) responseBySingleUseID(ctx context.Context, surveyID uuid.UUID, singleUseID string) (*existingResponse, error) {
-	return r.firstResponse(ctx, `SELECT id, finished FROM responses WHERE survey_id = ? AND single_use_id = ? LIMIT 1`, surveyID, singleUseID)
+	return r.firstResponse(ctx, `SELECT id, finished, COALESCE(data->>'verifiedEmail', '') AS verified_email FROM responses WHERE survey_id = ? AND single_use_id = ? LIMIT 1`, surveyID, singleUseID)
 }
 
 // contactResponse is forma2's getExistingContactResponse, never cached.

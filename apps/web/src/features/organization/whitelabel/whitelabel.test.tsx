@@ -52,6 +52,7 @@ const organization = (
   updatedAt: "2026-01-01T00:00:00Z",
   name: "Acme",
   isAISmartToolsEnabled: false,
+  isAIResponseReadingEnabled: true,
   displayTimeZone: null,
   surveySchedulingTimeZone: null,
   surveyScheduling: {

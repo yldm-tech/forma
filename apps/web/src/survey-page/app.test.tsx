@@ -166,7 +166,7 @@ describe("SurveyPageApp", () => {
         surveyClosedMessage: null,
         workspace: { linkSurveyBranding: true },
       },
-      heading: "Survey Paused",
+      heading: "Survey paused",
       description: "This survey is temporarily paused.",
       cta: true,
       logo: true,
@@ -185,7 +185,7 @@ describe("SurveyPageApp", () => {
     },
     {
       inactive: { status: "completed", isScheduled: false, surveyClosedMessage: null, workspace: null },
-      heading: "Survey Completed",
+      heading: "Survey closed",
       description: "This survey is closed.",
       cta: true,
       logo: true,
@@ -240,6 +240,19 @@ describe("SurveyPageApp", () => {
         "This survey accepts one response per email address, and one has already been submitted with this address.",
       cta: false,
       logo: true,
+    },
+    {
+      inactive: {
+        status: "link in use",
+        isScheduled: false,
+        surveyClosedMessage: null,
+        workspace: { linkSurveyBranding: false },
+      },
+      heading: "This link is already in use",
+      description:
+        "A response to this link has already been started, and not with the email address you verified. Only the person who started it can continue.",
+      cta: false,
+      logo: false,
     },
   ] as const)(
     "inactive: $inactive.status, scheduled $inactive.isScheduled",
