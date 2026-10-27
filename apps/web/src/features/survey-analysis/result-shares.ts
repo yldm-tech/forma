@@ -29,6 +29,8 @@ export interface ResultShare {
   revealedElementIds: string[];
   expiresAt: string | null;
   creator: ResultShareCreator | null;
+  /** The segments the frozen filter names that no longer exist, or that use one that no longer exists: the link no longer shows the responses it was created for. Absent from an older server's answer. */
+  missingSegmentIds?: string[];
 }
 
 /** What a card that lists individual answers shows: an element's answers, the values typed into a choice element's Other option, or a hidden field's values. */
@@ -76,6 +78,8 @@ export interface SharedResultsLink {
   expiresAt: string | null;
   /** The link shows only the responses matching a filter. */
   filtered: boolean;
+  /** The filter names a segment that no longer exists, so the responses shown are not the ones the link was created for. */
+  segmentMissing: boolean;
 }
 
 /** POST /api/app/shared-results/summary as the page reads it: the link, the survey as the summary cards take it, the summary, and the cards whose individual answers the link does not show. */
@@ -95,6 +99,9 @@ interface SharedResultsWire {
 
 /** The error code of a key that names no link, an expired one or a revoked one. */
 export const RESULT_SHARE_NOT_FOUND = "result_share_not_found";
+
+/** The error code of a new link whose filter names a segment the workspace does not have (one deleted since the filter was set). */
+export const RESULT_SHARE_SEGMENT_NOT_FOUND = "result_share_segment_not_found";
 
 /** The address of a link: the app's /results page with the key as its token, a query parameter telemetry masks. */
 export const resultShareUrl = (origin: string, key: string) =>

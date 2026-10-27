@@ -25,6 +25,7 @@ import {
   type Segment,
   attributeKeysQuery,
   segmentContactCountsQuery,
+  segmentResultSharesQuery,
   segmentsQuery,
   useCreateSegment,
   useDeleteSegment,
@@ -457,7 +458,7 @@ const SegmentActivityTab = ({
 };
 
 /** forma2's SegmentSettings: edit the title, description and filters, or delete the segment when no survey uses it. */
-const SegmentSettings = ({
+export const SegmentSettings = ({
   workspaceId,
   segment,
   segments,
@@ -482,6 +483,14 @@ const SegmentSettings = ({
   const [filters, setFilters] = useState(segment.filters);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const usedBy = [...activity.activeSurveys, ...activity.inactiveSurveys];
+  // Results links filtering by the segment do not block deleting it; the dialog names them, since they stop showing the responses they were created for.
+  const resultShares = useQuery({
+    ...segmentResultSharesQuery(workspaceId, segment.id),
+    enabled: confirmDelete && !isReadOnly,
+  });
+  const linkedShares = resultShares.data ?? [];
+  // Deleting waits for the list, so it is never confirmed before the links it breaks are shown.
+  const checkingLinks = confirmDelete && !isReadOnly && resultShares.isPending;
 
   const save = async () => {
     if (!title) {
@@ -550,19 +559,45 @@ const SegmentSettings = ({
             <DialogTitle>{t("workspace.segments.delete_segment")}</DialogTitle>
             <DialogDescription>{t("workspace.general.this_action_cannot_be_undone")}</DialogDescription>
           </DialogHeader>
-          {usedBy.length > 0 && (
-            <DialogBody>
-              <div className="space-y-2">
-                <p>{t("workspace.segments.cannot_delete_segment_used_in_surveys")}</p>
-                <ol className="my-2 ml-4 list-decimal">
-                  {usedBy.map((name) => (
-                    <li key={name}>{name}</li>
-                  ))}
-                </ol>
-              </div>
-              <p className="mt-2">
-                {t("workspace.segments.please_remove_the_segment_from_these_surveys_in_order_to_delete_it")}
-              </p>
+          {(usedBy.length > 0 || linkedShares.length > 0 || resultShares.isError) && (
+            <DialogBody className="space-y-4">
+              {usedBy.length > 0 && (
+                <div>
+                  <div className="space-y-2">
+                    <p>{t("workspace.segments.cannot_delete_segment_used_in_surveys")}</p>
+                    <ol className="my-2 ml-4 list-decimal">
+                      {usedBy.map((name) => (
+                        <li key={name}>{name}</li>
+                      ))}
+                    </ol>
+                  </div>
+                  <p className="mt-2">
+                    {t(
+                      "workspace.segments.please_remove_the_segment_from_these_surveys_in_order_to_delete_it"
+                    )}
+                  </p>
+                </div>
+              )}
+              {linkedShares.length > 0 && (
+                <div className="space-y-2" data-testid="segment-result-shares">
+                  <p>{t("workspace.analysis.result_shares.segment_delete_links_warning")}</p>
+                  <ul className="my-2 ml-4 list-disc">
+                    {linkedShares.map((share) => (
+                      <li key={share.id}>
+                        {t("workspace.analysis.result_shares.segment_link_in_survey", {
+                          name: share.name || t("workspace.analysis.result_shares.untitled_link"),
+                          survey: share.surveyName,
+                        })}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {resultShares.isError && (
+                <p data-testid="segment-result-shares-unchecked">
+                  {t("workspace.analysis.result_shares.segment_delete_links_unchecked")}
+                </p>
+              )}
             </DialogBody>
           )}
           <DialogFooter>
@@ -571,7 +606,7 @@ const SegmentSettings = ({
             </Button>
             <Button
               variant="destructive"
-              disabled={usedBy.length > 0}
+              disabled={usedBy.length > 0 || checkingLinks}
               loading={remove.isPending}
               onClick={() => void deleteSegment()}>
               {t("common.delete")}

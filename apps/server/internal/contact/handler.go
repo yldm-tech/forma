@@ -52,6 +52,7 @@ func (h *Handler) Register(r gin.IRouter) {
 	g.GET("/segments/:segmentId", h.segment)
 	g.PATCH("/segments/:segmentId", h.updateSegment)
 	g.DELETE("/segments/:segmentId", h.deleteSegment)
+	g.GET("/segments/:segmentId/result-shares", h.segmentResultShares)
 	g.POST("/segments/:segmentId/clone", h.cloneSegment)
 	g.POST("/surveys/:surveyId/segment/reset", h.resetSegment)
 }
@@ -471,6 +472,15 @@ func (h *Handler) deleteSegment(c *gin.Context) {
 	}
 	old, err := h.svc.DeleteSegment(c.Request.Context(), userID(c), id)
 	respond(c, http.StatusOK, old, err)
+}
+
+func (h *Handler) segmentResultShares(c *gin.Context) {
+	id, ok := pathID(c, "segmentId")
+	if !ok {
+		return
+	}
+	shares, err := h.svc.SegmentResultShares(c.Request.Context(), userID(c), id)
+	respond(c, http.StatusOK, shares, err)
 }
 
 type cloneSegmentRequest struct {

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { EyeOffIcon, FilterIcon, LinkIcon } from "lucide-react";
+import { EyeOffIcon, FilterIcon, LinkIcon, TriangleAlertIcon } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Wordmark } from "../../../../components/ui/logo";
@@ -98,6 +98,12 @@ export const SharedResultsPage = ({ token }: { token: string | undefined }) => {
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2 py-1">
                   <FilterIcon className="size-3.5" aria-hidden="true" />
                   {t("workspace.analysis.result_shares.filtered_view")}
+                </span>
+              )}
+              {link.segmentMissing && (
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-amber-800">
+                  <TriangleAlertIcon className="size-3.5" aria-hidden="true" />
+                  {t("workspace.analysis.result_shares.segment_missing_notice")}
                 </span>
               )}
               {withheldIds.size > 0 && (
