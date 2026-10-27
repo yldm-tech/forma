@@ -90,7 +90,7 @@ const IntegrationCard = ({
 
 const logo = (src: string, alt: string) => <img src={src} alt={alt} className="size-8 object-contain" />;
 
-/** forma2's integrations page: the Javascript SDK, webhooks, the four OAuth integrations, and the automation platforms that subscribe webhooks through the v1 API, with how many each has and, for webhooks, how many are failing or retrying. No platform has a published Forma app yet, so their cards open a guide to sending responses to one with a webhook instead of linking to an app page that does not exist. Their status still counts only the webhooks a platform subscribed through the v1 API (their source), not the user webhook the guide creates, which the Webhooks card counts; so the guide does not claim to connect the card. Read-only members see the cards but cannot open them, except webhooks and the SDK. */
+/** forma2's integrations page: the Javascript SDK, webhooks, the four OAuth integrations, and the automation platforms that subscribe webhooks through the v1 API, with how many each has and, for webhooks, how many are failing or retrying. No platform has a published Forma app yet, so their cards open a guide to sending responses to one with a webhook instead of linking to an app page that does not exist. Their status still counts only the webhooks a platform subscribed through the v1 API (their source), not the user webhook the guide creates, which the Webhooks card counts; so the guide does not claim to connect the card. Members who cannot manage the workspace see the cards but cannot open them, except webhooks and the SDK: connecting an account and adding a webhook, which the guides lead to, are a manager's decision. */
 export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) => {
   const { t } = useTranslation();
   const integrations = useQuery(integrationsQuery(workspace.id));
@@ -110,7 +110,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
         : connectionCountText(t, count, noun),
     alert: alert.failing > 0 ? "error" : alert.retrying > 0 || alert.lost > 0 ? "warning" : undefined,
   });
-  const isReadOnly = workspace.access.isReadOnly;
+  const cannotManage = !workspace.access.canManage;
   const base = `/workspaces/${workspace.id}/integrations`;
   const [guide, setGuide] = useState<AutomationPlatform | null>(null);
   const guideButton = (platform: AutomationPlatform) => ({
@@ -147,7 +147,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       : isUnavailable(type)
         ? t("workspace.integrations.not_available_on_this_instance")
         : t("common.not_connected"),
-    disabled: isReadOnly,
+    disabled: cannotManage,
     unavailable: isUnavailable(type),
   });
 
@@ -170,7 +170,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       icon: logo(zapierLogo, "Zapier Logo"),
       connect: guideButton("zapier"),
       ...webhookStatus(counts.zapier, "zap", alerts.zapier),
-      disabled: isReadOnly,
+      disabled: cannotManage,
     },
     {
       label: "Webhooks",
@@ -207,7 +207,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       icon: logo(n8nLogo, "n8n Logo"),
       connect: guideButton("n8n"),
       ...webhookStatus(counts.n8n, "integration", alerts.n8n),
-      disabled: isReadOnly,
+      disabled: cannotManage,
     },
     {
       label: "Make.com",
@@ -215,7 +215,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       icon: logo(makeLogo, "Make Logo"),
       connect: guideButton("make"),
       ...webhookStatus(counts.make, "integration", alerts.make),
-      disabled: isReadOnly,
+      disabled: cannotManage,
     },
     oauthCard(
       "notion",
@@ -230,7 +230,7 @@ export const IntegrationsPage = ({ workspace }: { workspace: WorkspaceDetail }) 
       icon: logo(activepiecesLogo, "ActivePieces Logo"),
       connect: guideButton("activepieces"),
       ...webhookStatus(counts.activepieces, "integration", alerts.activepieces),
-      disabled: isReadOnly,
+      disabled: cannotManage,
     },
   ];
 

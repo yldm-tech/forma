@@ -247,6 +247,11 @@ func v2Query(c *gin.Context) object {
 
 // v2ResolveWorkspace is forma2's resolveBodyIdsV2, the body transform of the create routes: the workspace named by workspaceId or its alias environmentId must exist (404), be in the key's organization and allow the method's action (403 otherwise); its canonical id replaces the body's.
 func (h *Handler) v2ResolveWorkspace(c *gin.Context, body map[string]any, method string) (uuid.UUID, bool) {
+	return h.v2ResolveWorkspaceFor(c, body, authz.WorkspaceActionForMethod(method))
+}
+
+// v2ResolveWorkspaceFor is v2ResolveWorkspace for a route whose action is not the one its method maps to.
+func (h *Handler) v2ResolveWorkspaceFor(c *gin.Context, body map[string]any, action authz.Action) (uuid.UUID, bool) {
 	raw, present := body["workspaceId"]
 	if !present || raw == nil {
 		raw = body["environmentId"]
@@ -270,7 +275,7 @@ func (h *Handler) v2ResolveWorkspace(c *gin.Context, body map[string]any, method
 		v2Error(c, http.StatusForbidden, nil)
 		return uuid.Nil, false
 	}
-	allowed, err := h.authz.Can(c.Request.Context(), p.Actor(), authz.WorkspaceActionForMethod(method), authz.Workspace(ws.ID))
+	allowed, err := h.authz.Can(c.Request.Context(), p.Actor(), action, authz.Workspace(ws.ID))
 	if err != nil {
 		h.v2Unexpected(c, err)
 		return uuid.Nil, false

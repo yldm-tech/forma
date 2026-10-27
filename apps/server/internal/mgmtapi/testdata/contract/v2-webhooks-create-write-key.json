@@ -1,0 +1,40 @@
+{
+  "case": "v2-webhooks-create-write-key",
+  "description": "POST /api/v2/management/webhooks with the `write` key (write on the workspace, no organization access). Sending the workspace's responses to a URL needs `manage`, as on the settings page; forma2 accepted `write`.",
+  "request": {
+    "method": "POST",
+    "path": "/api/v2/management/webhooks",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:write>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "workspaceId": "<id:workspace>",
+      "name": "RW",
+      "url": "https://example.com/rw",
+      "source": "user",
+      "triggers": [
+        "responseFinished"
+      ],
+      "surveyIds": []
+    }
+  },
+  "response": {
+    "status": 403,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "error": {
+        "code": 403,
+        "message": "Forbidden"
+      }
+    }
+  }
+}

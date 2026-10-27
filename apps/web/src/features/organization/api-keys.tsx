@@ -431,9 +431,22 @@ const ApiKeyDisplay = ({ secret }: { secret: string }) => {
   );
 };
 
-/** Who created a key. A creator who no longer belongs to the organization, or whose account is gone, reads as a former member, so an owner can find keys left behind. A suspended creator is marked too: their keys do not work until their access is restored. */
+/** Who created a key. A creator who no longer belongs to the organization, or whose account is gone, reads as a former member, so an owner can find keys left behind. A suspended creator is marked too: their keys do not work until their access is restored; so is one whose account the instance deactivated, until it is turned back on. */
 const CreatedBy = ({ createdBy }: { createdBy: ApiKey["createdBy"] }) => {
   const { t } = useTranslation();
+  if (createdBy?.deactivated)
+    return (
+      <span className="flex flex-wrap items-center gap-1 text-sm">
+        <span>{createdBy.name}</span>
+        <Badge
+          type="gray"
+          size="tiny"
+          text={t("common.inactive")}
+          title={t("workspace.api_keys.creator_deactivated_hint")}
+        />
+        <span className="sr-only">{t("workspace.api_keys.creator_deactivated_hint")}</span>
+      </span>
+    );
   if (createdBy?.suspended)
     return (
       <span className="flex flex-wrap items-center gap-1 text-sm">

@@ -2192,6 +2192,7 @@
       "api_key_updated": "API Key updated",
       "api_reference": "API reference",
       "check_key_hint": "To check what a key can reach, put it in the FORMA_API_KEY environment variable and run the command below. The answer lists the key's organization and the workspaces it may use.",
+      "creator_deactivated_hint": "This key's creator has been deactivated on this Forma instance. The key does not work until the instance's administrator turns their account back on.",
       "delete_api_key_confirmation": "Any applications using this key will no longer be able to access your Forma data.",
       "disabled_description": "This key stopped working on {date} and can't be turned back on. Create a new key for the integrations that used it, then delete this one.",
       "disabled_reason_creator_deleted": "Its creator deleted their account.",
@@ -2403,6 +2404,11 @@
       "upload_contacts_result": "Import finished: {created} created, {updated} updated, {skipped} skipped.",
       "upload_contacts_success": "Contacts uploaded successfully",
       "upload_csv": "Upload CSV"
+    },
+    "custom_scripts_access": {
+      "managers_only": "Only organization owners and managers can change custom scripts.",
+      "requires_public_url": "Custom scripts are turned off on this instance because its survey pages are served on the admin domain, where a script could act as anyone who is signed in. Your administrator can turn them on by setting PUBLIC_URL to a separate domain for surveys.",
+      "unavailable_cloud": "Custom scripts are not available on Forma Cloud."
     },
     "forma_logo": "Forma Logo",
     "general": {
@@ -2620,6 +2626,7 @@
         "endpoint_pinged": "Yay! We are able to ping the webhook!",
         "endpoint_pinged_error": "Unable to ping the webhook!",
         "endpoint_service_unavailable_error": "Service Unavailable (503): Service is temporarily down",
+        "managers_only": "Only those who manage this workspace can add webhooks or change where they send responses.",
         "no_triggers": "No Triggers",
         "please_check_console": "Please check the console for more details",
         "please_enter_a_url": "Please enter a URL",
@@ -4433,11 +4440,14 @@
         "ai_status_reading_survey": "Reading your questions…",
         "ai_status_saving_responses": "Saving the responses…",
         "ai_summary": {
+          "failed": "The summary could not be generated. Try again.",
           "generated_ago": "Generated {time}",
           "no_themes": "No recurring themes were found in these answers.",
+          "other_language": "This summary was written in {language}.",
           "privacy_note": "Summarizing sends the answers that match the current filters to the AI provider configured for this instance, with email addresses and phone numbers removed. Your organization allows this with “Allow AI to read responses” in its settings.",
           "quota_exceeded": "The AI provider is busy right now. Try again in a moment.",
           "read_limited": "Only the newest {count, number} responses were read.",
+          "read_only_none": "No AI summary yet. A member who can edit this workspace can create one.",
           "refresh": "Refresh summary",
           "sampled": "Based on a sample of {sampled, number} of {total, number} answers.",
           "sentiment": "Overall sentiment: {sentiment}",
@@ -4447,8 +4457,10 @@
           "sentiment_positive": "Positive",
           "sentiment_shares": "{positive}% positive, {neutral}% neutral, {negative}% negative.",
           "summarize": "Summarize answers",
+          "summarize_in_language": "Summarize in {language}",
           "summarize_other": "Summarize Other answers",
           "summarizing": "Summarizing answers…",
+          "taking_long": "The summary is taking longer than usual. Check back in a few minutes.",
           "theme_share": "{percentage}% of answers ({count, plural, one {# answer} other {# answers}})",
           "title": "AI summary"
         },

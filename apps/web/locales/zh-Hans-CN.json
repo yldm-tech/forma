@@ -2192,6 +2192,7 @@
       "api_key_updated": "API 密钥已更新",
       "api_reference": "API 参考",
       "check_key_hint": "要查看密钥能访问的范围，请先把密钥存入环境变量 FORMA_API_KEY，再运行下面的命令。返回结果会列出密钥所属的组织和可用的工作区。",
+      "creator_deactivated_hint": "该密钥创建者的账户已在此 Forma 实例上停用。在实例管理员重新启用该账户之前，该密钥无法使用。",
       "delete_api_key_confirmation": "使用此密钥的任何应用将无法再访问你的 Forma 数据。",
       "disabled_description": "此密钥已于 {date} 停用，且无法重新启用。请为使用它的集成创建新密钥，然后删除此密钥。",
       "disabled_reason_creator_deleted": "创建者已注销账号。",
@@ -2403,6 +2404,11 @@
       "upload_contacts_result": "导入完成：新建 {created} 个，更新 {updated} 个，跳过 {skipped} 个。",
       "upload_contacts_success": "联系人上传成功",
       "upload_csv": "上传 CSV"
+    },
+    "custom_scripts_access": {
+      "managers_only": "只有组织的所有者和管理者可以更改自定义脚本。",
+      "requires_public_url": "此实例已关闭自定义脚本：问卷页面与管理后台使用同一域名，脚本可能以任何已登录用户的身份执行操作。管理员可以将 PUBLIC_URL 设置为单独的问卷域名来开启此功能。",
+      "unavailable_cloud": "Forma Cloud 不提供自定义脚本。"
     },
     "forma_logo": "Forma 徽标",
     "general": {
@@ -2620,6 +2626,7 @@
         "endpoint_pinged": "太好了！我们能 ping 通该 Webhook！",
         "endpoint_pinged_error": "无法 ping 该 webhook！",
         "endpoint_service_unavailable_error": "服务不可用（503）：服务暂时不可用",
+        "managers_only": "只有管理此工作区的成员才能添加 Webhook 或更改其发送回复的目标。",
         "no_triggers": "无触发器",
         "please_check_console": "请查看控制台以获取更多详情",
         "please_enter_a_url": "请输入一个 URL",
@@ -4433,11 +4440,14 @@
         "ai_status_reading_survey": "正在阅读你的问题…",
         "ai_status_saving_responses": "正在保存回复…",
         "ai_summary": {
+          "failed": "无法生成摘要，请重试。",
           "generated_ago": "{time}生成",
           "no_themes": "这些回答中没有发现反复出现的主题。",
+          "other_language": "此摘要使用{language}撰写。",
           "privacy_note": "总结时，符合当前筛选条件的回答会先移除电子邮件地址和电话号码，再发送给此实例配置的 AI 服务商。你的组织已在设置中开启“允许 AI 读取回答”。",
           "quota_exceeded": "AI 服务商当前繁忙，请稍后再试。",
           "read_limited": "仅读取了最新的 {count, number} 条回复。",
+          "read_only_none": "还没有 AI 摘要。拥有此工作区编辑权限的成员可以生成。",
           "refresh": "刷新摘要",
           "sampled": "基于 {total, number} 条回答中的 {sampled, number} 条样本。",
           "sentiment": "整体情绪：{sentiment}",
@@ -4447,8 +4457,10 @@
           "sentiment_positive": "正面",
           "sentiment_shares": "正面{positive}%，中性{neutral}%，负面{negative}%。",
           "summarize": "总结回答",
+          "summarize_in_language": "用{language}总结",
           "summarize_other": "总结“其他”回答",
           "summarizing": "正在总结回答…",
+          "taking_long": "摘要生成时间比平时长，请几分钟后再来查看。",
           "theme_share": "占回答的{percentage}%（{count, plural, other {# 条回答}}）",
           "title": "AI 摘要"
         },
