@@ -73,6 +73,8 @@ jobs:
             echo "::warning::Setting up Go failed; the Go vulnerability scan was skipped."
             exit 0
           fi
+          # setup-go's problem matcher would turn every file:line of govulncheck's call traces into an error annotation, accepted findings included; the script annotates what fails by itself.
+          echo "::remove-matcher owner=go::"
           bash tooling/scripts/audit-dependencies.sh go
 
   pnpm-audit:
