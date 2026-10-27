@@ -2404,6 +2404,11 @@
       "upload_contacts_success": "联系人上传成功",
       "upload_csv": "上传 CSV"
     },
+    "custom_scripts_access": {
+      "managers_only": "只有组织的所有者和管理者可以更改自定义脚本。",
+      "requires_public_url": "此实例已关闭自定义脚本：问卷页面与管理后台使用同一域名，脚本可能以任何已登录用户的身份执行操作。管理员可以将 PUBLIC_URL 设置为单独的问卷域名来开启此功能。",
+      "unavailable_cloud": "Forma Cloud 不提供自定义脚本。"
+    },
     "forma_logo": "Forma 徽标",
     "general": {
       "cannot_delete_only_workspace": "这是你唯一的工作区，无法删除。请先创建一个新工作区。",
