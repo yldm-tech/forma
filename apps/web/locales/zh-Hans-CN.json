@@ -205,6 +205,7 @@
       "not_enabled": "此组织已禁用 AI 智能工具。",
       "not_in_plan": "你当前的套餐不包含 AI 智能工具。",
       "read_only": "你需要此工作区的编辑权限才能使用 AI 智能工具。",
+      "response_reading_disabled": "此组织不允许 AI 读取回答。所有者或管理者可以在组织设置中开启“允许 AI 读取回答”。",
       "unknown": "AI 智能工具不可用。"
     },
     "all": "全部",
@@ -599,7 +600,7 @@
     "video": "视频",
     "view_workflow": "查看工作流",
     "warning": "警告",
-    "web_and_mobile_sdk": "Web 和移动 SDK",
+    "web_and_mobile_sdk": "Web SDK",
     "webhook": "Webhook",
     "webhooks": "Webhooks",
     "website_app_survey": "网站和应用问卷",
@@ -727,7 +728,7 @@
   },
   "organizations": {
     "landing": {
-      "no_workspaces_warning_subtitle": "请联系你的组织所有者以获取工作区访问权限，或创建自己的组织开始使用。",
+      "no_workspaces_warning_subtitle": "请联系组织所有者获取工作区访问权限，或创建你自己的组织。",
       "no_workspaces_warning_title": "你的账户尚未获得任何工作区的访问权限。"
     },
     "members": {
@@ -753,7 +754,7 @@
       "deleted_runs": "{count, plural, other {已删除{count}条工作流运行}}",
       "deleting_description": "每天UTC零点，早于这些设置的数据会被永久删除，且无法恢复。",
       "deleting_title": "已开启删除",
-      "displays_description": "问卷已展示但未产生回复的记录。产生了回复的展示会随回复一起保留。",
+      "displays_description": "问卷已展示但未产生回复的记录。产生了回复的展示会随回复一起保留。应用内问卷会根据已识别用户的展示记录决定是否再次展示（仅展示一次、展示次数上限、再次展示的间隔），这些记录删除后，这类问卷可能会再次展示给这些用户。",
       "displays_label": "未产生回复的展示",
       "dry_run_description": "此实例的清理只统计这些设置将会删除的数据量。请先查看下方的统计；实例的运维人员可通过RETENTION_SWEEP_DRY_RUN=0开启删除。开启后，早于这些设置的数据会在下次清理时直接删除，不会再次确认。",
       "dry_run_description_cloud": "目前清理只统计这些设置将会删除的数据量。请先查看下方的统计。开启删除后，早于这些设置的数据会在下次清理时直接删除，不会再次确认。",
@@ -840,7 +841,7 @@
     "already_responded_with_email": "此问卷每个邮箱地址只接受一份回复，此邮箱地址已提交过一份。",
     "check_inbox_or_spam": "如果收件箱中没有看到邮件，请检查垃圾邮件文件夹。",
     "completed": "此问卷已关闭。",
-    "completed_heading": "问卷已完成",
+    "completed_heading": "问卷已关闭",
     "create_your_own": "创建您自己的开源问卷",
     "email_label": "邮箱地址",
     "email_placeholder": "wang@example.com",
@@ -848,7 +849,7 @@
     "invalid_email": "请输入有效的邮箱地址",
     "just_curious": "只是好奇？",
     "link_invalid": "此问卷只能通过邀请参加。",
-    "paused": "此问卷暂时暂停。",
+    "paused": "此问卷暂停收集回复。",
     "paused_heading": "问卷已暂停",
     "pin_incorrect": "PIN码不正确，请重试。",
     "pin_too_many_attempts": "尝试次数过多，请等待一分钟后再试。",
@@ -2945,7 +2946,7 @@
         "add_permission": "添加权限",
         "api_keys_description": "管理 API 密钥以访问 Forma 管理 API",
         "connect_app_banner_description": "在你的网页或移动应用上设置 Forma 不需要 API 密钥。",
-        "connect_app_banner_link": "前往 Web & Mobile SDK",
+        "connect_app_banner_link": "前往 Web SDK",
         "connect_app_banner_title": "正在设置网站和应用问卷？"
       },
       "billing": {
@@ -2971,7 +2972,7 @@
         "comparison_row_hide_branding": "隐藏 Forma 品牌标识",
         "comparison_row_inproduct_surveys": "产品内问卷",
         "comparison_row_link_surveys": "基于链接的问卷",
-        "comparison_row_mobile_sdks": "iOS 和 Android SDK",
+        "comparison_row_mobile_sdks": "适用于网站和 Web 应用的 SDK",
         "comparison_row_overage": "超额处理",
         "comparison_row_partial_responses": "部分回复",
         "comparison_row_question_types": "所有问题类型",
@@ -3147,9 +3148,11 @@
         "ai_enabled": "Forma AI",
         "ai_enabled_description": "管理该组织的 AI 驱动功能。",
         "ai_instance_not_configured": "AI 通过环境变量在实例级别进行配置。启用 AI 功能前，请让管理员设置 AI_PROVIDER、该提供商的凭据以及对应的模型列表。",
+        "ai_response_reading_enabled": "允许 AI 读取回答",
+        "ai_response_reading_enabled_description": "允许成员在问卷的摘要页让 AI 总结开放题的回答。回答会先移除电子邮件地址和电话号码，再发送给此实例配置的 AI 服务商。仅在智能功能（AI）开启时生效。",
         "ai_settings_updated_successfully": "AI 设置已成功更新",
         "ai_smart_tools_enabled": "智能功能（AI）",
-        "ai_smart_tools_enabled_description": "AI 帮你更高效地完成更多任务。绝不会接触 Forma 收集的数据，仅用于如问卷翻译等功能。",
+        "ai_smart_tools_enabled_description": "AI 帮你更高效地完成更多任务：生成问卷草稿、把问卷翻译成其他语言、生成示例回答。这些功能会把你输入的内容和问卷内容发送给此实例配置的 AI 服务商，但不会发送回答。同时开启“允许 AI 读取回答”后，成员还可以让 AI 总结开放题的回答；这些回答会先移除电子邮件地址和电话号码，再发送给 AI 服务商。",
         "bulk_invite_billing_not_supported": "计费角色仅在 Forma Cloud 上可用：{emails}。请为这些行选择其他角色。",
         "bulk_invite_download_template": "下载 CSV 模板",
         "bulk_invite_rows_detected": "{count, plural, other {检测到 {count} 行}}",
@@ -4430,7 +4433,7 @@
         "ai_summary": {
           "generated_ago": "{time}生成",
           "no_themes": "这些回答中没有发现反复出现的主题。",
-          "privacy_note": "总结时，符合当前筛选条件的回答会发送给此实例配置的 AI 服务商。电子邮件地址和电话号码会先被移除。",
+          "privacy_note": "总结时，符合当前筛选条件的回答会先移除电子邮件地址和电话号码，再发送给此实例配置的 AI 服务商。你的组织已在设置中开启“允许 AI 读取回答”。",
           "quota_exceeded": "AI 服务商当前繁忙，请稍后再试。",
           "read_limited": "仅读取了最新的 {count, number} 条回复。",
           "refresh": "刷新摘要",
