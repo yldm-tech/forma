@@ -357,13 +357,9 @@ export const RESERVED_FIELD_CATALOG: readonly TReservedFieldCatalogEntry[] = [
     },
   },
   /**
-   * startedAt/finishedAt map onto the row's timestamps: `createdAt` is when the response record was
-   * opened, `updatedAt` when it was last written — which for a finished response is its submission.
-   * Both resolve to ISO strings, never `Date` objects (see {@link TResolvedEmbeddedValue}).
+   * startedAt/finishedAt map onto the row's timestamps: `createdAt` is when the response record was opened, `updatedAt` when it was last written — which for a finished response is its submission. Both resolve to ISO strings, never `Date` objects (see {@link TResolvedEmbeddedValue}).
    *
-   * `finishedAt` is `updatedAt` and therefore only means "finished at" on a finished response; on a
-   * partial one it is the last partial write. The pair is the closest honest reading of the columns
-   * that exist — `Response` stores no separate completion timestamp.
+   * `finishedAt` is `updatedAt` on a finished response and unset on a partial one, whose last write is only its last partial save, not a finish time (J6). `Response` stores no separate completion timestamp, so this is the closest honest reading of the columns that exist. Mirrored by apps/server/internal/embeddeddata/resolver.go.
    */
   {
     name: "startedAt",
@@ -379,7 +375,7 @@ export const RESERVED_FIELD_CATALOG: readonly TReservedFieldCatalogEntry[] = [
     availability: "server",
     privacy: "keep",
     display: "none",
-    read: (r) => r.updatedAt,
+    read: (r) => (r.finished ? r.updatedAt : undefined),
   },
   /**
    * **Browser-runtime context (ENG-1841).** Captured by the renderer itself and frozen at display,

@@ -670,3 +670,57 @@ func TestResponsePipelineLocale(t *testing.T) {
 		t.Fatalf("default locale %q", got)
 	}
 }
+
+func (e *env) responseVariables(t *testing.T, id any) map[string]any {
+	t.Helper()
+	var raw []byte
+	if err := e.db.Raw(`SELECT variables FROM responses WHERE id = ?`, id).Row().Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	var v map[string]any
+	_ = json.Unmarshal(raw, &v)
+	return v
+}
+
+// NF-04: the total score is summed in the browser, so a create or update that sends a score the survey's choice scores cannot reach (this quiz scores 0 to 10) keeps the response but not the score; a reachable score and the other variables are stored as sent.
+func TestResponseScoreOutOfRangeIsDropped(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws, "blocks", `[{"id":"b1","name":"Quiz","elements":[
+		{"id":"capital","type":"multipleChoiceSingle","headline":{"default":"Capital?"},"required":true,"choices":[
+			{"id":"paris","label":{"default":"Paris"},"score":10},{"id":"rome","label":{"default":"Rome"},"score":0}]}]}]`,
+		"variables", `[{"id":"score","name":"score","type":"number","value":0,"isScore":true},{"id":"note","name":"note","type":"text","value":""}]`)
+	for _, version := range []string{"v1", "v2"} {
+		r := e.post(t, respond(ws, version), map[string]any{"surveyId": sv.String(), "finished": true, "data": map[string]any{"capital": "Paris"}, "variables": map[string]any{"score": 9999, "note": "kept"}})
+		if r.Status != 200 {
+			t.Fatalf("%s: %d %s", version, r.Status, r.Body)
+		}
+		id := r.data(t)["id"]
+		if v := e.responseVariables(t, id); v["score"] != nil || v["note"] != "kept" {
+			t.Fatalf("%s: variables %v", version, v)
+		}
+		if d := e.responseData(t, id); d["capital"] != "Paris" {
+			t.Fatalf("%s: data %v", version, d)
+		}
+	}
+
+	r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{"capital": "Paris"}, "variables": map[string]any{"score": 10}})
+	if r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	id := r.data(t)["id"].(string)
+	if v := e.responseVariables(t, id); v["score"] != 10.0 {
+		t.Fatalf("variables %v", v)
+	}
+	// An update with an unreachable score keeps the stored one and still finishes the response.
+	e.clock.nextWindow()
+	if r := e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+id, map[string]any{"finished": true, "variables": map[string]any{"score": -5, "note": "updated"}}); r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	if v := e.responseVariables(t, id); v["score"] != 10.0 || v["note"] != "updated" {
+		t.Fatalf("variables %v", v)
+	}
+	if n := e.count(`SELECT count(*) FROM responses WHERE id = ? AND finished`, id); n != 1 {
+		t.Fatal("the update did not finish the response")
+	}
+}
