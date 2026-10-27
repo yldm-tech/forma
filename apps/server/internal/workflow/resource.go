@@ -29,6 +29,8 @@ type RunSummary struct {
 	UpdatedAt         string     `json:"updatedAt"`
 	StartedAt         *string    `json:"startedAt"`
 	FinishedAt        *string    `json:"finishedAt"`
+	// ContinuedFailureCount is how many failed steps a completed run went on past, its steps being set to continue on failure: such a run completed, but not cleanly. 0 for any other run.
+	ContinuedFailureCount int `json:"continuedFailureCount"`
 }
 
 // RunListItem is a row of the runs list: the summary and the workflow's name.
@@ -117,7 +119,7 @@ func toRunSummary(r *Run) RunSummary {
 	return RunSummary{
 		ID: r.ID, WorkflowID: r.WorkflowID, WorkspaceID: r.WorkspaceID, WorkflowVersionID: r.WorkflowVersionID, Status: r.Status, IsDryRun: r.IsDryRun,
 		TriggerType: r.TriggerType, SurveyID: r.SurveyID, ResponseID: r.ResponseID, Error: r.Error, Attempt: r.Attempt,
-		CreatedAt: jsvalue.ISOString(r.CreatedAt), UpdatedAt: jsvalue.ISOString(r.UpdatedAt), StartedAt: iso(r.StartedAt), FinishedAt: iso(r.FinishedAt),
+		CreatedAt: jsvalue.ISOString(r.CreatedAt), UpdatedAt: jsvalue.ISOString(r.UpdatedAt), StartedAt: iso(r.StartedAt), FinishedAt: iso(r.FinishedAt), ContinuedFailureCount: r.ContinuedFailureCount,
 	}
 }
 

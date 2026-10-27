@@ -99,6 +99,25 @@ func TestDefinitionRules(t *testing.T) {
 			t.Fatalf("%+v", issues)
 		}
 	})
+	t.Run("keeps an action's continueOnFailure only when it is on", func(t *testing.T) {
+		d := testDefinition()
+		d["nodes"].([]any)[0].(map[string]any)["continueOnFailure"] = true
+		parsed, issues := ParseExecutable(raw(t, d))
+		if len(issues) > 0 || !parsed.Nodes[0].ContinueOnFailure || !strings.Contains(string(mustJSON(parsed)), `"actionType":"send_email","continueOnFailure":true,"config"`) {
+			t.Fatalf("%+v %s", issues, mustJSON(parsed))
+		}
+		steps, err := Plan(parsed)
+		if err != nil || !steps[0].Node.ContinueOnFailure {
+			t.Fatalf("the plan lost the option: %+v %v", steps, err)
+		}
+		d["nodes"].([]any)[0].(map[string]any)["continueOnFailure"] = false
+		if parsed, issues := ParseDefinition(raw(t, d)); len(issues) > 0 || parsed.Nodes[0].ContinueOnFailure || strings.Contains(string(mustJSON(parsed)), "continueOnFailure") {
+			t.Fatalf("off is the default and is not stored: %+v %s", issues, mustJSON(parsed))
+		}
+		d["nodes"].([]any)[0].(map[string]any)["continueOnFailure"] = "yes"
+		_, issues = ParseDefinition(raw(t, d))
+		issueAt(t, issues, "nodes.0.continueOnFailure", "Invalid input: expected boolean, received string")
+	})
 	t.Run("rejects invalid graph references", func(t *testing.T) {
 		d := testDefinition()
 		d["edges"] = []any{map[string]any{"id": "broken-edge", "source": "trigger", "target": "missing-node"}}

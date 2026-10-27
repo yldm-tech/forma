@@ -13,7 +13,7 @@ import { WorkflowRunSteps } from "./workflow-run-steps";
 
 const RunSummarySection = ({ run, locale }: Readonly<{ run: TWorkflowRunSummary; locale: string }>) => {
   const { t } = useTranslation();
-  const statusBadge = getWorkflowRunStatusBadge(run.status, t);
+  const statusBadge = getWorkflowRunStatusBadge(run, t);
   return (
     <SheetSection className="bg-slate-50">
       <h3 className="mb-4 text-lg font-semibold text-slate-900">{t("common.summary")}</h3>
