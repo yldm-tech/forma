@@ -1,6 +1,7 @@
 import { normalizeLanguageCode } from "@forma/i18n-utils/canonical";
-import { type TIso639Language, supportedLanguages } from "@forma/i18n-utils/utils";
+import { type TIso639Language, getLanguageLabel, supportedLanguages } from "@forma/i18n-utils/utils";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { ChevronDown, InfoIcon, PlusIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,6 +28,7 @@ import {
 import { toast } from "../../lib/toast";
 import {
   type LanguageRowValue,
+  type LanguagesProblem,
   NEW_LANGUAGE_ID,
   defaultLanguageOptions,
   isDefaultSurveyLanguage,
@@ -70,6 +72,39 @@ const rowsChanged = (rows: LanguageRowValue[], stored: LanguageRowValue[]) =>
       row.code !== stored[index]?.code ||
       (row.alias || "") !== (stored[index]?.alias || "")
   );
+
+/** A language as the problems name it: its name in the user's language, or the code when it has none. */
+const languageName = (code: string, locale: string) => getLanguageLabel(code, locale) ?? code;
+
+/** Why the form cannot be saved, naming the rows involved. */
+const languagesProblemMessage = (t: TFunction, problem: LanguagesProblem, locale: string): string => {
+  switch (problem.kind) {
+    case "missing_language":
+      return t("workspace.languages.please_select_a_language");
+    case "language_twice":
+      return t("workspace.languages.language_added_twice", {
+        language: languageName(problem.language, locale),
+      });
+    case "alias_twice":
+      return t("workspace.languages.alias_used_twice", {
+        alias: problem.alias,
+        language: languageName(problem.language, locale),
+        other: languageName(problem.other, locale),
+      });
+    case "alias_names_other_row":
+      return t("workspace.languages.alias_names_other_language", {
+        alias: problem.alias,
+        language: languageName(problem.language, locale),
+        other: languageName(problem.other, locale),
+      });
+    case "alias_names_missing_language":
+      return t("workspace.languages.alias_names_missing_language", {
+        alias: problem.alias,
+        language: languageName(problem.language, locale),
+        named: languageName(problem.named, locale),
+      });
+  }
+};
 
 interface Confirmation {
   open: boolean;
@@ -160,19 +195,25 @@ const EditLanguages = ({
   };
 
   const save = async () => {
-    const problem = languagesError(languages);
+    const stored = storedRows(workspace);
+    const problem = languagesError(languages, stored);
     if (problem) {
-      toast.error(t(problem));
+      toast.error(languagesProblemMessage(t, problem, locale));
       return;
     }
     setIsSaving(true);
     try {
+      // Only what changed is written, so a stored row an older rule let in is not checked again by the server.
       await Promise.all(
-        languages.map((language) =>
-          language.id === NEW_LANGUAGE_ID
-            ? createLanguage(workspace.id, { code: language.code, alias: language.alias })
-            : updateLanguage(workspace.id, language.id, language.alias)
-        )
+        languages.flatMap((language) => {
+          if (language.id === NEW_LANGUAGE_ID) {
+            return [createLanguage(workspace.id, { code: language.code, alias: language.alias })];
+          }
+          const before = stored.find((row) => row.id === language.id);
+          return before && (before.alias || "") === (language.alias || "")
+            ? []
+            : [updateLanguage(workspace.id, language.id, language.alias)];
+        })
       );
       if (defaultLanguage !== storedDefault(workspace)) {
         // Only the changed key: the server merges it onto the stored config.

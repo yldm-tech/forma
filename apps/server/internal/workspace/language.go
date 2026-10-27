@@ -52,6 +52,19 @@ func (r *Repository) scanLanguage(ctx context.Context, query string, args ...any
 	return rows[0].language(), nil
 }
 
+// languages lists the workspace's languages, oldest first.
+func (r *Repository) languages(ctx context.Context, workspaceID uuid.UUID) ([]*Language, error) {
+	var rows []languageRow
+	if err := r.db.WithContext(ctx).Raw(`SELECT `+languageColumns+` FROM languages WHERE workspace_id = ? ORDER BY created_at, id`, workspaceID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("load languages: %w", err)
+	}
+	out := make([]*Language, len(rows))
+	for i, row := range rows {
+		out[i] = row.language()
+	}
+	return out, nil
+}
+
 // language returns a language of the workspace, or nil when the workspace has none with that id.
 func (r *Repository) language(ctx context.Context, workspaceID, id uuid.UUID) (*Language, error) {
 	l, err := r.scanLanguage(ctx, `SELECT `+languageColumns+` FROM languages WHERE id = ? AND workspace_id = ?`, id, workspaceID)
@@ -138,6 +151,76 @@ func languageValidation(message string) *apperr.Error {
 	return apperr.InvalidInput(apperr.CodeValidation, message)
 }
 
+// comparableLanguage is a code or alias as the language rules compare it: its canonical tag when it names a language, else itself, lowercased either way.
+func comparableLanguage(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if canonical := langcode.Normalize(trimmed); canonical != "" {
+		return strings.ToLower(canonical)
+	}
+	return strings.ToLower(trimmed)
+}
+
+// baseLanguage is the base language (primary subtag) a code or alias names, or "" when it names none.
+func baseLanguage(value string) string {
+	canonical := langcode.Normalize(value)
+	if canonical == "" {
+		return ""
+	}
+	base, _, _ := strings.Cut(canonical, "-")
+	return strings.ToLower(base)
+}
+
+// trimmedAlias is a language's alias without surrounding spaces, "" when it has none.
+func trimmedAlias(alias *string) string {
+	if alias == nil {
+		return ""
+	}
+	return strings.TrimSpace(*alias)
+}
+
+// aliasNames tells whether alias, on the language with code owner, names the workspace's language code instead: it is that code, the same canonical language, or a code of its base language while the owner's base language differs (ja on de-DE names ja-JP).
+func aliasNames(alias, owner, code string) bool {
+	base := baseLanguage(alias)
+	return strings.EqualFold(alias, code) || comparableLanguage(alias) == comparableLanguage(code) || (base != "" && base != baseLanguage(owner) && base == baseLanguage(code))
+}
+
+// aliasProblem is the workspace languages form's rule for an alias (apps/web/src/lib/workspace-languages.ts), checked for the language with code and alias against the workspace's other languages: an alias is used once, and it may name its own language (ja for ja-JP, zh for zh-Hans-CN) or no language at all, but not another language of the workspace, which `?lang=<alias>` would then not open, nor a language the workspace does not have.
+func aliasProblem(code, alias string, others []*Language) *apperr.Error {
+	if alias == "" {
+		return nil
+	}
+	for _, other := range others {
+		if strings.EqualFold(trimmedAlias(other.Alias), alias) {
+			return languageValidation(fmt.Sprintf("The alias '%s' of %s is already the alias of %s. Each alias can be used once.", alias, code, other.Code))
+		}
+		if aliasNames(alias, code, other.Code) {
+			return languageValidation(fmt.Sprintf("The alias '%s' of %s names %s, another language of this workspace. Choose an alias that is not another language's code.", alias, code, other.Code))
+		}
+	}
+	if base := baseLanguage(alias); base != "" && base != baseLanguage(code) {
+		return languageValidation(fmt.Sprintf("The alias '%s' of %s is the code of %s, which this workspace does not have. Add that language, or choose an alias that is not a language code.", alias, code, langcode.Normalize(alias)))
+	}
+	return nil
+}
+
+// newLanguageProblem checks a language about to be added against the workspace's languages: it must not be one of them by canonical code, its alias must keep the alias rule, and no alias already stored may name it.
+func newLanguageProblem(code, alias string, existing []*Language) *apperr.Error {
+	for _, other := range existing {
+		if comparableLanguage(other.Code) == comparableLanguage(code) {
+			return apperr.Conflict("Language " + code + " already exists in this workspace")
+		}
+	}
+	if err := aliasProblem(code, alias, existing); err != nil {
+		return err
+	}
+	for _, other := range existing {
+		if stored := trimmedAlias(other.Alias); stored != "" && aliasNames(stored, other.Code, code) {
+			return languageValidation(fmt.Sprintf("The alias '%s' of %s names %s. Change that alias before adding %s.", stored, other.Code, code, code))
+		}
+	}
+	return nil
+}
+
 // CreateLanguage is forma2's createLanguageAction: the code is stored in its canonical form and must be one of the curated languages; an alias is kept as given.
 func (s *Service) CreateLanguage(ctx context.Context, userID, workspaceID uuid.UUID, code string, alias *string) (*Language, error) {
 	ws, err := s.manageLanguages(ctx, userID, workspaceID)
@@ -172,24 +255,65 @@ func (s *Service) createLanguage(ctx context.Context, workspaceID uuid.UUID, cod
 	if !langcode.IsCanonical(canonical) {
 		return nil, languageValidation(fmt.Sprintf("Unsupported language code: '%s'", code))
 	}
-	return s.repo.createLanguage(ctx, workspaceID, canonical, alias)
+	var l *Language
+	err := s.repo.transaction(ctx, func(tx *Repository) error {
+		existing, err := tx.lockedLanguages(ctx, workspaceID)
+		if err != nil {
+			return err
+		}
+		if problem := newLanguageProblem(canonical, trimmedAlias(alias), existing); problem != nil {
+			return problem
+		}
+		l, err = tx.createLanguage(ctx, workspaceID, canonical, alias)
+		return err
+	})
+	return l, err
 }
 
-// UpdateLanguage is forma2's updateLanguageAction: only the alias changes. A language of another workspace is not found.
+// lockedLanguages locks the workspace row and lists its languages, so concurrent changes to them (the languages form saves its rows in parallel) are checked one after another.
+func (r *Repository) lockedLanguages(ctx context.Context, workspaceID uuid.UUID) ([]*Language, error) {
+	ws, err := r.lockByID(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	if ws == nil {
+		return nil, apperr.NotFound("Workspace", "")
+	}
+	return r.languages(ctx, workspaceID)
+}
+
+// UpdateLanguage is forma2's updateLanguageAction: only the alias changes. A language of another workspace is not found. A changed alias must keep the alias rule (aliasProblem); an unchanged one is written back as it is, so a stored alias an older rule let in never blocks a save.
 func (s *Service) UpdateLanguage(ctx context.Context, userID, workspaceID, languageID uuid.UUID, alias *string) (*Language, error) {
 	ws, err := s.manageLanguages(ctx, userID, workspaceID)
 	var old, updated *Language
 	if err == nil {
-		old, err = s.repo.language(ctx, workspaceID, languageID)
-		if err == nil && old == nil {
-			err = apperr.NotFound("Language", languageID.String())
-		}
-	}
-	if err == nil {
-		updated, err = s.repo.updateLanguageAlias(ctx, workspaceID, languageID, alias)
-		if err == nil && updated == nil {
-			err = apperr.NotFound("Language", languageID.String())
-		}
+		err = s.repo.transaction(ctx, func(tx *Repository) error {
+			existing, err := tx.lockedLanguages(ctx, workspaceID)
+			if err != nil {
+				return err
+			}
+			var others []*Language
+			for _, l := range existing {
+				if l.ID == languageID {
+					old = l
+				} else {
+					others = append(others, l)
+				}
+			}
+			if old == nil {
+				return apperr.NotFound("Language", languageID.String())
+			}
+			if trimmedAlias(alias) != trimmedAlias(old.Alias) {
+				if problem := aliasProblem(old.Code, trimmedAlias(alias), others); problem != nil {
+					return problem
+				}
+			}
+			updated, err = tx.updateLanguageAlias(ctx, workspaceID, languageID, alias)
+			if err == nil && updated == nil {
+				err = apperr.NotFound("Language", languageID.String())
+			}
+			return err
+		})
 	}
 	s.recordLanguage(ctx, audit.ActionUpdated, languageID, ws, err, old, updated)
 	return updated, err

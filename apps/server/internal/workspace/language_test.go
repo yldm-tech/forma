@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/google/uuid"
@@ -139,4 +140,44 @@ func TestAppConnection(t *testing.T) {
 		t.Fatalf("app connection %+v", conn)
 	}
 	e.fails(e.do(e.user(), http.MethodGet, wsPath(ws, "/app-connection"), nil), http.StatusForbidden, apperr.CodeForbidden, "")
+}
+
+// An alias may name its own language by its base code (ja for ja-JP, zh for zh-Hans-CN) or no language, but not another language of the workspace nor one it does not have; only an alias being written is checked, so one an older rule let in blocks nothing but the language it names.
+func TestLanguageAliasesFollowTheBaseLanguageRule(t *testing.T) {
+	e := newEnv(t)
+	owner := e.user()
+	_, ws := e.organization(owner)
+	english := e.insert(`SELECT id FROM languages WHERE workspace_id = ? AND code = 'en-US'`, ws)
+	create := func(code string, alias any) *httptest.ResponseRecorder {
+		return e.do(owner, http.MethodPost, languagesPath(ws, ""), map[string]any{"code": code, "alias": alias})
+	}
+	setAlias := func(id uuid.UUID, alias any) *httptest.ResponseRecorder {
+		return e.do(owner, http.MethodPatch, languagesPath(ws, "/"+id.String()), map[string]any{"alias": alias})
+	}
+
+	// Seed's aliases, and a language added beside them.
+	var japanese, chinese, arabic Language
+	e.ok(create("ja-JP", "ja"), http.StatusCreated, &japanese)
+	e.ok(create("zh-Hans-CN", "zh"), http.StatusCreated, &chinese)
+	e.ok(create("ar-EG", nil), http.StatusCreated, &arabic)
+
+	e.fails(create("ko-KR", "fr"), http.StatusBadRequest, apperr.CodeValidation, "The alias 'fr' of ko-KR is the code of fr-FR, which this workspace does not have. Add that language, or choose an alias that is not a language code.")
+	e.fails(create("de-DE", "ja"), http.StatusBadRequest, apperr.CodeValidation, "The alias 'ja' of de-DE is already the alias of ja-JP. Each alias can be used once.")
+	e.fails(create("de-DE", "ja-jp"), http.StatusBadRequest, apperr.CodeValidation, "The alias 'ja-jp' of de-DE names ja-JP, another language of this workspace. Choose an alias that is not another language's code.")
+	e.fails(create("zh-Hant-TW", "zh-CN"), http.StatusBadRequest, apperr.CodeValidation, "The alias 'zh-CN' of zh-Hant-TW names zh-Hans-CN, another language of this workspace. Choose an alias that is not another language's code.")
+	e.fails(setAlias(english, "ja-JP"), http.StatusBadRequest, apperr.CodeValidation, "")
+	e.fails(setAlias(english, " ZH "), http.StatusBadRequest, apperr.CodeValidation, "")
+
+	var updated Language
+	e.ok(setAlias(english, "en_us"), http.StatusOK, &updated)
+	e.ok(setAlias(arabic.ID, "arabic"), http.StatusOK, &updated)
+
+	// An alias stored before the rule: it is written back unchanged, does not block the other languages, and only blocks adding the language it names.
+	e.exec(`UPDATE languages SET alias = 'nl' WHERE id = ?`, english)
+	e.ok(setAlias(english, "nl"), http.StatusOK, &updated)
+	e.ok(setAlias(japanese.ID, "japanese"), http.StatusOK, &updated)
+	e.fails(create("nl-NL", nil), http.StatusBadRequest, apperr.CodeValidation, "The alias 'nl' of en-US names nl-NL. Change that alias before adding nl-NL.")
+	// A legacy code is the same language as its canonical one.
+	e.exec(`INSERT INTO languages (workspace_id, code) VALUES (?, 'de')`, ws)
+	e.fails(create("de-DE", nil), http.StatusConflict, apperr.CodeConflict, "Language de-DE already exists in this workspace")
 }
