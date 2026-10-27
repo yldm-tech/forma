@@ -682,14 +682,19 @@ func (e *env) responseVariables(t *testing.T, id any) map[string]any {
 	return v
 }
 
-// NF-04: the total score is summed in the browser, so a create or update that sends a score the survey's choice scores cannot reach (this quiz scores 0 to 10) keeps the response but not the score; a reachable score and the other variables are stored as sent.
+// calculatedQuiz scores 0 to 10 and counts visits with a calculate action: a survey with calculate logic, whose total score the server does not recompute (response.Survey.RecomputesScore) and only checks against the range its choice scores can reach.
+const calculatedQuiz = `[{"id":"b1","name":"Quiz","elements":[
+	{"id":"capital","type":"multipleChoiceSingle","headline":{"default":"Capital?"},"required":true,"choices":[
+		{"id":"paris","label":{"default":"Paris"},"score":10},{"id":"rome","label":{"default":"Rome"},"score":0}]}],
+	"logic":[{"id":"l1","conditions":{"id":"c1","connector":"and","conditions":[]},"actions":[
+		{"id":"a1","objective":"calculate","variableId":"visits","operator":"add","value":{"type":"static","value":1}}]}]}]`
+
+// NF-04: the total score is summed in the browser, so on a survey with calculate logic a create or update that sends a score the survey's choice scores cannot reach (this quiz scores 0 to 10) keeps the response but not the score; a reachable score and the other variables are stored as sent.
 func TestResponseScoreOutOfRangeIsDropped(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
-	sv := e.survey(ws, "blocks", `[{"id":"b1","name":"Quiz","elements":[
-		{"id":"capital","type":"multipleChoiceSingle","headline":{"default":"Capital?"},"required":true,"choices":[
-			{"id":"paris","label":{"default":"Paris"},"score":10},{"id":"rome","label":{"default":"Rome"},"score":0}]}]}]`,
-		"variables", `[{"id":"score","name":"score","type":"number","value":0,"isScore":true},{"id":"note","name":"note","type":"text","value":""}]`)
+	sv := e.survey(ws, "blocks", calculatedQuiz,
+		"variables", `[{"id":"score","name":"score","type":"number","value":0,"isScore":true},{"id":"note","name":"note","type":"text","value":""},{"id":"visits","name":"visits","type":"number","value":0}]`)
 	for _, version := range []string{"v1", "v2"} {
 		r := e.post(t, respond(ws, version), map[string]any{"surveyId": sv.String(), "finished": true, "data": map[string]any{"capital": "Paris"}, "variables": map[string]any{"score": 9999, "note": "kept"}})
 		if r.Status != 200 {
@@ -729,10 +734,8 @@ func TestResponseScoreOutOfRangeIsDropped(t *testing.T) {
 func TestResponseScoreDropLogIsBounded(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
-	sv := e.survey(ws, "blocks", `[{"id":"b1","name":"Quiz","elements":[
-		{"id":"capital","type":"multipleChoiceSingle","headline":{"default":"Capital?"},"required":true,"choices":[
-			{"id":"paris","label":{"default":"Paris"},"score":10},{"id":"rome","label":{"default":"Rome"},"score":0}]}]}]`,
-		"variables", `[{"id":"score","name":"score","type":"number","value":0,"isScore":true}]`)
+	sv := e.survey(ws, "blocks", calculatedQuiz,
+		"variables", `[{"id":"score","name":"score","type":"number","value":0,"isScore":true},{"id":"visits","name":"visits","type":"number","value":0}]`)
 	forged := strings.Repeat("A", 200_000)
 	if r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": true, "data": map[string]any{"capital": "Paris"}, "variables": map[string]any{"score": forged}}); r.Status != 200 {
 		t.Fatalf("%d %s", r.Status, r.Body)
@@ -753,6 +756,102 @@ func TestResponseScoreDropLogIsBounded(t *testing.T) {
 		t.Fatalf("string score logged as %d bytes: %.300s", len(l), l)
 	}
 	if l := drops[1]; !strings.Contains(l, `"value":9999`) {
+		t.Fatalf("numeric score not logged: %s", l)
+	}
+}
+
+// branchingQuiz routes a respondent who answers Rome straight to the last block, past the bonus block. Its score has no calculate action, so the server recomputes it (NF-04, decision D3).
+const branchingQuiz = `[
+	{"id":"b1","name":"Capital","elements":[
+		{"id":"capital","type":"multipleChoiceSingle","headline":{"default":"Capital?"},"required":true,"choices":[
+			{"id":"paris","label":{"default":"Paris"},"score":10},{"id":"rome","label":{"default":"Rome"},"score":0}]}],
+		"logic":[{"id":"l1","conditions":{"id":"g1","connector":"and","conditions":[
+			{"id":"c1","leftOperand":{"type":"element","value":"capital"},"operator":"equals","rightOperand":{"type":"static","value":"rome"}}]},
+			"actions":[{"id":"a1","objective":"jumpToBlock","target":"b3"}]}]},
+	{"id":"b2","name":"Bonus","elements":[
+		{"id":"bonus","type":"multipleChoiceMulti","headline":{"default":"Bonus"},"required":false,"choices":[
+			{"id":"x","label":{"default":"X"},"score":1},{"id":"y","label":{"default":"Y"},"score":2}]}]},
+	{"id":"b3","name":"Last","elements":[
+		{"id":"last","type":"multipleChoiceSingle","headline":{"default":"Last"},"required":false,"choices":[
+			{"id":"yes","label":{"default":"Yes"},"score":5},{"id":"no","label":{"default":"No"},"score":0}]}]}]`
+
+const branchingQuizVariables = `[{"id":"score","name":"score","type":"number","value":0,"isScore":true},{"id":"note","name":"note","type":"text","value":""}]`
+
+// D3: on a survey without calculate logic the stored total score is the one the answers add up to along the blocks the respondent was routed through, whatever the client sent, on creates and updates, finished or not; the other variables are stored as sent.
+func TestResponseScoreIsRecomputed(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws, "blocks", branchingQuiz, "variables", branchingQuizVariables)
+	all := map[string]any{"capital": "Paris", "bonus": []any{"X", "Y"}, "last": "Yes"}
+	for _, version := range []string{"v1", "v2"} {
+		r := e.post(t, respond(ws, version), map[string]any{"surveyId": sv.String(), "finished": true, "data": all, "variables": map[string]any{"score": 9999, "note": "kept"}})
+		if r.Status != 200 {
+			t.Fatalf("%s: %d %s", version, r.Status, r.Body)
+		}
+		if v := e.responseVariables(t, r.data(t)["id"]); v["score"] != 18.0 || v["note"] != "kept" {
+			t.Fatalf("%s: variables %v", version, v)
+		}
+	}
+
+	// A partial create without variables still stores the score so far.
+	r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{"capital": "Paris"}, "ttc": map[string]any{"capital": 900}})
+	if r.Status != 200 {
+		t.Fatalf("%d %s", r.Status, r.Body)
+	}
+	id := r.data(t)["id"].(string)
+	if v := e.responseVariables(t, id); v["score"] != 10.0 {
+		t.Fatalf("partial create: variables %v", v)
+	}
+	put := func(body map[string]any) {
+		t.Helper()
+		e.clock.nextWindow()
+		if r := e.do("PUT", "/api/v1/client/"+ws.String()+"/responses/"+id, body); r.Status != 200 {
+			t.Fatalf("%d %s", r.Status, r.Body)
+		}
+	}
+	// The respondent answered the bonus block, went back and changed to Rome, which skips it: the bonus answer stays in the data but is not counted.
+	put(map[string]any{"data": map[string]any{"bonus": []any{"Y"}}, "variables": map[string]any{"score": 12}})
+	if v := e.responseVariables(t, id); v["score"] != 12.0 {
+		t.Fatalf("bonus: variables %v", v)
+	}
+	put(map[string]any{"data": map[string]any{"capital": "Rome"}, "variables": map[string]any{"score": 0}})
+	put(map[string]any{"data": map[string]any{"last": "Yes"}, "finished": true, "variables": map[string]any{"score": 7, "note": "updated"}})
+	if v := e.responseVariables(t, id); v["score"] != 5.0 || v["note"] != "updated" {
+		t.Fatalf("finished: variables %v", v)
+	}
+	if d := e.responseData(t, id); d["capital"] != "Rome" || d["bonus"] == nil {
+		t.Fatalf("data %v", d)
+	}
+}
+
+// A replaced score is logged with the value sent and the one stored; a value that is not a number is described by its type and length, never copied into the log line. A client that sent the right score is not logged.
+func TestResponseScoreRecomputeLogIsBounded(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws, "blocks", branchingQuiz, "variables", branchingQuizVariables)
+	data := map[string]any{"capital": "Paris"}
+	forged := strings.Repeat("A", 200_000)
+	for _, score := range []any{forged, 9999, 10} {
+		if r := e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": false, "data": data, "variables": map[string]any{"score": score}}); r.Status != 200 {
+			t.Fatalf("%d %s", r.Status, r.Body)
+		}
+	}
+	var replaced []string
+	for line := range strings.SplitSeq(e.logs.String(), "\n") {
+		if strings.Contains(line, "replaced a total score the answers do not add up to") {
+			replaced = append(replaced, line)
+		}
+		if strings.Contains(line, "dropped a total score the survey cannot produce") {
+			t.Fatalf("range check ran on a recomputed survey: %.300s", line)
+		}
+	}
+	if len(replaced) != 2 {
+		t.Fatalf("replace log lines: %d", len(replaced))
+	}
+	if l := replaced[0]; len(l) > 1024 || strings.Contains(l, "AAAA") || !strings.Contains(l, `"valueType":"string"`) || !strings.Contains(l, `"valueLength":200000`) || !strings.Contains(l, `"recomputed":10`) {
+		t.Fatalf("string score logged as %d bytes: %.300s", len(l), l)
+	}
+	if l := replaced[1]; !strings.Contains(l, `"value":9999`) || !strings.Contains(l, `"recomputed":10`) {
 		t.Fatalf("numeric score not logged: %s", l)
 	}
 }

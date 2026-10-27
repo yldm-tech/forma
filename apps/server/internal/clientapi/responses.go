@@ -3,7 +3,6 @@ package clientapi
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"slices"
 	"strings"
@@ -274,38 +273,21 @@ func (h *Handler) writeNewResponse(c *gin.Context, sv *response.Survey, workspac
 	writeData(c, result, noStore)
 }
 
-// dropUnreachableScore keeps a response's total score only when the survey can produce it (response.Survey.DropUnreachableScore): a score out of range is removed from the variables written, the rest of the response is taken as sent, and the drop is logged with the value (a bounded description of it, scoreValueAttrs) so a survey whose scores were edited mid-collection can be told apart from a forged submission. responseID is nil on a create.
+// dropUnreachableScore keeps a response's total score only when the survey can produce it (response.Survey.DropUnreachableScore): a score out of range is removed from the variables written, the rest of the response is taken as sent, and the drop is logged with the value (a bounded description of it, response.ScoreValueAttrs) so a survey whose scores were edited mid-collection can be told apart from a forged submission. A survey that has its score recomputed (response.Survey.RecomputesScore) is left to the response service, which replaces the client's value whatever it is. responseID is nil on a create.
 func (h *Handler) dropUnreachableScore(ctx context.Context, sv *response.Survey, responseID *uuid.UUID, variables map[string]any) {
+	if sv.RecomputesScore() {
+		return
+	}
 	bounds, value, dropped := sv.DropUnreachableScore(variables)
 	if !dropped {
 		return
 	}
-	attrs := append([]any{"surveyId", sv.ID, "variableId", bounds.VariableID}, scoreValueAttrs(value)...)
+	attrs := append([]any{"surveyId", sv.ID, "variableId", bounds.VariableID}, response.ScoreValueAttrs(value)...)
 	attrs = append(attrs, "min", bounds.Min, "max", bounds.Max)
 	if responseID != nil {
 		attrs = append(attrs, "responseId", *responseID)
 	}
 	h.log.WarnContext(ctx, "dropped a total score the survey cannot produce", attrs...)
-}
-
-// scoreValueAttrs describes a dropped score for the log without copying an unbounded client value into it: a number is logged as is, a string by its length and anything else (a boolean, null, an array or an object) by its type only, since an anonymous request can send a value up to the body limit and every forged create or update would otherwise write all of it as one log line.
-func scoreValueAttrs(value any) []any {
-	switch v := value.(type) {
-	case float64:
-		return []any{"value", v}
-	case string:
-		return []any{"valueType", "string", "valueLength", len(v)}
-	case bool:
-		return []any{"valueType", "boolean"}
-	case nil:
-		return []any{"valueType", "null"}
-	case []any:
-		return []any{"valueType", "array", "valueLength", len(v)}
-	case map[string]any:
-		return []any{"valueType", "object", "valueLength", len(v)}
-	default:
-		return []any{"valueType", fmt.Sprintf("%T", v)}
-	}
 }
 
 // checkPin is the PIN gate of both creates and the update: a survey with a PIN takes responses only with a valid PIN token for it.
