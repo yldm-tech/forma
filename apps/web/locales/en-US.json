@@ -764,7 +764,7 @@
       "deleted_runs": "{count, plural, one {Deleted {count} workflow run} other {Deleted {count} workflow runs}}",
       "deleting_description": "Every day at midnight UTC, data older than these settings is deleted permanently. It cannot be restored.",
       "deleting_title": "Deletion is on",
-      "displays_description": "Records of a survey being shown that did not lead to a response. An impression that led to a response is kept with it. App surveys also use the impressions of identified users to decide whether to show a survey again (show once, display limits, waiting periods), so once those are deleted, such surveys can be shown to those users again.",
+      "displays_description_identified_kept": "Records of a survey being shown that did not lead to a response. An impression that led to a response is kept with it. Impressions of identified users are also kept, however old: they decide whether surveys are shown to that user again (show once, display limits, waiting periods) and which segments they are in. They are deleted with the contact or the survey.",
       "displays_label": "Impressions without a response",
       "dry_run_description": "This instance's sweep only counts what these settings would delete. Check the counts below. The instance's operator turns deletion on with RETENTION_SWEEP_DRY_RUN=0; from then on, data older than these settings is deleted at the next sweep without asking again.",
       "dry_run_description_cloud": "For now the sweep only counts what these settings would delete. Check the counts below. Once deletion is turned on, data older than these settings is deleted at the next sweep without asking again.",
