@@ -20,6 +20,8 @@ interface LinkSurveyWrapperProps {
   isWelcomeCardEnabled: boolean;
   /** The white overlay held until the runtime has rendered its first card. A gate in front of the survey (the PIN screen) has no runtime to wait for, so it turns it off. */
   showLoadingOverlay?: boolean;
+  /** Called once the survey background has loaded (a color at once, an image or video when it has arrived). Never called in an embed, which draws no background. */
+  onBackgroundLoaded?: () => void;
   surveyId: string;
   surveyType: TSurveyType;
   isPreview: boolean;
@@ -44,6 +46,7 @@ export const LinkSurveyWrapper = ({
   workspaceId,
   isWelcomeCardEnabled,
   showLoadingOverlay = true,
+  onBackgroundLoaded,
   surveyType,
   surveyId,
   isPreview,
@@ -62,7 +65,9 @@ export const LinkSurveyWrapper = ({
   const { t } = useTranslation();
   const [isBackgroundLoaded, setIsBackgroundLoaded] = useState(false);
   const handleBackgroundLoaded = (isLoaded: boolean) => {
-    if (isLoaded) setIsBackgroundLoaded(true);
+    if (!isLoaded) return;
+    setIsBackgroundLoaded(true);
+    onBackgroundLoaded?.();
   };
   // The footer links sit on the survey background: an AA-compliant colour, and a backdrop on a non-solid background. An explicit footer link colour wins and drops the backdrop.
   const footerLinkStyle = getFooterLinkStyle(styling);

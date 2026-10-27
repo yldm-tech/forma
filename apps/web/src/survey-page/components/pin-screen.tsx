@@ -1,5 +1,6 @@
+import { getReadableTextColor } from "@forma/types/colors";
 import { DEFAULT_CARD_ARRANGEMENT } from "@forma/types/styling";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { OTPInput } from "../../components/ui/otp-input";
 import { cn } from "../../lib/cn";
@@ -16,6 +17,10 @@ import { SurveyClientWrapper } from "./survey-client-wrapper";
 const PIN_PATTERN = /^\d{4}$/;
 /** How long a rejected PIN stays on screen, in red, before the boxes clear. */
 const ERROR_RESET_MS = 2000;
+/** How long a cardless gate waits for an image or video background before it shows anyway, in its default colors. Matches the runtime overlay's wait for a card's media. */
+export const BACKGROUND_WAIT_MS = 3000;
+/** The digit box surface when a cardless theme sets no input background: the admin Input is transparent, which leaves the digits to the survey background. */
+const FALLBACK_INPUT_BG = "#ffffff";
 
 /**
  * forma2's PinScreen: four digit boxes. Once all four are entered the server checks them, and a correct PIN returns the survey with the token its responses must carry; until then the survey never reaches the browser.
@@ -42,6 +47,14 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
   const cardArrangement = styling.cardArrangement?.linkSurveys ?? DEFAULT_CARD_ARRANGEMENT.linkSurveys;
   const isCardless = cardArrangement === "cardless";
   const isAutoHeight = isEmbed && readEmbedFrameMode(globalThis.location.search).isAutoHeight;
+  // An embed draws no background of its own, so there is nothing to wait for.
+  const [isBackgroundLoaded, setIsBackgroundLoaded] = useState(isEmbed);
+  const [isBackgroundWaitOver, setIsBackgroundWaitOver] = useState(false);
+  const handleBackgroundLoaded = useCallback(() => setIsBackgroundLoaded(true), []);
+  const isGateRendered = isLocaleReady && !isResuming && !unlocked;
+  // Without a card the gate sits on the survey background, and the theme's colors are chosen for that background: until it has loaded (an image or video still on the light placeholder) the gate stays hidden, and if it never loads the gate shows in its default colors, which read on that placeholder.
+  const isGateShown = !isCardless || isBackgroundLoaded || isBackgroundWaitOver;
+  const isThemed = isCardless && isBackgroundLoaded;
 
   useEffect(() => {
     if (resumeToken === null) return;
@@ -77,11 +90,17 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
     return () => clearTimeout(timeout);
   }, [rejected, resetState]);
 
+  useEffect(() => {
+    if (!isGateRendered || isGateShown) return;
+    const timeout = setTimeout(() => setIsBackgroundWaitOver(true), BACKGROUND_WAIT_MS);
+    return () => clearTimeout(timeout);
+  }, [isGateRendered, isGateShown]);
+
   // The gate exists only to take the PIN, so the first box has focus as soon as it shows, and again once a refused PIN has cleared and the boxes are enabled again.
   useEffect(() => {
-    if (!isLocaleReady || rejected || unlocked) return;
+    if (!isLocaleReady || !isGateShown || rejected || unlocked) return;
     boxesRef.current?.querySelector<HTMLInputElement>("input:not(:disabled)")?.focus();
-  }, [isLocaleReady, rejected, unlocked]);
+  }, [isLocaleReady, isGateShown, rejected, unlocked]);
 
   // The PIN is checked as soon as all four digits are in.
   const handlePinChange = (value: string) => {
@@ -110,6 +129,16 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
   };
 
   if (!unlocked) {
+    const headlineColor = isThemed ? styling.elementHeadlineColor?.light : undefined;
+    const inputBg = styling.inputBgColor?.light ?? FALLBACK_INPUT_BG;
+    // The theme's input colors, as the runtime's own inputs use them, so the digits never sit on the bare background; a refused PIN keeps its red border.
+    const inputBoxStyle: CSSProperties | undefined = isThemed
+      ? {
+          backgroundColor: inputBg,
+          color: styling.inputTextColor?.light ?? getReadableTextColor(inputBg),
+          borderColor: rejected ? undefined : styling.inputBorderColor?.light,
+        }
+      : undefined;
     // The gate is nothing but translated chrome, so it waits for its locale instead of painting in another first; and it does not show while a kept token may still open it.
     if (!isLocaleReady || isResuming) return null;
     return (
@@ -120,6 +149,7 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
         isWelcomeCardEnabled={false}
         // Nothing to wait for: the runtime only loads behind the gate.
         showLoadingOverlay={false}
+        onBackgroundLoaded={handleBackgroundLoaded}
         surveyId={surveyId}
         surveyType="link"
         isPreview={isPreview}
@@ -143,11 +173,15 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
             linkSurveyCardWidth={styling.linkSurveyCardWidth}>
             {/* The card pads its own content; only the cardless prompt needs room from the screen edge. */}
             <div
-              className={cn("flex flex-col items-center justify-center text-center", isCardless && "px-4")}>
+              data-pin-gate=""
+              className={cn(
+                "flex flex-col items-center justify-center text-center transition-opacity duration-500",
+                isCardless && "px-4",
+                !isGateShown && "opacity-0"
+              )}
+              style={isGateShown ? undefined : { visibility: "hidden" }}>
               {/* Without a card the prompt sits on the survey background, where the theme's headline color is the one chosen to be read. */}
-              <h1
-                className="my-4 font-semibold"
-                style={isCardless ? { color: styling.elementHeadlineColor?.light } : undefined}>
+              <h1 className="my-4 font-semibold" style={headlineColor ? { color: headlineColor } : undefined}>
                 {t("s.enter_pin")}
               </h1>
               <div ref={boxesRef} className="w-full">
@@ -157,10 +191,14 @@ export const PinScreen = (props: Readonly<TSurveyProps>) => {
                   onChange={handlePinChange}
                   valueLength={4}
                   inputBoxClassName={cn({ "border-red-400": rejected })}
+                  inputBoxStyle={inputBoxStyle}
                 />
               </div>
-              {/* Always rendered, so a screen reader announces the message when it appears. */}
-              <p role="status" className="mt-3 min-h-5 text-sm text-red-700">
+              {/* Always rendered, so a screen reader announces the message when it appears. On the survey background red-700 can vanish (a dark theme), so the message takes the headline color there; the boxes' red border still marks the refusal. */}
+              <p
+                role="status"
+                className="mt-3 min-h-5 text-sm text-red-700"
+                style={headlineColor ? { color: headlineColor } : undefined}>
                 {pinError ? pinErrorMessages[pinError] : null}
               </p>
             </div>
