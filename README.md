@@ -56,7 +56,7 @@ make dev-web      # Vite dev server, the app at http://localhost:5173/app/, prox
 
 Run Forma with [`deploy/docker/docker-compose.yml`](./deploy/docker/docker-compose.yml) or the Helm chart in [`deploy/helm/forma`](./deploy/helm/forma/README.md). Two things to set up deliberately:
 
-- Audit events (sign-ins, changes to members, settings, surveys and other records) are written to the server's log stream as JSON lines with `"level":"audit"` (with `LOG_FORMAT=json`, the default). Forma keeps no audit table and has no page that shows them, so your log pipeline is where they are kept and searched. Set `AUDIT_LOG_GET_USER_IP=1`, with `TRUSTED_PROXY_HOP_COUNT` matching the proxies in front of the server, to record client addresses; without it they read `unknown`.
+- Audit events (sign-ins, changes to members, settings, surveys and other records) are written to the server's log stream as JSON lines with `"level":"audit"` (with `LOG_FORMAT=json`, the default). Forma keeps no audit table and has no page that shows them, so your log pipeline is where they are kept and searched. Set `AUDIT_LOG_GET_USER_IP=1`, with `TRUSTED_PROXY_HOP_COUNT` matching the proxies in front of the server (or `CLIENT_IP_HEADER` with `TRUSTED_PROXY_CIDRS` when the proxy passes the client address in a header such as `CF-Connecting-IP`), to record client addresses; without it they read `unknown`.
 - Data retention: organization owners choose how long finished workflow runs and survey impressions without a response are kept. The daily sweep only counts what those windows would delete until you set `RETENTION_SWEEP_DRY_RUN=0`. Responses and contacts are never swept.
 
 ## Security

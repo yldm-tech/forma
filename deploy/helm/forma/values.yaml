@@ -123,6 +123,9 @@ deployment:
     # a CDN, a corporate load balancer — in front of the ingress; setting it higher than the real chain
     # lets callers spoof their address by prepending entries.
     TRUSTED_PROXY_HOP_COUNT: "1"
+    # When the client address reaches the ingress only in a single-address header (Cloudflare Tunnel's CF-Connecting-IP), read that header from the ingress pods alone; requests from other peers keep the X-Forwarded-For rule above. Set both or neither, and keep the CIDRs to the ingress pods' network, or anything inside them can choose its own address.
+    # CLIENT_IP_HEADER: CF-Connecting-IP
+    # TRUSTED_PROXY_CIDRS: 10.42.0.0/16
 
   # Additional pod volumes and app container mounts. These are useful for custom CA bundles and
   # provider-specific runtime files without placing their contents directly in Helm values.
