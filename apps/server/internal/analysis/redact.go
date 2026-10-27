@@ -5,13 +5,17 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
 )
 
 // The contact details an AI summary removes from answers before they leave for the AI provider. The patterns are deliberately broad: a stray order number redacted as a phone costs nothing, a phone number sent to a third party cannot be taken back.
 var (
-	emailPattern = regexp.MustCompile(`[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}`)
+	// latinEmailPattern is an address in the Latin script, ASCII or with diacritics (jörg@bücher.de), the usual kind. It runs first so that such an address written into Japanese or Chinese text without spaces is redacted alone, not with the words around it, which unicodeEmailPattern would take for part of an internationalized address.
+	latinEmailPattern = regexp.MustCompile(`[\p{Latin}\p{M}0-9._%+\-]+@[\p{Latin}\p{M}0-9\-]+(?:\.[\p{Latin}\p{M}0-9\-]+)*\.[\p{Latin}\p{M}]{2,}`)
+	// unicodeEmailPattern is an internationalized address (EAI, IDN): letters, marks and digits of any script in the local part, the domain and the top-level domain, as in 张三@例子.公司. Without spaces around it, it also takes the words it is written between; that costs some context, never an address.
+	unicodeEmailPattern = regexp.MustCompile(`[\p{L}\p{M}\p{N}._%+\-]+@[\p{L}\p{M}\p{N}\-]+(?:\.[\p{L}\p{M}\p{N}\-]+)*\.[\p{L}\p{M}]{2,}`)
 	// phoneCandidate is a run of digits of any script (full-width ones typed with a CJK input method included) with the separators phone numbers are written with, the dashes, dots, spaces and brackets of those input methods included; redactPhoneCandidate decides whether it is one. RE2's \d and \s are ASCII only, hence \p{Nd} and \p{Zs}.
 	phoneCandidate = regexp.MustCompile(`[+＋]?[(（]?\p{Nd}[\p{Nd}\s\p{Zs}().．\-‐‑‒–—―−ー－﹣ｰ（）]{5,}\p{Nd}`)
 	// isoDate and yearLastDate are the 8-digit dates phoneCandidate also matches (2026-10-26, 26.10.2026, 10-26-2026), after normalizePhone.
@@ -33,8 +37,44 @@ const (
 
 // redactContactDetails replaces email addresses and phone numbers in text with [email] and [phone]. A phone number is a candidate with 8 to 15 digits that is not a date; a longer candidate is several numbers written next to each other, and every part of it but the dates in it is redacted.
 func redactContactDetails(text string) string {
-	text = emailPattern.ReplaceAllString(text, redactedEmail)
+	text = redactFolded(text, latinEmailPattern)
+	text = redactFolded(text, unicodeEmailPattern)
 	return phoneCandidate.ReplaceAllStringFunc(text, redactPhoneCandidate)
+}
+
+// redactFolded replaces every address the email pattern finds in text folded with NFKC, rune by rune, with [email]. The fold finds the full-width ＠, letters and digits a Japanese or Chinese input method types (ｔａｒｏ＠ｅｘａｍｐｌｅ．ｃｏｍ) like their ASCII forms; the replacement is made in text as written, over every rune a match was folded from, so the rest of the answer, quoted back to the people who ran the survey, keeps its full-width forms. (phoneCandidate needs no fold: it matches full-width digits and separators as they are.)
+func redactFolded(text string, pattern *regexp.Regexp) string {
+	var b strings.Builder
+	// from and to hold, for every byte of the folded text, the bounds in text of the rune it was folded from.
+	from := make([]int, 0, len(text))
+	to := make([]int, 0, len(text))
+	for i := 0; i < len(text); {
+		_, size := utf8.DecodeRuneInString(text[i:])
+		f := norm.NFKC.String(text[i : i+size])
+		b.WriteString(f)
+		for range len(f) {
+			from = append(from, i)
+			to = append(to, i+size)
+		}
+		i += size
+	}
+	matches := pattern.FindAllStringIndex(b.String(), -1)
+	if len(matches) == 0 {
+		return text
+	}
+	var out strings.Builder
+	last := 0
+	for _, m := range matches {
+		start, end := from[m[0]], to[m[1]-1]
+		// Two matches folded from one rune are one address.
+		if start >= last {
+			out.WriteString(text[last:start])
+			out.WriteString(redactedEmail)
+		}
+		last = max(last, end)
+	}
+	out.WriteString(text[last:])
+	return out.String()
 }
 
 func redactPhoneCandidate(m string) string {
