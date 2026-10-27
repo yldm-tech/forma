@@ -3,12 +3,18 @@ package authz
 import (
 	"context"
 	"net"
+	"slices"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
+
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
 )
 
 func TestAnOverdueRevocationStopsEveryCheckUntilItIsDelivered(t *testing.T) {
@@ -274,4 +280,101 @@ func TestDeliveryJobRunsOnTheWorker(t *testing.T) {
 	if len(queues) != 1 || queues[0] != jobs.QueueAuthz {
 		t.Fatalf("delivery jobs queued on %v, want only %q", queues, jobs.QueueAuthz)
 	}
+}
+
+// A periodic authz job is a singleton within its queue, not across queues. A release from before the split queues these jobs on default with the same uniqueness and works only default: after a rollback to it, a job this release left on authz must not skip every insert of the earlier release, which would stop delivery for good and fail every authorization check after the next revocation. After an upgrade, a job the earlier release left on default must not hold back the first one on authz either.
+func TestPeriodicAuthzJobsAreSingletonsPerQueue(t *testing.T) {
+	ctx := context.Background()
+	pool, closePool, err := jobs.OpenPool(ctx, config.Config{DatabaseURL: pgtest.DSN(t), DatabaseMaxOpenConns: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closePool()
+	inserter, err := jobs.NewInserter(pool, discardLog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The earlier release's options: the same singleton, on the default queue.
+	earlier := &river.InsertOpts{MaxAttempts: singleton.MaxAttempts, UniqueOpts: river.UniqueOpts{ByState: singleton.UniqueOpts.ByState}}
+	insert := func(args river.JobArgs, opts *river.InsertOpts) *rivertype.JobInsertResult {
+		t.Helper()
+		res, err := inserter.Insert(ctx, args, opts)
+		if err != nil {
+			t.Fatalf("insert %s on %q: %v", args.Kind(), opts.Queue, err)
+		}
+		return res
+	}
+	for _, c := range []struct {
+		name        string
+		args        river.JobArgs
+		left, first *river.InsertOpts
+	}{
+		{"rollback", DeliverArgs{}, singleton, earlier},
+		{"upgrade", AuditArgs{}, earlier, singleton},
+	} {
+		left := insert(c.args, c.left)
+		if left.UniqueSkippedAsDuplicate {
+			t.Fatalf("%s: the leftover %s was not queued", c.name, c.args.Kind())
+		}
+		if res := insert(c.args, c.first); res.UniqueSkippedAsDuplicate {
+			t.Fatalf("%s: %s skipped as a duplicate of the job left on %q", c.name, c.args.Kind(), res.Job.Queue)
+		}
+		// Each queue still holds one instance at most.
+		for _, opts := range []*river.InsertOpts{c.left, c.first} {
+			if !insert(c.args, opts).UniqueSkippedAsDuplicate {
+				t.Fatalf("%s: a second %s was queued alongside a pending one", c.name, c.args.Kind())
+			}
+		}
+	}
+	var queued []string
+	if err := pool.QueryRow(ctx, `SELECT array_agg(kind || '@' || queue ORDER BY kind, queue) FROM river_job`).Scan(&queued); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"authzed-projection.deliver@authz", "authzed-projection.deliver@default", "authzed-reconciliation.audit@authz", "authzed-reconciliation.audit@default"}
+	if !slices.Equal(queued, want) {
+		t.Fatalf("queued %v, want %v", queued, want)
+	}
+}
+
+// During a rollout, a delivery queued by each release can run at once. They claim disjoint events, each event is delivered once, and the outbox ends drained.
+func TestConcurrentDrainsDeliverEachEventOnce(t *testing.T) {
+	e := newTestEnv(t)
+	var member, ws uuid.UUID
+	// Each tenant queues a handful of events; enough tenants that one claim, at most outboxBatchSize events, cannot take them all.
+	for e.countOutbox(`processed_at IS NULL`) <= outboxBatchSize {
+		_, _, member, ws = e.seedTenant()
+	}
+	pending := e.countOutbox(`processed_at IS NULL`)
+
+	start := make(chan struct{})
+	results := make([]DrainResult, 2)
+	errs := make([]error, 2)
+	var wg sync.WaitGroup
+	for i := range results {
+		wg.Go(func() {
+			<-start
+			results[i], errs[i] = e.delivery.Drain(e.ctx, DefaultDrainBatches)
+		})
+	}
+	close(start)
+	wg.Wait()
+
+	claimed, delivered := 0, 0
+	for i, res := range results {
+		if errs[i] != nil {
+			t.Fatalf("Drain %d: %v", i, errs[i])
+		}
+		if res.Failed != 0 || res.DeadLettered != 0 {
+			t.Fatalf("Drain %d = %+v, want no failures", i, res)
+		}
+		claimed += res.Claimed
+		delivered += res.Delivered
+	}
+	if claimed != pending || delivered != pending {
+		t.Fatalf("the drains claimed %d and delivered %d of %d events, want each event once", claimed, delivered, pending)
+	}
+	if n := e.countOutbox(`processed_at IS NULL OR attempts <> 1`); n != 0 {
+		t.Fatalf("%d events are undelivered or were claimed more than once", n)
+	}
+	e.expect(User(member), Workspace(ws), map[Action]bool{WorkspaceRead: true, WorkspaceManage: true})
 }
