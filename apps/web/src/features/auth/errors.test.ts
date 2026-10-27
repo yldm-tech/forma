@@ -85,6 +85,7 @@ describe("twoFactorFailure", () => {
   test.each([
     ["too_many_attempts_request_new_code", "Too many attempts. Please request a new code."],
     ["invalid_two_factor_cookie", "Invalid two factor cookie"],
+    ["account_not_linked", "The sign-in method could not be linked to the account."],
   ])("sends the user back to their password when the pending sign-in is gone (%s)", (code, message) => {
     expect(twoFactorFailure(t, apiError(400, code, message))).toEqual({ message, restart: true });
   });

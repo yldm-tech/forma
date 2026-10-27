@@ -39,6 +39,25 @@ func (r *Repository) insertIdentity(ctx context.Context, userID uuid.UUID, provi
 	return nil
 }
 
+// linkIdentity links an external identity to the user unless it already is; one linked to anyone else meanwhile cannot be linked. A nil link links nothing.
+func (r *Repository) linkIdentity(ctx context.Context, userID uuid.UUID, link *identityLink) error {
+	if link == nil {
+		return nil
+	}
+	owner, err := r.identityOwner(ctx, link.Provider, link.Subject)
+	if err != nil {
+		return err
+	}
+	switch owner {
+	case userID:
+		return nil
+	case uuid.Nil:
+		return r.insertIdentity(ctx, userID, link.Provider, link.Subject)
+	default:
+		return errAccountNotLinked()
+	}
+}
+
 // syncName applies the identity provider's display name, which forma2 re-read on every SSO sign-in.
 func (r *Repository) syncName(ctx context.Context, userID uuid.UUID, name string, now time.Time) error {
 	if err := r.db.WithContext(ctx).Exec(
