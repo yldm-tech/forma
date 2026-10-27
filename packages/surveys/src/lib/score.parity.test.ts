@@ -12,7 +12,12 @@ import {
   projectClientReservedValues,
 } from "@forma/types/embedded-data-resolver";
 import { type TJsWorkspaceStateSurvey } from "@forma/types/js";
-import type { TResponseData, TResponseDataValue, TResponseMeta, TResponseVariables } from "@forma/types/responses";
+import type {
+  TResponseData,
+  TResponseDataValue,
+  TResponseMeta,
+  TResponseVariables,
+} from "@forma/types/responses";
 import type { TSurveyBlock } from "@forma/types/surveys/blocks";
 import type { TSurveyElement } from "@forma/types/surveys/elements";
 import { applyBlockScore, getElementScore, getScoreVariable } from "@forma/types/surveys/scoring";
@@ -98,7 +103,8 @@ const walk = (parityCase: TSurveyCase): { path: string[]; variables: TResponseVa
     variables = applyBlockScore(parityCase.variables, block.elements, parityCase.data, variables);
     let jumpTarget: string | undefined;
     for (const logic of block.logic ?? []) {
-      if (!evaluateLogic(survey, parityCase.data, variables, logic.conditions, "default", reservedValues)) continue;
+      if (!evaluateLogic(survey, parityCase.data, variables, logic.conditions, "default", reservedValues))
+        continue;
       const result = performActions(survey, logic.actions, parityCase.data, variables);
       variables = { ...variables, ...result.calculations };
       jumpTarget = jumpTarget || result.jumpTarget;
