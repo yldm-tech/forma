@@ -97,13 +97,23 @@ func TestEnqueueUniqueReportsADuplicate(t *testing.T) {
 	}
 	ctx := context.Background()
 	unique := &river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true}}
+	var first int64
 	for i, want := range []bool{true, false} {
 		err := enq.Transaction(ctx, db, func(tx *jobs.Tx) error {
-			inserted, err := tx.EnqueueUnique(ctx, recordArgs{Note: "once"}, unique)
-			if err == nil && inserted != want {
+			job, inserted, err := tx.EnqueueUnique(ctx, recordArgs{Note: "once"}, unique)
+			if err != nil {
+				return err
+			}
+			if inserted != want {
 				t.Errorf("enqueue %d: inserted %t, want %t", i, inserted, want)
 			}
-			return err
+			// The duplicate answers the job it duplicates.
+			if i == 0 {
+				first = job.ID
+			} else if job.ID != first {
+				t.Errorf("duplicate answered job %d, want %d", job.ID, first)
+			}
+			return nil
 		})
 		if err != nil {
 			t.Fatal(err)

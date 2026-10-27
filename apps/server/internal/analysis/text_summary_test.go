@@ -1003,6 +1003,78 @@ func TestTextSummaryIgnoresALeftoverPendingStatus(t *testing.T) {
 	}
 }
 
+// A filter the job reads back from River differs in its bytes from the one it was asked with: jsonb decodes the escapes of a condition value and reorders the keys of an object. The summary is still stored under the key it was asked for, and the lookup finds it.
+func TestTextSummaryFilterSurvivesTheQueue(t *testing.T) {
+	e, _, _ := newTextEnv(t, true)
+	owner := e.user()
+	org, ws := e.organization(owner, nil)
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
+	sv := e.survey(ws, surveyOpts{blocks: textBlocks})
+	lookup, generate := textPaths(sv)
+	e.response(sv, row{at: at(1), finished: true, data: `{"q1":"the price"}`})
+	// The filter keeps the answers containing "price", its p written as the escape \u0070.
+	in := rawJSON(`{"elementId":"q1","target":"answers","language":"zh-Hans-CN","filterCriteria":{"data":{"q1":{"op":"contains","value":"\u0070rice"}}}}`)
+
+	if rec := e.request(owner, http.MethodPost, generate, in); rec.Code != http.StatusAccepted {
+		t.Fatalf("generate: %d %s", rec.Code, rec.Body)
+	}
+	for _, err := range e.runTextJobs() {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	var state TextSummaryState
+	decode(t, e.request(owner, http.MethodPost, lookup, in), &state)
+	if state.Status != "" || state.Summary == nil || state.Summary.AnswerCount != 1 {
+		t.Fatalf("lookup after the job: %+v", state)
+	}
+	// The summary is current: asking again answers it at once and queues nothing.
+	if rec := e.request(owner, http.MethodPost, generate, in); rec.Code != http.StatusOK {
+		t.Errorf("generate again: %d %s", rec.Code, rec.Body)
+	}
+}
+
+// A generation of the same summary already queued or running is not charged again, even when its pending status is gone (expired while the job waited, or lost with a killed worker): the request marks it pending again instead.
+func TestTextSummaryDuplicateIsNotCharged(t *testing.T) {
+	e, _, texts := newTextEnv(t, true)
+	owner := e.user()
+	org, ws := e.organization(owner, nil)
+	e.exec(`UPDATE organizations SET is_ai_smart_tools_enabled = true WHERE id = ?`, org)
+	sv := e.survey(ws, surveyOpts{blocks: textBlocks})
+	lookup, generate := textPaths(sv)
+	e.response(sv, row{at: at(1), finished: true, data: `{"q1":"the price"}`})
+	in := textInput("q1", TextTargetAnswers, nil)
+
+	if rec := e.request(owner, http.MethodPost, generate, in); rec.Code != http.StatusAccepted {
+		t.Fatalf("generate: %d %s", rec.Code, rec.Body)
+	}
+	scope, err := texts.scope(t.Context(), owner, sv, TextSummaryInput{ElementID: "q1", Target: TextTargetAnswers, Language: "zh-Hans-CN"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range 3 {
+		texts.clearStatus(t.Context(), scope.key)
+		rec := e.request(owner, http.MethodPost, generate, in)
+		var state TextSummaryState
+		if err := json.Unmarshal(rec.Body.Bytes(), &state); rec.Code != http.StatusAccepted || err != nil || state.Status != TextStatusPending {
+			t.Fatalf("generate %d with the job queued: %d %s", i, rec.Code, rec.Body)
+		}
+		if state := e.lookupText(owner, lookup, in); state.Status != TextStatusPending {
+			t.Fatalf("lookup %d with the job queued: %+v", i, state)
+		}
+	}
+	if n := e.count(`SELECT count(*) FROM river_job WHERE kind = ?`, TextSummaryArgs{}.Kind()); n != 1 {
+		t.Fatalf("%d jobs", n)
+	}
+	// Only the request that queued the job was charged: the rest of the member's and the organization's budgets is still there.
+	if res, err := texts.limiter.Check(t.Context(), ratelimit.ActionAITextSummaryMember, owner.String(), ratelimit.ActionAITextSummaryMember.Limit-1); err != nil || !res.Allowed {
+		t.Errorf("the member was charged for a duplicate: %+v %v", res, err)
+	}
+	if res, err := texts.limiter.Check(t.Context(), ratelimit.ActionAITextSummary, org.String(), ratelimit.ActionAITextSummary.Limit-1); err != nil || !res.Allowed {
+		t.Errorf("the organization was charged for a duplicate: %+v %v", res, err)
+	}
+}
+
 // Only an open-text question that asks for text has answers worth summarizing: one asking for an email address, a phone number, a URL or a number is not offered, and refused.
 func TestTextSummaryOnlyOfFreeText(t *testing.T) {
 	e, _, _ := newTextEnv(t, true)

@@ -22,8 +22,10 @@ type TextSummaryArgs struct {
 	Target         string             `json:"target"`
 	Language       string             `json:"language"`
 	FilterCriteria *response.Criteria `json:"filterCriteria,omitempty"`
-	Refresh        bool               `json:"refresh,omitempty"`
-	RequestedAt    time.Time          `json:"requestedAt"`
+	// Criteria is FilterCriteria encoded as it was asked with, which Key was made from. FilterCriteria comes back from River's jsonb with its escapes decoded and its objects' keys reordered, so it cannot make Key again.
+	Criteria    string    `json:"criteria"`
+	Refresh     bool      `json:"refresh,omitempty"`
+	RequestedAt time.Time `json:"requestedAt"`
 }
 
 func (TextSummaryArgs) Kind() string { return "analysis.text-summary" }

@@ -312,7 +312,7 @@ func (x *TextSummaries) current(ctx context.Context, scope *textScope) (*TextSum
 	return newest, nil
 }
 
-// Generate asks for a summary of the answers. A current cached summary is answered at once unless a refresh was asked for. Otherwise the generation is queued for `forma worker` and the state answered is pending (with the summary it refreshes, if any), which Lookup reports until the new summary is stored or the generation fails. A generation already pending for the same summary is not queued, or charged, again; a new one is charged to the rate limits, the member's and the organization's, as it is queued.
+// Generate asks for a summary of the answers. A current cached summary is answered at once unless a refresh was asked for. Otherwise the generation is queued for `forma worker` and the state answered is pending (with the summary it refreshes, if any), which Lookup reports until the new summary is stored or the generation fails. A generation already pending, or queued or running, for the same summary is not queued, or charged, again; a new one is charged to the rate limits, the member's and the organization's, as it is queued.
 func (x *TextSummaries) Generate(ctx context.Context, userID, surveyID uuid.UUID, in TextSummaryInput) (*TextSummaryState, error) {
 	scope, err := x.scope(ctx, userID, surveyID, in)
 	if err != nil {
@@ -351,24 +351,32 @@ func (x *TextSummaries) Generate(ctx context.Context, userID, surveyID uuid.UUID
 		state.PendingSeconds = x.secondsSince(st.Since)
 		return state, nil
 	}
-	if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummaryMember, userID.String()); err != nil {
-		return nil, err
-	}
-	if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummary, organizationID.String()); err != nil {
-		return nil, err
-	}
 	now := x.now().UTC()
-	args := TextSummaryArgs{Key: scope.key, SurveyID: surveyID, ElementID: in.ElementID, Target: in.Target, Language: in.Language, FilterCriteria: in.FilterCriteria, Refresh: in.Refresh, RequestedAt: now}
-	marked := false
+	args := TextSummaryArgs{Key: scope.key, SurveyID: surveyID, ElementID: in.ElementID, Target: in.Target, Language: in.Language, FilterCriteria: in.FilterCriteria, Criteria: scope.criteria, Refresh: in.Refresh, RequestedAt: now}
+	marked, since := false, now
 	err = x.svc.jobs.Transaction(ctx, x.svc.db, func(tx *jobs.Tx) error {
-		inserted, err := tx.EnqueueUnique(ctx, args, nil)
+		job, inserted, err := tx.EnqueueUnique(ctx, args, nil)
 		if err != nil {
 			return err
 		}
-		// Marked before the job commits, so the job cannot finish, and clear the status, before it is written. A duplicate is a generation of the same summary already queued or running, which keeps its own status.
-		if inserted {
-			marked = x.setStatus(ctx, scope.key, textStatus{Status: TextStatusPending, Since: now}, textPendingTTL)
+		// A duplicate is a generation of the same summary already queued or running, its status gone (expired while it waited for a slot, or lost with a worker killed while it ran): it is not charged, and is reported pending again since it was queued, so a status marked just after it finished is a leftover Lookup ignores. A status written meanwhile is kept.
+		if !inserted {
+			since = job.CreatedAt
+			x.markPending(ctx, scope.key, since)
+			return nil
 		}
+		// Charged only for the job inserted, before it commits: a limit reached rolls the job back. The organization's budget is checked first so a member is not charged for a generation it refuses.
+		if err := x.limiter.AssertAvailable(ctx, ratelimit.ActionAITextSummary, organizationID.String()); err != nil {
+			return err
+		}
+		if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummaryMember, userID.String()); err != nil {
+			return err
+		}
+		if err := x.limiter.Apply(ctx, ratelimit.ActionAITextSummary, organizationID.String()); err != nil {
+			return err
+		}
+		// Marked before the job commits, so the job cannot finish, and clear the status, before it is written.
+		marked = x.setStatus(ctx, scope.key, textStatus{Status: TextStatusPending, Since: now}, textPendingTTL)
 		return nil
 	})
 	if err != nil {
@@ -377,7 +385,7 @@ func (x *TextSummaries) Generate(ctx context.Context, userID, surveyID uuid.UUID
 		}
 		return nil, err
 	}
-	state.PendingSeconds = x.secondsSince(now)
+	state.PendingSeconds = x.secondsSince(since)
 	return state, nil
 }
 
@@ -402,6 +410,11 @@ func (x *TextSummaries) run(ctx context.Context, args TextSummaryArgs) error {
 	}
 	if !scope.freeText {
 		return apperr.BadRequest(notFreeTextMessage)
+	}
+	// The filter read back from River is the one asked with, but not byte for byte: jsonb decodes the escapes of its values and reorders the keys of its objects. The summary is keyed by the encoding it was asked with, which Generate marked pending and the lookups compute.
+	scope.criteria = args.Criteria
+	if scope.key = scope.keyFor(scope.language); scope.key != args.Key {
+		return fmt.Errorf("text summary job: key %s does not match its input", args.Key)
 	}
 	x.setStatus(ctx, scope.key, textStatus{Status: TextStatusPending, Since: args.RequestedAt}, textJobTimeout+time.Minute)
 	if _, err := x.ai.AssertResponseReading(ctx, sv.OrganizationID); err != nil {
@@ -641,6 +654,17 @@ func (x *TextSummaries) setStatus(ctx context.Context, key string, st textStatus
 		return false
 	}
 	return true
+}
+
+// markPending records a generation of the summary under key pending since then, unless a status is recorded already.
+func (x *TextSummaries) markPending(ctx context.Context, key string, since time.Time) {
+	b, err := json.Marshal(textStatus{Status: TextStatusPending, Since: since})
+	if err == nil {
+		err = x.cache.SetNX(ctx, textStatusKey(key), b, textPendingTTL).Err()
+	}
+	if err != nil {
+		x.log.WarnContext(ctx, "text summary status write failed", "err", err)
+	}
 }
 
 // clearStatus forgets the status of the generation of the summary under key.
