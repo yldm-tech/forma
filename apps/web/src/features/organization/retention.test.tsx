@@ -100,12 +100,12 @@ describe("RetentionCard", () => {
     expect(await screen.findByText(/No sweep has run with these settings yet/)).toBeTruthy();
   });
 
-  // The sweep keeps an app survey's impressions of identified users whatever the window (they decide show once, display limits and waiting periods), and the impressions window says so.
-  test("the impressions window says identified users' app survey impressions are kept", async () => {
+  // The sweep keeps impressions of identified users whatever the window (they decide show once, display limits, waiting periods and segment membership), and the impressions window says so.
+  test("the impressions window says identified users' impressions are kept", async () => {
     stubServer(retention());
     renderCard();
     expect(
-      await screen.findByText(/App survey impressions of identified users are also kept, however old/)
+      await screen.findByText(/Impressions of identified users are also kept, however old/)
     ).toBeTruthy();
   });
 
