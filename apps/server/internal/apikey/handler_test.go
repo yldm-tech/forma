@@ -16,8 +16,13 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 )
 
+// testZone is the server's local zone for every test of the package: 14 hours ahead of UTC, as far ahead as any zone, since the database driver reads times back in the local zone (see TestTheLatestExpiryIsListedInAnyZone).
+var testZone = time.FixedZone("UTC+14", 14*60*60)
+
 func TestMain(m *testing.M) {
 	gin.SetMode(gin.TestMode)
+	// The zone is set once, before any test starts a goroutine. A test that changed it and changed it back raced with the gRPC transports of its SpiceDB client, which read it on their way out after the client was closed.
+	time.Local = testZone
 	os.Exit(m.Run())
 }
 

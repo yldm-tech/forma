@@ -139,12 +139,11 @@ func TestCreateRefusesAnExpiryThatIsNotAFutureTime(t *testing.T) {
 	}
 }
 
-// The latest expiry accepted can be returned and listed even by a server whose zone is as far ahead of UTC as any, since the database driver reads times back in the local zone.
+// The latest expiry accepted can be returned and listed even by a server whose zone is as far ahead of UTC as any, since the database driver reads times back in the local zone. TestMain runs the package in that zone.
 func TestTheLatestExpiryIsListedInAnyZone(t *testing.T) {
-	local := time.Local
-	time.Local = time.FixedZone("UTC+14", 14*60*60)
-	t.Cleanup(func() { time.Local = local })
-
+	if time.Local != testZone {
+		t.Fatalf("the tests run in %v, want %v", time.Local, testZone)
+	}
 	e := newAppEnv(t)
 	org, owner := e.org(), e.user()
 	e.member(org, owner, "owner")
