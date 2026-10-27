@@ -144,6 +144,18 @@ describe("labels", () => {
     expect(formatTrendValue(3, "tick", "en-US")).toBe("3");
   });
 
+  test("an axis tick is written exactly, however small the scale's step", () => {
+    const ticks = (scale: { ticks: number[] }) =>
+      scale.ticks.map((tick) => formatTrendValue(tick, "tick", "en-US"));
+    expect(scoreScale([0.4])).toEqual({ min: 0, max: 0.5, ticks: [0, 0.25, 0.5] });
+    expect(ticks(scoreScale([0.4]))).toEqual(["0", "0.25", "0.5"]);
+    expect(ticks(scoreScale([0.04]))).toEqual(["0", "0.025", "0.05"]);
+    expect(ticks(sliderScale(0, 0.5, []))).toEqual(["0", "0.25", "0.5"]);
+    expect(ticks(sliderScale(0, 1.5, [0.7]))).toEqual(["0", "0.75", "1.5"]);
+    // Floating-point noise is not written out as more decimals.
+    expect(formatTrendValue(0.1 + 0.2, "tick", "en-US")).toBe("0.3");
+  });
+
   test("the x axis labels at most the given number of buckets", () => {
     expect([...labelledBuckets(5, 8)]).toEqual([0, 1, 2, 3, 4]);
     const many = labelledBuckets(30, 8);

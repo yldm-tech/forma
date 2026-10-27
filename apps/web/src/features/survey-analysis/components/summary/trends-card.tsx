@@ -72,7 +72,7 @@ const TrendChart = ({
   data: TrendDatum[];
   scale: TrendScale;
   kind: ValueKind;
-  /** The values are the average total score, taken over completed responses rather than answers. */
+  /** The values are the average total score, taken over the completed responses that have a score rather than over answers. */
   isScore: boolean;
   interval: TrendInterval;
   locale: string;
@@ -264,7 +264,7 @@ const TrendChart = ({
                           count: activeDatum.bucket.responses,
                         })
                       : isScore
-                        ? t("workspace.analysis.trends.completed_count", { count: activeDatum.answered })
+                        ? t("workspace.analysis.trends.scored_count", { count: activeDatum.answered })
                         : t("workspace.analysis.trends.answers_count", { count: activeDatum.answered })}
                   </p>
                 </>
@@ -319,9 +319,11 @@ const TrendTable = ({
             <th scope="col">{t("workspace.analysis.trends.period")}</th>
             <th scope="col">{valueHeader}</th>
             <th scope="col">
-              {bars || isScore
+              {bars
                 ? t("workspace.analysis.trends.completed")
-                : t("workspace.analysis.trends.answers")}
+                : isScore
+                  ? t("workspace.analysis.trends.scored")
+                  : t("workspace.analysis.trends.answers")}
             </th>
           </tr>
         </thead>

@@ -275,10 +275,12 @@ describe("TrendsCard", () => {
         .getAllByRole("cell")
         .map((cell) => cell.textContent)
     ).toEqual(["7.50", "2", "No data", "0"]);
-    expect(within(table).getByRole("columnheader", { name: "Completed" })).toBeTruthy();
-    expect(screen.getByText("Average total score of the completed responses in each period.")).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: "Scored responses" })).toBeTruthy();
+    expect(
+      screen.getByText("Average total score in each period, over the completed responses that have a score.")
+    ).toBeTruthy();
     fireEvent.mouseEnter(screen.getAllByTestId("trend-bucket")[0]!);
-    expect(screen.getByRole("tooltip").textContent).toContain("2 completed");
+    expect(screen.getByRole("tooltip").textContent).toContain("2 scored responses");
   });
 
   test("says when there are no responses to chart", async () => {

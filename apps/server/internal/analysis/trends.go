@@ -482,7 +482,7 @@ func trendExportHeaders(t *Trends) []string {
 		headers = append(headers, fmt.Sprintf("%s - %s", el.Headline, label), fmt.Sprintf("%s - Answered", el.Headline))
 	}
 	if t.Score != nil {
-		headers = append(headers, fmt.Sprintf("Total score (%s) - Average", t.Score.Name), fmt.Sprintf("Total score (%s) - Completed responses", t.Score.Name))
+		headers = append(headers, fmt.Sprintf("Total score (%s) - Average", t.Score.Name), fmt.Sprintf("Total score (%s) - Responses with a score", t.Score.Name))
 	}
 	return headers
 }

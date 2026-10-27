@@ -413,7 +413,7 @@ func TestTrendsAverageASliderAndTheTotalScoreOfCompletedResponses(t *testing.T) 
 		t.Fatal(err)
 	}
 	want := [][]string{
-		{"Period start", "Period end", "Partial period", "Responses", "Completed", "Completion rate (%)", "How warm? - Average", "How warm? - Answered", "Stars - Average", "Stars - Answered", "Total score (score) - Average", "Total score (score) - Completed responses"},
+		{"Period start", "Period end", "Partial period", "Responses", "Completed", "Completion rate (%)", "How warm? - Average", "How warm? - Answered", "Stars - Average", "Stars - Answered", "Total score (score) - Average", "Total score (score) - Responses with a score"},
 		{"2026-03-01", "2026-03-01", "No", "3", "2", "66.67", "5", "3", "4", "1", "3", "2"},
 		{"2026-03-02", "2026-03-02", "No", "1", "1", "100", "", "0", "", "0", "", "0"},
 		{"2026-03-03", "2026-03-03", "No", "2", "2", "100", "10", "1", "", "0", "10", "1"},

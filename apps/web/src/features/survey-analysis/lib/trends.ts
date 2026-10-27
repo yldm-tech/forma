@@ -84,11 +84,12 @@ export const metricScale = (
   return { min: 1, max: top, ticks: [1, (1 + top) / 2, top] };
 };
 
-/** The scale of a slider's average: from the element's minimum to its maximum, widened to a value drawn outside them (the scale changed after it was answered). */
+/** The scale of a slider's average: from the element's minimum to its maximum, widened to a value drawn outside them (the scale changed after it was answered), and to a span of one when there is none. A slider narrower than one keeps its own range. */
 export const sliderScale = (min: number, max: number, values: (number | null)[]): TrendScale => {
   const drawn = values.filter((v): v is number => v !== null);
   const lo = Math.min(min, ...drawn);
-  const hi = Math.max(max, lo + 1, ...drawn);
+  const top = Math.max(max, ...drawn);
+  const hi = top > lo ? top : lo + 1;
   return { min: lo, max: hi, ticks: [lo, (lo + hi) / 2, hi] };
 };
 
@@ -127,7 +128,15 @@ export const bucketRangeLabel = (bucket: TrendBucket, locale: string): string =>
     : format.formatRange(parseDay(bucket.start), parseDay(bucket.end));
 };
 
-/** A value as the chart writes it: the NPS signed and rounded, a share rounded with a percent sign, an average to two decimals, a count as a whole number, and an axis tick of an average to one decimal at most. */
+/** How many decimals an axis tick needs to be written exactly, from one to four: a score scale up to 0.5 has its middle tick at 0.25, and one up to 0.05 at 0.025. A difference far below the tick's size is floating-point noise (0.1 + 0.2), not a decimal to write. */
+const tickFractionDigits = (value: number): number => {
+  const noise = 1e-9 * Math.max(1, Math.abs(value));
+  let digits = 1;
+  while (digits < 4 && Math.abs(Number(value.toFixed(digits)) - value) > noise) digits++;
+  return digits;
+};
+
+/** A value as the chart writes it: the NPS signed and rounded, a share rounded with a percent sign, an average to two decimals, a count as a whole number, and an axis tick of an average with as many decimals as it has, up to four, so its label matches the height it is drawn at. */
 export const formatTrendValue = (
   value: number,
   metric: TrendMetric | "percentage" | "count" | "tick",
@@ -148,7 +157,9 @@ export const formatTrendValue = (
         value
       );
     case "tick":
-      return new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value);
+      return new Intl.NumberFormat(locale, { maximumFractionDigits: tickFractionDigits(value) }).format(
+        value
+      );
     default:
       return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
   }
