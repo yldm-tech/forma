@@ -141,13 +141,13 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	e.sessions.now = e.now
 	limiter, emitter := ratelimit.New(cfg, e.rdb, log), audit.New(cfg, log)
 	// Sign-up redeems invites through the real invite module; nothing on that path asks SpiceDB, so it runs without one.
-	invites := invite.NewService(cfg, invite.NewRepository(e.db), authz.NewAuthorizer(cfg, e.db, nil), limiter, m, emitter, log)
+	invites := invite.NewService(cfg, invite.NewRepository(e.db), authz.NewAuthorizer(cfg, e.db, nil), nil, limiter, m, emitter, log)
 	enqueuer, err := jobs.NewEnqueuer(log)
 	if err != nil {
 		t.Fatal(err)
 	}
 	lifecycle := billing.NewLifecycle(cfg, billing.NewStripe(cfg, log), e.db, enqueuer, log)
-	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, invites, limiter, m, emitter, e.rdb, lifecycle, enqueuer, brevo.NewContacts(cfg), log)
+	e.svc = NewService(cfg, NewRepository(e.db), e.sessions, invites, limiter, m, emitter, e.rdb, lifecycle, nil, enqueuer, brevo.NewContacts(cfg), log)
 	e.svc.now = e.now
 	e.svc.failures.now = e.now
 	cipher, err := secret.NewCipher(cfg)

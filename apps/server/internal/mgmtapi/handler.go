@@ -39,6 +39,7 @@ type Handler struct {
 	v1            *mgmtv1.Wrapper
 	keys          *apikey.Authenticator
 	authz         *authz.Authorizer
+	delivery      *authz.Delivery
 	limiter       *ratelimit.Limiter
 	audit         *audit.Emitter
 	workspaces    *workspace.Repository
@@ -54,9 +55,9 @@ type Handler struct {
 	now           func() time.Time
 }
 
-func NewHandler(cfg config.Config, db *gorm.DB, cache *redis.Client, v1 *mgmtv1.Wrapper, keys *apikey.Authenticator, authorizer *authz.Authorizer, limiter *ratelimit.Limiter, emitter *audit.Emitter, workspaces *workspace.Repository, sessions httpapi.SessionAuth, surveys *survey.Service, responses *response.Service, actionClasses *actionclass.Service, contacts *contact.Service, webhooks *webhook.Service, files *storage.Service, log *slog.Logger) *Handler {
+func NewHandler(cfg config.Config, db *gorm.DB, cache *redis.Client, v1 *mgmtv1.Wrapper, keys *apikey.Authenticator, authorizer *authz.Authorizer, delivery *authz.Delivery, limiter *ratelimit.Limiter, emitter *audit.Emitter, workspaces *workspace.Repository, sessions httpapi.SessionAuth, surveys *survey.Service, responses *response.Service, actionClasses *actionclass.Service, contacts *contact.Service, webhooks *webhook.Service, files *storage.Service, log *slog.Logger) *Handler {
 	return &Handler{
-		cfg: cfg, db: db, repo: NewRepository(db), cache: cache, v1: v1, keys: keys, authz: authorizer, limiter: limiter, audit: emitter, workspaces: workspaces,
+		cfg: cfg, db: db, repo: NewRepository(db), cache: cache, v1: v1, keys: keys, authz: authorizer, delivery: delivery, limiter: limiter, audit: emitter, workspaces: workspaces,
 		sessions: sessions, surveys: surveys, responses: responses, actionClasses: actionClasses, contacts: contacts, segments: contact.NewEvaluator(db, log), webhooks: webhooks,
 		files: files, log: log, now: time.Now,
 	}
