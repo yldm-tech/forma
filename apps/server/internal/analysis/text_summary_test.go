@@ -64,6 +64,17 @@ func TestRedactContactDetails(t *testing.T) {
 		{"jo\u0308rg@bu\u0308cher.de", "[email]"},
 		{"Grüße, jörg@example.com!", "Grüße, [email]!"},
 		{"пишите иван@пример.рф или ivan@example.ru", "пишите [email] или [email]"},
+		// The ideographic full stop a Chinese or Japanese input method types for '.', full-width (。) or half-width (｡), is a dot in a domain; elsewhere it stays as written.
+		{"連絡は taro＠example。co。jp までお願いします", "連絡は [email] までお願いします"},
+		{"请回复到我的QQ邮箱：12345678@qq。com，谢谢", "请回复到我的QQ邮箱：[email]，谢谢"},
+		{"ｔａｒｏ＠ｅｘａｍｐｌｅ。ｃｏｍ", "[email]"},
+		{"taro@example｡com", "[email]"},
+		{"taro@例子。中国", "[email]"},
+		{"です。taro@example.com。ありがとう", "です。[email]。ありがとう"},
+		// A local part that mixes scripts is redacted whole when a '.', '_', '+', '-' or '%' joins its runs.
+		{"张三.zhang@example.com 是我的邮箱", "[email] 是我的邮箱"},
+		{"иван.ivanov@mail.ru", "[email]"},
+		{"邮箱 李_li＠example．com", "邮箱 [email]"},
 		// Not addresses: an @ without a domain and a dot, and an answer with nothing to redact keeps its full-width forms.
 		{"＠channel 5＠100円", "＠channel 5＠100円"},
 		{"ＡＢＣ社のサービスに満足", "ＡＢＣ社のサービスに満足"},

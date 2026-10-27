@@ -42,15 +42,25 @@ func redactContactDetails(text string) string {
 	return phoneCandidate.ReplaceAllStringFunc(text, redactPhoneCandidate)
 }
 
-// redactFolded replaces every address the email pattern finds in text folded with NFKC, rune by rune, with [email]. The fold finds the full-width ＠, letters and digits a Japanese or Chinese input method types (ｔａｒｏ＠ｅｘａｍｐｌｅ．ｃｏｍ) like their ASCII forms; the replacement is made in text as written, over every rune a match was folded from, so the rest of the answer, quoted back to the people who ran the survey, keeps its full-width forms. (phoneCandidate needs no fold: it matches full-width digits and separators as they are.)
+// redactFolded replaces every address the email pattern finds in text folded with NFKC, rune by rune, with [email]. The fold finds the full-width ＠, letters and digits a Japanese or Chinese input method types (ｔａｒｏ＠ｅｘａｍｐｌｅ．ｃｏｍ) like their ASCII forms, and after an @ it also takes the ideographic full stop those input methods type for '.' (。, and the half-width ｡ that NFKC folds to it) for a dot, so taro＠example。co。jp is found too; before an @ or outside an address it stays a full stop, so the sentence an address follows is not taken for its local part. A match that starts with one of the characters that join the parts of a local part ('.', '_', '%', '+', '-') is a local part in mixed scripts that latinEmailPattern took only the Latin end of (张三.zhang@example.com), so it is extended back over the letters, marks, digits and joiners before it. The replacement is made in text as written, over every rune a match was folded from, so the rest of the answer, quoted back to the people who ran the survey, keeps its full-width forms. (phoneCandidate needs no fold: it matches full-width digits and separators as they are.)
 func redactFolded(text string, pattern *regexp.Regexp) string {
 	var b strings.Builder
 	// from and to hold, for every byte of the folded text, the bounds in text of the rune it was folded from.
 	from := make([]int, 0, len(text))
 	to := make([]int, 0, len(text))
+	// inDomain is whether the runes since the last @ could all be part of a domain.
+	inDomain := false
 	for i := 0; i < len(text); {
 		_, size := utf8.DecodeRuneInString(text[i:])
 		f := norm.NFKC.String(text[i : i+size])
+		switch {
+		case f == "@":
+			inDomain = true
+		case f == "。" && inDomain:
+			f = "."
+		case inDomain:
+			inDomain = isDomainText(f)
+		}
 		b.WriteString(f)
 		for range len(f) {
 			from = append(from, i)
@@ -58,14 +68,25 @@ func redactFolded(text string, pattern *regexp.Regexp) string {
 		}
 		i += size
 	}
-	matches := pattern.FindAllStringIndex(b.String(), -1)
+	folded := b.String()
+	matches := pattern.FindAllStringIndex(folded, -1)
 	if len(matches) == 0 {
 		return text
 	}
 	var out strings.Builder
 	last := 0
 	for _, m := range matches {
-		start, end := from[m[0]], to[m[1]-1]
+		s := m[0]
+		if strings.IndexByte(localPartJoiners, folded[s]) >= 0 {
+			for s > 0 {
+				r, size := utf8.DecodeLastRuneInString(folded[:s])
+				if !isLocalPartRune(r) {
+					break
+				}
+				s -= size
+			}
+		}
+		start, end := from[s], to[m[1]-1]
 		// Two matches folded from one rune are one address.
 		if start >= last {
 			out.WriteString(text[last:start])
@@ -75,6 +96,24 @@ func redactFolded(text string, pattern *regexp.Regexp) string {
 	}
 	out.WriteString(text[last:])
 	return out.String()
+}
+
+// localPartJoiners are the characters other than letters, marks and digits that a local part may hold, as unicodeEmailPattern's local part class names them.
+const localPartJoiners = "._%+-"
+
+// isLocalPartRune reports whether r is in unicodeEmailPattern's local part class.
+func isLocalPartRune(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsMark(r) || unicode.IsNumber(r) || strings.ContainsRune(localPartJoiners, r)
+}
+
+// isDomainText reports whether every rune of s is in a domain: a letter, a mark, a digit, '-' or '.'.
+func isDomainText(s string) bool {
+	for _, r := range s {
+		if !unicode.IsLetter(r) && !unicode.IsMark(r) && !unicode.IsNumber(r) && r != '-' && r != '.' {
+			return false
+		}
+	}
+	return true
 }
 
 func redactPhoneCandidate(m string) string {
