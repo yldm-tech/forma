@@ -97,6 +97,10 @@ interface Window {
 }
 ```
 
+### Staging and production
+
+The SDK has no separate test mode: every site that uses a workspace ID shows the surveys published in that workspace to real visitors. Create a second workspace in the same organization for staging, put its ID in your staging or local site, and build and try surveys there. When a survey is ready, choose **Copy to...** in its menu in the survey list to copy it into the production workspace as a draft: code actions are matched by key, and missing ones are created. Responses and contacts stay in the workspace that collected them.
+
 ## Identify users
 
 Surveys that target a segment, or that should be shown only once per person, need to know who the visitor is. Anonymous visitors still see surveys whose audience is everyone.

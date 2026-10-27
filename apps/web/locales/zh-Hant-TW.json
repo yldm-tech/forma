@@ -2289,6 +2289,8 @@
       "loader_wordpress_description": "目前尚無外掛程式。請將 HTML 程式碼片段貼到佈景主題的 <head> 標籤中，或透過 Google Tag Manager 部署。",
       "receiving_data": "資料接收中 💃🕺",
       "recheck": "重新檢查",
+      "staging_workspace_description": "所有使用這個工作區 ID 的網站，都會向真實訪客顯示這裡發布的問卷。若想在不影響他們的情況下試用問卷和動作，請在這個組織中另建一個工作區，將它的 ID 填入預備環境或本機網站，並在那裡建立問卷。問卷準備好後，在問卷清單中開啟它的選單，選擇「複製到...」，將它以草稿形式複製到這個工作區：程式碼動作會依鍵值比對，缺少的會自動建立。回應和聯絡人會留在收集它們的工作區。",
+      "staging_workspace_title": "在獨立的預備環境工作區中測試",
       "webapp_url": "SDK 連線 URL",
       "workspace_details": "工作區詳細資料",
       "workspace_details_description": "您用於整合 Forma 與應用程式的唯一工作區 ID 和 SDK 連線網址。",

@@ -2197,6 +2197,8 @@ checksums:
     workspace/app-connection/loader_wordpress_description: 640062dffce7231151d9fdb299afb41b
     workspace/app-connection/receiving_data: 9f2a48c0b0278861add70b526061264c
     workspace/app-connection/recheck: f95f2bbe6990a123d60255c87bdd59f7
+    workspace/app-connection/staging_workspace_description: 1ba5124e3ee0f4a15c154110ce0bd391
+    workspace/app-connection/staging_workspace_title: ad57e7198f7bd9f5f8768638a48b95f4
     workspace/app-connection/webapp_url: d64d8cc3c4c4ecce780d94755f7e4de9
     workspace/app-connection/workspace_details: 92b9d4c1844951bdc9835571311c753e
     workspace/app-connection/workspace_details_description: 2a67f81b72dca65a8169928767c44949

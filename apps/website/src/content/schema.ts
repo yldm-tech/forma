@@ -163,7 +163,7 @@ const sdk = obj({
   meta,
   title: text,
   sub: text,
-  install: obj({ title: text, body: text, frameworks: text, queue: text }),
+  install: obj({ title: text, body: text, frameworks: text, queue: text, staging: text }),
   reference: obj({
     title: text,
     lead: text,

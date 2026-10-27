@@ -99,6 +99,11 @@ const ConnectionCards = ({ connection, onRecheck }: { connection: AppConnection;
         <div className="space-y-3 pb-4">
           <IdBadge id={connection.workspaceId} label={t("workspace.app-connection.workspace_id")} />
           <IdBadge id={connection.appUrl} label={t("workspace.app-connection.webapp_url")} />
+          {/* There is no staging environment per workspace: a second workspace is the staging one, and Copy to... (survey/copy.go) moves a finished survey across. */}
+          <Alert variant="info" role="note">
+            <AlertTitle>{t("workspace.app-connection.staging_workspace_title")}</AlertTitle>
+            <AlertDescription>{t("workspace.app-connection.staging_workspace_description")}</AlertDescription>
+          </Alert>
         </div>
       </SettingsCard>
       <SettingsCard

@@ -354,6 +354,8 @@ export const zh: SiteContent = {
           'React 和 Vue：粘贴到 `index.html`。Next.js：用 `next/script` 并设置 `strategy="beforeInteractive"` 渲染同一段 JavaScript，这样 `window.forma` 会在组件的 effect 运行前就已存在：App Router 放在根 `app/layout.tsx` 中，Pages Router 直接放在 `pages/_document.tsx` 中。无需路由 hook。SDK 尚未发布到 npm，移动端 SDK 和 WordPress 插件也暂未提供。',
         queue:
           '脚本加载完成前，`window.forma` 是一个占位对象：调用会先进入队列而不会报错，SDK 加载并完成初始化后按顺序执行。排队中的调用没有返回值，请不要 await。SDK 加载后，占位对象会把调用转发给 SDK，因此加载前保存的引用仍然有效。使用 TypeScript 时，声明一次全局变量，逐个写出你调用的方法名，不要使用索引签名（开启 `noUncheckedIndexedAccess` 时，通过索引签名取到的方法可能为 undefined）：`interface Window { forma: Record<"setUserId" | "track" | "logout", (...args: unknown[]) => unknown> }`。',
+        staging:
+          "在预发布工作区里测试：SDK 没有单独的测试模式，所有使用某个工作区 ID 的站点都会向真实访客展示其中发布的问卷。在同一组织里另建一个工作区用于预发布，把它的 ID 填进预发布或本地站点，在那里搭建并试用问卷。问卷准备好后，在问卷列表中打开它的菜单，选择“复制到...”，把它作为草稿复制到正式工作区：代码操作按键名匹配，缺少的会自动创建。回复和联系人留在收集它们的工作区。",
       },
       reference: {
         title: "方法",
