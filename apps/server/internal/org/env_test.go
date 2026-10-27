@@ -135,13 +135,13 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wsSvc := workspace.NewService(cfg, wsRepo, e.authz.Authorizer, limiter, emitter, schemas, storage.NewService(bucket), log)
+	wsSvc := workspace.NewService(cfg, wsRepo, e.authz.Authorizer, e.authz.Delivery(), limiter, emitter, schemas, storage.NewService(bucket), log)
 	enqueuer, err := jobs.NewEnqueuer(log)
 	if err != nil {
 		t.Fatal(err)
 	}
 	lifecycle := billing.NewLifecycle(cfg, billing.NewStripe(cfg, log), db, enqueuer, log)
-	e.svc = NewService(cfg, NewRepository(db), wsRepo, wsSvc, e.authz.Authorizer, limiter, emitter, lifecycle, m, log)
+	e.svc = NewService(cfg, NewRepository(db), wsRepo, wsSvc, e.authz.Authorizer, e.authz.Delivery(), limiter, emitter, lifecycle, m, log)
 
 	e.engine = gin.New()
 	group := e.engine.Group("/api/app", httpapi.ErrorHandler(log), httpapi.CSRF(cfg), authz.DecisionMemo())

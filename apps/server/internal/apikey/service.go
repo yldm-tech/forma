@@ -172,6 +172,8 @@ func (s *Service) Delete(ctx context.Context, user httpapi.Actor, organizationID
 	if deleted == nil {
 		return apperr.NotFound("apiKey", id.String())
 	}
+	// The key's and its grants' revocations reach SpiceDB before the answer, so none waits on a worker that may be minutes behind, where it would pass the freshness window and stop every authorization check.
+	s.delivery.DeliverAPIKey(ctx, id)
 	return nil
 }
 

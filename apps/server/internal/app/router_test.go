@@ -341,7 +341,7 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, log),
 		webhook.NewHandler(nil, sessions),
 		webhook.NewV1Handler(nil, v1, log),
-		mgmtapi.NewHandler(cfg, nil, nil, v1, nil, nil, nil, nil, nil, sessions, nil, nil, nil, nil, nil, nil, log),
+		mgmtapi.NewHandler(cfg, nil, nil, v1, nil, nil, nil, nil, nil, nil, sessions, nil, nil, nil, nil, nil, nil, log),
 		integration.NewHandler(nil, sessions),
 		integration.NewOAuthHandler(nil, sessions, nil, log),
 		notification.NewHandler(),
