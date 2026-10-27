@@ -55,6 +55,8 @@ var (
 	ActionStateMutation = Rule{Namespace: "action:state-mutation", Window: time.Minute, Limit: 120}
 	// PublicResultShare is per client IP, charged by each read through a read-only results link. A link is opened by people without an account, so this is what bounds how fast one address can ask; the key itself carries 256 bits and is not guessable.
 	PublicResultShare = Rule{Namespace: "public:result-share", Window: time.Minute, Limit: 60}
+	// PublicUnsubscribe is per client IP, charged by reading and by redeeming an email's signed unsubscribe link. The token is the authorization and carries 256 bits of signature; the limit only bounds how fast one address can try tokens. It is as generous as BAVerifyEmail for the same reasons: mail scanners prefetch links and corporate NAT puts many users behind one address.
+	PublicUnsubscribe = Rule{Namespace: "public:unsubscribe", Window: time.Minute, Limit: 30}
 
 	// Better Auth's per-path limits (apps/web/modules/auth/lib/auth.ts, rateLimit.customRules), all per client IP. They guarded the endpoints the browser called directly; the flows forma2 ran through server actions were limited by the rules above instead.
 	//

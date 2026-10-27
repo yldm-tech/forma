@@ -109,7 +109,7 @@ func NewRouter(p *Platform, sessions httpapi.SessionAuth, apiKeys *apikey.Authen
 	}
 	// Stored files, at the URLs surveys, responses and emails embed: forma2's paths and answers, outside /api/app.
 	storageHandler.Register(r)
-	// The unsubscribe and view-responses links of the response-finished email, which emails already sent carry.
+	// The unsubscribe links of the notification emails: the unsigned one emails already sent carry, and /api/unsubscribe, which the signed ones and mail clients' one-click unsubscribe use without a session.
 	notificationHandler.Register(r)
 	web.Register(r)
 	return r
