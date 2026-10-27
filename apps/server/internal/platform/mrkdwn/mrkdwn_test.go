@@ -23,6 +23,15 @@ func TestEscape(t *testing.T) {
 		{"between letters or digits", "first_last@example.com snake_case 2*3 https://example.com/a_b", "first_last@example.com snake_case 2*3 https://example.com/a_b"},
 		{"at the edges", "_x x_", z + "_" + z + "x x" + z + "_" + z},
 		{"non-Latin words", "日本_語", "日本_語"},
+		{"URL with _ after / and =", "https://drive.google.com/file/d/1aB-_xYz/view https://www.youtube.com/watch?v=_kZ3abc", "https://drive.google.com/file/d/1aB-_xYz/view https://www.youtube.com/watch?v=_kZ3abc"},
+		{"URL with ~", "https://example.com/~bob/cv.pdf", "https://example.com/~bob/cv.pdf"},
+		{"upload URL with a camera file name", "https://forma.example/files/elements/e/_DSC1234--fid--0b5c.jpg", "https://forma.example/files/elements/e/_DSC1234--fid--0b5c.jpg"},
+		{"URL in a sentence", "see *https://example.com/_a_* now", "see " + z + "*" + z + "https://example.com/_a_* now"},
+		{"URL with entities", "https://example.com/?a=_1&b=<2>", "https://example.com/?a=_1&amp;b=&lt;2" + z + "&gt;"},
+		{"email with _ at the start", "_jane@example.com", "_jane@example.com"},
+		{"emails whose domain starts with a broadcast word", "ops@channelpartners.com jane@hereford.ac.uk bob@everyone.org", "ops@channelpartners.com jane@hereford.ac.uk bob@everyone.org"},
+		{"handles that start with a broadcast word", "@channelpartners @heresy", "@channelpartners @heresy"},
+		{"broadcast words next to punctuation", "(@here), @channel. _@everyone_ @here@here", "(@" + z + "here), @" + z + "channel. " + z + "_" + z + "@" + z + "everyone" + z + "_" + z + " @" + z + "here@here"},
 	}
 	for _, c := range cases {
 		if got := Escape(c.in); got != c.want {
@@ -32,6 +41,16 @@ func TestEscape(t *testing.T) {
 }
 
 // Whatever a respondent types, the escaped text holds no character mrkdwn reads as the start of a mention, a link or an entity of its own, and no formatting character next to anything but a zero-width space or a letter or digit.
+// A workflow template that wraps an answer in link syntax gets the answer's URL as the link's target, unchanged.
+func TestEscapeKeepsLinkTargets(t *testing.T) {
+	t.Parallel()
+	for _, url := range []string{"https://www.youtube.com/watch?v=_kZ3abc", "https://example.com/~bob/cv.pdf", "https://forma.example/files/e/_DSC1234.jpg"} {
+		if got := "<" + Escape(url) + "|Open>"; got != "<"+url+"|Open>" {
+			t.Errorf("link target for %q: got %q", url, got)
+		}
+	}
+}
+
 func TestEscapeLeavesNoMarkup(t *testing.T) {
 	t.Parallel()
 	hostile := "<!channel> *<https://evil.example|click>* _@here_ ~`>`~ &lt;"
