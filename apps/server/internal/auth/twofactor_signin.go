@@ -47,7 +47,7 @@ func (f secondFactor) refused() error {
 
 // verifySignIn is the second step of a sign-in (grantSignIn): token is the forma.two_factor cookie the first step set. A code from the authenticator app, or a backup code (spent by its use), completes the sign-in with a session, and links the external identity the sign-in carries (SSO recovery's) in the same transaction.
 //
-// The order and limits are Better Auth's verify-totp and verify-backup-code as forma2 ran them: the per-address limit, then a live pending sign-in, an enabled second factor, the account lockout, and the pending sign-in's budget of five refused codes, before the code is checked. A refused code counts against both the budget and the lockout; a correct one clears the lockout count. A value that cannot be decrypted fails the request without charging an attempt.
+// The order and limits are Better Auth's verify-totp and verify-backup-code as forma2 ran them: the per-address limit, then a live pending sign-in, an enabled second factor, the account lockout, the pending sign-in's budget of five refused codes, and, for a sign-in that links an identity, that the identity is still free for the account, before the code is checked. A refused code counts against both the budget and the lockout; a correct one clears the lockout count. A value that cannot be decrypted fails the request without charging an attempt.
 func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secondFactor, code string, meta clientMeta) (issuedToken, error) {
 	if err := t.limit(ctx, factor.limitBucket()); err != nil {
 		return issuedToken{}, err
@@ -109,6 +109,15 @@ func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secon
 			refusal = errTooManyTwoFactorAttempts()
 			return tx.consumePendingSignIn(ctx, p.ID, now)
 		}
+		// An identity linked to another account since the recovery link was redeemed spends the sign-in before the code is checked, so the refusal costs no backup code and counts no failure.
+		linkable, err := tx.identityLinkable(ctx, acc.ID, then.Link)
+		if err != nil {
+			return err
+		}
+		if !linkable {
+			refusal = errAccountNotLinked()
+			return tx.consumePendingSignIn(ctx, p.ID, now)
+		}
 		ok, err := t.checkSecondFactor(ctx, tx, factor, row, code, now)
 		if err != nil {
 			return err
@@ -129,7 +138,7 @@ func (t *TwoFactor) verifySignIn(ctx context.Context, token string, factor secon
 		if !acc.IsActive {
 			return errAccountInactive()
 		}
-		// The identity was free when the recovery link was redeemed; one linked to another account since spends the sign-in.
+		// Linked to another account between the check above and here: the sign-in is spent all the same.
 		if err := tx.linkIdentity(ctx, acc.ID, then.Link); err != nil {
 			if e, ok := apperr.As(err); ok && e.Code == CodeAccountNotLinked {
 				refusal = err

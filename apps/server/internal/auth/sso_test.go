@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1109,4 +1110,43 @@ func TestSSORecoverySecondFactorRefusesAnIdentityLinkedMeanwhile(t *testing.T) {
 	if e.count(`SELECT count(*) FROM verifications WHERE user_id = ? AND purpose = 'two_factor' AND consumed_at IS NULL`, id) != 0 {
 		t.Fatal("the pending sign-in was not spent")
 	}
+}
+
+// A refused link must not spend the backup code that would have completed the sign-in: the identity's owner is checked before the code is.
+func TestSSORecoveryRefusedLinkKeepsTheBackupCode(t *testing.T) {
+	t.Parallel()
+	e, fake := ssoEnv(t, providerGoogle)
+	id := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: true})
+	other := e.seedUser("grace@example.com", strongPassword, userOpts{})
+	codes := e.totp[id].BackupCodes
+	fake.set(func(f *fakeIdP) { f.profile = googleProfile("g-1", "ada@example.com") })
+
+	expectRedirect(t, e.browser().ssoSignIn(fake, "google", ""), appBase+"/auth/verification-requested?purpose=sso_recovery")
+	clicker := e.browser()
+	done := clicker.post("/auth/sso/recovery/complete", map[string]string{"token": e.recoveryToken("ada@example.com")})
+	expectStatus(t, done, http.StatusOK, "")
+	if done.json()["status"] != "two_factor_required" {
+		t.Fatalf("completion %s", done.Body.String())
+	}
+	e.exec(`INSERT INTO user_identities (user_id, provider, subject) VALUES (?, 'google', 'g-1')`, other)
+
+	r := verifyBackup(clicker, codes[0])
+	expectStatus(t, r, http.StatusBadRequest, CodeAccountNotLinked)
+	if c := r.cookie(twoFactorCookieName); c == nil || c.MaxAge >= 0 {
+		t.Fatalf("the spent pending sign-in's cookie was not cleared: %v", c)
+	}
+	if e.count(`SELECT count(*) FROM sessions WHERE user_id = ?`, id) != 0 || e.count(`SELECT count(*) FROM user_identities WHERE user_id = ? AND provider = 'google'`, id) != 0 {
+		t.Fatal("the refused recovery signed in or linked")
+	}
+	if e.count(`SELECT count(*) FROM verifications WHERE user_id = ? AND purpose = 'two_factor' AND consumed_at IS NULL`, id) != 0 {
+		t.Fatal("the pending sign-in was not spent")
+	}
+	left, err := openBackupCodes(e.twoFactor.cipher, id, e.backupCodesCiphertext(id))
+	if err != nil || len(left) != len(codes) || !slices.Contains(left, codes[0]) {
+		t.Fatalf("the refused link spent the backup code: %d left, %v", len(left), err)
+	}
+	// The kept code still completes a password sign-in.
+	b := e.browser()
+	b.signInPending()
+	expectStatus(t, verifyBackup(b, codes[0]), http.StatusOK, "")
 }

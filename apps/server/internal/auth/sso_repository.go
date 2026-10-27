@@ -58,6 +58,18 @@ func (r *Repository) linkIdentity(ctx context.Context, userID uuid.UUID, link *i
 	}
 }
 
+// identityLinkable reports whether linkIdentity can link the identity to the user: it is free or already the user's. A nil link is linkable.
+func (r *Repository) identityLinkable(ctx context.Context, userID uuid.UUID, link *identityLink) (bool, error) {
+	if link == nil {
+		return true, nil
+	}
+	owner, err := r.identityOwner(ctx, link.Provider, link.Subject)
+	if err != nil {
+		return false, err
+	}
+	return owner == uuid.Nil || owner == userID, nil
+}
+
 // syncName applies the identity provider's display name, which forma2 re-read on every SSO sign-in.
 func (r *Repository) syncName(ctx context.Context, userID uuid.UUID, name string, now time.Time) error {
 	if err := r.db.WithContext(ctx).Exec(
