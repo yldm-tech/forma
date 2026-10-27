@@ -521,7 +521,6 @@ describe("the survey", () => {
   });
 });
 
-// D-FG03: a survey that takes one response per browser remembers, once the final answer is in, that this browser answered, and shows "already responded" on the next visit.
 // The survey's title the server paints over a survey page before the bundles run (lib/first-paint.ts).
 describe("the server's first paint", () => {
   const firstPaint = () => document.getElementById("forma-first-paint");
@@ -582,6 +581,7 @@ describe("the server's first paint", () => {
   });
 });
 
+// D-FG03: a survey that takes one response per browser remembers, once the final answer is in, that this browser answered, and shows "already responded" on the next visit.
 describe("one response per browser", () => {
   const MARK_KEY = "forma:responded:survey-1";
   const COOKIE = "forma_responded_survey-1";

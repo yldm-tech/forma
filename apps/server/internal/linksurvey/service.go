@@ -230,8 +230,7 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 		return page{}, err
 	}
 	// The title follows the language the survey opens in, negotiated from the browser when the link names none.
-	mdLang := metadataLanguage(q.get("lang"), acceptLanguage, sv.Languages)
-	md := basicSurveyMetadata(sv, mdLang, s.cfg.IsFormaCloud)
+	md := basicSurveyMetadata(sv, metadataLanguage(q.get("lang"), acceptLanguage, sv.Languages), s.cfg.IsFormaCloud)
 	h := pageHead(s.publicDomain(), sv, md, brandColor(wc.Workspace.Styling, sv.Styling), wc.whitelabel().FaviconURL, linkViewport, true)
 
 	singleUseID := ""
@@ -260,9 +259,6 @@ func (s *Service) surveyPage(ctx context.Context, rawID string, q query, acceptL
 		return notFound, err
 	}
 	p.Head = h
-	if p.State.View == viewSurvey {
-		p.FirstPaintTitle = firstPaintTitle(sv, mdLang)
-	}
 	return p, err
 }
 
@@ -398,7 +394,12 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 		props.Locale = gate
 		state.View = viewPin
 	}
-	return page{Status: http.StatusOK, State: state, RuntimeLanguage: runtimeLanguage(languageCode, sv.Languages), CustomScripts: runsCustomScripts(props, public)}, nil
+	p := page{Status: http.StatusOK, State: state, RuntimeLanguage: runtimeLanguage(languageCode, sv.Languages), CustomScripts: runsCustomScripts(props, public)}
+	if state.View == viewSurvey {
+		// The paint is in the language the survey opens in (languageCode, which ?lang= also names by canonical tag), not the title tag's: /s keeps forma2's narrower rule for <title> (metadataLanguageCode) and /c its default-language head.
+		p.FirstPaintTitle = firstPaintTitle(sv, languageCode)
+	}
+	return p, nil
 }
 
 // runsCustomScripts mirrors the survey page's CustomScriptsInjector: off on Forma Cloud and in a preview, otherwise on when the workspace's scripts in the page state or the survey's in the public survey (which a PIN-gated page receives once the PIN is entered) are not blank. It reads what the browser is given, so whatever keeps the scripts from a page keeps this policy exception from it too.
@@ -570,10 +571,6 @@ func (s *Service) contactPage(ctx context.Context, token string, q query, accept
 		return notFound, err
 	}
 	p.Head = h
-	// The head keeps forma2's default-language metadata; the first paint follows the language the survey opens in, as on /s.
-	if p.State.View == viewSurvey {
-		p.FirstPaintTitle = firstPaintTitle(sv, metadataLanguage(q.get("lang"), acceptLanguage, sv.Languages))
-	}
 	return p, err
 }
 

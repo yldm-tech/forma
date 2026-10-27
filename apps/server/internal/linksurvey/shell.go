@@ -21,6 +21,9 @@ const fallbackShell = `<!doctype html><html lang="en" translate="no"><head><meta
 
 var htmlLang = regexp.MustCompile(`<html lang="[^"]*"`)
 
+// stylesheetLink is a stylesheet link as Vite writes it into the built survey.html.
+var stylesheetLink = regexp.MustCompile(`<link rel="stylesheet"[^>]*>`)
+
 type shell struct {
 	doc []byte
 }
@@ -29,7 +32,26 @@ func newShell(doc []byte) shell {
 	if !bytes.Contains(doc, []byte(headMarker)) || !bytes.Contains(doc, []byte(firstPaintMarker)) || !bytes.Contains(doc, []byte(stateMarker)) {
 		doc = []byte(fallbackShell)
 	}
-	return shell{doc: doc}
+	return shell{doc: stylesheetsFirst(doc)}
+}
+
+// stylesheetsFirst moves the head's stylesheet links in front of the head marker, so the browser asks for them first. Vite writes the page bundle's stylesheet last, after its module preloads, and the server writes the runtime's high-priority preload at the marker; but the stylesheet blocks rendering, so on a first visit the first paint (firstpaint.go), and every other screen, would wait while it shared the connection with several hundred kilobytes of script.
+func stylesheetsFirst(doc []byte) []byte {
+	head, body, ok := bytes.Cut(doc, []byte("</head>"))
+	if !ok {
+		return doc
+	}
+	links := stylesheetLink.FindAll(head, -1)
+	if len(links) == 0 {
+		return doc
+	}
+	head = stylesheetLink.ReplaceAllLiteral(head, nil)
+	moved := append(bytes.Join(links, nil), headMarker...)
+	head = bytes.Replace(head, []byte(headMarker), moved, 1)
+	out := make([]byte, 0, len(doc))
+	out = append(out, head...)
+	out = append(out, "</head>"...)
+	return append(out, body...)
 }
 
 // render fills the shell; firstPaintHTML may be empty. The state is JSON inside a script element; encoding/json escapes <, > and & in strings, so no value can close the element.

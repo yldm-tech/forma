@@ -44,3 +44,20 @@ func TestShellRender(t *testing.T) {
 		t.Fatalf("fallback shell:\n%s", doc)
 	}
 }
+
+// The page bundle's stylesheet blocks rendering, so the first paint waits for it: the shell asks for it before anything else, ahead of the runtime the head preloads and the bundle's module preloads, which Vite writes before it.
+func TestShellPutsTheStylesheetFirst(t *testing.T) {
+	built := `<!doctype html><html lang="en" translate="no"><head><meta charset="UTF-8"><!--forma:head--><script type="module" crossorigin src="/app/assets/survey-a.js"></script><link rel="modulepreload" crossorigin href="/app/assets/chunk-b.js"><link rel="stylesheet" crossorigin href="/app/assets/survey-c.css"></head><body><!--forma:first-paint--><div id="root"></div><!--forma:state--></body></html>`
+	doc, err := newShell([]byte(built)).render("en-US", `<title>T</title><link rel="preload" href="/js/surveys.umd.js" as="script" fetchpriority="high">`, "", pageState{View: viewNotFound})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const stylesheet = `<link rel="stylesheet" crossorigin href="/app/assets/survey-c.css">`
+	out := string(doc)
+	if !strings.Contains(out, `<head><meta charset="UTF-8">`+stylesheet+`<title>T</title><link rel="preload" href="/js/surveys.umd.js"`) || strings.Count(out, stylesheet) != 1 {
+		t.Fatalf("shell:\n%s", out)
+	}
+	if !strings.Contains(out, `<script type="module" crossorigin src="/app/assets/survey-a.js"></script><link rel="modulepreload" crossorigin href="/app/assets/chunk-b.js"></head>`) {
+		t.Fatalf("the bundle's other tags moved:\n%s", out)
+	}
+}

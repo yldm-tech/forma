@@ -27,13 +27,20 @@ func TestSurveyPagePaintsTheTitleFirst(t *testing.T) {
 	titled := e.survey(ws, "metadata", `{"title":{"default":"Custom title","de-DE":"Eigener Titel"}}`)
 	e.language(ws, titled, "en-US", "", true, true)
 	e.language(ws, titled, "de-DE", "", false, true)
+	// The survey opens in a language its ?lang= names only by canonical tag (zh-CN and zh-Hans read zh-Hans-CN); the title tag keeps forma2's narrower rule, the paint follows the survey.
+	chinese := e.survey(ws, "metadata", `{"title":{"default":"Quick question","zh-Hans-CN":"一个简单的问题"}}`)
+	e.language(ws, chinese, "en-US", "", true, true)
+	e.language(ws, chinese, "zh-Hans-CN", "zh", false, true)
 	welcome := e.survey(ws, "welcome_card", `{"enabled":true,"headline":{"default":"<p>Welcome to our <b>survey</b></p>"}}`)
 
 	for target, want := range map[string]string{
-		"/s/" + named.String():                  "Q4 &lt;NPS&gt; &amp; &#34;more&#34;",
-		"/s/" + titled.String():                 "Custom title",
-		"/s/" + titled.String() + "?lang=de-DE": "Eigener Titel",
-		"/s/" + welcome.String():                "Welcome to our survey",
+		"/s/" + named.String():                     "Q4 &lt;NPS&gt; &amp; &#34;more&#34;",
+		"/s/" + titled.String():                    "Custom title",
+		"/s/" + titled.String() + "?lang=de-DE":    "Eigener Titel",
+		"/s/" + welcome.String():                   "Welcome to our survey",
+		"/s/" + chinese.String() + "?lang=zh-CN":   "一个简单的问题",
+		"/s/" + chinese.String() + "?lang=zh-Hans": "一个简单的问题",
+		"/s/" + chinese.String() + "?lang=zh":      "一个简单的问题",
 	} {
 		p := e.page(target)
 		if p.view() != viewSurvey {
@@ -78,10 +85,16 @@ func TestSurveyPageFirstPaintOnlyOnTheSurvey(t *testing.T) {
 func TestContactPagePaintsTheTitleFirst(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()
-	id := e.survey(ws)
+	id := e.survey(ws, "metadata", `{"title":{"default":"Quick question","zh-Hans-CN":"一个简单的问题"}}`)
+	e.language(ws, id, "en-US", "", true, true)
+	e.language(ws, id, "zh-Hans-CN", "", false, true)
 	token := contactToken(t, e.cfg, e.contact(ws).String(), id.String(), nil)
 	p := e.page("/c/" + token)
-	if paint, style := p.paint(); p.view() != viewSurvey || !strings.Contains(paint, `<p dir="auto">Link Feedback Survey</p>`) || !style {
+	if paint, style := p.paint(); p.view() != viewSurvey || !strings.Contains(paint, `<p dir="auto">Quick question</p>`) || !style {
 		t.Fatalf("view %q first paint %q style %v", p.view(), paint, style)
+	}
+	// In the language the survey opens in, even one ?lang= names only by canonical tag.
+	if paint, _ := e.page("/c/" + token + "?lang=zh-CN").paint(); !strings.Contains(paint, `<p dir="auto">一个简单的问题</p>`) {
+		t.Errorf("?lang=zh-CN: first paint %q", paint)
 	}
 }
