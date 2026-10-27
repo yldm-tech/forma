@@ -7,10 +7,11 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 )
 
-// The writes and reads of forma2's /api/v2/management/webhooks. The management API module validates the input and authorizes the API key with v2's rules before it calls these; they authorize nothing.
+// The writes and reads of forma2's /api/v2/management/webhooks. The management API module validates the input and authorizes the API key with v2's rules before it calls these; they authorize nothing more, except ReplaceManaged, which alone knows whether a replacement retargets the webhook.
 
 // View is the webhook as the v2 API serializes it, without its secret.
 func (w *Webhook) View() View { return w.view() }
@@ -26,13 +27,13 @@ func (s *Service) ByID(ctx context.Context, id uuid.UUID) (*Webhook, error) {
 	return s.repo.ByID(ctx, id)
 }
 
-// CreateManaged is forma2's v2 createWebhook in a workspace the caller may write: the input's rules, the URL's SSRF check (400 with forma2's message) and a new secret.
+// CreateManaged is forma2's v2 createWebhook in a workspace the caller may manage: the input's rules, the URL's SSRF check (400 with forma2's message) and a new secret.
 func (s *Service) CreateManaged(ctx context.Context, workspaceID uuid.UUID, in Input) (*Webhook, error) {
 	return s.createV1(ctx, workspaceID, in)
 }
 
-// ReplaceManaged is forma2's v2 updateWebhook: every field of the webhook replaced, its source included, after the URL's SSRF check. A webhook that disappeared meanwhile is 404 webhook.
-func (s *Service) ReplaceManaged(ctx context.Context, id uuid.UUID, in Input) (*Webhook, error) {
+// ReplaceManaged is forma2's v2 updateWebhook by a caller who may write to the webhook's workspace: every field of the webhook replaced, its source included, after the URL's SSRF check. A replacement that changes its URL, its triggers or its surveys also needs workspace.manage, as on the settings page (403 forbidden otherwise). A webhook that disappeared meanwhile is 404 webhook.
+func (s *Service) ReplaceManaged(ctx context.Context, actor authz.Actor, id uuid.UUID, in Input) (*Webhook, error) {
 	current, err := s.repo.ByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -43,6 +44,15 @@ func (s *Service) ReplaceManaged(ctx context.Context, id uuid.UUID, in Input) (*
 	f, err := s.fields(ctx, current.WorkspaceID, in, current.SurveyIDs)
 	if err != nil {
 		return nil, err
+	}
+	if retargets(current, f) {
+		allowed, err := s.authz.Can(ctx, actor, authz.WorkspaceManage, authz.Workspace(current.WorkspaceID))
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			return nil, apperr.Forbidden(managersOnly)
+		}
 	}
 	if _, err := s.guard.Validate(ctx, f.URL); err != nil {
 		return nil, err

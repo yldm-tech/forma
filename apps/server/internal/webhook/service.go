@@ -44,6 +44,9 @@ var endpointStatusErrors = map[int]*apperr.Error{
 	http.StatusGatewayTimeout:      apperr.InvalidInput("endpoint_gateway_timeout_error", "Gateway Timeout (504): Gateway timeout, service not reachable"),
 }
 
+// managersOnly is the refusal of a webhook change only a workspace manager may make.
+const managersOnly = "Only workspace managers can add webhooks or change where they send responses."
+
 // Service holds the webhook rules: the settings page's operations, the v1 API's, and delivery. Every operation on behalf of a caller authorizes through authz on the webhook's workspace before it reads or writes.
 type Service struct {
 	repo    *Repository
@@ -111,6 +114,26 @@ func (s *Service) fields(ctx context.Context, workspaceID uuid.UUID, in Input, k
 	return f, nil
 }
 
+// require authorizes action on the workspace for the user. Where a webhook sends the workspace's responses, which of them, and the secret it signs them with are a workspace manager's decision, as a workflow's HTTP request step is, so a refused workspace.manage says that rather than the generic refusal.
+func (s *Service) require(ctx context.Context, userID, workspaceID uuid.UUID, action authz.Action) error {
+	err := s.authz.Require(ctx, authz.User(userID), action, authz.Workspace(workspaceID))
+	if e, ok := apperr.As(err); ok && action == authz.WorkspaceManage && e.Code == apperr.CodeForbidden {
+		return apperr.Forbidden(managersOnly)
+	}
+	return err
+}
+
+// retargets reports whether f changes what w sends or where: its URL, its triggers, or the surveys whose responses it sends. Its name and source do not.
+func retargets(w *Webhook, f fields) bool {
+	return f.URL != w.URL || f.AllSurveys != w.AllSurveys || !sameSet(f.Triggers, w.Triggers) || !sameSet(f.SurveyIDs, w.SurveyIDs)
+}
+
+// sameSet reports whether a and b hold the same values, in any order.
+func sameSet[T comparable](a, b []T) bool {
+	missing := func(in []T) func(T) bool { return func(v T) bool { return !slices.Contains(in, v) } }
+	return !slices.ContainsFunc(a, missing(b)) && !slices.ContainsFunc(b, missing(a))
+}
+
 // resolveSurveyIDs reads survey ids from outside, which are UUIDs.
 func resolveSurveyIDs(raw []string) ([]uuid.UUID, error) {
 	var out []uuid.UUID
@@ -153,11 +176,11 @@ type CreateInput struct {
 	Secret *string `json:"webhookSecret"`
 }
 
-// Create is forma2's createWebhookAction: workspace.write, the state-mutation limit per workspace, the URL's SSRF check, no Discord, and the given secret or a new one. The answer is the only one that carries the secret.
+// Create is forma2's createWebhookAction, with workspace.manage where forma2 asked for workspace.write: the state-mutation limit per workspace, the URL's SSRF check, no Discord, and the given secret or a new one. The answer is the only one that carries the secret.
 func (s *Service) Create(ctx context.Context, userID, workspaceID uuid.UUID, in CreateInput) (*View, error) {
 	var org *uuid.UUID
 	created, err := func() (*Webhook, error) {
-		if err := s.authz.Require(ctx, authz.User(userID), authz.WorkspaceWrite, authz.Workspace(workspaceID)); err != nil {
+		if err := s.require(ctx, userID, workspaceID, authz.WorkspaceManage); err != nil {
 			return nil, err
 		}
 		var err error
@@ -226,13 +249,13 @@ func (s *Service) owned(ctx context.Context, userID, id uuid.UUID, action authz.
 	if w == nil {
 		return nil, apperr.NotFound("webhook", id.String())
 	}
-	if err := s.authz.Require(ctx, authz.User(userID), action, authz.Workspace(w.WorkspaceID)); err != nil {
+	if err := s.require(ctx, userID, w.WorkspaceID, action); err != nil {
 		return nil, err
 	}
 	return w, nil
 }
 
-// Update is forma2's updateWebhookAction: workspace.write on the webhook's workspace, the state-mutation limit, and the URL's SSRF check. The source is never changed. forma2 stored a cleared name as "", which this keeps.
+// Update is forma2's updateWebhookAction: workspace.write on the webhook's workspace, and workspace.manage when the update changes its URL, its triggers or its surveys; the state-mutation limit, and the URL's SSRF check. The source is never changed. forma2 stored a cleared name as "", which this keeps.
 func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, in Input) (*View, error) {
 	var before, after *Webhook
 	err := func() error {
@@ -247,6 +270,11 @@ func (s *Service) Update(ctx context.Context, userID, id uuid.UUID, in Input) (*
 		f, err := s.fields(ctx, before.WorkspaceID, in, before.SurveyIDs)
 		if err != nil {
 			return err
+		}
+		if retargets(before, f) {
+			if err := s.require(ctx, userID, before.WorkspaceID, authz.WorkspaceManage); err != nil {
+				return err
+			}
 		}
 		if _, err := s.guard.Validate(ctx, f.URL); err != nil {
 			return err
@@ -316,7 +344,7 @@ type TestResult struct {
 	Secret  *string `json:"secret,omitempty"`
 }
 
-// TestEndpoint is forma2's testEndpointAction: workspace.write on the webhook's workspace (an existing webhook) or on the workspace it is being created in, then one signed {"event":"testEndpoint"} POST to the URL.
+// TestEndpoint is forma2's testEndpointAction, with workspace.manage where forma2 asked for workspace.write: on the webhook's workspace (an existing webhook) or on the workspace it is being created in, then one signed {"event":"testEndpoint"} POST to the URL.
 func (s *Service) TestEndpoint(ctx context.Context, userID, workspaceID uuid.UUID, in TestInput) (*TestResult, error) {
 	var secret string
 	result := &TestResult{Success: true}
@@ -325,7 +353,7 @@ func (s *Service) TestEndpoint(ctx context.Context, userID, workspaceID uuid.UUI
 		if !ok {
 			return nil, apperr.BadRequest("Invalid webhook id")
 		}
-		w, err := s.owned(ctx, userID, id, authz.WorkspaceWrite)
+		w, err := s.owned(ctx, userID, id, authz.WorkspaceManage)
 		if err != nil {
 			return nil, err
 		}
@@ -333,7 +361,7 @@ func (s *Service) TestEndpoint(ctx context.Context, userID, workspaceID uuid.UUI
 			secret = *w.Secret
 		}
 	} else {
-		if err := s.authz.Require(ctx, authz.User(userID), authz.WorkspaceWrite, authz.Workspace(workspaceID)); err != nil {
+		if err := s.require(ctx, userID, workspaceID, authz.WorkspaceManage); err != nil {
 			return nil, err
 		}
 		secret = GenerateSecret()
