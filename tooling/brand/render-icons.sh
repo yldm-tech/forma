@@ -9,7 +9,7 @@
 #   apps/web/public/favicon/apple-touch-icon.png     180 px, from app-icon-crimson.svg on a full crimson square: iOS rounds the corners itself and fills transparent ones with black
 #   apps/web/public/favicon/android-chrome-{192x192,512x512}.png from app-icon-crimson.svg
 #   apps/web/public/favicon/safari-pinned-tab.svg    symbol.svg in one colour, the mask Safari tints
-#   apps/web/public/logo-transparent.png             lockup.svg at twice its size, 424 × 96 with no added margin: every email embeds this file at a fixed width (212 × 48 from apps/server/internal/platform/mailer/templates/layout.html, and the 240 px of emails already sent), so its name stays, and a padded or square canvas would only push the card down by its empty margin
+#   apps/web/public/logo-transparent.png             lockup.svg at twice its size, 424 × 96 with no added margin: every email embeds this file at a fixed width (212 × 48 from apps/server/internal/platform/mailer/templates/layout.html, and the 240 px of emails already sent), so its name stays (the emails load it with a content version query, formaLogoURL in apps/server/internal/platform/mailer/render.go, which TestRenderFormaLogoSize makes a re-render bump), and a padded or square canvas would only push the card down by its empty margin
 #   apps/website/public/_site/icons/                 the same favicon-32x32.png and apple-touch-icon.png
 set -euo pipefail
 
