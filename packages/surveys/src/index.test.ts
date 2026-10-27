@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { render } from "preact";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { config as zodConfig } from "zod";
 import { type SurveyContainerProps } from "@forma/types/forma-surveys";
 import { loadSurveyLanguage } from "@/lib/i18n.config";
 import { LANGUAGE_WAIT_MS, renderSurvey } from "./index";
@@ -149,4 +150,9 @@ describe("renderSurvey with a language that is still being fetched", () => {
     await finish();
     expect(render).not.toHaveBeenCalled();
   });
+});
+
+// Loading the runtime turns off zod's eval probe, which a Content-Security-Policy without 'unsafe-eval' reports as a violation on every page that renders a survey.
+test("the runtime runs zod without compiling schemas", () => {
+  expect(zodConfig().jitless).toBe(true);
 });
