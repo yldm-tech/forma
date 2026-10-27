@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivertype"
 	"gorm.io/gorm"
 )
 
@@ -39,22 +40,31 @@ type Tx struct {
 
 // Enqueue inserts a job inside the transaction.
 func (t *Tx) Enqueue(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
-	err := t.enqueue(ctx, args, opts)
-	t.metrics.recordEnqueue(ctx, args.Kind(), err)
+	_, _, err := t.EnqueueUnique(ctx, args, opts)
 	return err
 }
 
-func (t *Tx) enqueue(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
-	return t.conn.Raw(func(driverConn any) error {
+// EnqueueUnique is Enqueue for a unique job kind: inserted is false when River skipped the job as a duplicate of one its unique options match, still queued or running. job is the job inserted, or the one it duplicates.
+func (t *Tx) EnqueueUnique(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) (job *rivertype.JobRow, inserted bool, err error) {
+	job, inserted, err = t.enqueue(ctx, args, opts)
+	t.metrics.recordEnqueue(ctx, args.Kind(), err)
+	return job, inserted, err
+}
+
+func (t *Tx) enqueue(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) (job *rivertype.JobRow, inserted bool, err error) {
+	err = t.conn.Raw(func(driverConn any) error {
 		c, ok := driverConn.(*stdlib.Conn)
 		if !ok {
 			return fmt.Errorf("enqueue %s: database driver is %T, not pgx", args.Kind(), driverConn)
 		}
-		if _, err := t.client.InsertTx(ctx, connTx{c.Conn()}, args, opts); err != nil {
+		res, err := t.client.InsertTx(ctx, connTx{c.Conn()}, args, opts)
+		if err != nil {
 			return fmt.Errorf("enqueue %s: %w", args.Kind(), err)
 		}
+		job, inserted = res.Job, !res.UniqueSkippedAsDuplicate
 		return nil
 	})
+	return job, inserted, err
 }
 
 // Transaction runs fn in a transaction on one dedicated connection of db's pool. GORM's transaction is a database/sql one and River inserts through pgx, so Enqueue reaches the pgx connection underneath the same session: both write inside the one open transaction, which fn's return commits or rolls back as GORM's Transaction does.

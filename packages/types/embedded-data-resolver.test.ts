@@ -954,6 +954,13 @@ describe("RESERVED_FIELD_CATALOG", () => {
     expect(finishedAt).not.toBeInstanceOf(Date);
   });
 
+  test("finishedAt is unset on a partial response, whose last write is not a finish time", () => {
+    const entry = catalogEntry("finishedAt");
+
+    expect(resolveEmbeddedValue({ entry }, { ...capturedResponse, finished: false })).toBeUndefined();
+    expect("finishedAt" in projectCatalog({ ...capturedResponse, finished: false })).toBe(false);
+  });
+
   test("finished resolves as a boolean and projects as the string the maps can hold", () => {
     const entry = catalogEntry("finished");
 
@@ -972,7 +979,6 @@ describe("RESERVED_FIELD_CATALOG", () => {
       responseId: sparseResponse.id,
       surveyId: sparseResponse.surveyId,
       startedAt: "2026-08-02T12:00:00.000Z",
-      finishedAt: "2026-08-02T12:00:00.000Z",
     });
   });
 

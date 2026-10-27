@@ -19,6 +19,7 @@ import (
 	standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/mrkdwn"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
@@ -343,7 +344,7 @@ func TestTemplates(t *testing.T) {
 	if got != want {
 		t.Fatalf("text\n got %q\nwant %q", got, want)
 	}
-	if got := tpl.RenderText("<{{answers.q1}}>", slackEscape); got != `<He said "hi" &lt;b&gt;>` {
+	if got := tpl.RenderText("<{{answers.q1}}>", mrkdwn.Escape); got != "<He said \"hi\" &lt;b\u200b&gt;>" {
 		t.Fatalf("escaped %q", got)
 	}
 
@@ -388,7 +389,7 @@ func TestChatPayloads(t *testing.T) {
 		return string(b)
 	}
 	slack := encode(chatPayload(ActionSlackMessage, tpl, "*New:* {{answers.q1}} <https://example.com|open>"))
-	if slack != `{"text":"*New:* He said \"hi\" &lt;b&gt; <https://example.com|open>"}` {
+	if slack != `{"text":"*New:* He said \"hi\" &lt;b`+"\u200b"+`&gt; <https://example.com|open>"}` {
 		t.Fatalf("slack %s", slack)
 	}
 	discord := chatPayload(ActionDiscordMessage, tpl, strings.Repeat("x", 2500)).(map[string]any)
@@ -422,6 +423,22 @@ func TestChatPayloads(t *testing.T) {
 	}
 	if got := markdownEscape(`a\b-c_d~e|f` + "`"); got != `a\\b\-c\_d\~e\|f\`+"`" {
 		t.Fatalf("escape %q", got)
+	}
+
+	// The same for Slack: an answer cannot notify the channel, mention anyone, post a disguised link or take on formatting; the template's mrkdwn, its link included, stays.
+	r = &response.Response{ID: uuid.New(), SurveyID: uuid.MustParse(testSurveyID), Finished: true,
+		Data: json.RawMessage(`{"q1":"<!channel> <!here> <@U123> @here <https://evil.example/login|Your Forma session expired> *urgent* _now_ ~x~ ` + "`code`" + ` > quote"}`)}
+	if answers, err = responsemail.Decode(r); err != nil {
+		t.Fatal(err)
+	}
+	evil = responseTemplate(r, &responsemail.Survey{Name: "NPS"}, answers)
+	const z = "\u200b"
+	slackText := chatPayload(ActionSlackMessage, evil, "*New:* {{answers.q1}} <https://example.com|open>").(map[string]any)["text"]
+	want := "*New:* &lt;!channel" + z + "&gt; &lt;!here" + z + "&gt; &lt;@U123" + z + "&gt; @" + z + "here &lt;https://evil.example/login|Your Forma session expired" + z + "&gt; " +
+		z + "*" + z + "urgent" + z + "*" + z + " " + z + "_" + z + "now" + z + "_" + z + " " + z + "~" + z + "x" + z + "~" + z + " " + z + "`" + z + "code" + z + "`" + z + " " + z + "&gt; quote" +
+		" <https://example.com|open>"
+	if slackText != want {
+		t.Fatalf("slack\n got %q\nwant %q", slackText, want)
 	}
 }
 

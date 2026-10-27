@@ -51,9 +51,9 @@ func (s *Service) requireConfigured(typ string) error {
 	return nil
 }
 
-// Authorize starts a provider's OAuth flow for the workspace, forma2's GET /api/google-sheet and /api/v1/integrations/{airtable,notion,slack}: workspace.write, the provider configured, then a state bound to the provider, the caller's session and the workspace (with a PKCE verifier for Airtable), and the provider's authorize URL carrying it.
+// Authorize starts a provider's OAuth flow for the workspace, forma2's GET /api/google-sheet and /api/v1/integrations/{airtable,notion,slack}: workspace.manage (forma2 asked for workspace.write; sending the workspace's responses to an outside account is a manager's decision, as a webhook's URL is), the provider configured, then a state bound to the provider, the caller's session and the workspace (with a PKCE verifier for Airtable), and the provider's authorize URL carrying it.
 func (s *Service) Authorize(ctx context.Context, actor httpapi.Actor, workspaceID uuid.UUID, typ string) (string, error) {
-	if err := s.authz.Require(ctx, authz.User(actor.UserID), authz.WorkspaceWrite, authz.Workspace(workspaceID)); err != nil {
+	if err := s.authz.Require(ctx, authz.User(actor.UserID), authz.WorkspaceManage, authz.Workspace(workspaceID)); err != nil {
 		return "", err
 	}
 	if err := s.requireConfigured(typ); err != nil {
@@ -95,7 +95,7 @@ func (s *Service) pageURL(typ string, workspaceID uuid.UUID, errorCode string) s
 	return u
 }
 
-// Callback completes a provider's OAuth flow, forma2's callback routes: the state consumed (it must have been issued to this provider, user and session), workspace.write on the workspace it names, then the provider's code exchanged and the credentials stored, keeping the integration's links. It returns where to send the browser; a provider error the user can act on is passed to the page as ?error=.
+// Callback completes a provider's OAuth flow, forma2's callback routes: the state consumed (it must have been issued to this provider, user and session), workspace.manage on the workspace it names, as Authorize needs, then the provider's code exchanged and the credentials stored, keeping the integration's links. It returns where to send the browser; a provider error the user can act on is passed to the page as ?error=.
 func (s *Service) Callback(ctx context.Context, actor httpapi.Actor, typ string, query url.Values) (string, error) {
 	st, err := s.states.consume(ctx, typ, actor.UserID, actor.SessionID, query.Get("state"))
 	if errors.Is(err, errInvalidState) {
@@ -107,7 +107,7 @@ func (s *Service) Callback(ctx context.Context, actor httpapi.Actor, typ string,
 	if typ == TypeAirtable && st.PKCEVerifier == "" {
 		return "", errStateRefused
 	}
-	if err := s.authz.Require(ctx, authz.User(actor.UserID), authz.WorkspaceWrite, authz.Workspace(st.WorkspaceID)); err != nil {
+	if err := s.authz.Require(ctx, authz.User(actor.UserID), authz.WorkspaceManage, authz.Workspace(st.WorkspaceID)); err != nil {
 		return "", err
 	}
 	code, safeError := query.Get("code"), safeCallbackError(query.Get("error"))

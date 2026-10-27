@@ -140,8 +140,10 @@ func TestAuthorizeRefusals(t *testing.T) {
 	e := newEnv(t)
 	o := e.owner()
 	org := o.org
-	reader := e.user()
+	reader, contributor, manager := e.user(), e.user(), e.user()
 	e.grant(org, o.ws, reader, "read")
+	e.grant(org, o.ws, contributor, "readWrite")
+	e.grant(org, o.ws, manager, "manage")
 
 	for _, path := range []string{"/api/google-sheet", "/api/v1/integrations/airtable", "/api/v1/integrations/notion", "/api/v1/integrations/slack"} {
 		h := o.headers()
@@ -156,6 +158,12 @@ func TestAuthorizeRefusals(t *testing.T) {
 		if rec := e.do(http.MethodGet, path, readOnly, nil); rec.Code != http.StatusUnauthorized || !strings.Contains(rec.Body.String(), `"code":"unauthorized"`) {
 			t.Errorf("%s as a read-only member: %d %s", path, rec.Code, rec.Body)
 		}
+		// Connecting sends the workspace's responses to the provider's account, a workspace manager's decision, as a webhook's URL is.
+		writeOnly := reqHeaders{testUserHeader: contributor.String(), "workspaceId": o.ws.String()}
+		if rec := e.do(http.MethodGet, path, writeOnly, nil); rec.Code != http.StatusUnauthorized || !strings.Contains(rec.Body.String(), `"code":"unauthorized"`) {
+			t.Errorf("%s as a contributor who cannot manage the workspace: %d %s", path, rec.Code, rec.Body)
+		}
+		e.authorize(path, oauthCaller{user: manager, session: uuid.New(), org: org, ws: o.ws})
 	}
 
 	e.svc.cfg.Integrations.GoogleSheetsClientSecret = ""
@@ -417,17 +425,18 @@ func TestAirtableTablesRoute(t *testing.T) {
 	}
 }
 
-// The callback checks workspace.write again on the workspace the state names: a member demoted to read, or removed, after starting the flow cannot finish it, and the workspace's credentials stay as they were.
-func TestCallbackRechecksWriteAccess(t *testing.T) {
+// The callback checks workspace.manage again on the workspace the state names: a manager demoted to readWrite or read, or removed, after starting the flow cannot finish it, and the workspace's credentials stay as they were.
+func TestCallbackRechecksManageAccess(t *testing.T) {
 	for name, revoke := range map[string]string{
-		"demoted to read": `UPDATE workspace_teams SET permission = 'read' WHERE team_id IN (SELECT team_id FROM team_members WHERE user_id = ?)`,
-		"removed":         `DELETE FROM memberships WHERE user_id = ?`,
+		"demoted to readWrite": `UPDATE workspace_teams SET permission = 'readWrite' WHERE team_id IN (SELECT team_id FROM team_members WHERE user_id = ?)`,
+		"demoted to read":      `UPDATE workspace_teams SET permission = 'read' WHERE team_id IN (SELECT team_id FROM team_members WHERE user_id = ?)`,
+		"removed":              `DELETE FROM memberships WHERE user_id = ?`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := newEnv(t)
 			o := e.owner()
 			member := oauthCaller{user: e.user(), session: uuid.New(), org: o.org, ws: o.ws}
-			e.grant(o.org, o.ws, member.user, "readWrite")
+			e.grant(o.org, o.ws, member.user, "manage")
 			e.fake.reply("POST /google/token", http.StatusOK, `{"access_token":"ya29.attacker","refresh_token":"1//attacker","expires_in":3599,"token_type":"Bearer"}`)
 			e.fake.reply("GET /googleapis/oauth2/v2/userinfo", http.StatusOK, `{"email":"attacker@example.com"}`)
 			id := e.connect(o.ws, TypeGoogleSheets, GoogleKey{AccessToken: "old"}, "old@example.com", nil)

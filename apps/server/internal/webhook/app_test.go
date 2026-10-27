@@ -3,6 +3,7 @@ package webhook
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -126,8 +127,9 @@ func TestAppCreateRules(t *testing.T) {
 
 func TestAppUpdateAndDelete(t *testing.T) {
 	e := newEnv(t, false)
-	owner, writer, reader := e.user(), e.user(), e.user()
+	owner, manager, writer, reader := e.user(), e.user(), e.user(), e.user()
 	org, ws := e.organization(owner)
+	e.grant(org, ws, manager, "manage")
 	e.grant(org, ws, writer, "readWrite")
 	e.grant(org, ws, reader, "read")
 	sv := e.survey(ws)
@@ -137,7 +139,7 @@ func TestAppUpdateAndDelete(t *testing.T) {
 	if res := e.do(http.MethodPatch, path, asUser(reader), map[string]any{"url": "https://93.184.216.34/new", "triggers": []string{"responseCreated"}}); res.Code != http.StatusForbidden {
 		t.Fatalf("reader update = %d", res.Code)
 	}
-	res := e.do(http.MethodPatch, path, asUser(writer), map[string]any{"name": "", "url": "https://93.184.216.34/new", "source": "user", "triggers": []string{"responseCreated"}, "surveyIds": []string{sv.String()}})
+	res := e.do(http.MethodPatch, path, asUser(manager), map[string]any{"name": "", "url": "https://93.184.216.34/new", "source": "user", "triggers": []string{"responseCreated"}, "surveyIds": []string{sv.String()}})
 	if res.Code != http.StatusOK {
 		t.Fatalf("update = %d %s", res.Code, res.Body)
 	}
@@ -149,10 +151,10 @@ func TestAppUpdateAndDelete(t *testing.T) {
 	if ev.Action != "updated" || ev.Target.ID != id.String() || ev.Changes == nil {
 		t.Errorf("update audit = %+v", ev)
 	}
-	if res := e.do(http.MethodPatch, path, asUser(writer), map[string]any{"url": "http://127.0.0.1/", "triggers": []string{"responseCreated"}}); res.Code != http.StatusBadRequest {
+	if res := e.do(http.MethodPatch, path, asUser(manager), map[string]any{"url": "http://127.0.0.1/", "triggers": []string{"responseCreated"}}); res.Code != http.StatusBadRequest {
 		t.Errorf("update to a private URL = %d", res.Code)
 	}
-	if res := e.do(http.MethodPatch, "/api/app/webhooks/"+uuid.NewString(), asUser(writer), map[string]any{"url": "https://93.184.216.34/", "triggers": []string{"responseCreated"}}); res.Code != http.StatusNotFound {
+	if res := e.do(http.MethodPatch, "/api/app/webhooks/"+uuid.NewString(), asUser(manager), map[string]any{"url": "https://93.184.216.34/", "triggers": []string{"responseCreated"}}); res.Code != http.StatusNotFound {
 		t.Errorf("update of an unknown webhook = %d", res.Code)
 	}
 
@@ -273,6 +275,105 @@ func TestScopeOutlivesDeletedSurveys(t *testing.T) {
 		body["url"], body["triggers"] = "https://93.184.216.34/hook", []string{"responseFinished"}
 		if res := e.do(http.MethodPatch, "/api/app/webhooks/"+created.ID.String(), asUser(owner), body); res.Code != http.StatusBadRequest {
 			t.Errorf("%s: %d %s", name, res.Code, res.Body)
+		}
+	}
+}
+
+// Where a webhook sends the workspace's responses, which responses, and the secret that signs them are a workspace manager's decision, as a workflow's HTTP request step is: a contributor who can write to the workspace but not manage it cannot create, retarget, test or re-key a webhook, though they can rename or delete one. A manager through a team, like the organization's owner, can.
+func TestOnlyManagersRouteResponses(t *testing.T) {
+	e := newEnv(t, true)
+	owner, manager, contributor, reader := e.user(), e.user(), e.user(), e.user()
+	org, ws := e.organization(owner)
+	e.grant(org, ws, manager, "manage")
+	e.grant(org, ws, contributor, "readWrite")
+	e.grant(org, ws, reader, "read")
+	s1, s2 := e.survey(ws), e.survey(ws)
+	rec := newReceiver(t, http.StatusOK)
+	hook := func() uuid.UUID {
+		id := e.insert(`INSERT INTO webhooks (workspace_id, name, url, triggers, all_surveys, secret) VALUES (?, 'CRM', ?, '{responseFinished}', false, ?) RETURNING id`, ws, rec.URL+"/crm", GenerateSecret())
+		e.exec(`INSERT INTO webhook_surveys (webhook_id, survey_id) VALUES (?, ?)`, id, s1)
+		return id
+	}
+	edit := func(changes map[string]any) map[string]any {
+		body := map[string]any{"name": "CRM", "url": rec.URL + "/crm", "triggers": []string{"responseFinished"}, "surveyIds": []string{s1.String()}, "allSurveys": false}
+		for k, v := range changes {
+			body[k] = v
+		}
+		return body
+	}
+	create := map[string]any{"url": rec.URL + "/new", "triggers": []string{"responseFinished"}}
+	refused := func(name string, res *httptest.ResponseRecorder) {
+		t.Helper()
+		if body := decode[errorBody](t, res); res.Code != http.StatusForbidden || body.Code != "forbidden" {
+			t.Errorf("%s = %d %s, want 403 forbidden", name, res.Code, res.Body)
+		}
+	}
+
+	for name, as := range map[string]uuid.UUID{"contributor": contributor, "reader": reader} {
+		id := hook()
+		refused(name+" create", e.do(http.MethodPost, "/api/app/workspaces/"+ws.String()+"/webhooks", asUser(as), create))
+		refused(name+" test a new endpoint", e.do(http.MethodPost, "/api/app/workspaces/"+ws.String()+"/webhooks/test", asUser(as), map[string]any{"url": rec.URL + "/new"}))
+		refused(name+" test an existing webhook", e.do(http.MethodPost, "/api/app/workspaces/"+ws.String()+"/webhooks/test", asUser(as), map[string]any{"url": rec.URL + "/new", "webhookId": id.String()}))
+		refused(name+" regenerate the secret", e.do(http.MethodPost, "/api/app/webhooks/"+id.String()+"/secret", asUser(as), nil))
+		for change, body := range map[string]map[string]any{
+			"url":         edit(map[string]any{"url": rec.URL + "/elsewhere"}),
+			"triggers":    edit(map[string]any{"triggers": []string{"responseFinished", "responseCreated"}}),
+			"surveys":     edit(map[string]any{"surveyIds": []string{s1.String(), s2.String()}}),
+			"all surveys": edit(map[string]any{"surveyIds": []string{}, "allSurveys": true}),
+		} {
+			refused(name+" change the "+change, e.do(http.MethodPatch, "/api/app/webhooks/"+id.String(), asUser(as), body))
+		}
+	}
+	if got := rec.received(); len(got) != 0 {
+		t.Fatalf("a refused caller reached the endpoint %d times", len(got))
+	}
+	var stored []struct {
+		URL        string
+		AllSurveys bool
+		Triggers   int
+		Surveys    int
+	}
+	if err := e.db.Raw(`SELECT url, all_surveys, cardinality(triggers) AS triggers, (SELECT count(*) FROM webhook_surveys s WHERE s.webhook_id = w.id) AS surveys FROM webhooks w WHERE workspace_id = ?`, ws).Scan(&stored).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(stored) != 2 {
+		t.Fatalf("webhooks = %+v", stored)
+	}
+	for _, w := range stored {
+		if w.URL != rec.URL+"/crm" || w.AllSurveys || w.Triggers != 1 || w.Surveys != 1 {
+			t.Fatalf("a refused change was stored: %+v", stored)
+		}
+	}
+	if ev := e.lastAudit(); ev.Action != "updated" || ev.Status != "failure" {
+		t.Errorf("refused update audit = %+v", ev)
+	}
+
+	// A contributor still renames and deletes.
+	id := hook()
+	res := e.do(http.MethodPatch, "/api/app/webhooks/"+id.String(), asUser(contributor), edit(map[string]any{"name": "Renamed"}))
+	if res.Code != http.StatusOK || *decode[View](t, res).Name != "Renamed" {
+		t.Fatalf("contributor rename = %d %s", res.Code, res.Body)
+	}
+	if res := e.do(http.MethodDelete, "/api/app/webhooks/"+id.String(), asUser(contributor), nil); res.Code != http.StatusNoContent {
+		t.Fatalf("contributor delete = %d %s", res.Code, res.Body)
+	}
+
+	for name, as := range map[string]uuid.UUID{"manager": manager, "owner": owner} {
+		id := hook()
+		if res := e.do(http.MethodPost, "/api/app/workspaces/"+ws.String()+"/webhooks/test", asUser(as), map[string]any{"url": rec.URL + "/new"}); res.Code != http.StatusOK {
+			t.Errorf("%s test a new endpoint = %d %s", name, res.Code, res.Body)
+		}
+		if res := e.do(http.MethodPost, "/api/app/workspaces/"+ws.String()+"/webhooks/test", asUser(as), map[string]any{"url": rec.URL + "/new", "webhookId": id.String()}); res.Code != http.StatusOK {
+			t.Errorf("%s test an existing webhook = %d %s", name, res.Code, res.Body)
+		}
+		if res := e.do(http.MethodPost, "/api/app/workspaces/"+ws.String()+"/webhooks", asUser(as), create); res.Code != http.StatusCreated {
+			t.Errorf("%s create = %d %s", name, res.Code, res.Body)
+		}
+		if res := e.do(http.MethodPatch, "/api/app/webhooks/"+id.String(), asUser(as), edit(map[string]any{"url": rec.URL + "/elsewhere", "surveyIds": []string{}, "allSurveys": true, "triggers": []string{"responseCreated"}})); res.Code != http.StatusOK {
+			t.Errorf("%s retarget = %d %s", name, res.Code, res.Body)
+		}
+		if res := e.do(http.MethodPost, "/api/app/webhooks/"+id.String()+"/secret", asUser(as), nil); res.Code != http.StatusOK {
+			t.Errorf("%s regenerate the secret = %d %s", name, res.Code, res.Body)
 		}
 	}
 }

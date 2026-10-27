@@ -57,7 +57,7 @@ func engine(t *testing.T, cfg config.Config, releases *Releases) *gin.Engine {
 		t.Fatal(err)
 	}
 	r := gin.New()
-	NewHandler(bucket, releases, headerSessions{}).Register(r.Group("/api/app", httpapi.ErrorHandler(discard)))
+	NewHandler(cfg, bucket, releases, headerSessions{}).Register(r.Group("/api/app", httpapi.ErrorHandler(discard)))
 	return r
 }
 
@@ -102,8 +102,35 @@ func TestInstanceReportsStorage(t *testing.T) {
 			if err := json.Unmarshal(rec.Body.Bytes(), &info); err != nil {
 				t.Fatal(err)
 			}
-			if info != (Info{StorageConfigured: tc.want, Version: buildinfo.Version}) {
+			if info != (Info{StorageConfigured: tc.want, CustomScripts: config.CustomScriptsNeedPublicURL, Version: buildinfo.Version}) {
 				t.Errorf("info = %+v", info)
+			}
+		})
+	}
+}
+
+// The SPA learns whether it may offer custom head scripts, and what to tell the user when it may not.
+func TestInstanceReportsCustomScripts(t *testing.T) {
+	t.Parallel()
+	webApp, _ := url.Parse("https://forma.example.com")
+	surveys, _ := url.Parse("https://surveys.example.com")
+	for _, tc := range []struct {
+		name string
+		cfg  config.Config
+		want config.CustomScripts
+	}{
+		{"no PUBLIC_URL", config.Config{WebAppURL: webApp}, config.CustomScriptsNeedPublicURL},
+		{"a survey domain", config.Config{WebAppURL: webApp, PublicURL: surveys}, config.CustomScriptsAvailable},
+		{"Forma Cloud", config.Config{WebAppURL: webApp, PublicURL: surveys, IsFormaCloud: true}, config.CustomScriptsFormaCloud},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := get(engine(t, tc.cfg, nil), "/api/app/instance", true)
+			var info map[string]any
+			if err := json.Unmarshal(rec.Body.Bytes(), &info); err != nil || rec.Code != http.StatusOK {
+				t.Fatalf("status %d: %s", rec.Code, rec.Body)
+			}
+			if info["customScripts"] != string(tc.want) {
+				t.Errorf("customScripts = %v, want %q", info["customScripts"], tc.want)
 			}
 		})
 	}

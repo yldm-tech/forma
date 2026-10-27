@@ -179,15 +179,15 @@ func (h *Handler) authenticateOAuth(c *gin.Context, token string) (*principal, b
 		clientID = "unknown"
 	}
 	userID, err := uuid.Parse(claims.Subject)
-	active := false
+	usable := false
 	if err == nil {
-		if active, err = h.userActive(ctx, userID); err != nil {
+		if usable, err = h.tokenUsable(ctx, userID, claims.JWTID); err != nil {
 			h.internalError(c, "MCP API authentication unexpected error", err)
 			return nil, false
 		}
 	}
-	if !active {
-		h.reject(c, "", "MCP OAuth token user is inactive", "client_id", clientID)
+	if !usable {
+		h.reject(c, "", "MCP OAuth token is revoked or its user inactive", "client_id", clientID)
 		return nil, false
 	}
 	scopes := strings.Fields(claims.Scope)
@@ -203,6 +203,21 @@ func (h *Handler) authenticateOAuth(c *gin.Context, token string) (*principal, b
 		return nil, false
 	}
 	return p, true
+}
+
+// tokenUsable reports whether the token's user is active and, for a token this instance issued, whether the token is still on record and not revoked: a password reset, signing out other sessions, a second-factor change, deactivation and withdrawing the client's consent revoke it before it expires. It is one query either way.
+func (h *Handler) tokenUsable(ctx context.Context, userID uuid.UUID, jti string) (bool, error) {
+	if !h.verifier.IssuedHere() {
+		return h.userActive(ctx, userID)
+	}
+	// A token without a well-formed jti has no row, so it is not usable.
+	var usable []bool
+	if tokenID, parseErr := uuid.Parse(jti); parseErr == nil {
+		if err := h.db.WithContext(ctx).Raw(`SELECT u.is_active AND t.revoked_at IS NULL FROM oauth_access_tokens t JOIN users u ON u.id = t.user_id WHERE t.id = ? AND t.user_id = ?`, tokenID, userID).Scan(&usable).Error; err != nil {
+			return false, fmt.Errorf("load access token: %w", err)
+		}
+	}
+	return len(usable) == 1 && usable[0], nil
 }
 
 func (h *Handler) userActive(ctx context.Context, id uuid.UUID) (bool, error) {

@@ -2199,6 +2199,7 @@
       "api_key_updated": "APIキーを更新しました",
       "api_reference": "APIリファレンス",
       "check_key_hint": "キーでアクセスできる範囲を確認するには、キーを環境変数 FORMA_API_KEY に設定してから、下のコマンドを実行してください。キーの組織と、使えるワークスペースが返されます。",
+      "creator_deactivated_hint": "このキーの作成者のアカウントはこのFormaインスタンスで無効化されています。インスタンスの管理者がアカウントを再び有効にするまで、このキーは使えません。",
       "delete_api_key_confirmation": "このキーを使用しているアプリケーションは、Formaデータにアクセスできなくなります。",
       "disabled_description": "このキーは {date} に無効になり、再び有効にすることはできません。このキーを使っていた連携用に新しいキーを作成してから、このキーを削除してください。",
       "disabled_reason_creator_deleted": "作成者がアカウントを削除しました。",
@@ -2410,6 +2411,11 @@
       "upload_contacts_result": "インポート完了：作成 {created} 件、更新 {updated} 件、スキップ {skipped} 件。",
       "upload_contacts_success": "連絡先のアップロードに成功しました",
       "upload_csv": "CSVをアップロード"
+    },
+    "custom_scripts_access": {
+      "managers_only": "カスタムスクリプトを変更できるのは、組織のオーナーと管理者のみです。",
+      "requires_public_url": "このインスタンスではカスタムスクリプトが無効です。アンケートページが管理画面と同じドメインで配信されているため、スクリプトがログイン中のユーザーとして操作できてしまいます。管理者が PUBLIC_URL にアンケート用の別ドメインを設定すると有効になります。",
+      "unavailable_cloud": "Forma Cloud ではカスタムスクリプトを利用できません。"
     },
     "forma_logo": "Formaのロゴ",
     "general": {
@@ -2627,6 +2633,7 @@
         "endpoint_pinged": "成功！Webhook に ping できました。",
         "endpoint_pinged_error": "Webhook への ping に失敗しました。",
         "endpoint_service_unavailable_error": "サービス利用不可 (503): サービスは一時的に停止しています",
+        "managers_only": "Webhook の追加や、回答の送信先の変更ができるのは、このワークスペースを管理するユーザーだけです。",
         "no_triggers": "トリガーなし",
         "please_check_console": "詳細はコンソールを確認してください",
         "please_enter_a_url": "URL を入力してください",
@@ -4445,11 +4452,14 @@
         "ai_status_reading_survey": "質問を読み取り中…",
         "ai_status_saving_responses": "回答を保存中…",
         "ai_summary": {
+          "failed": "要約を生成できませんでした。もう一度お試しください。",
           "generated_ago": "{time}に生成",
           "no_themes": "これらの回答に繰り返し現れるテーマは見つかりませんでした。",
+          "other_language": "この要約は{language}で書かれています。",
           "privacy_note": "要約すると、現在のフィルターに一致する回答が、メールアドレスと電話番号を削除したうえで、このインスタンスで設定されたAIプロバイダーに送信されます。組織設定の「AIによる回答の読み取りを許可」で許可されています。",
           "quota_exceeded": "AIプロバイダーが混み合っています。しばらくしてからもう一度お試しください。",
           "read_limited": "最新の {count, number} 件の回答のみを読み込みました。",
+          "read_only_none": "AI要約はまだありません。このワークスペースの編集権限を持つメンバーが作成できます。",
           "refresh": "要約を更新",
           "sampled": "{total, number} 件の回答のうち {sampled, number} 件のサンプルに基づいています。",
           "sentiment": "全体的な感情：{sentiment}",
@@ -4459,8 +4469,10 @@
           "sentiment_positive": "ポジティブ",
           "sentiment_shares": "ポジティブ{positive}%、ニュートラル{neutral}%、ネガティブ{negative}%。",
           "summarize": "回答を要約",
+          "summarize_in_language": "{language}で要約",
           "summarize_other": "「その他」の回答を要約",
           "summarizing": "回答を要約しています…",
+          "taking_long": "要約に通常より時間がかかっています。数分後にもう一度ご確認ください。",
           "theme_share": "回答の{percentage}%（{count, plural, other {# 件}}）",
           "title": "AI要約"
         },

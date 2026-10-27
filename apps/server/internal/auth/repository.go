@@ -423,6 +423,26 @@ func (r *Repository) insertVerification(ctx context.Context, purpose string, use
 	return nil
 }
 
+// countLiveVerifications counts the user's tokens of purpose that are neither used nor expired at now.
+func (r *Repository) countLiveVerifications(ctx context.Context, userID uuid.UUID, purpose string, now time.Time) (int64, error) {
+	var n int64
+	if err := r.db.WithContext(ctx).Raw(
+		`SELECT count(*) FROM verifications WHERE user_id = ? AND purpose = ? AND consumed_at IS NULL AND expires_at > ?`,
+		userID, purpose, now,
+	).Scan(&n).Error; err != nil {
+		return 0, fmt.Errorf("count %s tokens: %w", purpose, err)
+	}
+	return n, nil
+}
+
+// deleteVerification deletes one token.
+func (r *Repository) deleteVerification(ctx context.Context, purpose string, tokenHash []byte) error {
+	if err := r.db.WithContext(ctx).Exec(`DELETE FROM verifications WHERE token_hash = ? AND purpose = ?`, tokenHash, purpose).Error; err != nil {
+		return fmt.Errorf("delete %s token: %w", purpose, err)
+	}
+	return nil
+}
+
 // findVerification returns the token whatever its state, or nil when it does not exist.
 func (r *Repository) findVerification(ctx context.Context, purpose string, tokenHash []byte) (*verification, error) {
 	var rows []verification
