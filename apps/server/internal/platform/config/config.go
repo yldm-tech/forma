@@ -98,7 +98,7 @@ type Config struct {
 	// DangerouslyAllowWebhookInternalURLs lets webhooks target private, loopback, link-local and metadata addresses and follow redirects, for self-hosted instances whose receivers live on the internal network, forma2's DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS. A host name that does not resolve is still refused.
 	DangerouslyAllowWebhookInternalURLs bool `env:"DANGEROUSLY_ALLOW_WEBHOOK_INTERNAL_URLS" envDefault:"0"`
 
-	// WorkerConcurrency is how many jobs `forma worker` runs at once. 0 derives it from the CPU count, as forma2 did. Unset, it is taken from forma2's BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT when either is set (resolveWorkerConcurrency).
+	// WorkerConcurrency is how many jobs `forma worker` runs at once on each of its default and webhooks queues; with the authz queue's two slots, a worker runs up to 2*WorkerConcurrency+2 jobs at once (jobs.queues). 0 derives it from the CPU count, as forma2 did. Unset, it is taken from forma2's BULLMQ_WORKER_CONCURRENCY and BULLMQ_WORKER_COUNT when either is set (resolveWorkerConcurrency).
 	WorkerConcurrency int `env:"WORKER_CONCURRENCY" envDefault:"0"`
 
 	// SurveySchedulingTimeZone, SurveySchedulingLocalHour and SurveySchedulingLocalMinute are when, each day, scheduled surveys are published and closed: a publish or close date is snapped to that local time of its calendar day in the zone, forma2's SURVEY_SCHEDULING_* settings. An organization can choose its own zone (organizations.survey_scheduling_time_zone); this one is the default of those that do not.
@@ -663,7 +663,7 @@ func (c *Config) resolveWorkerConcurrency() error {
 	return nil
 }
 
-// DefaultWorkerConcurrency is forma2's default for how many jobs run at once: every running job can hold a database connection, so jobs take at most half a small pod's pool and never more than four slots.
+// DefaultWorkerConcurrency is forma2's default for how many jobs run at once, between two and four by CPU count. It now sizes each of the default and webhooks queues, so a worker runs up to twice that plus the authz and ai queues' two each: every running job can hold a database connection, so at four that is up to twelve connections from the jobs alone; size DATABASE_MAX_OPEN_CONNS for that total.
 func DefaultWorkerConcurrency() int {
 	return max(2, min(4, runtime.NumCPU()))
 }

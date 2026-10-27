@@ -27,6 +27,29 @@ const (
 	discardedRetention = 7 * 24 * time.Hour
 )
 
+// Queues. Every job kind is registered with every queue's workers, so the queue a job lands in only decides which slots it waits for. One tenant's slow webhook endpoint, a burst of responses or a long audit fills the slots of its own queue and no other: before the split all kinds shared one first-in-first-out queue, and a backlog of pipeline and webhook jobs held back the projection delivery the authorization freshness guard waits on, failing every authorization check of every organization once a revocation sat undelivered for 60 seconds.
+const (
+	// QueueDefault takes every job that names no queue: the response pipeline, emails, digests, cleanups and sweeps. It also still works any kind, so a job queued here by an earlier release is not stranded.
+	QueueDefault = river.QueueDefault
+	// QueueWebhooks takes the jobs that wait on endpoints outside forma: webhook deliveries and workflow runs.
+	QueueWebhooks = "webhooks"
+	// QueueAuthz takes the SpiceDB projection delivery and the reconciliation audit.
+	QueueAuthz = "authz"
+)
+
+// authzMaxWorkers gives each of the authz queue's two kinds a slot of its own. Both are periodic singletons, so this is never more than ran at once before; a single slot would let an audit, which may run for up to an hour, hold back the five-second delivery the freshness guard depends on.
+const authzMaxWorkers = 2
+
+// queues sizes each queue. WORKER_CONCURRENCY applies to the default and the webhooks queue each, so a worker runs up to twice that many jobs plus the authz and ai queues' two each.
+func queues(concurrency int) map[string]river.QueueConfig {
+	return map[string]river.QueueConfig{
+		QueueDefault:  {MaxWorkers: concurrency},
+		QueueWebhooks: {MaxWorkers: concurrency},
+		QueueAuthz:    {MaxWorkers: authzMaxWorkers},
+		QueueAI:       {MaxWorkers: aiMaxWorkers},
+	}
+}
+
 // QueueAI takes the jobs that wait on the AI provider, the open-text summaries: a generation can take minutes, so it gets slots of its own and never holds back the response pipeline, emails or authorization behind it.
 const QueueAI = "ai"
 
@@ -121,7 +144,7 @@ type Worker struct {
 	log             *slog.Logger
 }
 
-// Concurrency is how many jobs the worker's default queue runs at once: WORKER_CONCURRENCY, or DefaultWorkerConcurrency when it is 0.
+// Concurrency is how many jobs each of the worker's default and webhooks queues runs at once: WORKER_CONCURRENCY, or DefaultWorkerConcurrency when it is 0. The webhook breaker sizes its per-webhook slots from it, since deliveries run on the webhooks queue.
 func Concurrency(cfg config.Config) int {
 	if cfg.WorkerConcurrency == 0 {
 		return config.DefaultWorkerConcurrency()
@@ -135,7 +158,7 @@ func NewWorker(cfg config.Config, pool *pgxpool.Pool, reg *Registry, log *slog.L
 		Logger:                      log,
 		Workers:                     reg.workers,
 		PeriodicJobs:                reg.periodic,
-		Queues:                      map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: concurrency}, QueueAI: {MaxWorkers: aiMaxWorkers}},
+		Queues:                      queues(concurrency),
 		MaxAttempts:                 maxAttempts,
 		RetryPolicy:                 exponentialRetry{},
 		Middleware:                  []rivertype.Middleware{&metricsMiddleware{metrics: defaultJobMetrics()}},

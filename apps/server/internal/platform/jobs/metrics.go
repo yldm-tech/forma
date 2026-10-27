@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// jobMetrics are forma2's background job instruments (apps/web/lib/jobs/metrics.ts), under its meter, names and buckets. Their only attributes are the job kind, a closed set registered in code, and the outcome. The wait histogram is the backlog signal: how long a job waited past the time it was due before a worker took it.
+// jobMetrics are forma2's background job instruments (apps/web/lib/jobs/metrics.ts), under its meter, names and buckets. Their only attributes are the job kind, a closed set registered in code, the queue the worker took it from, the closed set of jobs.go, and the outcome. The wait histogram is the backlog signal: how long a job waited past the time it was due before a worker took it, which by queue shows which one is behind.
 type jobMetrics struct {
 	processed metric.Int64Counter
 	duration  metric.Float64Histogram
@@ -50,9 +50,9 @@ type metricsMiddleware struct {
 
 func (m *metricsMiddleware) Work(ctx context.Context, job *rivertype.JobRow, doInner func(context.Context) error) error {
 	started := time.Now()
-	name := attribute.String("job_name", job.Kind)
+	name, queue := attribute.String("job_name", job.Kind), attribute.String("queue", job.Queue)
 	if job.Attempt <= 1 && job.AttemptedAt != nil {
-		m.metrics.wait.Record(ctx, max(0, job.AttemptedAt.Sub(job.ScheduledAt).Seconds()), metric.WithAttributes(name))
+		m.metrics.wait.Record(ctx, max(0, job.AttemptedAt.Sub(job.ScheduledAt).Seconds()), metric.WithAttributes(name, queue))
 	}
 	err := doInner(ctx)
 	var snooze *rivertype.JobSnoozeError
@@ -64,7 +64,7 @@ func (m *metricsMiddleware) Work(ctx context.Context, job *rivertype.JobRow, doI
 	if err != nil {
 		status = attribute.String("status", "failed")
 	}
-	attrs := metric.WithAttributes(name, status)
+	attrs := metric.WithAttributes(name, queue, status)
 	m.metrics.processed.Add(ctx, 1, attrs)
 	m.metrics.duration.Record(ctx, time.Since(started).Seconds(), attrs)
 	return err

@@ -1,0 +1,3092 @@
+{
+  "_comment": "The total score parity table: the survey runtime (packages/types/surveys/scoring.ts, walked as packages/surveys/src/components/general/survey.tsx walks blocks) and the server's recomputation (score.go) are both run over these cases, by packages/surveys/src/lib/score.parity.test.ts and score_parity_test.go. elements: what one answer earns, null when the element is not scored. surveys: the blocks a response walks and the total it ends with; startAt is the element a link opened the survey at, which only the runtime is told (the server starts at the first block the response holds an answer or a time for). meta is the response meta the reserved values logic conditions read are projected from: only the entries the runtime can read mid-survey, as it projects them.",
+  "elements": [
+    {
+      "name": "single choice: the picked choice's score",
+      "element": {
+        "id": "q1",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "q1"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 5
+          },
+          {
+            "id": "b",
+            "label": {
+              "default": "B"
+            },
+            "score": -2
+          },
+          {
+            "id": "c",
+            "label": {
+              "default": "C"
+            }
+          }
+        ]
+      },
+      "answer": "A",
+      "score": 5
+    },
+    {
+      "name": "single choice: a negative score",
+      "element": {
+        "id": "q1",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "q1"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 5
+          },
+          {
+            "id": "b",
+            "label": {
+              "default": "B"
+            },
+            "score": -2
+          },
+          {
+            "id": "c",
+            "label": {
+              "default": "C"
+            }
+          }
+        ]
+      },
+      "answer": "B",
+      "score": -2
+    },
+    {
+      "name": "single choice: a choice without a score earns 0",
+      "element": {
+        "id": "q1",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "q1"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 5
+          },
+          {
+            "id": "b",
+            "label": {
+              "default": "B"
+            },
+            "score": -2
+          },
+          {
+            "id": "c",
+            "label": {
+              "default": "C"
+            }
+          }
+        ]
+      },
+      "answer": "C",
+      "score": 0
+    },
+    {
+      "name": "single choice: a label in another language",
+      "element": {
+        "id": "s",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "s"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 2
+          },
+          {
+            "id": "a2",
+            "label": {
+              "default": "A2",
+              "de": "A-de"
+            },
+            "score": 3
+          },
+          {
+            "id": "other",
+            "label": {
+              "default": "Other"
+            },
+            "score": 1
+          }
+        ]
+      },
+      "answer": "A-de",
+      "score": 3
+    },
+    {
+      "name": "single choice: free text is the Other choice",
+      "element": {
+        "id": "s",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "s"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 2
+          },
+          {
+            "id": "a2",
+            "label": {
+              "default": "A2",
+              "de": "A-de"
+            },
+            "score": 3
+          },
+          {
+            "id": "other",
+            "label": {
+              "default": "Other"
+            },
+            "score": 1
+          }
+        ]
+      },
+      "answer": "something else",
+      "score": 1
+    },
+    {
+      "name": "single choice: text no choice has, without an Other choice, earns 0",
+      "element": {
+        "id": "q1",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "q1"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 5
+          },
+          {
+            "id": "b",
+            "label": {
+              "default": "B"
+            },
+            "score": -2
+          },
+          {
+            "id": "c",
+            "label": {
+              "default": "C"
+            }
+          }
+        ]
+      },
+      "answer": "Nope",
+      "score": 0
+    },
+    {
+      "name": "single choice: an empty answer is not scored",
+      "element": {
+        "id": "q1",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "q1"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 5
+          },
+          {
+            "id": "b",
+            "label": {
+              "default": "B"
+            },
+            "score": -2
+          },
+          {
+            "id": "c",
+            "label": {
+              "default": "C"
+            }
+          }
+        ]
+      },
+      "answer": "",
+      "score": null
+    },
+    {
+      "name": "single choice: no answer is not scored",
+      "element": {
+        "id": "q1",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "q1"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 5
+          },
+          {
+            "id": "b",
+            "label": {
+              "default": "B"
+            },
+            "score": -2
+          },
+          {
+            "id": "c",
+            "label": {
+              "default": "C"
+            }
+          }
+        ]
+      },
+      "answer": null,
+      "score": null
+    },
+    {
+      "name": "single choice: a number is not an answer",
+      "element": {
+        "id": "q1",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "q1"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 5
+          },
+          {
+            "id": "b",
+            "label": {
+              "default": "B"
+            },
+            "score": -2
+          },
+          {
+            "id": "c",
+            "label": {
+              "default": "C"
+            }
+          }
+        ]
+      },
+      "answer": 5,
+      "score": null
+    },
+    {
+      "name": "multiple choice: the sum, unrounded",
+      "element": {
+        "id": "q2",
+        "type": "multipleChoiceMulti",
+        "headline": {
+          "default": "q2"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "x",
+            "label": {
+              "default": "X"
+            },
+            "score": 0.1
+          },
+          {
+            "id": "y",
+            "label": {
+              "default": "Y"
+            },
+            "score": 0.2
+          },
+          {
+            "id": "z",
+            "label": {
+              "default": "Z"
+            },
+            "score": -1
+          }
+        ]
+      },
+      "answer": [
+        "X",
+        "Y"
+      ],
+      "score": 0.30000000000000004
+    },
+    {
+      "name": "multiple choice: each choice counts once",
+      "element": {
+        "id": "q2",
+        "type": "multipleChoiceMulti",
+        "headline": {
+          "default": "q2"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "x",
+            "label": {
+              "default": "X"
+            },
+            "score": 0.1
+          },
+          {
+            "id": "y",
+            "label": {
+              "default": "Y"
+            },
+            "score": 0.2
+          },
+          {
+            "id": "z",
+            "label": {
+              "default": "Z"
+            },
+            "score": -1
+          }
+        ]
+      },
+      "answer": [
+        "Y",
+        "Y",
+        "Z"
+      ],
+      "score": -0.8
+    },
+    {
+      "name": "multiple choice: two free texts are the Other choice once",
+      "element": {
+        "id": "m",
+        "type": "multipleChoiceMulti",
+        "headline": {
+          "default": "m"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            },
+            "score": 2
+          },
+          {
+            "id": "other",
+            "label": {
+              "default": "Other"
+            },
+            "score": 4
+          }
+        ]
+      },
+      "answer": [
+        "A",
+        "one",
+        "two"
+      ],
+      "score": 6
+    },
+    {
+      "name": "multiple choice: an empty selection is not scored",
+      "element": {
+        "id": "q2",
+        "type": "multipleChoiceMulti",
+        "headline": {
+          "default": "q2"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "x",
+            "label": {
+              "default": "X"
+            },
+            "score": 0.1
+          },
+          {
+            "id": "y",
+            "label": {
+              "default": "Y"
+            },
+            "score": 0.2
+          },
+          {
+            "id": "z",
+            "label": {
+              "default": "Z"
+            },
+            "score": -1
+          }
+        ]
+      },
+      "answer": [],
+      "score": null
+    },
+    {
+      "name": "multiple choice: only strings are read",
+      "element": {
+        "id": "q2",
+        "type": "multipleChoiceMulti",
+        "headline": {
+          "default": "q2"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "x",
+            "label": {
+              "default": "X"
+            },
+            "score": 0.1
+          },
+          {
+            "id": "y",
+            "label": {
+              "default": "Y"
+            },
+            "score": 0.2
+          },
+          {
+            "id": "z",
+            "label": {
+              "default": "Z"
+            },
+            "score": -1
+          }
+        ]
+      },
+      "answer": [
+        "X",
+        3,
+        "",
+        null
+      ],
+      "score": 0.1
+    },
+    {
+      "name": "picture selection: answers are choice ids",
+      "element": {
+        "id": "q3",
+        "type": "pictureSelection",
+        "headline": {
+          "default": "q3"
+        },
+        "required": false,
+        "allowMulti": true,
+        "choices": [
+          {
+            "id": "p1",
+            "imageUrl": "/p1.png",
+            "score": 0.5
+          },
+          {
+            "id": "p2",
+            "imageUrl": "/p2.png",
+            "score": 0.25
+          }
+        ]
+      },
+      "answer": [
+        "p1",
+        "p2"
+      ],
+      "score": 0.75
+    },
+    {
+      "name": "picture selection: a label or unknown id earns 0",
+      "element": {
+        "id": "q3",
+        "type": "pictureSelection",
+        "headline": {
+          "default": "q3"
+        },
+        "required": false,
+        "allowMulti": true,
+        "choices": [
+          {
+            "id": "p1",
+            "imageUrl": "/p1.png",
+            "score": 0.5
+          },
+          {
+            "id": "p2",
+            "imageUrl": "/p2.png",
+            "score": 0.25
+          }
+        ]
+      },
+      "answer": [
+        "/p1.png"
+      ],
+      "score": 0
+    },
+    {
+      "name": "an element whose choices have no score is not scored",
+      "element": {
+        "id": "u",
+        "type": "multipleChoiceSingle",
+        "headline": {
+          "default": "u"
+        },
+        "required": false,
+        "choices": [
+          {
+            "id": "a",
+            "label": {
+              "default": "A"
+            }
+          },
+          {
+            "id": "b",
+            "label": {
+              "default": "B"
+            }
+          }
+        ]
+      },
+      "answer": "A",
+      "score": null
+    },
+    {
+      "name": "an open text element is not scored",
+      "element": {
+        "id": "note",
+        "type": "openText",
+        "headline": {
+          "default": "note"
+        },
+        "required": false,
+        "inputType": "text",
+        "charLimit": {
+          "enabled": false
+        }
+      },
+      "answer": "A",
+      "score": null
+    }
+  ],
+  "surveys": [
+    {
+      "name": "every block answered: each block's points are added, and the total rounded, when it is submitted",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 10,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        },
+        {
+          "field": {
+            "name": "flag",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 0,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "flag"
+          }
+        }
+      ],
+      "data": {
+        "q1": "A",
+        "q2": [
+          "X",
+          "Y"
+        ],
+        "q3": [
+          "p1"
+        ],
+        "note": "hi"
+      },
+      "ttc": {
+        "q1": 1000,
+        "q2": 1000,
+        "q3": 1000,
+        "note": 1000
+      },
+      "path": [
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "score": 15.8
+    },
+    {
+      "name": "a partial response: the blocks not reached yet earn nothing",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 10,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        },
+        {
+          "field": {
+            "name": "flag",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 0,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "flag"
+          }
+        }
+      ],
+      "data": {
+        "q1": "B"
+      },
+      "ttc": {
+        "q1": 1000
+      },
+      "path": [
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "score": 8
+    },
+    {
+      "name": "a jump past a block: the answer the respondent left behind when going back is not counted",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "element",
+                      "value": "q1"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "a"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "b3"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 10,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        },
+        {
+          "field": {
+            "name": "flag",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 0,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "flag"
+          }
+        }
+      ],
+      "data": {
+        "q1": "A",
+        "q2": [
+          "Y"
+        ],
+        "q3": [
+          "p2"
+        ]
+      },
+      "ttc": {
+        "q1": 1000,
+        "q2": 1000,
+        "q3": 1000,
+        "note": 1000
+      },
+      "path": [
+        "b1",
+        "b3"
+      ],
+      "score": 15.25
+    },
+    {
+      "name": "a jump to an ending ends the walk",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "element",
+                      "value": "q1"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "b"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "end1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 10,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        },
+        {
+          "field": {
+            "name": "flag",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 0,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "flag"
+          }
+        }
+      ],
+      "data": {
+        "q1": "B",
+        "q2": [
+          "X"
+        ]
+      },
+      "ttc": {
+        "q1": 1000,
+        "q2": 1000
+      },
+      "path": [
+        "b1"
+      ],
+      "score": 8
+    },
+    {
+      "name": "the fallback is taken when no rule holds, and a choice without a score earns 0 and still rounds",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "element",
+                      "value": "q1"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "a"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "b2"
+                }
+              ]
+            }
+          ],
+          "logicFallback": "b3"
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 10,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        },
+        {
+          "field": {
+            "name": "flag",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 0,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "flag"
+          }
+        }
+      ],
+      "data": {
+        "q1": "C",
+        "q2": [
+          "X"
+        ],
+        "q3": [
+          "p1"
+        ]
+      },
+      "ttc": {
+        "q1": 1000,
+        "q2": 1000,
+        "q3": 1000,
+        "note": 1000
+      },
+      "path": [
+        "b1",
+        "b3"
+      ],
+      "score": 10.5
+    },
+    {
+      "name": "a condition on the score reads it with the block's points already added (jump taken)",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "variable",
+                      "value": "total"
+                    },
+                    "operator": "isGreaterThan",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": 12
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "b3"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 10,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        },
+        {
+          "field": {
+            "name": "flag",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 0,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "flag"
+          }
+        }
+      ],
+      "data": {
+        "q1": "A",
+        "q2": [
+          "X"
+        ],
+        "q3": [
+          "p1"
+        ]
+      },
+      "ttc": {
+        "q1": 1000,
+        "q2": 1000,
+        "q3": 1000,
+        "note": 1000
+      },
+      "path": [
+        "b1",
+        "b3"
+      ],
+      "score": 15.5
+    },
+    {
+      "name": "a condition on the score reads it with the block's points already added (jump not taken)",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "variable",
+                      "value": "total"
+                    },
+                    "operator": "isGreaterThan",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": 12
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "b3"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 10,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        },
+        {
+          "field": {
+            "name": "flag",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 0,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "flag"
+          }
+        }
+      ],
+      "data": {
+        "q1": "B",
+        "q2": [
+          "X"
+        ],
+        "q3": [
+          "p1"
+        ]
+      },
+      "ttc": {
+        "q1": 1000,
+        "q2": 1000,
+        "q3": 1000,
+        "note": 1000
+      },
+      "path": [
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "score": 8.6
+    },
+    {
+      "name": "the score starts from its computed field's default",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 20,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        },
+        {
+          "field": {
+            "name": "flag",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 0,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "flag"
+          }
+        }
+      ],
+      "data": {
+        "q1": "A"
+      },
+      "ttc": {
+        "q1": 1000
+      },
+      "path": [
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "score": 25
+    },
+    {
+      "name": "a computed field that is not a number leaves the declared value as the start",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "string",
+            "defaultValue": "20",
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        }
+      ],
+      "data": {
+        "q1": "A"
+      },
+      "ttc": {
+        "q1": 1000
+      },
+      "path": [
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "score": 15
+    },
+    {
+      "name": "without computed fields the score starts from the declared value",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [],
+      "data": {
+        "q1": "A",
+        "q2": [
+          "Z"
+        ]
+      },
+      "ttc": {
+        "q1": 1000,
+        "q2": 1000
+      },
+      "path": [
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "score": 14
+    },
+    {
+      "name": "a block without a scored answer leaves the total unrounded",
+      "blocks": [
+        {
+          "id": "b0",
+          "name": "Zero",
+          "elements": [
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 1.23456789,
+          "isScore": true
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 1.23456789,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        }
+      ],
+      "data": {
+        "note": "hi"
+      },
+      "ttc": {
+        "note": 1000
+      },
+      "path": [
+        "b0",
+        "b1"
+      ],
+      "score": 1.23456789
+    },
+    {
+      "name": "an answer that names no choice earns 0 and rounds the total",
+      "blocks": [
+        {
+          "id": "b0",
+          "name": "Zero",
+          "elements": [
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 1.23456789,
+          "isScore": true
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 1.23456789,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        }
+      ],
+      "data": {
+        "note": "hi",
+        "q1": "Nope"
+      },
+      "ttc": {
+        "note": 1000,
+        "q1": 1000
+      },
+      "path": [
+        "b0",
+        "b1"
+      ],
+      "score": 1.234568
+    },
+    {
+      "name": "a link opened at a later block (startAt) starts the walk there",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 5
+                },
+                {
+                  "id": "b",
+                  "label": {
+                    "default": "B"
+                  },
+                  "score": -2
+                },
+                {
+                  "id": "c",
+                  "label": {
+                    "default": "C"
+                  }
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "element",
+                      "value": "q1"
+                    },
+                    "operator": "isSkipped"
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "end1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceMulti",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "x",
+                  "label": {
+                    "default": "X"
+                  },
+                  "score": 0.1
+                },
+                {
+                  "id": "y",
+                  "label": {
+                    "default": "Y"
+                  },
+                  "score": 0.2
+                },
+                {
+                  "id": "z",
+                  "label": {
+                    "default": "Z"
+                  },
+                  "score": -1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "name": "Three",
+          "elements": [
+            {
+              "id": "q3",
+              "type": "pictureSelection",
+              "headline": {
+                "default": "q3"
+              },
+              "required": false,
+              "allowMulti": true,
+              "choices": [
+                {
+                  "id": "p1",
+                  "imageUrl": "/p1.png",
+                  "score": 0.5
+                },
+                {
+                  "id": "p2",
+                  "imageUrl": "/p2.png",
+                  "score": 0.25
+                }
+              ]
+            },
+            {
+              "id": "note",
+              "type": "openText",
+              "headline": {
+                "default": "note"
+              },
+              "required": false,
+              "inputType": "text",
+              "charLimit": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "score",
+          "type": "number",
+          "value": 10,
+          "isScore": true
+        },
+        {
+          "id": "flag",
+          "name": "flag",
+          "type": "number",
+          "value": 0
+        }
+      ],
+      "embeddedFields": [
+        {
+          "field": {
+            "name": "total",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 10,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "total"
+          }
+        },
+        {
+          "field": {
+            "name": "flag",
+            "source": "computed",
+            "dataType": "number",
+            "defaultValue": 0,
+            "locked": false
+          },
+          "link": {
+            "storageKey": "flag"
+          }
+        }
+      ],
+      "data": {
+        "q2": [
+          "X",
+          "Z"
+        ],
+        "q3": [
+          "p1",
+          "p2"
+        ]
+      },
+      "ttc": {
+        "q2": 1000,
+        "q3": 1000,
+        "note": 1000
+      },
+      "startAt": "q2",
+      "path": [
+        "b2",
+        "b3"
+      ],
+      "score": 9.85
+    },
+    {
+      "name": "a condition on a reserved field only the server knows (country) reads as unset, as in the browser",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 1
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "reserved",
+                      "value": "country"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "JP"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "end1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 10
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "total",
+          "type": "number",
+          "value": 0,
+          "isScore": true
+        }
+      ],
+      "embeddedFields": [],
+      "data": {
+        "q1": "A",
+        "q2": "A"
+      },
+      "ttc": {},
+      "meta": {
+        "source": "link",
+        "country": "JP",
+        "userAgent": {
+          "browser": "Chrome",
+          "os": "macOS",
+          "device": "desktop"
+        }
+      },
+      "path": [
+        "b1",
+        "b2"
+      ],
+      "score": 11
+    },
+    {
+      "name": "a condition on a reserved field the browser knows (source) reads the response meta",
+      "blocks": [
+        {
+          "id": "b1",
+          "name": "One",
+          "elements": [
+            {
+              "id": "q1",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q1"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 1
+                }
+              ]
+            }
+          ],
+          "logic": [
+            {
+              "id": "r1",
+              "conditions": {
+                "id": "r1-group",
+                "connector": "and",
+                "conditions": [
+                  {
+                    "id": "r1-c",
+                    "leftOperand": {
+                      "type": "reserved",
+                      "value": "source"
+                    },
+                    "operator": "equals",
+                    "rightOperand": {
+                      "type": "static",
+                      "value": "link"
+                    }
+                  }
+                ]
+              },
+              "actions": [
+                {
+                  "id": "r1-jump",
+                  "objective": "jumpToBlock",
+                  "target": "end1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "name": "Two",
+          "elements": [
+            {
+              "id": "q2",
+              "type": "multipleChoiceSingle",
+              "headline": {
+                "default": "q2"
+              },
+              "required": false,
+              "choices": [
+                {
+                  "id": "a",
+                  "label": {
+                    "default": "A"
+                  },
+                  "score": 10
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "id": "total",
+          "name": "total",
+          "type": "number",
+          "value": 0,
+          "isScore": true
+        }
+      ],
+      "embeddedFields": [],
+      "data": {
+        "q1": "A",
+        "q2": "A"
+      },
+      "ttc": {},
+      "meta": {
+        "source": "link",
+        "country": "JP",
+        "userAgent": {
+          "browser": "Chrome",
+          "os": "macOS",
+          "device": "desktop"
+        }
+      },
+      "path": [
+        "b1"
+      ],
+      "score": 1
+    }
+  ]
+}

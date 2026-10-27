@@ -1,8 +1,8 @@
 import type { TFunction } from "i18next";
+import type { TWorkflowRunSummary } from "../api";
 import {
   type TWorkflowDefinition,
   type TWorkflowRunLogStatus,
-  type TWorkflowRunStatus,
   type TWorkflowStatus,
   type TWorkflowTriggerType,
   getWorkflowActionProblems,
@@ -36,10 +36,16 @@ export const getWorkflowStatusBadge = (status: TWorkflowStatus, t: TFunction): T
   }
 };
 
-export const getWorkflowRunStatusBadge = (status: TWorkflowRunStatus, t: TFunction): TStatusBadge => {
-  switch (status) {
+/** A run's status badge. A run that went on past failed steps set to continue on failure completed, but not cleanly, and says so wherever it is listed. */
+export const getWorkflowRunStatusBadge = (
+  run: Pick<TWorkflowRunSummary, "status" | "continuedFailureCount">,
+  t: TFunction
+): TStatusBadge => {
+  switch (run.status) {
     case "completed":
-      return { label: t("common.completed"), type: "success" };
+      return run.continuedFailureCount > 0
+        ? { label: t("workspace.workflows.run_completed_with_failures"), type: "warning" }
+        : { label: t("common.completed"), type: "success" };
     case "failed":
       return { label: t("common.failed"), type: "error" };
     case "running":

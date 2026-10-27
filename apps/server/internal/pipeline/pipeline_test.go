@@ -20,6 +20,7 @@ import (
 
 	"sync/atomic"
 
+	"github.com/yldm-tech/forma/apps/server/internal/notification"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics/analyticstest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jobs"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
@@ -139,6 +140,53 @@ func TestWebhookPayload(t *testing.T) {
 	wh, _ := standardwebhooks.NewWebhook(secret)
 	if err := wh.Verify(got[0].Body, h); err != nil {
 		t.Errorf("signature does not verify: %v", err)
+	}
+}
+
+// Next to the unchanged data, fields lists every answer with what it answers, so an automation maps headlines instead of ids: the elements in order with their default-language headline as text (recall shown as its fallback, the same for every response), then the variables and the hidden fields under their names, each with the value the response holds (file URLs absolute, numbers as stored) or null.
+func TestWebhookPayloadFields(t *testing.T) {
+	e := newEnv(t, Handoffs{})
+	f := e.fixture()
+	e.exec(`UPDATE surveys SET blocks = ?::jsonb WHERE id = ?`, `[{"id":"b1","name":"Block","elements":[
+		{"id":"q1","type":"openText","headline":{"default":"Your email?","ja":"メール?"},"required":false,"inputType":"email"},
+		{"id":"q2","type":"fileUpload","headline":{"default":"<p>Upload <b>files</b></p>"},"required":false},
+		{"id":"q3","type":"rating","headline":{"default":"How was #recall:q1/fallback:your visit#?"},"required":false,"scale":"number","range":5}
+	]}]`, f.survey)
+	e.embedded(f, "score", "Score", "computed", "number")
+	e.embedded(f, "utm", "utm", "ingested", "string")
+	r := e.respond(f, true, `{"q1":"a@example.com","q2":["/storage/ws1/public/c.png"],"utm":"mail","verifiedEmail":"x@example.com"}`)
+	e.exec(`UPDATE responses SET variables = '{"score": 12.50}'::jsonb WHERE id = ?`, r.ID)
+	r2, _ := response.Load(context.Background(), e.db, r.ID)
+	sv, err := e.worker.loadSurvey(context.Background(), f.survey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := webhookPayloadData(e.cfg, *r2, sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `"fields":[` +
+		`{"id":"q1","type":"openText","headline":"Your email?","value":"a@example.com"},` +
+		`{"id":"q2","type":"fileUpload","headline":"Upload files","value":["https://surveys.example.com/storage/ws1/public/c.png"]},` +
+		`{"id":"q3","type":"rating","headline":"How was your visit?","value":null},` +
+		`{"id":"score","type":"variable","headline":"Score","value":12.50},` +
+		`{"id":"utm","type":"hiddenField","headline":"utm","value":"mail"}],`
+	if !strings.Contains(string(data), want) {
+		t.Errorf("data lacks %s:\n%s", want, data)
+	}
+	// data itself is unchanged, every stored key kept.
+	if !strings.Contains(string(data), `"data":{"q1":"a@example.com","q2":["https://surveys.example.com/storage/ws1/public/c.png"],"utm":"mail","verifiedEmail":"x@example.com"},"fields":[`) {
+		t.Errorf("data changed:\n%s", data)
+	}
+
+	// A response with no answers yet still lists every field, each null.
+	empty := e.respond(f, false, `{}`)
+	data, err = webhookPayloadData(e.cfg, empty, sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `{"id":"q1","type":"openText","headline":"Your email?","value":null}`) || !strings.Contains(string(data), `{"id":"utm","type":"hiddenField","headline":"utm","value":null}]`) {
+		t.Errorf("empty response's fields:\n%s", data)
 	}
 }
 
@@ -312,13 +360,23 @@ func TestNotificationEmails(t *testing.T) {
 		t.Fatal(err)
 	}
 	sent := map[string]string{}
+	userOf := map[string]uuid.UUID{"owner@example.com": owner, "manager@example.com": manager, "team@example.com": teamMember, "unsubscribed@example.com": unsubscribedOrg}
 	for _, m := range e.mail.Messages() {
 		sent[m.To] = m.Subject
 		if m.ReplyTo != "respondent@example.com" {
 			t.Errorf("reply-to = %q", m.ReplyTo)
 		}
-		if (m.To != "unsubscribed@example.com" && !strings.Contains(m.HTML, "View 1 more responses")) || !strings.Contains(m.HTML, "/workspaces/"+f.ws.String()+"/settings/notifications?type=alert&amp;elementId="+f.survey.String()) {
-			t.Errorf("email to %s lacks the count or the unsubscribe link", m.To)
+		// Each recipient's unsubscribe links are signed for them: the survey's alert and the organization's auto-subscription on the public page, and the alert as RFC 8058's one-click header.
+		survey, err1 := notification.NewUnsubscribeLinks(e.cfg, userOf[m.To], notification.KindAlert, f.survey)
+		org, err2 := notification.NewUnsubscribeLinks(e.cfg, userOf[m.To], notification.KindAutoSubscribe, f.org)
+		if err1 != nil || err2 != nil {
+			t.Fatal(err1, err2)
+		}
+		if (m.To != "unsubscribed@example.com" && !strings.Contains(m.HTML, "View 1 more responses")) || !strings.Contains(m.HTML, `href="`+survey.Page+`"`) || !strings.Contains(m.HTML, `href="`+org.Page+`"`) {
+			t.Errorf("email to %s lacks the count or the unsubscribe links", m.To)
+		}
+		if m.Headers["List-Unsubscribe"] != "<"+survey.OneClick+">" || m.Headers["List-Unsubscribe-Post"] != "List-Unsubscribe=One-Click" {
+			t.Errorf("email to %s has unsubscribe headers %v", m.To, m.Headers)
 		}
 		if !strings.Contains(m.HTML, `src="https://surveys.example.com/storage/ws/public/logo.png"`) {
 			t.Errorf("email to %s lacks the organization logo", m.To)

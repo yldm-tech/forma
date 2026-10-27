@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
-import { MAX_RUN_JSON_CHARS, formatStepDuration, hasKeys, stringifyRunJson } from "./run-display";
+import {
+  MAX_RUN_JSON_CHARS,
+  formatStepDuration,
+  hasKeys,
+  isContinuedFailure,
+  stringifyRunJson,
+} from "./run-display";
 
 describe("formatStepDuration", () => {
   test("returns null when startedAt is missing", () => {
@@ -70,4 +76,10 @@ describe("stringifyRunJson", () => {
   test("falls back to String() when JSON.stringify yields undefined", () => {
     expect(stringifyRunJson(undefined)).toBe("undefined");
   });
+});
+
+test("isContinuedFailure is a failed step whose input says it continues on failure", () => {
+  expect(isContinuedFailure({ status: "failed", input: { continueOnFailure: true } })).toBe(true);
+  expect(isContinuedFailure({ status: "failed", input: {} })).toBe(false);
+  expect(isContinuedFailure({ status: "succeeded", input: { continueOnFailure: true } })).toBe(false);
 });

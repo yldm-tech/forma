@@ -22,8 +22,9 @@ import (
 // maxConcurrency is forma2's NOTIFICATION_EMAIL_MAX_CONCURRENCY: each send holds its own SMTP connection.
 const maxConcurrency = 5
 
-// Recipient is a member to notify and the locale of their email.
+// Recipient is a member to notify and the locale of their email. UserID is whose switches the email's unsubscribe links sign.
 type Recipient struct {
+	UserID uuid.UUID
 	Email  string
 	Locale string
 }
@@ -43,7 +44,7 @@ func NewNotifier(cfg config.Config, db *gorm.DB, m *mailer.Mailer, log *slog.Log
 // Recipients is forma2's getUsersWithNotifications: active users with a membership in the organization that owns the workspace, that the organization does not refuse, who are owners or managers there, or are on a team with access to the workspace, and whose alert for the survey is on. A deactivated account, a suspended member and a member the organization's two-factor requirement refuses (authz.MemberNotRefusedSQL) are refused the responses in the app, so their answers are not mailed to them either. Whether the user turned off auto-subscription for the organization does not matter here, and neither does whether the membership was accepted.
 func (n *Notifier) Recipients(ctx context.Context, workspaceID, surveyID uuid.UUID) ([]Recipient, error) {
 	var rows []Recipient
-	err := n.db.WithContext(ctx).Raw(`SELECT u.email, u.locale FROM users u
+	err := n.db.WithContext(ctx).Raw(`SELECT u.id AS user_id, u.email, u.locale FROM users u
 		WHERE u.is_active
 		AND EXISTS (SELECT 1 FROM memberships m JOIN workspaces w ON w.organization_id = m.organization_id WHERE m.user_id = u.id AND w.id = ? AND `+authz.MemberNotRefusedSQL("m")+`)
 		AND (
@@ -73,7 +74,7 @@ type ResponseFinished struct {
 	ResponseCount int
 }
 
-// Content is forma2's ResponseFinishedEmail for one response: the elements with their file and picture URLs made absolute, the computed and hidden fields, the CTA to the responses and the two unsubscribe links. The links are an external contract: emails already sent carry them.
+// Content is forma2's ResponseFinishedEmail for one response, the part every recipient gets alike: the elements with their file and picture URLs made absolute, the computed and hidden fields and the CTA to the responses. withUnsubscribeLinks adds each recipient's own unsubscribe links.
 func (n *Notifier) Content(rf ResponseFinished) (mailer.ResponseFinished, error) {
 	elements, err := rf.Answers.Elements(rf.Survey)
 	if err != nil {
@@ -82,19 +83,31 @@ func (n *Notifier) Content(rf ResponseFinished) (mailer.ResponseFinished, error)
 	public := responsemail.PublicBase(n.cfg)
 	base := n.cfg.AppPageURL("/workspaces/" + rf.WorkspaceID.String()).String()
 	c := mailer.ResponseFinished{
-		SurveyName:                 rf.Survey.Name,
-		Elements:                   responsemail.WithAbsoluteFiles(elements, public),
-		EmbeddedFields:             rf.Answers.ComputedValues(rf.Survey),
-		HiddenFields:               rf.Answers.HiddenValues(rf.Survey),
-		ResponsesURL:               base + "/surveys/" + rf.Survey.ID.String() + "/responses?utm_source=email_notification&utm_medium=email&utm_content=view_responses_CTA",
-		ResponseCount:              rf.ResponseCount,
-		UnsubscribeSurveyURL:       base + "/settings/notifications?type=alert&elementId=" + rf.Survey.ID.String(),
-		UnsubscribeOrganizationURL: base + "/settings/notifications?type=unsubscribedOrganizationIds&elementId=" + rf.Organization.ID.String(),
+		SurveyName:     rf.Survey.Name,
+		Elements:       responsemail.WithAbsoluteFiles(elements, public),
+		EmbeddedFields: rf.Answers.ComputedValues(rf.Survey),
+		HiddenFields:   rf.Answers.HiddenValues(rf.Survey),
+		ResponsesURL:   base + "/surveys/" + rf.Survey.ID.String() + "/responses?utm_source=email_notification&utm_medium=email&utm_content=view_responses_CTA",
+		ResponseCount:  rf.ResponseCount,
 	}
 	if rf.Organization.LogoURL != "" {
 		c.LogoURL = responsemail.ResolveStorageURL(public, rf.Organization.LogoURL)
 	}
 	return c, nil
+}
+
+// withUnsubscribeLinks is c with the recipient's two unsubscribe links, signed for them (NewUnsubscribeLinks): the survey's alert and the organization's auto-subscription, each opening the public unsubscribe page. The second value is the List-Unsubscribe URL, for the survey's alert. Emails sent before the links were signed carry /app/workspaces/{id}/settings/notifications, which Handler still answers.
+func (n *Notifier) withUnsubscribeLinks(c mailer.ResponseFinished, rf ResponseFinished, r Recipient) (mailer.ResponseFinished, string, error) {
+	survey, err := NewUnsubscribeLinks(n.cfg, r.UserID, KindAlert, rf.Survey.ID)
+	if err != nil {
+		return c, "", err
+	}
+	organization, err := NewUnsubscribeLinks(n.cfg, r.UserID, KindAutoSubscribe, rf.Organization.ID)
+	if err != nil {
+		return c, "", err
+	}
+	c.UnsubscribeSurveyURL, c.UnsubscribeOrganizationURL = survey.Page, organization.Page
+	return c, survey.OneClick, nil
 }
 
 // replyTo is forma2's: the respondent's email contact attribute, otherwise MAIL_FROM. It is never in the subject.
@@ -108,9 +121,9 @@ func (n *Notifier) replyTo(rf ResponseFinished) string {
 	return n.cfg.MailFrom
 }
 
-// Send emails every recipient, five at a time, each in their own locale. A failed send is logged and does not stop the others or fail the caller, as in forma2.
+// Send emails every recipient, five at a time, each in their own locale and with unsubscribe links of their own. A failed send is logged and does not stop the others or fail the caller, as in forma2.
 func (n *Notifier) Send(ctx context.Context, recipients []Recipient, rf ResponseFinished) error {
-	content, err := n.Content(rf)
+	shared, err := n.Content(rf)
 	if err != nil {
 		return err
 	}
@@ -119,9 +132,13 @@ func (n *Notifier) Send(ctx context.Context, recipients []Recipient, rf Response
 		var wg sync.WaitGroup
 		for _, r := range recipients[start:min(start+maxConcurrency, len(recipients))] {
 			wg.Go(func() {
-				subject, html, err := n.mailer.Render(r.Locale, content)
+				content, oneClick, err := n.withUnsubscribeLinks(shared, rf, r)
+				var subject, html string
 				if err == nil {
-					_, err = n.mailer.Send(ctx, mailer.Message{To: r.Email, ReplyTo: replyTo, Subject: subject, HTML: html})
+					subject, html, err = n.mailer.Render(r.Locale, content)
+				}
+				if err == nil {
+					_, err = n.mailer.Send(ctx, mailer.Message{To: r.Email, ReplyTo: replyTo, Subject: subject, HTML: html, Headers: mailer.OneClickUnsubscribe(oneClick)})
 				}
 				if err != nil {
 					n.log.ErrorContext(ctx, "Response pipeline notification email failed", "err", err, "survey_id", rf.Survey.ID, "response_id", rf.Answers.Response.ID)
@@ -132,9 +149,6 @@ func (n *Notifier) Send(ctx context.Context, recipients []Recipient, rf Response
 	}
 	return nil
 }
-
-// unsubscribeTypes are the switches an unsubscribe link may name.
-var unsubscribeTypes = map[string]bool{"alert": true, "unsubscribedOrganizationIds": true}
 
 // UnsubscribeTarget is where an email's unsubscribe link (/app/workspaces/{id}/settings/notifications) lands: the account notification settings under the app's base path, which turn the named switch off. elementId, the survey or organization the switch is for, is kept when it is a UUID.
 func UnsubscribeTarget(kind, elementID string) string {

@@ -8,6 +8,7 @@ import {
   isValidChatWebhookUrl,
   isValidWorkflowRequestUrl,
   isWorkflowSecretFilled,
+  withContinueOnFailure,
 } from "./definition";
 
 const SURVEY_ID = "0192f7a8-1c3e-7b2a-9d4f-5e6a7b8c9d0e";
@@ -161,6 +162,24 @@ describe("getWorkflowActionProblems", () => {
     ).toBe(false);
     expect(ZWorkflowDefinition.safeParse(chain(http({ headers: [{ name: "A" }] }))).success).toBe(false);
   });
+});
+
+test("an action keeps continueOnFailure through a parse, which zod would otherwise strip, and rejects a value that is not a boolean", () => {
+  const parsed = ZWorkflowExecutableDefinition.safeParse(chain({ ...http(), continueOnFailure: true }));
+  expect(parsed.success && parsed.data.nodes[0]).toMatchObject({ continueOnFailure: true });
+  const off = ZWorkflowDefinition.parse(chain(http()));
+  expect(off.nodes[0]).not.toHaveProperty("continueOnFailure");
+  const notBoolean = { ...http(), continueOnFailure: "yes" } as unknown as TWorkflowActionNode;
+  expect(ZWorkflowDefinition.safeParse(chain(notBoolean)).success).toBe(false);
+});
+
+test("withContinueOnFailure turns the option on, and off by removing the key", () => {
+  const on = withContinueOnFailure(http(), true);
+  expect(on.continueOnFailure).toBe(true);
+  const off = withContinueOnFailure(on, false);
+  expect(off).toEqual(http());
+  expect(off).not.toHaveProperty("continueOnFailure");
+  expect(on.continueOnFailure).toBe(true);
 });
 
 test("isWorkflowSecretFilled", () => {

@@ -81,6 +81,7 @@ export const workflowDefinitionToFlowNodes = (
         summary: registryEntry.summary(node, t),
         isLeaf: !sourcesWithEdges.has(node.id),
         issue: getWorkflowNodeIssue(node, t, resolvedOptions),
+        continueOnFailure: node.type === "action" && node.continueOnFailure === true,
       },
     };
   });

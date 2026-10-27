@@ -67,7 +67,7 @@ func TestWorkerMiddlewareRecordsOutcomesDurationsAndFirstAttemptWaits(t *testing
 	scheduled := time.Now().Add(-3 * time.Second)
 	attempted := time.Now()
 	job := func(attempt int) *rivertype.JobRow {
-		return &rivertype.JobRow{Kind: "response-pipeline.process", Attempt: attempt, ScheduledAt: scheduled, AttemptedAt: &attempted}
+		return &rivertype.JobRow{Kind: "response-pipeline.process", Queue: river.QueueDefault, Attempt: attempt, ScheduledAt: scheduled, AttemptedAt: &attempted}
 	}
 	ctx := context.Background()
 	boom := errors.New("boom")
@@ -89,17 +89,18 @@ func TestWorkerMiddlewareRecordsOutcomesDurationsAndFirstAttemptWaits(t *testing
 
 	got := collect(t, reader)
 	name := attribute.String("job_name", "response-pipeline.process")
+	queue := attribute.String("queue", "default")
 	completed, failed := attribute.String("status", "completed"), attribute.String("status", "failed")
-	if n := sumOf(t, got["forma_jobs_processed_total"], name, completed); n != 2 {
+	if n := sumOf(t, got["forma_jobs_processed_total"], name, queue, completed); n != 2 {
 		t.Errorf("completed = %d, want 2", n)
 	}
-	if n := sumOf(t, got["forma_jobs_processed_total"], name, failed); n != 1 {
+	if n := sumOf(t, got["forma_jobs_processed_total"], name, queue, failed); n != 1 {
 		t.Errorf("failed = %d, want 1", n)
 	}
-	if n, bounds := histogramCount(t, got["forma_jobs_duration_seconds"], name, completed); n != 2 || len(bounds) != 12 || bounds[0] != 0.05 || bounds[11] != 300 {
+	if n, bounds := histogramCount(t, got["forma_jobs_duration_seconds"], name, queue, completed); n != 2 || len(bounds) != 12 || bounds[0] != 0.05 || bounds[11] != 300 {
 		t.Errorf("duration observations = %d with bounds %v, want 2 on forma2's buckets", n, bounds)
 	}
-	if n, bounds := histogramCount(t, got["forma_jobs_wait_duration_seconds"], name); n != 3 || len(bounds) != 13 || bounds[12] != 600 {
+	if n, bounds := histogramCount(t, got["forma_jobs_wait_duration_seconds"], name, queue); n != 3 || len(bounds) != 13 || bounds[12] != 600 {
 		t.Errorf("wait observations = %d with bounds %v, want the 3 first attempts on forma2's buckets", n, bounds)
 	}
 	h := got["forma_jobs_wait_duration_seconds"].(metricdata.Histogram[float64])

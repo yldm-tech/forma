@@ -191,7 +191,7 @@ migrate_env() {
     fi
   done
 
-  # BULLMQ_WORKER_COUNT workers of BULLMQ_WORKER_CONCURRENCY jobs each (one worker of 2 to 4 jobs by default) become WORKER_CONCURRENCY.
+  # BULLMQ_WORKER_COUNT workers of BULLMQ_WORKER_CONCURRENCY jobs each (one worker of 2 to 4 jobs by default) become WORKER_CONCURRENCY, which forma worker applies to each of its default and webhooks queues.
   concurrency=$(dotenv_get BULLMQ_WORKER_CONCURRENCY "$file")
   count=$(dotenv_get BULLMQ_WORKER_COUNT "$file")
   if [ -n "$concurrency$count" ]; then
@@ -203,7 +203,7 @@ migrate_env() {
         concurrency=$((cpus < 2 ? 2 : (cpus > 4 ? 4 : cpus)))
       fi
       dotenv_set WORKER_CONCURRENCY "$((concurrency * ${count:-1}))" "$file"
-      echo "  WORKER_CONCURRENCY=$((concurrency * ${count:-1})) replaces BULLMQ_WORKER_CONCURRENCY x BULLMQ_WORKER_COUNT"
+      echo "  WORKER_CONCURRENCY=$((concurrency * ${count:-1})) replaces BULLMQ_WORKER_CONCURRENCY x BULLMQ_WORKER_COUNT; it applies to each of the worker's default and webhooks queues, so the worker runs up to $((2 * concurrency * ${count:-1} + 2)) jobs at once (lower WORKER_CONCURRENCY to keep the old total)"
     else
       die "BULLMQ_WORKER_CONCURRENCY ($concurrency) and BULLMQ_WORKER_COUNT ($count) in $file must be positive integers; fix or remove them and run the update again"
     fi

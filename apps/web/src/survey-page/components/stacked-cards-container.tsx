@@ -2,7 +2,7 @@ import {
   TCardArrangementOptions,
   TLinkSurveyCardWidthOptions,
   getLinkSurveyCardMaxWidth,
-} from "@forma/types/styling";
+} from "@forma/types/card-layout";
 
 interface StackedCardsContainerProps {
   children: React.ReactNode;

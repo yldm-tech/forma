@@ -222,6 +222,7 @@ describe("the survey editor", () => {
       [`/api/app/workspaces/${WORKSPACE}/segments`, []],
       [`/api/app/workspaces/${WORKSPACE}`, { id: WORKSPACE }],
       ["/api/v3/surveys?", { data: [], meta: { nextCursor: null } }],
+      ["/api/app/auth/options", { spamProtectionAvailable: false }],
     ];
     vi.stubGlobal(
       "fetch",

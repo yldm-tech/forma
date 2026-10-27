@@ -68,6 +68,8 @@ type page struct {
 	State  pageState
 	// RuntimeLanguage is the survey language code the respondent runtime renders a survey view in (its getI18nLanguage): LanguageCode, with "default" read as the default language's code. The handler preloads the runtime's translations for it.
 	RuntimeLanguage string
+	// FirstPaintTitle is the title painted over a survey view until the survey has rendered (firstpaint.go); empty paints nothing.
+	FirstPaintTitle string
 	// CustomScripts reports whether the page runs the workspace's or the survey's custom head scripts (CustomScriptsInjector), arbitrary HTML that their owner may write inline or load from any host; the handler then keeps the permissive policy every response gets instead of the survey pages' own (Handler.policy).
 	CustomScripts bool
 }
@@ -392,7 +394,12 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 		props.Locale = gate
 		state.View = viewPin
 	}
-	return page{Status: http.StatusOK, State: state, RuntimeLanguage: runtimeLanguage(languageCode, sv.Languages), CustomScripts: runsCustomScripts(props, public)}, nil
+	p := page{Status: http.StatusOK, State: state, RuntimeLanguage: runtimeLanguage(languageCode, sv.Languages), CustomScripts: runsCustomScripts(props, public)}
+	if state.View == viewSurvey {
+		// The paint is in the language the survey opens in (languageCode, which ?lang= also names by canonical tag), not the title tag's: /s keeps forma2's narrower rule for <title> (metadataLanguageCode) and /c its default-language head.
+		p.FirstPaintTitle = firstPaintTitle(sv, languageCode)
+	}
+	return p, nil
 }
 
 // runsCustomScripts mirrors the survey page's CustomScriptsInjector: off on Forma Cloud and in a preview, otherwise on when the workspace's scripts in the page state or the survey's in the public survey (which a PIN-gated page receives once the PIN is entered) are not blank. It reads what the browser is given, so whatever keeps the scripts from a page keeps this policy exception from it too.

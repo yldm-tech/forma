@@ -78,6 +78,7 @@ const trends = (interval: SurveyTrends["interval"]): SurveyTrends => ({
       ],
     },
   ],
+  score: null,
 });
 
 /** The trend endpoint, recording each request body; answer builds the reply from it. */
@@ -198,6 +199,88 @@ describe("TrendsCard", () => {
     ).toBeTruthy();
     fireEvent.mouseEnter(screen.getAllByTestId("trend-bucket")[0]!);
     expect(screen.getByRole("tooltip").textContent).toContain("only part of it is in the range");
+  });
+
+  test("draws a slider's average on its own scale, and the average total score of the completed responses", async () => {
+    const scored: SurveyTrends = {
+      ...trends("day"),
+      elements: [
+        {
+          elementId: "temp",
+          type: "slider",
+          headline: "How warm?",
+          metric: "average",
+          points: [
+            { answered: 3, value: 70 },
+            { answered: 0, value: null },
+          ],
+        },
+      ],
+      score: {
+        variableId: "total",
+        name: "score",
+        points: [
+          { answered: 2, value: 7.5 },
+          { answered: 0, value: null },
+        ],
+      },
+    };
+    stubTrends(() => json(scored));
+    render(
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <TrendsCard
+            survey={
+              {
+                ...survey,
+                blocks: [
+                  {
+                    id: "b1",
+                    name: "B1",
+                    elements: [
+                      {
+                        id: "temp",
+                        type: TSurveyElementTypeEnum.Slider,
+                        headline: { default: "How warm?" },
+                        required: false,
+                        min: 0,
+                        max: 100,
+                        step: 1,
+                      },
+                    ],
+                  },
+                ],
+              } as unknown as TSurvey
+            }
+            locale="en-US"
+          />
+        </QueryClientProvider>
+      </I18nextProvider>
+    );
+    const select = await screen.findByRole("combobox", { name: "Metric" });
+    await waitFor(() =>
+      expect(within(select).getByRole("option", { name: "Total score: score" })).toBeTruthy()
+    );
+
+    // The slider's axis runs over its scale, 0 to 100, not from 1 to the largest average as a rating's does.
+    fireEvent.change(select, { target: { value: "element:temp" } });
+    expect(within(screen.getByRole("table")).getAllByRole("cell")[0]!.textContent).toBe("70.00");
+    expect(screen.getByText("100")).toBeTruthy();
+    expect(screen.getByText("50")).toBeTruthy();
+
+    fireEvent.change(select, { target: { value: "score" } });
+    const table = screen.getByRole("table");
+    expect(
+      within(table)
+        .getAllByRole("cell")
+        .map((cell) => cell.textContent)
+    ).toEqual(["7.50", "2", "No data", "0"]);
+    expect(within(table).getByRole("columnheader", { name: "Scored responses" })).toBeTruthy();
+    expect(
+      screen.getByText("Average total score in each period, over the completed responses that have a score.")
+    ).toBeTruthy();
+    fireEvent.mouseEnter(screen.getAllByTestId("trend-bucket")[0]!);
+    expect(screen.getByRole("tooltip").textContent).toContain("2 scored responses");
   });
 
   test("says when there are no responses to chart", async () => {

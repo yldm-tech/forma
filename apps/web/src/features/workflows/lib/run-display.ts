@@ -1,3 +1,5 @@
+import type { TWorkflowRunLog } from "../api";
+
 // How a run's detail is shown, forma2's modules/workflows/lib/run-display.ts.
 
 /** The characters one run JSON blob (trigger payload, run data, a step's input or output) renders at most; past it the text is cut with a notice, so one huge payload cannot blow up the page. */
@@ -19,3 +21,7 @@ export const stringifyRunJson = (value: unknown, maxChars: number = MAX_RUN_JSON
   if (json.length <= maxChars) return json;
   return `${json.slice(0, maxChars)}\n\n… truncated — ${json.length} characters total`;
 };
+
+/** Whether a step failed and the run went on past it: the step was set to continue on failure, which its run log input records. */
+export const isContinuedFailure = (log: Pick<TWorkflowRunLog, "status" | "input">): boolean =>
+  log.status === "failed" && log.input.continueOnFailure === true;

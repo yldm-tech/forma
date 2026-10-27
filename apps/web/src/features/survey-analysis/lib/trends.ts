@@ -2,15 +2,15 @@ import type { ElementTrend, SurveyTrends, TrendBucket, TrendInterval, TrendMetri
 
 // The trend card's arithmetic, kept apart from the component so it is tested on its own: which series a view shows, the y scale it is drawn on, and how a bucket and a value are written.
 
-/** What the trend chart shows: the responses per bucket, their completion rate, or one score element's metric. */
-export type TrendView = "responses" | "completion" | `element:${string}`;
+/** What the trend chart shows: the responses per bucket, their completion rate, one score element's metric, or the average total score. */
+export type TrendView = "responses" | "completion" | "score" | `element:${string}`;
 
 /** One bar or point of the chart: the bucket, the value drawn (null leaves a gap), and for the responses view the completed part of the bar. */
 export interface TrendDatum {
   bucket: TrendBucket;
   value: number | null;
   completed?: number;
-  /** How many answers the value is taken over, for an element's metric. */
+  /** How many answers the value is taken over, for an element's metric; for the total score, how many completed responses carry one. */
   answered?: number;
 }
 
@@ -36,6 +36,13 @@ export const trendData = (trends: SurveyTrends, view: TrendView): TrendDatum[] =
     return trends.buckets.map((bucket) => ({
       bucket,
       value: bucket.responses > 0 ? bucket.completionPercentage : null,
+    }));
+  }
+  if (view === "score") {
+    return trends.buckets.map((bucket, i) => ({
+      bucket,
+      value: trends.score?.points[i]?.value ?? null,
+      answered: trends.score?.points[i]?.answered ?? 0,
     }));
   }
   const element = viewElement(trends, view);
@@ -77,6 +84,25 @@ export const metricScale = (
   return { min: 1, max: top, ticks: [1, (1 + top) / 2, top] };
 };
 
+/** The scale of a slider's average: from the element's minimum to its maximum, widened to a value drawn outside them (the scale changed after it was answered), and to a span of one when there is none. A slider narrower than one keeps its own range. */
+export const sliderScale = (min: number, max: number, values: (number | null)[]): TrendScale => {
+  const drawn = values.filter((v): v is number => v !== null);
+  const lo = Math.min(min, ...drawn);
+  const top = Math.max(max, ...drawn);
+  const hi = top > lo ? top : lo + 1;
+  return { min: lo, max: hi, ticks: [lo, (lo + hi) / 2, hi] };
+};
+
+/** The scale of the average total score, which has no fixed range: from zero to a round number at or above the highest value, reaching down to a round number below zero when a value is negative, with a grid line at zero then. */
+export const scoreScale = (values: (number | null)[]): TrendScale => {
+  const drawn = values.filter((v): v is number => v !== null);
+  const lowest = Math.min(0, ...drawn);
+  const highest = Math.max(0, ...drawn);
+  const min = lowest < 0 ? -niceCeil(-lowest) : 0;
+  const max = highest > 0 ? niceCeil(highest) : min < 0 ? 0 : 1;
+  return { min, max, ticks: min < 0 && max > 0 ? [min, 0, max] : [min, (min + max) / 2, max] };
+};
+
 /** A local date of the trend ("2026-03-01") as the UTC midnight the formatters read it at, so the day never shifts with the browser's zone. */
 const parseDay = (day: string): Date => new Date(`${day}T00:00:00Z`);
 
@@ -102,7 +128,15 @@ export const bucketRangeLabel = (bucket: TrendBucket, locale: string): string =>
     : format.formatRange(parseDay(bucket.start), parseDay(bucket.end));
 };
 
-/** A value as the chart writes it: the NPS signed and rounded, a share rounded with a percent sign, an average to two decimals, a count as a whole number, and an axis tick of an average to one decimal at most. */
+/** How many decimals an axis tick needs to be written exactly, from one to four: a score scale up to 0.5 has its middle tick at 0.25, and one up to 0.05 at 0.025. A difference far below the tick's size is floating-point noise (0.1 + 0.2), not a decimal to write. */
+const tickFractionDigits = (value: number): number => {
+  const noise = 1e-9 * Math.max(1, Math.abs(value));
+  let digits = 1;
+  while (digits < 4 && Math.abs(Number(value.toFixed(digits)) - value) > noise) digits++;
+  return digits;
+};
+
+/** A value as the chart writes it: the NPS signed and rounded, a share rounded with a percent sign, an average to two decimals, a count as a whole number, and an axis tick of an average with as many decimals as it has, up to four, so its label matches the height it is drawn at. */
 export const formatTrendValue = (
   value: number,
   metric: TrendMetric | "percentage" | "count" | "tick",
@@ -123,7 +157,9 @@ export const formatTrendValue = (
         value
       );
     case "tick":
-      return new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value);
+      return new Intl.NumberFormat(locale, { maximumFractionDigits: tickFractionDigits(value) }).format(
+        value
+      );
     default:
       return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
   }

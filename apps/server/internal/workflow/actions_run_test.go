@@ -199,6 +199,133 @@ func TestRunActionRetriesAndPermanentFailures(t *testing.T) {
 	}
 }
 
+// continueOnFailure sets an action node to let the run go on past its failure.
+func continueOnFailure(n map[string]any) map[string]any {
+	n["continueOnFailure"] = true
+	return n
+}
+
+// A failed step set to continue on failure does not stop the steps after it: they run at once, the failed step gets the run's retries (the steps that succeeded are not repeated), and the run then completes with the failure recorded on it and on the step's log. A step without the option still fails the run, even after a continued failure.
+func TestRunContinuesPastFailedStep(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixture()
+	tag := e.insert(`INSERT INTO tags (workspace_id, name) VALUES (?, 'After') RETURNING id`, f.ws)
+	start := func(name string, def map[string]any) (uuid.UUID, uuid.UUID, uuid.UUID) {
+		t.Helper()
+		def["trigger"].(map[string]any)["config"] = map[string]any{"surveyId": f.survey.String(), "endingCardIds": []any{}}
+		wf := e.enabled(f, name, def)
+		responseID := e.respondAs(f, nil, `{"q1":"a"}`)
+		return wf, e.startRun(f, wf, responseID), responseID
+	}
+	runState := func(run uuid.UUID) (string, string) {
+		return e.text(`SELECT status FROM workflow_runs WHERE id = ?`, run), e.text(`SELECT coalesce(error, '') FROM workflow_runs WHERE id = ?`, run)
+	}
+
+	// A transient failure: retried with the run, then the run completes.
+	failing, failingURL := serve(t, http.StatusServiceUnavailable)
+	wf, run, responseID := start("Continue transient", chain(continueOnFailure(httpNode("notify", failingURL)), tagNode("tag", tag.String())))
+	const want = "Continued after a failed step: Status 503"
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err == nil || err.Error() != want {
+		t.Fatalf("first attempt: %v\n%s", err, e.errorLogs())
+	}
+	if status, msg := runState(run); status != RunRunning || msg != want {
+		t.Fatalf("after the first attempt: run %s %q", status, msg)
+	}
+	if e.count(`SELECT count(*) FROM response_tags WHERE response_id = ? AND tag_id = ?`, responseID, tag) != 1 {
+		t.Fatal("the step after the failed one did not run")
+	}
+	e.exec(`DELETE FROM response_tags WHERE response_id = ?`, responseID)
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 2)); err == nil || err.Error() != want {
+		t.Fatalf("second attempt: %v", err)
+	}
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 3)); err != nil {
+		t.Fatalf("last attempt: %v", err)
+	}
+	if status, msg := runState(run); status != RunCompleted || msg != want {
+		t.Fatalf("after the last attempt: run %s %q", status, msg)
+	}
+	if failing.count() != 9 {
+		t.Fatalf("the failed step was sent %d times, want 3 per attempt", failing.count())
+	}
+	if e.count(`SELECT count(*) FROM response_tags WHERE response_id = ?`, responseID) != 0 {
+		t.Fatal("the succeeded step ran again on a retry")
+	}
+	var logs []RunLog
+	e.db.Raw(`SELECT step_id, status, input, error FROM workflow_run_logs WHERE run_id = ? ORDER BY sequence`, run).Scan(&logs)
+	if len(logs) != 2 || logs[0].Status != StepFailed || logs[0].Error == nil || *logs[0].Error != "Status 503" || !strings.Contains(string(logs[0].Input), `"continueOnFailure": true`) ||
+		logs[1].Status != StepSucceeded || strings.Contains(string(logs[1].Input), "continueOnFailure") {
+		t.Fatalf("logs %+v", logs)
+	}
+	data := e.text(`SELECT data::text FROM workflow_runs WHERE id = ?`, run)
+	if !strings.Contains(data, `"status": "failed"`) || !strings.Contains(data, `"status": "succeeded"`) {
+		t.Fatalf("run data %s", data)
+	}
+
+	// A permanent failure: no retry can change it, so the run completes on the first attempt.
+	_, rejectURL := serve(t, http.StatusUnprocessableEntity)
+	wf, run, responseID = start("Continue permanent", chain(continueOnFailure(httpNode("notify", rejectURL)), tagNode("tag", tag.String())))
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err != nil {
+		t.Fatalf("a permanent continued failure asked for a retry: %v", err)
+	}
+	if status, msg := runState(run); status != RunCompleted || msg != "Continued after a failed step: Status 422" ||
+		e.count(`SELECT count(*) FROM response_tags WHERE response_id = ? AND tag_id = ?`, responseID, tag) != 1 {
+		t.Fatalf("permanent: run %s %q", status, msg)
+	}
+
+	// Two continued failures: the run names the first and counts the rest.
+	wf, run, _ = start("Continue twice", chain(continueOnFailure(httpNode("a", rejectURL)), continueOnFailure(httpNode("b", rejectURL)), tagNode("tag", tag.String())))
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if status, msg := runState(run); status != RunCompleted || msg != "Continued after a failed step: Status 422 (and 1 more)" {
+		t.Fatalf("twice: run %s %q", status, msg)
+	}
+
+	// A transient failure a retry clears: the run completes clean, without the error the first attempt recorded for it.
+	flaky, flakyURL := serve(t, http.StatusServiceUnavailable, http.StatusServiceUnavailable, http.StatusServiceUnavailable, http.StatusOK)
+	wf, run, _ = start("Continue then recover", chain(continueOnFailure(httpNode("notify", flakyURL)), tagNode("tag", tag.String())))
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err == nil || err.Error() != want {
+		t.Fatalf("recover, first attempt: %v", err)
+	}
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 2)); err != nil {
+		t.Fatalf("recover, second attempt: %v", err)
+	}
+	if status, msg := runState(run); status != RunCompleted || msg != "" || flaky.count() != 4 ||
+		e.count(`SELECT count(*) FROM workflow_runs WHERE id = ? AND last_error_at IS NULL`, run) != 1 {
+		t.Fatalf("recover: run %s %q, %d requests", status, msg, flaky.count())
+	}
+
+	// A permanent failure beside a transient one: the run's retries are for the transient step, and the step that failed for good is never sent again.
+	transient, transientURL := serve(t, http.StatusServiceUnavailable)
+	rejecting, rejectingURL := serve(t, http.StatusUnprocessableEntity)
+	wf, run, _ = start("Continue mixed", chain(continueOnFailure(httpNode("a", rejectingURL)), continueOnFailure(httpNode("b", transientURL)), tagNode("tag", tag.String())))
+	const mixed = "Continued after a failed step: Status 422 (and 1 more)"
+	for attempt := 1; attempt <= 3; attempt++ {
+		err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, attempt))
+		if attempt < 3 && (err == nil || err.Error() != mixed) || attempt == 3 && err != nil {
+			t.Fatalf("mixed, attempt %d: %v", attempt, err)
+		}
+	}
+	if status, msg := runState(run); status != RunCompleted || msg != mixed || rejecting.count() != 1 || transient.count() != 9 {
+		t.Fatalf("mixed: run %s %q, the permanent step sent %d times, the transient one %d", status, msg, rejecting.count(), transient.count())
+	}
+	if e.count(`SELECT count(*) FROM workflow_run_logs WHERE run_id = ? AND step_id = 'a' AND status = 'failed' AND permanent_failure`, run) != 1 ||
+		e.count(`SELECT count(*) FROM workflow_run_logs WHERE run_id = ? AND step_id = 'b' AND status = 'failed' AND NOT permanent_failure`, run) != 1 {
+		t.Fatal("the step logs do not record which failure was permanent")
+	}
+
+	// A step without the option still fails the run, after a continued failure too, and the steps after it never run.
+	wf, run, responseID = start("Stop after continue", chain(continueOnFailure(httpNode("a", rejectURL)), httpNode("b", rejectURL), tagNode("tag", tag.String())))
+	if err := e.runner.Work(context.Background(), runJob(run, wf, f.ws, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if status, msg := runState(run); status != RunFailed || msg != "Status 422" ||
+		e.count(`SELECT count(*) FROM response_tags WHERE response_id = ?`, responseID) != 0 ||
+		e.count(`SELECT count(*) FROM workflow_run_logs WHERE run_id = ?`, run) != 2 {
+		t.Fatalf("stop: run %s %q", status, msg)
+	}
+}
+
 func TestHTTPRequestPermissionsAndSecrets(t *testing.T) {
 	e := newEnv(t)
 	f := e.fixture()

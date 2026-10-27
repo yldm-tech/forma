@@ -104,7 +104,7 @@ func stepMessageID(runID uuid.UUID, stepID string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// stepInput is what a step's run log records it was asked to do, without its secrets or the path and query of a URL, which often carry a token, and the label its author gave the step, which the run detail names it by.
+// stepInput is what a step's run log records it was asked to do, without its secrets or the path and query of a URL, which often carry a token, and the label its author gave the step, which the run detail names it by. It also records continueOnFailure when the step is set to let the run go on past its failure, so the run detail can say why a failed step did not stop the run.
 func stepInput(step Step) map[string]any {
 	n := step.Node
 	var input map[string]any
@@ -124,6 +124,9 @@ func stepInput(step Step) map[string]any {
 	}
 	if n.Label != nil && strings.TrimSpace(*n.Label) != "" {
 		input["label"] = *n.Label
+	}
+	if n.ContinueOnFailure {
+		input["continueOnFailure"] = true
 	}
 	return input
 }

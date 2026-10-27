@@ -193,7 +193,7 @@ func TestOptions(t *testing.T) {
 	e := newEnv(t)
 	r := e.browser().get("/auth/options")
 	expectStatus(t, r, http.StatusOK, "")
-	if m := r.json(); m["signupEnabled"] != true || m["emailAuthEnabled"] != true || m["passwordResetEnabled"] != true || m["emailVerificationRequired"] != true || m["smtpConfigured"] != true || m["turnstileSiteKey"] != nil || m["isFormaCloud"] != false || m["termsUrl"] != nil || m["privacyUrl"] != nil {
+	if m := r.json(); m["signupEnabled"] != true || m["emailAuthEnabled"] != true || m["passwordResetEnabled"] != true || m["emailVerificationRequired"] != true || m["smtpConfigured"] != true || m["turnstileSiteKey"] != nil || m["isFormaCloud"] != false || m["termsUrl"] != nil || m["privacyUrl"] != nil || m["spamProtectionAvailable"] != false {
 		t.Fatalf("fresh instance options %v", m)
 	}
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
@@ -206,11 +206,17 @@ func TestOptions(t *testing.T) {
 		c.TurnstileSiteKey, c.TurnstileSecretKey = "site-key", "secret"
 		c.PasswordResetDisabled, c.EmailVerificationDisabled = true, true
 		c.TermsURL, c.PrivacyURL = "https://forma.example/terms", "https://forma.example/privacy"
+		c.RecaptchaSiteKey, c.RecaptchaSecretKey = "recaptcha-site", "recaptcha-secret"
 	})
 	cloud.seedUser("ada@example.com", strongPassword, userOpts{})
 	if m := cloud.browser().get("/auth/options").json(); m["signupEnabled"] != true || m["turnstileSiteKey"] != "site-key" || m["passwordResetEnabled"] != false || m["emailVerificationRequired"] != false ||
-		m["isFormaCloud"] != true || m["termsUrl"] != "https://forma.example/terms" || m["privacyUrl"] != "https://forma.example/privacy" {
+		m["isFormaCloud"] != true || m["termsUrl"] != "https://forma.example/terms" || m["privacyUrl"] != "https://forma.example/privacy" || m["spamProtectionAvailable"] != true {
 		t.Fatalf("cloud options %v", m)
+	}
+	// A site key without its secret cannot verify a token, so spam protection is not offered.
+	halfRecaptcha := newEnv(t, func(c *config.Config) { c.RecaptchaSiteKey = "recaptcha-site" })
+	if m := halfRecaptcha.browser().get("/auth/options").json(); m["spamProtectionAvailable"] != false {
+		t.Fatalf("site key only options %v", m)
 	}
 	ssoOnly := newEnv(t, func(c *config.Config) { c.EmailAuthDisabled = true })
 	if m := ssoOnly.browser().get("/auth/options").json(); m["emailAuthEnabled"] != false || m["signupEnabled"] != false {

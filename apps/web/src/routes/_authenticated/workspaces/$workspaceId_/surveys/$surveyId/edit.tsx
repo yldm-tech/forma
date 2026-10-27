@@ -16,7 +16,7 @@ import {
 import { SurveyEditor } from "../../../../../../features/survey-editor/components/survey-editor";
 import { SURVEY_BG_COLORS } from "../../../../../../features/survey-editor/lib/constants";
 import { resolveSurveySchedulingConfig } from "../../../../../../features/survey-editor/lib/scheduling-config";
-import { meQuery } from "../../../../../../lib/queries/auth";
+import { authOptionsQuery, meQuery } from "../../../../../../lib/queries/auth";
 import { accessFlags } from "../../../../../../lib/roles";
 import { workspaceQuery } from "../../../../../../lib/queries/workspaces";
 import { guardPageError } from "../../../../../../lib/route-guards";
@@ -43,6 +43,7 @@ export const Route = createFileRoute("/_authenticated/workspaces/$workspaceId_/s
       queryClient.ensureQueryData(segmentsQuery(params.workspaceId)),
       queryClient.ensureQueryData(quotasQuery(params.surveyId)),
       queryClient.ensureQueryData(responseCountsQuery(params.workspaceId, params.surveyId, survey.name)),
+      queryClient.ensureQueryData(authOptionsQuery),
     ]).catch(guardPageError);
   },
   pendingComponent: RoutePending,
@@ -54,6 +55,7 @@ function SurveyEditorPage() {
   const { workspaceId, surveyId } = Route.useParams();
   const { mode } = Route.useSearch();
   const { data: me } = useSuspenseQuery(meQuery);
+  const { data: authOptions } = useSuspenseQuery(authOptionsQuery);
   const { data: workspaceDetail } = useSuspenseQuery(workspaceQuery(workspaceId));
   const { data: survey } = useSuspenseQuery(editorSurveyQuery(surveyId));
   const { data: actionClasses } = useSuspenseQuery(actionClassesQuery(workspaceId));
@@ -88,8 +90,8 @@ function SurveyEditorPage() {
         finishedResponseCount={responseCounts.finishedResponseCount}
         isReadOnly={workspaceDetail.access.isReadOnly}
         colors={SURVEY_BG_COLORS}
-        // The Go server does not tell the SPA whether reCAPTCHA keys are configured, so spam protection is not offered.
-        isSpamProtectionAllowed={false}
+        // Offered only when the instance has reCAPTCHA keys: without them the server refuses a survey that turns it on.
+        isSpamProtectionAllowed={authOptions.spamProtectionAvailable}
         isCxMode={mode === "cx"}
         surveySchedulingConfig={resolveSurveySchedulingConfig(workspaceDetail.surveyScheduling)}
         locale={ZUserLocale.safeParse(me.locale).data ?? "en-US"}

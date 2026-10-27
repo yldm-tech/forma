@@ -1,5 +1,21 @@
 import { z } from "zod";
+import {
+  APP_SURVEY_CARD_ARRANGEMENTS,
+  LINK_SURVEY_CARD_ARRANGEMENTS,
+  LINK_SURVEY_CARD_WIDTHS,
+} from "./card-layout";
 import { ZColor, ZStorageUrl } from "./common";
+
+// The option lists, the default arrangement and the card widths live in card-layout.ts, free of zod, so the survey runtime and the survey page read them without the schema library; the schemas below are built from the same lists.
+export {
+  DEFAULT_CARD_ARRANGEMENT,
+  LINK_SURVEY_CARD_WIDTH_MAX,
+  getLinkSurveyCardMaxWidth,
+  type TAppSurveyCardArrangementOptions,
+  type TCardArrangement,
+  type TCardArrangementOptions,
+  type TLinkSurveyCardWidthOptions,
+} from "./card-layout";
 
 export const ZStylingColor = z.object({
   light: ZColor,
@@ -7,37 +23,15 @@ export const ZStylingColor = z.object({
 });
 export type TStylingColor = z.infer<typeof ZStylingColor>;
 
-// "cardless" is only supported for link surveys; app surveys keep the card-based arrangements.
-export const ZLinkSurveyCardArrangementOptions = z.enum(["casual", "straight", "simple", "cardless"]);
-export const ZAppSurveyCardArrangementOptions = z.enum(["casual", "straight", "simple"]);
-export type TCardArrangementOptions = z.infer<typeof ZLinkSurveyCardArrangementOptions>;
-export type TAppSurveyCardArrangementOptions = z.infer<typeof ZAppSurveyCardArrangementOptions>;
+export const ZLinkSurveyCardArrangementOptions = z.enum(LINK_SURVEY_CARD_ARRANGEMENTS);
+export const ZAppSurveyCardArrangementOptions = z.enum(APP_SURVEY_CARD_ARRANGEMENTS);
 
 export const ZCardArrangement = z.object({
   linkSurveys: ZLinkSurveyCardArrangementOptions,
   appSurveys: ZAppSurveyCardArrangementOptions,
 });
-export type TCardArrangement = z.infer<typeof ZCardArrangement>;
 
-/**
- * The card arrangement a survey takes when neither it nor its workspace stored one. It is what respondents have always seen (the runtime in packages/surveys falls back to it), so the admin shows and saves the same value: the Appearance page, the survey editor's "Add custom styles" and the survey page around the runtime all read it from here. Changing it changes how every live survey without a stored arrangement looks.
- */
-export const DEFAULT_CARD_ARRANGEMENT: Readonly<TCardArrangement> = Object.freeze({
-  linkSurveys: "straight",
-  appSurveys: "straight",
-});
-
-export const ZLinkSurveyCardWidthOptions = z.enum(["narrow", "default", "wide"]);
-export type TLinkSurveyCardWidthOptions = z.infer<typeof ZLinkSurveyCardWidthOptions>;
-
-export const LINK_SURVEY_CARD_WIDTH_MAX: Record<TLinkSurveyCardWidthOptions, string> = {
-  narrow: "clamp(17.5rem, 88vw, 30rem)",
-  default: "clamp(20rem, 92vw, 40rem)",
-  wide: "clamp(24rem, 96vw, 60rem)",
-};
-
-export const getLinkSurveyCardMaxWidth = (cardWidth?: TLinkSurveyCardWidthOptions | null): string =>
-  LINK_SURVEY_CARD_WIDTH_MAX[cardWidth ?? "default"];
+export const ZLinkSurveyCardWidthOptions = z.enum(LINK_SURVEY_CARD_WIDTHS);
 
 export const ZLogo = z.object({
   url: ZStorageUrl.optional(),

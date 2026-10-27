@@ -129,7 +129,7 @@ export type ExportFormat = "csv" | "xlsx";
 /** The length of one trend bucket; the server picks one from the range when none is asked for. */
 export type TrendInterval = "day" | "week" | "month";
 
-/** What an element trend's values are: the NPS score (-100 to 100), the satisfied share (4 or 5) in percent, or the average answer. */
+/** What an element trend's values are: the NPS score (-100 to 100), the satisfied share (4 or 5) in percent, or the average answer (a rating, CES or slider). */
 export type TrendMetric = "nps" | "satisfied" | "average";
 
 /** One trend bucket: its first and last day (local dates in the trend's time zone, both inclusive, cut to the range at the two ends), the responses started in it and how many of them are completed. */
@@ -149,12 +149,19 @@ export interface TrendPoint {
   value: number | null;
 }
 
-/** One NPS, CSAT, rating or CES element's metric per bucket, its points lined up with the buckets. */
+/** One NPS, CSAT, rating, CES or slider element's metric per bucket, its points lined up with the buckets. */
 export interface ElementTrend {
   elementId: string;
   type: string;
   headline: string;
   metric: TrendMetric;
+  points: TrendPoint[];
+}
+
+/** The average of the survey's total score variable per bucket over the completed responses that carry one, as the score summary counts them; each point's answered counts those responses. */
+export interface ScoreTrend {
+  variableId: string;
+  name: string;
   points: TrendPoint[];
 }
 
@@ -164,6 +171,8 @@ export interface SurveyTrends {
   timeZone: string;
   buckets: TrendBucket[];
   elements: ElementTrend[];
+  /** Null when the survey has no total score variable. */
+  score: ScoreTrend | null;
 }
 
 /** The error code of a trend whose range needs too many buckets at the interval asked for. */
