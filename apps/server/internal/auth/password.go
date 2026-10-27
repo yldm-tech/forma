@@ -14,7 +14,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 )
 
-// forgotPassword mails a reset link when the address belongs to an account that can reset its password, and answers the same whether or not it does. The audit trail records a reset only when a link was actually sent.
+// forgotPassword mails a reset link when the address belongs to an account that can reset its password, and answers the same whether or not it does. The audit trail records a reset only when a link was actually sent. Requests are limited per client address and, silently, per account by the reset links it already holds (maxLiveResetLinks).
 func (s *Service) forgotPassword(ctx context.Context, email string) error {
 	if err := s.requestReset(ctx, email); err != nil {
 		s.logFailure(ctx, audit.ActionPasswordReset, "")
@@ -22,6 +22,9 @@ func (s *Service) forgotPassword(ctx context.Context, email string) error {
 	}
 	return nil
 }
+
+// maxLiveResetLinks bounds the reset mails one inbox receives through forgot-password, however many client addresses send the requests: while the account holds this many unexpired, unused reset links, a request answers success and sends nothing. It is no lockout: the cap counts links that still work, so whenever it holds the owner has a working link in their inbox, and one more can be sent as soon as one expires.
+const maxLiveResetLinks = 3
 
 func (s *Service) requestReset(ctx context.Context, email string) error {
 	// forma2 charged the limit before looking at PASSWORD_RESET_DISABLED here, and the other way round when redeeming.
@@ -38,11 +41,15 @@ func (s *Service) requestReset(ctx context.Context, email string) error {
 	if acc == nil || !s.canResetPassword(acc) {
 		return nil
 	}
-	if err := s.sendResetLink(ctx, acc); err != nil {
+	// Past the cap the request answers as usual and sends nothing, the same as for an unknown address, so the answer tells nothing about the account.
+	sent, err := s.sendResetLink(ctx, acc, maxLiveResetLinks)
+	if err != nil {
 		s.log.ErrorContext(ctx, "Password reset request failed", "err", err, "userId", acc.ID.String())
 		return nil
 	}
-	s.logEvent(ctx, audit.Event{Action: audit.ActionPasswordReset, TargetType: audit.TargetUser, TargetID: acc.ID.String(), Status: audit.StatusSuccess})
+	if sent {
+		s.logEvent(ctx, audit.Event{Action: audit.ActionPasswordReset, TargetType: audit.TargetUser, TargetID: acc.ID.String(), Status: audit.StatusSuccess})
+	}
 	return nil
 }
 
@@ -54,27 +61,48 @@ func (s *Service) canResetPassword(acc *account) bool {
 	return acc.HasCredentialIdentity && !s.cfg.EmailAuthDisabled
 }
 
-// sendResetLink issues a reset token and mails it. A mailer without SMTP counts as a failed send.
-func (s *Service) sendResetLink(ctx context.Context, acc *account) error {
+// sendResetLink issues a reset token and mails it, and reports whether it did. With maxLive above zero it issues nothing while the account already holds that many unexpired, unused reset links. A mailer without SMTP counts as a failed send; the token of a failed send is deleted, so a link nobody received neither works nor takes a place under the cap.
+func (s *Service) sendResetLink(ctx context.Context, acc *account, maxLive int64) (bool, error) {
 	lifetime := time.Duration(s.cfg.PasswordResetTokenLifetimeMinutes) * time.Minute
-	token, err := s.issueVerification(ctx, s.repo, purposePasswordReset, acc.ID, normalizeEmail(acc.Email), lifetime)
-	if err != nil {
+	var token issuedToken
+	issued := false
+	err := s.repo.transaction(ctx, func(tx *Repository) error {
+		if maxLive > 0 {
+			// The account's row lock serializes concurrent requests, so they cannot each see room for one more link.
+			locked, err := tx.lockAccount(ctx, acc.ID)
+			if err != nil || locked == nil {
+				return err
+			}
+			live, err := tx.countLiveVerifications(ctx, acc.ID, purposePasswordReset, s.now())
+			if err != nil || live >= maxLive {
+				return err
+			}
+		}
+		var err error
+		token, err = s.issueVerification(ctx, tx, purposePasswordReset, acc.ID, normalizeEmail(acc.Email), lifetime)
+		issued = err == nil
 		return err
+	})
+	if err != nil || !issued {
+		return false, err
 	}
 	sent, err := s.mailer.SendTemplate(ctx, acc.Email, acc.Locale, mailer.PasswordReset{
 		VerifyLink:            s.link(resetPasswordPath, token.Value),
 		LinkValidityInMinutes: s.cfg.PasswordResetTokenLifetimeMinutes,
 	})
+	if err == nil && !sent {
+		err = errMailNotSent
+	}
 	if err != nil {
-		return err
+		if delErr := s.repo.deleteVerification(ctx, purposePasswordReset, secret.HashToken(token.Value)); delErr != nil {
+			s.log.ErrorContext(ctx, "Failed to delete an unsent password reset token", "err", delErr, "userId", acc.ID.String())
+		}
+		return false, err
 	}
-	if !sent {
-		return errMailNotSent
-	}
-	return nil
+	return true, nil
 }
 
-// resetPassword redeems a reset token. A breached password is refused before the token is touched, so the user can retry with the same link. Success signs every session out and invalidates outstanding email change links and pending second-factor sign-ins, which were authorized by the old password.
+// resetPassword redeems a reset token. A breached password is refused before the token is touched, so the user can retry with the same link. Success signs every session and OAuth grant out and invalidates outstanding email change links, pending second-factor sign-ins and the other reset links, which were authorized by the old password or issued before it changed.
 func (s *Service) resetPassword(ctx context.Context, token, password string) error {
 	if s.cfg.PasswordResetDisabled {
 		return errPasswordResetDisabled()
@@ -117,15 +145,15 @@ func (s *Service) resetPassword(ctx context.Context, token, password string) err
 	return nil
 }
 
-// replacePassword stores a new hash and ends everything the old password authorized: every session but keepSession, outstanding email change links and pending second-factor sign-ins.
+// replacePassword stores a new hash and ends everything the old password authorized: every session but keepSession, every OAuth grant, outstanding email change links, pending second-factor sign-ins, and every other password reset link, so a link captured before the owner recovered the account cannot take it back.
 func (s *Service) replacePassword(ctx context.Context, tx *Repository, userID uuid.UUID, hash string, keepSession uuid.UUID) error {
 	if err := tx.setPassword(ctx, userID, hash, s.now()); err != nil {
 		return err
 	}
-	if _, err := s.sessions.RevokeAll(ctx, tx.db, userID, keepSession); err != nil {
+	if _, err := s.sessions.endOtherAccess(ctx, tx.db, userID, keepSession); err != nil {
 		return err
 	}
-	return tx.deleteVerifications(ctx, userID, purposeEmailChange, purposeTwoFactor)
+	return tx.deleteVerifications(ctx, userID, purposeEmailChange, purposeTwoFactor, purposePasswordReset)
 }
 
 // notifyPasswordChanged sends the security notice. It is best-effort: the password has already changed.
@@ -139,7 +167,7 @@ func (s *Service) notifyPasswordChanged(ctx context.Context, acc *account) {
 	}
 }
 
-// changePassword replaces the signed-in user's password after checking the current one. It applies the sign-up password policy and breach check, keeps the current session and signs every other one out.
+// changePassword replaces the signed-in user's password after checking the current one. It applies the sign-up password policy and breach check, keeps the current session and signs every other one and every OAuth grant out (replacePassword).
 func (s *Service) changePassword(ctx context.Context, actor httpapi.Actor, current, next string) error {
 	if err := s.limiter.ApplyIP(ctx, ratelimit.BAChangePassword); err != nil {
 		return err
@@ -200,7 +228,7 @@ func (s *Service) sendOwnResetLink(ctx context.Context, actor httpapi.Actor) err
 	if !acc.emailIdentity() {
 		return apperr.OperationNotAllowed("Password reset is not allowed for this user.")
 	}
-	if err := s.sendResetLink(ctx, acc); err != nil {
+	if _, err := s.sendResetLink(ctx, acc, 0); err != nil {
 		s.log.ErrorContext(ctx, "Password reset request failed", "err", err, "userId", acc.ID.String())
 		return errEmailSendFailed()
 	}

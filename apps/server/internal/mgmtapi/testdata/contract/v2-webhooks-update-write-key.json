@@ -1,0 +1,42 @@
+{
+  "case": "v2-webhooks-update-write-key",
+  "description": "PUT /api/v2/management/webhooks/<id:webhook:contract> with the `write` key (write on the workspace, no organization access). A replacement that changes where the webhook sends responses (its URL, triggers or surveys) needs `manage`; forma2 accepted `write`.",
+  "request": {
+    "method": "PUT",
+    "path": "/api/v2/management/webhooks/<id:webhook:contract>",
+    "query": {},
+    "headers": {
+      "x-api-key": "<api-key:write>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "name": "Contract hook (renamed)",
+      "url": "https://example.com/elsewhere",
+      "source": "user",
+      "triggers": [
+        "responseFinished"
+      ],
+      "surveyIds": [
+        "<id:survey:link>",
+        "<id:survey:app>"
+      ]
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "cache-control": "private, no-store",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+      "content-type": "application/json",
+      "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "bodyFormat": "json",
+    "body": {
+      "error": {
+        "code": 401,
+        "message": "Unauthorized"
+      }
+    }
+  }
+}

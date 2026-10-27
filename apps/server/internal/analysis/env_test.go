@@ -63,6 +63,8 @@ type env struct {
 	authz  *authztest.Env
 	svc    *Service
 	engine *gin.Engine
+	// texts is the AI text summaries of newTextEnv, nil in any other env.
+	texts *TextSummaries
 }
 
 func newEnv(t *testing.T) *env {
@@ -208,11 +210,16 @@ func (e *env) response(survey uuid.UUID, r row) uuid.UUID {
 		survey, r.at, r.at, r.finished, r.data, r.ttc, r.meta, r.variables, r.contactAttributes, r.language, r.contact, r.display)
 }
 
+// rawJSON is a request body sent as it is, byte for byte: json.Marshal would rewrite it (decode its escapes).
+type rawJSON string
+
 func (e *env) request(user uuid.UUID, method, path string, body any) *httptest.ResponseRecorder {
 	e.t.Helper()
 	e.authz.Deliver(e.t)
 	var r io.Reader
-	if body != nil {
+	if raw, ok := body.(rawJSON); ok {
+		r = bytes.NewReader([]byte(raw))
+	} else if body != nil {
 		raw, err := json.Marshal(body)
 		if err != nil {
 			e.t.Fatal(err)

@@ -22,7 +22,7 @@ import type {
   TResponseVariables,
 } from "@forma/types/responses";
 import { TUploadFileConfig } from "@forma/types/storage";
-import { getLinkSurveyCardMaxWidth } from "@forma/types/styling";
+import { DEFAULT_CARD_ARRANGEMENT, getLinkSurveyCardMaxWidth } from "@forma/types/styling";
 import { TSurveyBlock, TSurveyBlockLogic } from "@forma/types/surveys/blocks";
 import { TSurveyElement } from "@forma/types/surveys/elements";
 import { applyBlockScore } from "@forma/types/surveys/scoring";
@@ -442,9 +442,9 @@ export function Survey({
 
   const cardArrangement = useMemo(() => {
     if (localSurvey.type === "link") {
-      return styling.cardArrangement?.linkSurveys ?? "straight";
+      return styling.cardArrangement?.linkSurveys ?? DEFAULT_CARD_ARRANGEMENT.linkSurveys;
     }
-    return styling.cardArrangement?.appSurveys ?? "straight";
+    return styling.cardArrangement?.appSurveys ?? DEFAULT_CARD_ARRANGEMENT.appSurveys;
   }, [localSurvey.type, styling.cardArrangement?.linkSurveys, styling.cardArrangement?.appSurveys]);
   const isCardless = cardArrangement === "cardless";
   const linkSurveyCardMaxWidth =

@@ -44,7 +44,7 @@ x-forma-app: &forma-app
     # Everything else comes from .env. The groups:
     #
     # Required: WEBAPP_URL (the public URL of the admin, e.g. https://forma.example.com) and ENCRYPTION_KEY (openssl rand -hex 32; an existing instance keeps its value).
-    # Optional URLs: PUBLIC_URL (a separate origin for surveys and the client API), AUTH_URL (only when single sign-on redirect URIs were registered under another origin).
+    # Optional URLs: PUBLIC_URL (a separate origin for surveys and the client API; custom head scripts need it on a host other than WEBAPP_URL's), AUTH_URL (only when single sign-on redirect URIs were registered under another origin).
     # Link survey token secrets, kept so links already sent keep working: LINK_SURVEY_TOKEN_SECRET, LINK_SURVEY_PIN_TOKEN_SECRET.
     # Renamed: NEXTAUTH_SECRET is now LINK_SURVEY_TOKEN_SECRET, BETTER_AUTH_SECRET LINK_SURVEY_PIN_TOKEN_SECRET, BETTER_AUTH_URL and NEXTAUTH_URL AUTH_URL, SAML_DATABASE_URL SAML_ENABLED=1 and BULLMQ_WORKER_ENABLED WORKER_ENABLED. The old names are still read, with a deprecation warning in the log, until a later release; forma.sh update renames them in .env.
     # Email: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_AUTHENTICATED, SMTP_SECURE_ENABLED, SMTP_REJECT_UNAUTHORIZED_TLS, MAIL_FROM, MAIL_FROM_NAME.
@@ -188,7 +188,7 @@ services:
     volumes:
       - ./saml-connection:/home/nextjs/apps/web/saml-connection
 
-  # Background jobs: the response pipeline, webhooks, emails, integrations, workflows and the periodic tasks. Scale it with `docker compose up -d --scale forma-worker=2`.
+  # Background jobs: the response pipeline, webhooks, emails, integrations, workflows, the AI summaries of open-text answers (so it needs the AI_* settings too) and the periodic tasks. Scale it with `docker compose up -d --scale forma-worker=2`.
   forma-worker:
     <<: *forma-app
     command: ["worker"]

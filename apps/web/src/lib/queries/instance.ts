@@ -1,13 +1,33 @@
 import { queryOptions } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { api } from "../api";
 
 /** What the running instance reports about itself (GET /api/app/instance). */
 export interface InstanceInfo {
   /** forma2's IS_STORAGE_CONFIGURED: uploads work only when it is true. */
   storageConfigured: boolean;
+  /** Whether workspaces and surveys may set custom head scripts here, or why not: Forma Cloud never runs them, and a self-hosted instance only once PUBLIC_URL gives the survey pages a domain of their own. */
+  customScripts: CustomScriptsAvailability;
   /** The release the server was built as; a development build reports DEVELOPMENT_VERSION. */
   version: string;
 }
+
+export type CustomScriptsAvailability = "available" | "forma_cloud" | "requires_public_url";
+
+/** Why custom head scripts cannot be set here, or null when they can (or while it is not known yet). */
+export const customScriptsUnavailableMessage = (
+  t: TFunction,
+  availability: CustomScriptsAvailability | undefined
+): string | null => {
+  switch (availability) {
+    case "forma_cloud":
+      return t("workspace.custom_scripts_access.unavailable_cloud");
+    case "requires_public_url":
+      return t("workspace.custom_scripts_access.requires_public_url");
+    default:
+      return null;
+  }
+};
 
 /** The version an unreleased server build reports, forma2's version of an unpublished package. */
 export const DEVELOPMENT_VERSION = "0.0.0";

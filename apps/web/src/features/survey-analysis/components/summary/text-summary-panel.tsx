@@ -9,6 +9,7 @@ import { ProgressBar } from "../../../../components/ui/progress-bar";
 import { ApiError } from "../../../../lib/api";
 import { cn } from "../../../../lib/cn";
 import { errorMessage } from "../../../../lib/errors";
+import { APP_LANGUAGES } from "../../../../lib/languages";
 import { timeSince } from "../../../../lib/time";
 import { getAIUnavailableMessage, getAIUnavailableMessageForErrorCode } from "../../../ai/availability";
 import {
@@ -17,7 +18,7 @@ import {
   type TextSummaryRequest,
   type TextSummaryTarget,
   analysisApi,
-  analysisKeys,
+  isTextSummaryOverdue,
   textSummaryQuery,
 } from "../../api";
 import { useResponseFilter } from "../filter/response-filter-context";
@@ -31,7 +32,11 @@ const SENTIMENT_BADGE: Record<TextSentimentLabel, "success" | "gray" | "error" |
   mixed: "warning",
 };
 
-/** The AI summary of a question's free-text answers under the current filter: the themes the answers share, each with its share and quotes that open their responses, and the overall sentiment. Nothing is generated until the reader asks; a summary stays until its answers change. A read-only results link shows none. */
+/** Whether an open-text question asks for text, the only kind whose answers are summarized: not an email address, a phone number, a URL or a number. A question saved without an input type asks for text. */
+export const isFreeTextInput = (inputType: string | undefined): boolean =>
+  inputType === undefined || inputType === "text";
+
+/** The AI summary of a question's free-text answers under the current filter: the themes the answers share, each with its share and quotes that open their responses, and the overall sentiment. Nothing is generated until the reader asks; the generation runs in the background and the card follows it until the summary lands. A summary stays until its answers change, and is shown to readers of other languages, labelled with its own. A read-only results link shows none. */
 export const TextSummaryPanel = (props: {
   survey: TSurvey;
   elementId: string;
@@ -70,18 +75,19 @@ const TextSummarySection = ({
     [elementId, target, locale, filterCriteria]
   );
   const state = useQuery(textSummaryQuery(survey.id, request));
-  // The request travels with the mutation: a pending mutation takes the options of the latest render, so a summary must be stored under the filter and language it was asked for, not the ones the reader has switched to since.
+  // The request travels with the mutation: a pending mutation takes the options of the latest render, so a summary must be stored under the filter and language it was asked for, not the ones the reader has switched to since. A queued generation keeps the summary on screen next to it (the one it refreshes, or one in another language) until the lookup, which polls while it is pending, brings the new one.
   const generate = useMutation({
     mutationFn: (vars: { request: TextSummaryRequest; refresh: boolean }) =>
       analysisApi.generateTextSummary(survey.id, vars.request, vars.refresh),
     onSuccess: (next, vars) =>
-      queryClient.setQueryData(analysisKeys.textSummary(survey.id, vars.request), next),
+      queryClient.setQueryData(textSummaryQuery(survey.id, vars.request).queryKey, (previous) =>
+        next.summary === null && previous?.summary ? { ...next, summary: previous.summary } : next
+      ),
   });
   const run = (refresh: boolean) => generate.mutate({ request, refresh });
   // A generation pending or failed for another filter or language is not this one's.
   const isCurrent =
     generate.variables !== undefined && hashKey([generate.variables.request]) === hashKey([request]);
-  const pending = generate.isPending && isCurrent;
   const [openResponseId, setOpenResponseId] = useState<string | null>(null);
 
   if (state.isPending) return null;
@@ -92,27 +98,73 @@ const TextSummarySection = ({
       </div>
     );
   }
-  const { available, reason, summary } = state.data;
+  const { available, reason, summary, status, error } = state.data;
+  // An open-text question that asks for an email address, a phone number, a URL or a number has nothing to summarize.
+  if (reason === "not_free_text") return null;
 
-  const failure = generate.isError && isCurrent ? generationError(generate.error, t) : null;
+  const overdue = isTextSummaryOverdue(state.data);
+  const pending = (generate.isPending && isCurrent) || (status === "pending" && !overdue);
+  // A summary in another language than the reader's is labelled with it; a member who can generate one is offered one in their own language instead of a refresh.
+  const inOtherLanguage = summary !== null && summary.language !== locale;
+  const failure =
+    generate.isError && isCurrent
+      ? generationError(generate.error, t)
+      : status === "failed" && available && !pending
+        ? failedGeneration(error?.code, t)
+        : null;
   const summarizeLabel =
     target === "other"
       ? t("workspace.surveys.summary.ai_summary.summarize_other")
       : t("workspace.surveys.summary.ai_summary.summarize");
+  const progress = pending ? (
+    <p role="status" className="text-sm text-slate-600">
+      {t("workspace.surveys.summary.ai_summary.summarizing")}
+    </p>
+  ) : overdue ? (
+    <p role="status" className="text-sm text-slate-600">
+      {t("workspace.surveys.summary.ai_summary.taking_long")}
+    </p>
+  ) : null;
 
   return (
     <section
       aria-label={t("workspace.surveys.summary.ai_summary.title")}
       className={cn("rounded-lg border border-slate-200 bg-slate-50 p-4", className)}>
       {summary ? (
-        // A member without edit access reads the summary others generated, and cannot refresh it.
-        <SummaryView
-          summary={summary}
-          locale={locale}
-          refreshing={pending}
-          onRefresh={available ? () => run(true) : undefined}
-          onOpenResponse={setOpenResponseId}
-        />
+        <>
+          {/* A member without edit access reads the summary others generated, and cannot refresh it. */}
+          <SummaryView
+            summary={summary}
+            locale={locale}
+            refreshing={pending}
+            onRefresh={available && !inOtherLanguage ? () => run(true) : undefined}
+            onOpenResponse={setOpenResponseId}
+          />
+          {inOtherLanguage && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <p className="text-sm text-slate-600">
+                {t("workspace.surveys.summary.ai_summary.other_language", {
+                  language: languageName(summary.language),
+                })}
+              </p>
+              {available && (
+                <Button variant="secondary" size="sm" loading={pending} onClick={() => run(false)}>
+                  <SparklesIcon />
+                  {t("workspace.surveys.summary.ai_summary.summarize_in_language", {
+                    language: languageName(locale),
+                  })}
+                </Button>
+              )}
+              {progress}
+            </div>
+          )}
+          {!inOtherLanguage && overdue && <div className="mt-3">{progress}</div>}
+        </>
+      ) : reason === "read_only" ? (
+        // Not a permission error: there is simply no summary yet, and someone with edit access can make one.
+        (progress ?? (
+          <p className="text-sm text-slate-600">{t("workspace.surveys.summary.ai_summary.read_only_none")}</p>
+        ))
       ) : !available ? (
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="secondary" size="sm" disabled>
@@ -127,11 +179,7 @@ const TextSummarySection = ({
             <SparklesIcon />
             {summarizeLabel}
           </Button>
-          {pending && (
-            <p role="status" className="text-sm text-slate-600">
-              {t("workspace.surveys.summary.ai_summary.summarizing")}
-            </p>
-          )}
+          {progress}
         </div>
       )}
       {failure && (
@@ -155,7 +203,11 @@ const TextSummarySection = ({
   );
 };
 
-/** What a failed generation says: AI switched off or unconfigured since the page loaded, the provider rate limiting the instance, or the usual error wording. */
+/** A language's own name when the app offers it ("日本語"), else its tag. */
+const languageName = (code: string): string =>
+  APP_LANGUAGES.find((language) => language.code === code)?.native ?? code;
+
+/** What a refused request says: AI switched off or unconfigured since the page loaded, the provider rate limiting the instance, or the usual error wording. */
 const generationError = (error: unknown, t: ReturnType<typeof useTranslation>["t"]): string => {
   if (error instanceof ApiError) {
     const unavailable = getAIUnavailableMessageForErrorCode(error.code, t);
@@ -163,6 +215,14 @@ const generationError = (error: unknown, t: ReturnType<typeof useTranslation>["t
     if (error.code === "ai_quota_exceeded") return t("workspace.surveys.summary.ai_summary.quota_exceeded");
   }
   return errorMessage(t, error);
+};
+
+/** What a generation that failed in the worker says, by the code it ended with: AI switched off or unconfigured since it was asked for, the provider rate limiting the instance, or that it can be asked for again. */
+const failedGeneration = (code: string | undefined, t: ReturnType<typeof useTranslation>["t"]): string => {
+  const unavailable = getAIUnavailableMessageForErrorCode(code, t);
+  if (unavailable) return unavailable;
+  if (code === "ai_quota_exceeded") return t("workspace.surveys.summary.ai_summary.quota_exceeded");
+  return t("workspace.surveys.summary.ai_summary.failed");
 };
 
 const SummaryView = ({

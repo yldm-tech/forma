@@ -76,12 +76,16 @@ const existing: ResultShare = {
   revealedElementIds: [],
   expiresAt: null,
   creator: { id: "u1", name: "Ada" },
+  missingSegmentIds: [],
 };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
-const stubApi = (share: ResultShare = existing) => {
+const stubApi = (
+  share: ResultShare = existing,
+  failCreate?: { status: number; code: string; message: string }
+) => {
   const calls: { method: string; path: string; body?: unknown }[] = [];
   let list: ResultShares = {
     shares: [share],
@@ -98,6 +102,9 @@ const stubApi = (share: ResultShare = existing) => {
       calls.push({ method, path, body });
       const base = `/api/app/surveys/${SURVEY_ID}/result-shares`;
       if (path === base && method === "GET") return json(list);
+      if (path === base && method === "POST" && failCreate) {
+        return json({ code: failCreate.code, message: failCreate.message }, failCreate.status);
+      }
       if (path === base && method === "POST") {
         const created = { ...existing, id: "new", key: "b".repeat(43), ...(body as object) };
         list = { ...list, shares: [created as ResultShare, ...list.shares] };
@@ -202,6 +209,41 @@ describe("ShareResultsDialog", () => {
       expiresAt: null,
       revealedElementIds: [],
     });
+  });
+
+  test("a link whose segment was deleted is marked", async () => {
+    stubApi({ ...existing, missingSegmentIds: ["0192f7a8-1c3e-7b2a-9d4f-00000000000a"] });
+    renderDialog();
+    const row = await screen.findByTestId("result-share");
+    expect(within(row).getByText("Segment deleted")).toBeTruthy();
+    expect(row.textContent).toContain("filters by a segment that was deleted");
+  });
+
+  test("a link from an older server, without missingSegmentIds, is listed unmarked", async () => {
+    // During a rolling deploy the new bundle can be answered by a pod that predates the field.
+    const { missingSegmentIds: _absent, ...older } = existing;
+    stubApi(older as ResultShare);
+    renderDialog();
+    const row = await screen.findByTestId("result-share");
+    expect(within(row).getByText("Board")).toBeTruthy();
+    expect(within(row).queryByText("Segment deleted")).toBeNull();
+  });
+
+  test("a new link whose filter names a deleted segment is refused in the user's words", async () => {
+    stubApi(existing, {
+      status: 400,
+      code: "result_share_segment_not_found",
+      message: "The filter uses a segment that does not exist in this workspace: x.",
+    });
+    renderDialog();
+    await screen.findByTestId("result-share");
+    fireEvent.click(screen.getByRole("button", { name: "Create link" }));
+    await waitFor(() =>
+      expect(toast.getSnapshot().map((shown) => shown.message)).toContain(
+        "The filter uses a segment that no longer exists, or one that uses a deleted segment. Remove it from the filter and try again."
+      )
+    );
+    expect(screen.getAllByTestId("result-share")).toHaveLength(1);
   });
 
   test("revoking asks first, then deletes the link", async () => {

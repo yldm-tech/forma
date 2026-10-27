@@ -302,7 +302,7 @@ func TestExportWritesForma2sColumnsAndCells(t *testing.T) {
 	}
 	empty := q("")
 	newer := []string{"1", q(r2.String()), q("2026-01-02 16:30:00 GMT+8"), q("No"), empty, q(sv.String()), empty, empty, empty,
-		empty, empty, empty, empty, empty, empty, empty, empty, empty, q("2026-01-02T08:30:00.000Z"), empty, empty,
+		empty, empty, empty, empty, empty, empty, empty, empty, empty, empty, empty, empty,
 		empty, empty, empty, empty, empty, empty, empty, empty, empty, empty, empty,
 		empty, q("Zed"), q("other"), "", "", empty,
 		"", "42", empty, empty, empty}

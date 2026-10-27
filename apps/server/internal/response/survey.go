@@ -41,6 +41,8 @@ type Survey struct {
 	IsSingleResponsePerEmailEnabled bool
 
 	blocks []surveydoc.Block
+	// variables are the survey's variables, read for its total score (ScoreBounds).
+	variables []surveydoc.Variable
 }
 
 // Elements are the survey's elements in document order, forma2's getElementsFromBlocks.
@@ -88,12 +90,13 @@ func LoadSurvey(ctx context.Context, db *gorm.DB, id uuid.UUID) (*Survey, error)
 		IsAnonymizeResponsesEnabled bool
 		Blocks                      []byte
 		HiddenFields                []byte
+		Variables                   []byte
 		DefaultLanguage             *string
 		// IsSingleResponsePerEmailEnabled is Survey's.
 		IsSingleResponsePerEmailEnabled bool
 	}
 	err := db.WithContext(ctx).Raw(`SELECT s.id, s.workspace_id, s.type, s.status, s.pin, s.single_use, s.recaptcha,
-		s.is_verify_email_enabled, s.is_capture_ip_enabled, s.is_anonymize_responses_enabled, s.blocks, s.hidden_fields, s.is_single_response_per_email_enabled,
+		s.is_verify_email_enabled, s.is_capture_ip_enabled, s.is_anonymize_responses_enabled, s.blocks, s.hidden_fields, s.variables, s.is_single_response_per_email_enabled,
 		(SELECT l.code FROM survey_languages sl JOIN languages l ON l.id = sl.language_id WHERE sl.survey_id = s.id AND sl.is_default) AS default_language
 		FROM surveys s WHERE s.id = ?`, id).Scan(&rows).Error
 	if err != nil {
@@ -122,6 +125,9 @@ func LoadSurvey(ctx context.Context, db *gorm.DB, id uuid.UUID) (*Survey, error)
 	}
 	if err := json.Unmarshal(r.HiddenFields, &sv.HiddenFields); err != nil {
 		return nil, fmt.Errorf("decode survey %s hidden fields: %w", id, err)
+	}
+	if err := json.Unmarshal(r.Variables, &sv.variables); err != nil {
+		return nil, fmt.Errorf("decode survey %s variables: %w", id, err)
 	}
 	if sv.Fields, err = embeddeddata.LoadLinked(ctx, db, id); err != nil {
 		return nil, err

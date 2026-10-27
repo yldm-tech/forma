@@ -17,6 +17,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
@@ -36,6 +37,9 @@ const maxResultShareNameLength = 100
 
 // CodeResultShareNotFound is the error a key answers when it names no link, or one that expired or was revoked: the three are not told apart.
 const CodeResultShareNotFound = "result_share_not_found"
+
+// CodeResultShareSegmentNotFound is the error a new link answers when its filter names a segment the survey's workspace does not have: a segment since deleted, another workspace's, or no segment id at all. Such a segment holds nobody, so the link would silently show no responses (or all of them).
+const CodeResultShareSegmentNotFound = "result_share_segment_not_found"
 
 // shareKeyPattern is the shape of a key secret.NewToken issues; anything else names no link and is refused before the database is asked.
 var shareKeyPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
@@ -68,6 +72,8 @@ type ResultShare struct {
 	RevealedElementIDs []string            `json:"revealedElementIds"`
 	ExpiresAt          *time.Time          `json:"expiresAt"`
 	Creator            *ResultShareCreator `json:"creator"`
+	// MissingSegmentIDs are the segments the frozen filter names that no longer exist, or that nest one that no longer exists, sorted: the link counts nobody as in them, so it no longer shows the responses it was created for.
+	MissingSegmentIDs []string `json:"missingSegmentIds"`
 	// revealed are the cards the link reveals, as stored: the survey may since have dropped some (keepOffered).
 	revealed []Revealable
 }
@@ -118,6 +124,8 @@ type SharedResultsLink struct {
 	ExpiresAt *time.Time `json:"expiresAt"`
 	// Filtered is set when the link shows only the responses matching a filter.
 	Filtered bool `json:"filtered"`
+	// SegmentMissing is set when the filter names a segment that no longer exists, so the responses shown are not the ones the link was created for.
+	SegmentMissing bool `json:"segmentMissing"`
 }
 
 // SharedResults is the summary a link shows. WithheldIDs are the cards, by element or hidden field id, whose individual answers the link does not show: their entries keep their counts and have no samples.
@@ -149,7 +157,7 @@ const selectResultShare = `SELECT s.id, s.created_at, s.updated_at, s.survey_id,
 
 func (r resultShareRow) share() (ResultShare, error) {
 	out := ResultShare{ID: r.ID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, SurveyID: r.SurveyID, Key: r.ShareKey, Name: r.Name,
-		FilterCriteria: r.FilterCriteria, ExpiresAt: r.ExpiresAt}
+		FilterCriteria: r.FilterCriteria, ExpiresAt: r.ExpiresAt, MissingSegmentIDs: []string{}}
 	if err := json.Unmarshal(r.Revealed, &out.revealed); err != nil {
 		return out, fmt.Errorf("decode result share %s revealed cards: %w", r.ID, err)
 	}
@@ -267,8 +275,52 @@ func (s *Service) ResultShares(ctx context.Context, userID, surveyID uuid.UUID) 
 		if err := s.pruneReveals(ctx, &shares[i], sv); err != nil {
 			return nil, err
 		}
+		if err := s.markMissingSegments(ctx, &shares[i], sv); err != nil {
+			return nil, err
+		}
 	}
 	return &ResultShares{Shares: shares, Revealable: sv.revealable()}, nil
+}
+
+// missingSegments lists, sorted, the segments criteria name that hold nobody because they do not exist the way the filter evaluates them (response.segmentConditions): no segment of the survey's workspace has the id, or one it nests is gone.
+func (s *Service) missingSegments(ctx context.Context, sv *surveyDoc, f *response.Criteria) ([]string, error) {
+	missing := []string{}
+	if f == nil {
+		return missing, nil
+	}
+	for key := range f.Segments {
+		found := false
+		if id, ok := rowid.Parse(key); ok {
+			var err error
+			if _, _, found, err = s.segments.SegmentMembers(ctx, sv.WorkspaceID, id); err != nil {
+				return nil, fmt.Errorf("evaluate segment %s: %w", id, err)
+			}
+		}
+		if !found {
+			missing = append(missing, key)
+		}
+	}
+	slices.Sort(missing)
+	return missing, nil
+}
+
+// frozenCriteria decodes the filter a link stores.
+func (sh *ResultShare) frozenCriteria() (*response.Criteria, error) {
+	var filter response.Criteria
+	if err := json.Unmarshal(sh.FilterCriteria, &filter); err != nil {
+		return nil, fmt.Errorf("decode result share %s filter: %w", sh.ID, err)
+	}
+	return &filter, nil
+}
+
+// markMissingSegments sets the link's MissingSegmentIDs from its frozen filter. A link whose segment was deleted is kept and marked rather than deleted: its managers decide what to do with it.
+func (s *Service) markMissingSegments(ctx context.Context, sh *ResultShare, sv *surveyDoc) error {
+	filter, err := sh.frozenCriteria()
+	if err != nil {
+		return err
+	}
+	sh.MissingSegmentIDs, err = s.missingSegments(ctx, sv, filter)
+	return err
 }
 
 // checkResultShareFields trims the name and checks the name, the revealed ids and the expiry against the survey, as the field errors a binding failure reports. It returns the cards the ids reveal, in the survey's order.
@@ -332,6 +384,13 @@ func (s *Service) CreateResultShare(ctx context.Context, userID, surveyID uuid.U
 	}
 	if _, err := response.Where(ctx, s.segments, sv.Survey, in.FilterCriteria); err != nil {
 		return nil, err
+	}
+	missing, err := s.missingSegments(ctx, sv, in.FilterCriteria)
+	if err != nil {
+		return nil, err
+	}
+	if len(missing) > 0 {
+		return nil, apperr.InvalidInput(CodeResultShareSegmentNotFound, "The filter uses a segment that does not exist in this workspace: "+strings.Join(missing, ", ")+". Remove it from the filter and create the link again.")
 	}
 	criteria, err := compactCriteria(in.FilterCriteria)
 	if err != nil {
@@ -457,6 +516,9 @@ func (s *Service) UpdateResultShare(ctx context.Context, userID, surveyID, share
 		return nil, err
 	}
 	share.keepOffered(sv)
+	if err := s.markMissingSegments(ctx, share, sv); err != nil {
+		return nil, err
+	}
 	return share, nil
 }
 
@@ -523,11 +585,11 @@ func (s *Service) liveResultShare(ctx context.Context, key string) (*ResultShare
 	if err := s.pruneReveals(ctx, share, sv); err != nil {
 		return nil, nil, nil, err
 	}
-	var filter response.Criteria
-	if err := json.Unmarshal(share.FilterCriteria, &filter); err != nil {
-		return nil, nil, nil, fmt.Errorf("decode result share %s filter: %w", share.ID, err)
+	filter, err := share.frozenCriteria()
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	return share, sv, &filter, nil
+	return share, sv, filter, nil
 }
 
 // SharedResults is the summary a link shows, computed now under its frozen filter, with what identifies respondents removed and the cards it does not reveal withheld.
@@ -541,12 +603,16 @@ func (s *Service) SharedResults(ctx context.Context, key string) (*SharedResults
 		return nil, err
 	}
 	withheld := redactSummary(summary, share.revealed)
+	missing, err := s.missingSegments(ctx, sv, filter)
+	if err != nil {
+		return nil, err
+	}
 	shared, err := loadSharedSurvey(ctx, s.db, sv.ID)
 	if err != nil {
 		return nil, err
 	}
 	return &SharedResults{
-		Link:        SharedResultsLink{Name: share.Name, ExpiresAt: share.ExpiresAt, Filtered: hasCriteria(filter)},
+		Link:        SharedResultsLink{Name: share.Name, ExpiresAt: share.ExpiresAt, Filtered: hasCriteria(filter), SegmentMissing: len(missing) > 0},
 		Survey:      *shared,
 		Summary:     summary,
 		WithheldIDs: withheld,

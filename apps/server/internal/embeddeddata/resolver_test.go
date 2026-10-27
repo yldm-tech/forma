@@ -90,6 +90,19 @@ func TestDurationSecondsIsUnsetOnAPartialResponse(t *testing.T) {
 	}
 }
 
+// J6: a partial response has not finished, so its last partial save is not reported as its finish time (exports showed it in Finished At).
+func TestFinishedAtIsUnsetOnAPartialResponse(t *testing.T) {
+	r := capturedResponse()
+	r.Finished = false
+	got := Project(ReservedCatalog, r)
+	if v, ok := got["finishedAt"]; ok {
+		t.Fatalf("finishedAt = %v on a partial response", v)
+	}
+	if got["startedAt"] != "2026-08-01T09:00:00.000Z" {
+		t.Fatalf("startedAt = %v", got["startedAt"])
+	}
+}
+
 func TestServerValuesLetDeclaredNamesShadowReservedFields(t *testing.T) {
 	r := capturedResponse()
 	r.Data = map[string]any{"q1": "answer"}

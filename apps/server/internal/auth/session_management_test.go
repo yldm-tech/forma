@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/yldm-tech/forma/apps/server/internal/platform/apperr"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
 )
@@ -231,5 +233,91 @@ func TestRevokeOtherSessions(t *testing.T) {
 	}
 	if len(revoked) != 2 || revoked[0] != float64(2) || revoked[1] != float64(0) {
 		t.Fatalf("audit %v", revoked)
+	}
+}
+
+// Every change that signs the user's other sessions out revokes their OAuth grants in the same transaction: an MCP client's refresh token is a session that rotates for thirty days, so one an attacker holds must not survive the owner's recovery. Another user's grants are not touched, and a refused change revokes nothing.
+func TestEndingOtherAccessRevokesOAuthGrants(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		twoFactor bool
+		// refused runs a request that must change nothing; end runs the change.
+		refused func(e *env, id uuid.UUID) response
+		end     func(e *env, id uuid.UUID) response
+	}{
+		{
+			name: "password reset",
+			refused: func(e *env, _ uuid.UUID) response {
+				return e.browser().post("/auth/password/reset", map[string]string{"token": "not-a-token", "password": newPassword})
+			},
+			end: func(e *env, _ uuid.UUID) response {
+				expectStatus(e.t, forgot(e.browser(), "ada@example.com"), http.StatusOK, "")
+				return e.browser().post("/auth/password/reset", map[string]string{"token": e.lastToken("ada@example.com", subjectReset), "password": newPassword})
+			},
+		},
+		{
+			name: "password change",
+			refused: func(e *env, id uuid.UUID) response {
+				return e.sessionFor(id).post("/auth/password/change", map[string]string{"currentPassword": "Wrong-Password-1", "newPassword": newPassword})
+			},
+			end: func(e *env, id uuid.UUID) response {
+				return e.sessionFor(id).post("/auth/password/change", map[string]string{"currentPassword": strongPassword, "newPassword": newPassword})
+			},
+		},
+		{
+			name: "sign out other sessions",
+			end: func(e *env, id uuid.UUID) response {
+				return e.sessionFor(id).post("/auth/sessions/revoke-others", nil)
+			},
+		},
+		{
+			name: "enable two-factor authentication",
+			refused: func(e *env, id uuid.UUID) response {
+				e.enrolTOTP(id, false)
+				return e.sessionFor(id).post("/auth/two-factor/enable", map[string]string{"code": e.totpCode(id, -3)})
+			},
+			end: func(e *env, id uuid.UUID) response {
+				return e.sessionFor(id).post("/auth/two-factor/enable", map[string]string{"code": e.totpCode(id, 0)})
+			},
+		},
+		{
+			name:      "disable two-factor authentication",
+			twoFactor: true,
+			refused: func(e *env, id uuid.UUID) response {
+				return e.sessionFor(id).post("/auth/two-factor/disable", map[string]string{"password": strongPassword, "backupCode": "aaaaa-bbbbb"})
+			},
+			end: func(e *env, id uuid.UUID) response {
+				return e.sessionFor(id).post("/auth/two-factor/disable", map[string]string{"password": strongPassword, "backupCode": e.totp[id].BackupCodes[0]})
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			e := newEnv(t)
+			ada := e.seedUser("ada@example.com", strongPassword, userOpts{twoFactor: tc.twoFactor})
+			bob := e.seedUser("bob@example.com", strongPassword, userOpts{})
+			e.seedOAuthGrant(ada)
+			e.seedOAuthGrant(ada)
+			e.seedOAuthGrant(bob)
+			if tc.refused != nil {
+				if r := tc.refused(e, ada); r.Code < 400 {
+					t.Fatalf("the refused request succeeded: %d %s", r.Code, r.Body.String())
+				}
+				if n := e.liveOAuthTokens(ada); n != 4 {
+					t.Fatalf("a refused request revoked OAuth tokens: %d live, want 4", n)
+				}
+			}
+			if r := tc.end(e, ada); r.Code >= 300 {
+				t.Fatalf("%d %s", r.Code, r.Body.String())
+			}
+			if n := e.liveOAuthTokens(ada); n != 0 {
+				t.Fatalf("%d of the user's OAuth tokens survived", n)
+			}
+			if n := e.liveOAuthTokens(bob); n != 2 {
+				t.Fatalf("another user's OAuth tokens were revoked: %d live, want 2", n)
+			}
+		})
 	}
 }

@@ -106,7 +106,11 @@ const renderCard = (logo: TSurveyStyling["logo"], storageConfigured = true) => {
     history: createMemoryHistory({ initialEntries: [`/workspaces/${WS}/surveys/${SURVEY}/edit`] }),
   });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  queryClient.setQueryData(instanceQuery.queryKey, { storageConfigured, version: "0.2.10" });
+  queryClient.setQueryData(instanceQuery.queryKey, {
+    storageConfigured,
+    customScripts: "requires_public_url",
+    version: "0.2.10",
+  });
   render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>

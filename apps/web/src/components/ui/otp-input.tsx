@@ -1,4 +1,4 @@
-import type { ChangeEvent, FocusEvent, KeyboardEvent } from "react";
+import type { CSSProperties, ChangeEvent, FocusEvent, KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn";
 import { otpDigits, setOtpDigit } from "../../lib/otp";
@@ -11,6 +11,8 @@ interface OTPInputProps {
   className?: string;
   /** Classes for every digit box, such as the error border of a rejected PIN. */
   inputBoxClassName?: string;
+  /** Inline colors for every digit box, such as a survey theme's input colors where the boxes sit on the survey's own background. */
+  inputBoxStyle?: CSSProperties;
   disabled?: boolean;
   /** Focuses the first box when it mounts, and when a Dialog holding it opens. */
   autoFocus?: boolean;
@@ -23,6 +25,7 @@ export const OTPInput = ({
   onChange,
   className,
   inputBoxClassName,
+  inputBoxStyle,
   disabled,
   autoFocus = false,
 }: OTPInputProps) => {
@@ -81,6 +84,7 @@ export const OTPInput = ({
           maxLength={valueLength}
           aria-label={t("common.digit_number_of_total", { number: index + 1, total: valueLength })}
           className={cn("h-11 w-full max-w-12 min-w-0 px-0 text-center shadow-xs sm:h-10", inputBoxClassName)}
+          style={inputBoxStyle}
           value={digit}
           onChange={(e) => handleChange(e, index)}
           onKeyDown={handleKeyDown}

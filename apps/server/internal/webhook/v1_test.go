@@ -115,6 +115,7 @@ func TestV1CreateRefusals(t *testing.T) {
 	org, ws := e.organization(owner)
 	readKey, _ := e.apiKey(org, ws, "read")
 	writeKey, _ := e.apiKey(org, ws, "write")
+	manageKey, _ := e.apiKey(org, ws, "manage")
 	otherOwner := e.user()
 	_, foreignWS := e.organization(otherOwner)
 	foreignSurvey := e.survey(foreignWS)
@@ -134,20 +135,22 @@ func TestV1CreateRefusals(t *testing.T) {
 		message string
 		details map[string]any
 	}{
-		{"malformed", writeKey, "{", http.StatusBadRequest, "bad_request", "Malformed JSON input, please check your request body", nil},
-		{"no workspace", writeKey, map[string]any{"url": "https://93.184.216.34/"}, http.StatusBadRequest, "bad_request", "workspaceId must be provided", nil},
-		{"numeric workspace", writeKey, map[string]any{"workspaceId": 5}, http.StatusBadRequest, "bad_request", "workspaceId must be a string", nil},
-		{"unknown workspace", writeKey, valid(map[string]any{"workspaceId": "clnope"}), http.StatusNotFound, "not_found", "Workspace not found", map[string]any{"resource_id": "clnope", "resource_type": "Workspace"}},
+		{"malformed", manageKey, "{", http.StatusBadRequest, "bad_request", "Malformed JSON input, please check your request body", nil},
+		{"no workspace", manageKey, map[string]any{"url": "https://93.184.216.34/"}, http.StatusBadRequest, "bad_request", "workspaceId must be provided", nil},
+		{"numeric workspace", manageKey, map[string]any{"workspaceId": 5}, http.StatusBadRequest, "bad_request", "workspaceId must be a string", nil},
+		{"unknown workspace", manageKey, valid(map[string]any{"workspaceId": "clnope"}), http.StatusNotFound, "not_found", "Workspace not found", map[string]any{"resource_id": "clnope", "resource_type": "Workspace"}},
 		{"read key", readKey, valid(nil), http.StatusUnauthorized, "unauthorized", "You are not authorized to access this resource", nil},
-		{"foreign workspace", writeKey, valid(map[string]any{"workspaceId": foreignWS.String()}), http.StatusUnauthorized, "unauthorized", "You are not authorized to access this resource", nil},
-		{"invalid fields", writeKey, valid(map[string]any{"url": "nope", "triggers": []string{}, "source": "carrier-pigeon"}), http.StatusBadRequest, "bad_request", "Fields are missing or incorrectly formatted", map[string]any{
+		// Sending the workspace's responses to a URL is a workspace manager's decision, for an API key as for a member.
+		{"write key", writeKey, valid(nil), http.StatusUnauthorized, "unauthorized", "You are not authorized to access this resource", nil},
+		{"foreign workspace", manageKey, valid(map[string]any{"workspaceId": foreignWS.String()}), http.StatusUnauthorized, "unauthorized", "You are not authorized to access this resource", nil},
+		{"invalid fields", manageKey, valid(map[string]any{"url": "nope", "triggers": []string{}, "source": "carrier-pigeon"}), http.StatusBadRequest, "bad_request", "Fields are missing or incorrectly formatted", map[string]any{
 			"url": "Invalid URL", "triggers": "At least one trigger is required", "source": `Invalid option: expected one of "user"|"zapier"|"make"|"n8n"|"activepieces"`,
 		}},
-		{"missing fields", writeKey, map[string]any{"workspaceId": ws.String(), "triggers": []any{"responseFinished", "nope"}}, http.StatusBadRequest, "bad_request", "Fields are missing or incorrectly formatted", map[string]any{
+		{"missing fields", manageKey, map[string]any{"workspaceId": ws.String(), "triggers": []any{"responseFinished", "nope"}}, http.StatusBadRequest, "bad_request", "Fields are missing or incorrectly formatted", map[string]any{
 			"url": "Invalid input: expected string, received undefined", "triggers.1": `Invalid option: expected one of "responseFinished"|"responseCreated"|"responseUpdated"`,
 		}},
-		{"private URL", writeKey, valid(map[string]any{"url": "http://10.0.0.1/hook"}), http.StatusBadRequest, "bad_request", "Webhook URL must not point to private or internal IP addresses", nil},
-		{"foreign survey", writeKey, valid(map[string]any{"surveyIds": []string{foreignSurvey.String()}}), http.StatusBadRequest, "bad_request", "Every survey of a webhook must belong to its workspace", nil},
+		{"private URL", manageKey, valid(map[string]any{"url": "http://10.0.0.1/hook"}), http.StatusBadRequest, "bad_request", "Webhook URL must not point to private or internal IP addresses", nil},
+		{"foreign survey", manageKey, valid(map[string]any{"surveyIds": []string{foreignSurvey.String()}}), http.StatusBadRequest, "bad_request", "Every survey of a webhook must belong to its workspace", nil},
 	}
 	for _, tc := range cases {
 		res := e.do(http.MethodPost, "/api/v1/webhooks", asKey(tc.key), tc.body)
@@ -160,7 +163,7 @@ func TestV1CreateRefusals(t *testing.T) {
 		}
 	}
 	big := `{"workspaceId":"` + ws.String() + `","pad":"` + strings.Repeat("x", 2*1024*1024) + `"}`
-	res := e.do(http.MethodPost, "/api/v1/webhooks", asKey(writeKey), big)
+	res := e.do(http.MethodPost, "/api/v1/webhooks", asKey(manageKey), big)
 	tooLarge := decode[v1Error](t, res)
 	if res.Code != http.StatusRequestEntityTooLarge || tooLarge.Code != "payload_too_large" || tooLarge.Details["error"] != "Request body must not exceed 2097152 bytes" {
 		t.Errorf("too large = %d %+v", res.Code, tooLarge)

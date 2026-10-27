@@ -1,4 +1,4 @@
-// Package followup sends a survey's follow-up emails when a response is finished, forma2's sendFollowUpsForResponse (apps/web/modules/survey/follow-ups/lib): each follow-up whose trigger the response meets, to the address its `to` resolves to, with the author's subject and a body sanitized at send time.
+// Package followup sends a survey's follow-up emails when a response is finished, forma2's sendFollowUpsForResponse (apps/web/modules/survey/follow-ups/lib): each follow-up whose trigger the response meets, to the address its `to` resolves to, with the author's subject and a body sanitized at send time. A `to` that is itself an address must belong to someone with access to the survey's workspace, the rule of a workflow's send_email step (package recipient); forma2 sent to any address.
 package followup
 
 import (
@@ -19,6 +19,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
+	"github.com/yldm-tech/forma/apps/server/internal/recipient"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/responsemail"
 	"github.com/yldm-tech/forma/apps/server/internal/survey/surveydoc"
@@ -159,6 +160,12 @@ func (s *Sender) Send(ctx context.Context, responseID uuid.UUID, locale string) 
 	if org.LogoURL != nil {
 		logo = *org.LogoURL
 	}
+	allowed := map[string]bool{}
+	if slices.ContainsFunc(followUps, func(f followUp) bool { return recipient.IsLiteral(f.Action.Properties.To) }) {
+		if allowed, err = recipient.Allowlist(ctx, s.db, sv.WorkspaceID); err != nil {
+			return nil, err
+		}
+	}
 	results := make([]Result, len(followUps))
 	var wg sync.WaitGroup
 	for i, f := range followUps {
@@ -167,7 +174,7 @@ func (s *Sender) Send(ctx context.Context, responseID uuid.UUID, locale string) 
 			continue
 		}
 		wg.Go(func() {
-			results[i] = s.evaluate(ctx, f, sv, answers, logo, locale)
+			results[i] = s.evaluate(ctx, f, sv, answers, allowed, logo, locale)
 		})
 	}
 	wg.Wait()
@@ -183,8 +190,8 @@ func (s *Sender) Send(ctx context.Context, responseID uuid.UUID, locale string) 
 	return results, nil
 }
 
-// evaluate is forma2's evaluateFollowUp: the recipient resolved from `to`, the email built and sent. The From is always the instance's MAIL_FROM: forma2 ignored the follow-up's own from, and so does this.
-func (s *Sender) evaluate(ctx context.Context, f followUp, sv *responsemail.Survey, a *responsemail.Answers, logo, locale string) Result {
+// evaluate is forma2's evaluateFollowUp: the recipient resolved from `to` (a literal recipient must be in allowed, the workspace's recipient allowlist), the email built and sent. The From is always the instance's MAIL_FROM: forma2 ignored the follow-up's own from, and so does this.
+func (s *Sender) evaluate(ctx context.Context, f followUp, sv *responsemail.Survey, a *responsemail.Answers, allowed map[string]bool, logo, locale string) Result {
 	fail := func(message string) Result { return Result{FollowUpID: f.ID, Status: StatusError, Error: message} }
 	p := f.Action.Properties
 	to, reason := a.ResolveRecipient(p.To)
@@ -196,6 +203,9 @@ func (s *Sender) evaluate(ctx context.Context, f followUp, sv *responsemail.Surv
 		return fail("Email address not found in response data for followup: " + f.ID)
 	default:
 		return fail("Email address is not valid for followup: " + f.ID)
+	}
+	if recipient.IsLiteral(p.To) && !allowed[recipient.Normalize(to)] {
+		return fail(fmt.Sprintf("Recipient %s cannot access this workspace", to))
 	}
 	content, err := a.FollowUpContent(sv, responsemail.EmailOptions{
 		Subject: p.Subject, Body: p.Body, AttachResponseData: p.AttachResponseData,
