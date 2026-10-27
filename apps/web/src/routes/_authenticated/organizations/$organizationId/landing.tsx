@@ -3,6 +3,7 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Building2Icon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CreateOrganizationModal } from "../../../../components/shell/create-organization-modal";
 import { CreateWorkspaceModal } from "../../../../components/shell/create-workspace-modal";
 import { OrganizationBreadcrumb } from "../../../../components/shell/organization-breadcrumb";
 import { RoutePending } from "../../../../components/shell/route-states";
@@ -17,6 +18,7 @@ import {
 } from "../../../../components/ui/dropdown-menu";
 import { Wordmark } from "../../../../components/ui/logo";
 import { switcherOrganizations } from "../../../../lib/navigation";
+import { PHONE_READY } from "../../../../lib/phone";
 import { guardPageError } from "../../../../lib/route-guards";
 import { meQuery } from "../../../../lib/queries/auth";
 import {
@@ -25,8 +27,9 @@ import {
   organizationsQuery,
 } from "../../../../lib/queries/organizations";
 
-// forma2's landing page, for a member who can open no workspace in the organization; anyone who can is sent to their first workspace instead.
+// forma2's landing page, for a member who can open no workspace in the organization; anyone who can is sent to their first workspace instead. It offers the two ways forward the page names, a workspace when the member may create one and an organization of their own, and opens on a phone: an invited member often signs in there first.
 export const Route = createFileRoute("/_authenticated/organizations/$organizationId/landing")({
+  staticData: PHONE_READY,
   loader: async ({ context: { queryClient }, params, location }) => {
     const navigation = await queryClient
       .fetchQuery(organizationNavigationQuery(params.organizationId))
@@ -46,6 +49,7 @@ function Landing() {
   const { data: me } = useSuspenseQuery(meQuery);
   const { data: organization } = useSuspenseQuery(organizationQuery(organizationId));
   const [createOpen, setCreateOpen] = useState(false);
+  const [createOrganizationOpen, setCreateOrganizationOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen min-w-full flex-row">
@@ -67,24 +71,34 @@ function Landing() {
             isBilling={organization.membership.role === "billing"}
           />
         </div>
-        <main className="flex flex-1 flex-col items-center justify-center gap-y-12">
+        <main className="flex flex-1 flex-col items-center justify-center gap-y-12 px-6">
           <div className="text-center">
-            <h1 className="text-3xl font-medium text-slate-800">
+            <h1 className="text-2xl font-medium text-slate-800 sm:text-3xl">
               {t("organizations.landing.no_workspaces_warning_title")}
             </h1>
             <p className="mt-2 text-sm text-slate-500">
               {t("organizations.landing.no_workspaces_warning_subtitle")}
             </p>
           </div>
-          {navigation.canCreateWorkspace && (
-            <Button type="button" onClick={() => setCreateOpen(true)}>
-              <PlusIcon />
-              {t("common.create_workspace")}
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {navigation.canCreateWorkspace && (
+              <Button type="button" onClick={() => setCreateOpen(true)}>
+                <PlusIcon />
+                {t("common.create_workspace")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant={navigation.canCreateWorkspace ? "secondary" : "default"}
+              onClick={() => setCreateOrganizationOpen(true)}>
+              <Building2Icon />
+              {t("workspace.settings.general.create_new_organization")}
             </Button>
-          )}
+          </div>
         </main>
       </div>
       <CreateWorkspaceModal open={createOpen} setOpen={setCreateOpen} organizationId={organization.id} />
+      <CreateOrganizationModal open={createOrganizationOpen} setOpen={setCreateOrganizationOpen} />
     </div>
   );
 }
@@ -101,7 +115,8 @@ const LandingSidebar = ({
   const [open, setOpen] = useState(false);
   const organizations = useQuery({ ...organizationsQuery, enabled: open });
   return (
-    <aside className="w-sidebar-collapsed z-40 flex flex-col justify-between rounded-r-xl border-r border-slate-200 bg-white pt-3 shadow-md">
+    // On a phone the organization breadcrumb is the switcher; the sidebar would leave the page no room.
+    <aside className="w-sidebar-collapsed z-40 hidden flex-col justify-between rounded-r-xl border-r border-slate-200 bg-white pt-3 shadow-md sm:flex">
       <div className="px-3">
         <Wordmark className="text-2xl" />
       </div>
