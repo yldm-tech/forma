@@ -26,7 +26,7 @@ const MaxRetentionDays = 3650
 type RetentionWindows struct {
 	// WorkflowRunRetentionDays is how long finished workflow runs (completed, failed, canceled) and their logs are kept.
 	WorkflowRunRetentionDays *int `json:"workflowRunRetentionDays"`
-	// DisplayRetentionDays is how long survey impressions (displays) that never became a response are kept.
+	// DisplayRetentionDays is how long survey impressions (displays) that never became a response are kept; an app survey's impressions of identified users are kept regardless (internal/retention).
 	DisplayRetentionDays *int `json:"displayRetentionDays"`
 }
 

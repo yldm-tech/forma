@@ -1,4 +1,4 @@
-// Package retention is forma2's retention sweep (apps/web/lib/jobs/retention): once a day, each organization's own retention windows are applied to its terminal workflow runs and to the survey impressions (displays) that never became a response. A window is configuration on the organization, null (keep forever) until its owner sets one (the Data retention card), so an upgrade deletes nothing by itself. The instance's RETENTION_SWEEP_DRY_RUN, on by default, makes every sweep count instead of delete; each organization's last sweep is kept for its owner to read (organization_retention_sweeps).
+// Package retention is forma2's retention sweep (apps/web/lib/jobs/retention): once a day, each organization's own retention windows are applied to its terminal workflow runs and to the survey impressions (displays) that never became a response, except an app survey's impressions of identified users, which are its targeting history. A window is configuration on the organization, null (keep forever) until its owner sets one (the Data retention card), so an upgrade deletes nothing by itself. The instance's RETENTION_SWEEP_DRY_RUN, on by default, makes every sweep count instead of delete; each organization's last sweep is kept for its owner to read (organization_retention_sweeps).
 package retention
 
 import (
@@ -69,6 +69,11 @@ func NewSweeper(db *gorm.DB, log *slog.Logger) *Sweeper {
 
 type idRow struct {
 	ID uuid.UUID
+}
+
+type surveyRow struct {
+	ID   uuid.UUID
+	Type string
 }
 
 type organizationWindows struct {
@@ -255,23 +260,26 @@ func (s *Sweeper) sweepWorkflowRuns(ctx context.Context, organizationID uuid.UUI
 	return result, nil
 }
 
-// sweepDisplays walks the organization's surveys in id order, a page at a time, so each statement stays on the (survey_id, created_at) index. An impression that became a response is kept: the response would otherwise silently lose its display (ON DELETE SET NULL).
+// sweepDisplays walks the organization's surveys in id order, a page at a time, so each statement stays on the (survey_id, created_at) index. An impression that became a response is kept: the response would otherwise silently lose its display (ON DELETE SET NULL). An app survey's impression of an identified user (one linked to a contact) is kept as well, whatever its age: it is what the SDK decides show once, display limits and waiting periods by (clientapi userState), so deleting it would show the survey to that user again. It goes with its contact or its survey. A link survey's impressions, and an app survey's anonymous ones, are swept.
 func (s *Sweeper) sweepDisplays(ctx context.Context, organizationID uuid.UUID, cutoff time.Time, dryRun bool) (PassResult, error) {
 	var result PassResult
 	after := uuid.Nil
 	for {
-		var surveys []idRow
-		err := s.db.WithContext(ctx).Raw(`SELECT s.id FROM surveys s JOIN workspaces w ON w.id = s.workspace_id
+		var surveys []surveyRow
+		err := s.db.WithContext(ctx).Raw(`SELECT s.id, s.type FROM surveys s JOIN workspaces w ON w.id = s.workspace_id
 			WHERE w.organization_id = ? AND s.id > ? ORDER BY s.id LIMIT ?`, organizationID, after, surveyPageSize).Scan(&surveys).Error
 		if err != nil {
 			return result, fmt.Errorf("list surveys: %w", err)
 		}
 		for _, row := range surveys {
 			surveyID := row.ID
+			// keepIdentified excludes the survey's impressions linked to a contact; the type is the survey's current one, the one userState reads.
+			keepIdentified := row.Type == "app"
 			if dryRun {
 				var n int64
 				err := s.db.WithContext(ctx).Raw(`SELECT count(*) FROM displays d WHERE d.survey_id = ? AND d.created_at < ?
-					AND NOT EXISTS (SELECT 1 FROM responses r WHERE r.display_id = d.id)`, surveyID, cutoff).Scan(&n).Error
+					AND NOT (? AND d.contact_id IS NOT NULL)
+					AND NOT EXISTS (SELECT 1 FROM responses r WHERE r.display_id = d.id)`, surveyID, cutoff, keepIdentified).Scan(&n).Error
 				if err != nil {
 					return result, fmt.Errorf("count expired displays: %w", err)
 				}
@@ -282,10 +290,11 @@ func (s *Sweeper) sweepDisplays(ctx context.Context, organizationID uuid.UUID, c
 				res := s.db.WithContext(ctx).Exec(`
 					WITH expired AS (
 						SELECT d.id FROM displays d WHERE d.survey_id = ? AND d.created_at < ?
+							AND NOT (? AND d.contact_id IS NOT NULL)
 							AND NOT EXISTS (SELECT 1 FROM responses r WHERE r.display_id = d.id)
 						ORDER BY d.created_at LIMIT ?
 					)
-					DELETE FROM displays AS target USING expired WHERE target.id = expired.id`, surveyID, cutoff, deleteBatchSize)
+					DELETE FROM displays AS target USING expired WHERE target.id = expired.id`, surveyID, cutoff, keepIdentified, deleteBatchSize)
 				return res.RowsAffected, res.Error
 			})
 			// The batches drain committed before a failure stay deleted, so they count.

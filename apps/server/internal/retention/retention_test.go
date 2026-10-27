@@ -390,8 +390,11 @@ func TestSweepKeepsIdentifiedUsersAppSurveyDisplays(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if preview.Displays == nil || *preview.Displays != 3 {
-		t.Fatalf("preview = %v, want the 3 impressions that are not an identified user's app survey impression", preview.Displays)
+	if preview.Displays == nil {
+		t.Fatal("preview has no impression count")
+	}
+	if *preview.Displays != 3 {
+		t.Fatalf("preview = %d, want the 3 impressions that are not an identified user's app survey impression", *preview.Displays)
 	}
 	s := NewSweeper(e.db, slog.New(slog.DiscardHandler))
 	dry, err := s.Sweep(t.Context(), e.now, true)
