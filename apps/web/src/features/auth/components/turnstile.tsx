@@ -8,6 +8,7 @@ interface TurnstileApi {
     container: HTMLElement,
     options: {
       sitekey: string;
+      action?: string;
       size?: "normal" | "flexible" | "compact";
       callback: (token: string) => void;
       "error-callback": () => void;
@@ -71,6 +72,8 @@ export function Turnstile({
         if (cancelled || !container.current) return;
         const id = api.render(container.current, {
           sitekey: siteKey,
+          // The server takes a sign-up token only for this action (turnstile.ActionSignUp), so a token the survey widget minted is not one.
+          action: "sign_up",
           size: "flexible",
           callback: (token) => callbacks.current.onToken(token),
           "error-callback": () => {

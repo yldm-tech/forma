@@ -26,6 +26,12 @@ const (
 	maxTokenLength = 2048
 )
 
+// The actions the instance's widgets name (the action render option), which Verify requires of a token so that a token minted for one form is not taken by another: the sign-up form's (apps/web features/auth) and the survey runtime's, for the first write of a response (packages/surveys lib/turnstile.ts).
+const (
+	ActionSignUp         = "sign_up"
+	ActionSubmitResponse = "submit_response"
+)
+
 // ErrUnavailable is the error Verify returns when Cloudflare gave no verdict on the token: the request failed or timed out, the answer was not a 200 or not JSON, or Cloudflare reported a problem of its own or of the instance's secret key rather than of the token. Callers must not read it as an accepted token.
 var ErrUnavailable = errors.New("turnstile verification unavailable")
 
@@ -49,8 +55,8 @@ func NewWithEndpoint(secret, verifyURL string) *Verifier {
 	return &Verifier{client: &http.Client{Timeout: timeout}, verifyURL: verifyURL, secret: secret}
 }
 
-// Verify reports whether Cloudflare accepts token, presented by the client at remoteIP (httpapi.ClientIP; an address the proxy chain did not vouch for is not sent). An empty or overlong token is refused without a request. A token Cloudflare refuses (invalid, expired or already spent) is false with a nil error; when Cloudflare gives no verdict the error wraps ErrUnavailable.
-func (v *Verifier) Verify(ctx context.Context, token, remoteIP string) (bool, error) {
+// Verify reports whether Cloudflare accepts token, presented by the client at remoteIP (httpapi.ClientIP; an address the proxy chain did not vouch for is not sent), for the form that names action. An empty or overlong token is refused without a request. A token Cloudflare refuses (invalid, expired or already spent), or one it accepts for another action, is false with a nil error; a token that carries no action is taken, since Cloudflare's test keys answer without one and a widget rendered by a page loaded before its form named an action issues one without it. When Cloudflare gives no verdict the error wraps ErrUnavailable.
+func (v *Verifier) Verify(ctx context.Context, token, remoteIP, action string) (bool, error) {
 	if token == "" || len(token) > maxTokenLength {
 		return false, nil
 	}
@@ -79,13 +85,14 @@ func (v *Verifier) Verify(ctx context.Context, token, remoteIP string) (bool, er
 	}
 	var out struct {
 		Success    bool     `json:"success"`
+		Action     string   `json:"action"`
 		ErrorCodes []string `json:"error-codes"`
 	}
 	if err := json.NewDecoder(io.LimitReader(res.Body, responseLimit)).Decode(&out); err != nil {
 		return false, fmt.Errorf("%w: decode answer: %w", ErrUnavailable, err)
 	}
 	if out.Success {
-		return true, nil
+		return out.Action == "" || out.Action == action, nil
 	}
 	for _, code := range out.ErrorCodes {
 		if slices.Contains(unavailableCodes, code) {

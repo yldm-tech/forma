@@ -73,7 +73,11 @@ func TestVerify(t *testing.T) {
 		want        bool
 		unavailable bool
 	}{
-		{"accepted", 200, `{"success":true,"error-codes":[],"hostname":"forma.example"}`, true, false},
+		{"accepted", 200, `{"success":true,"error-codes":[],"hostname":"forma.example","action":"submit_response"}`, true, false},
+		// Cloudflare's test keys answer without an action, as does a widget a page rendered before its form named one.
+		{"accepted without an action", 200, `{"success":true,"error-codes":[],"hostname":"example.com"}`, true, false},
+		// A token minted by the sign-up widget is not a response's, and the reverse.
+		{"accepted for another action", 200, `{"success":true,"error-codes":[],"hostname":"forma.example","action":"sign_up"}`, false, false},
 		{"invalid token", 200, `{"success":false,"error-codes":["invalid-input-response"]}`, false, false},
 		{"spent or expired token", 200, `{"success":false,"error-codes":["timeout-or-duplicate"]}`, false, false},
 		{"refused without a reason", 200, `{"success":false}`, false, false},
@@ -86,7 +90,7 @@ func TestVerify(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cf.answer(tc.status, tc.body)
-			ok, err := v.Verify(ctx, "tok", "203.0.113.7")
+			ok, err := v.Verify(ctx, "tok", "203.0.113.7", ActionSubmitResponse)
 			if ok != tc.want || errors.Is(err, ErrUnavailable) != tc.unavailable {
 				t.Fatalf("Verify = %v, %v; want %v, unavailable %v", ok, err, tc.want, tc.unavailable)
 			}
@@ -106,7 +110,7 @@ func TestVerifyRefusesMissingTokenLocally(t *testing.T) {
 	v := NewWithEndpoint("s3cret", cf.serve(t).URL)
 	cf.answer(200, `{"success":true}`)
 	for _, token := range []string{"", strings.Repeat("a", maxTokenLength+1)} {
-		if ok, err := v.Verify(context.Background(), token, "203.0.113.7"); ok || err != nil {
+		if ok, err := v.Verify(context.Background(), token, "203.0.113.7", ActionSubmitResponse); ok || err != nil {
 			t.Fatalf("token of %d characters: %v, %v", len(token), ok, err)
 		}
 	}
@@ -121,7 +125,7 @@ func TestVerifyRemoteIP(t *testing.T) {
 	v := NewWithEndpoint("s3cret", cf.serve(t).URL)
 	cf.answer(200, `{"success":true}`)
 	for _, ip := range []string{"", httpapi.UntrustedClientIP} {
-		if ok, err := v.Verify(context.Background(), "tok", ip); !ok || err != nil {
+		if ok, err := v.Verify(context.Background(), "tok", ip, ActionSubmitResponse); !ok || err != nil {
 			t.Fatalf("Verify with %q = %v, %v", ip, ok, err)
 		}
 		if _, sent := cf.last()["remoteip"]; sent {
@@ -134,7 +138,7 @@ func TestVerifyRemoteIP(t *testing.T) {
 func TestVerifyProviderDown(t *testing.T) {
 	down := httptest.NewServer(http.NotFoundHandler())
 	down.Close()
-	if ok, err := NewWithEndpoint("s", down.URL).Verify(context.Background(), "tok", ""); ok || !errors.Is(err, ErrUnavailable) {
+	if ok, err := NewWithEndpoint("s", down.URL).Verify(context.Background(), "tok", "", ActionSubmitResponse); ok || !errors.Is(err, ErrUnavailable) {
 		t.Fatalf("unreachable: %v, %v", ok, err)
 	}
 
@@ -149,7 +153,7 @@ func TestVerifyProviderDown(t *testing.T) {
 	t.Cleanup(func() { close(release) })
 	v := NewWithEndpoint("s", slow.URL)
 	v.client.Timeout = 50 * time.Millisecond
-	if ok, err := v.Verify(context.Background(), "tok", ""); ok || !errors.Is(err, ErrUnavailable) {
+	if ok, err := v.Verify(context.Background(), "tok", "", ActionSubmitResponse); ok || !errors.Is(err, ErrUnavailable) {
 		t.Fatalf("timed out: %v, %v", ok, err)
 	}
 }

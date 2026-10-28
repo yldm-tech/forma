@@ -11,6 +11,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/turnstile"
 )
 
 // signupInput is a validated sign-up request.
@@ -42,7 +43,7 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 	}
 	if s.cfg.TurnstileConfigured() {
 		// Fails closed: an account is not created while Cloudflare cannot vouch for the token.
-		ok, err := s.turnstile.Verify(ctx, in.TurnstileToken, httpapi.ClientIP(ctx))
+		ok, err := s.turnstile.Verify(ctx, in.TurnstileToken, httpapi.ClientIP(ctx), turnstile.ActionSignUp)
 		if err != nil {
 			s.log.WarnContext(ctx, "Turnstile verification unavailable; refusing sign-up", "err", err)
 		}

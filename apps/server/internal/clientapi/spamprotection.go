@@ -9,6 +9,7 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/turnstile"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
 
@@ -33,13 +34,17 @@ func (h *Handler) checkSpamProtection(ctx context.Context, sv *response.Survey, 
 	if !settings.Enabled {
 		return nil
 	}
-	turnstile := h.cfg.SpamProtectionProvider() == config.SpamProtectionTurnstile
+	useTurnstile := h.cfg.SpamProtectionProvider() == config.SpamProtectionTurnstile
+	// An instance that adds Turnstile keys beside its reCAPTCHA keys moves its surveys to Turnstile, but for a few minutes after that, pages and SDK state from before (the environment state is cached in Valkey, in the SDK and by HTTP caches, and a page may have stayed open) still send only a reCAPTCHA token. While the reCAPTCHA keys stay configured, such a create is checked by reCAPTCHA against the survey's threshold, which vouches for the respondent as much as it did before the switch.
+	if useTurnstile && isBlank(in.TurnstileToken) && !isBlank(in.RecaptchaToken) && h.cfg.RecaptchaConfigured() {
+		useTurnstile = false
+	}
 	token := in.RecaptchaToken
-	if turnstile {
+	if useTurnstile {
 		token = in.TurnstileToken
 	}
-	if token == nil || *token == "" {
-		if turnstile {
+	if isBlank(token) {
+		if useTurnstile {
 			h.log.WarnContext(ctx, "Missing turnstile token")
 			return badRequest(msgMissingTurnstileToken, fields{{"code", codeRecaptchaFailed}})
 		}
@@ -54,13 +59,13 @@ func (h *Handler) checkSpamProtection(ctx context.Context, sv *response.Survey, 
 	if !billed {
 		return notFound("Organization", nil)
 	}
-	if !turnstile {
+	if !useTurnstile {
 		if !h.recaptcha.Verify(ctx, *token, settings.Threshold) {
 			return badRequest("reCAPTCHA verification failed", fields{{"code", codeRecaptchaFailed}})
 		}
 		return nil
 	}
-	ok, err := h.turnstile.Verify(ctx, *token, httpapi.ClientIP(ctx))
+	ok, err := h.turnstile.Verify(ctx, *token, httpapi.ClientIP(ctx), turnstile.ActionSubmitResponse)
 	if err != nil {
 		h.log.ErrorContext(ctx, "Turnstile verification unavailable; refusing the response", "err", err)
 		return newError(http.StatusServiceUnavailable, codeServiceUnavailable, msgSpamProtectionUnavailable, fields{{"code", codeSpamProtectionUnavailable}})
@@ -70,4 +75,9 @@ func (h *Handler) checkSpamProtection(ctx context.Context, sv *response.Survey, 
 		return badRequest(msgTurnstileVerificationRejected, fields{{"code", codeRecaptchaFailed}})
 	}
 	return nil
+}
+
+// isBlank reports whether a token is absent or empty.
+func isBlank(token *string) bool {
+	return token == nil || *token == ""
 }

@@ -107,7 +107,7 @@ type env struct {
 		status int
 		forms  []url.Values
 	}
-	// cloudflare stands in for Turnstile's siteverify: it accepts turnstilePassToken, fails with Cloudflare's internal error for turnstileDownToken and refuses every other token, recording each request.
+	// cloudflare stands in for Turnstile's siteverify: it accepts turnstilePassToken for the survey widget's action and turnstileSignUpToken for the sign-up widget's, fails with Cloudflare's internal error for turnstileDownToken and refuses every other token, recording each request.
 	cloudflare *httptest.Server
 	turnstile  struct {
 		mu       sync.Mutex
@@ -117,8 +117,9 @@ type env struct {
 
 // The tokens the Turnstile stand-in answers by.
 const (
-	turnstilePassToken = "turnstile-pass"
-	turnstileDownToken = "turnstile-down"
+	turnstilePassToken   = "turnstile-pass"
+	turnstileSignUpToken = "turnstile-sign-up"
+	turnstileDownToken   = "turnstile-down"
 )
 
 // turnstileRequests are the siteverify requests the stand-in received.
@@ -186,7 +187,9 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 		status, answer := http.StatusOK, `{"success":false,"error-codes":["invalid-input-response"]}`
 		switch req["response"] {
 		case turnstilePassToken:
-			answer = `{"success":true,"error-codes":[]}`
+			answer = `{"success":true,"error-codes":[],"action":"submit_response"}`
+		case turnstileSignUpToken:
+			answer = `{"success":true,"error-codes":[],"action":"sign_up"}`
 		case turnstileDownToken:
 			status, answer = http.StatusInternalServerError, `{"success":false,"error-codes":["internal-error"]}`
 		}

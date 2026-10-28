@@ -6,11 +6,11 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
-// With Turnstile configured, a survey with spam protection on takes the first write of a response only with a turnstileToken Cloudflare accepts, verified with the address the proxy chain vouched for; the updates that carry the rest of the response need no token; Cloudflare not answering refuses the response with a 503 instead of taking it unchecked; a survey with spam protection off needs no token at all.
+// With Turnstile configured, a survey with spam protection on takes the first write of a response only with a turnstileToken Cloudflare accepts for the survey widget's action, verified with the address the proxy chain vouched for; the updates that carry the rest of the response need no token; Cloudflare not answering refuses the response with a 503 instead of taking it unchecked; a survey with spam protection off needs no token at all. While reCAPTCHA keys are configured too, a create from a page that still uses reCAPTCHA is checked by reCAPTCHA.
 func TestCreateResponseTurnstile(t *testing.T) {
 	e := newEnv(t, func(c *config.Config) {
 		c.TurnstileSiteKey, c.TurnstileSecretKey = "1x00000000000000000000AA", "turnstile-secret"
-		// Configured too, but Turnstile is the provider: a reCAPTCHA token is not enough.
+		// Configured too, but Turnstile is the provider: reCAPTCHA only checks a create that carries no Turnstile token.
 		c.RecaptchaSiteKey, c.RecaptchaSecretKey = "recaptcha-site", "recaptcha-secret"
 	})
 	ws := e.workspace()
@@ -31,7 +31,7 @@ func TestCreateResponseTurnstile(t *testing.T) {
 
 	t.Run("missing", func(t *testing.T) {
 		for _, v := range []string{"v1", "v2"} {
-			for _, b := range []map[string]any{body(nil), body(""), {"surveyId": sv.String(), "finished": true, "data": map[string]any{}, "recaptchaToken": "a-recaptcha-token"}} {
+			for _, b := range []map[string]any{body(nil), body(""), {"surveyId": sv.String(), "finished": true, "data": map[string]any{}, "recaptchaToken": ""}} {
 				details := post(t, v, b).expectError(t, 400, "bad_request", "Missing turnstile token")
 				if details["code"] != codeRecaptchaFailed {
 					t.Fatalf("details %v", details)
@@ -46,6 +46,20 @@ func TestCreateResponseTurnstile(t *testing.T) {
 			if details["code"] != codeRecaptchaFailed {
 				t.Fatalf("details %v", details)
 			}
+		}
+	})
+
+	t.Run("minted for sign-up", func(t *testing.T) {
+		for _, v := range []string{"v1", "v2"} {
+			post(t, v, body(turnstileSignUpToken)).expectError(t, 400, "bad_request", "Turnstile verification failed")
+		}
+	})
+
+	t.Run("reCAPTCHA token Google refuses", func(t *testing.T) {
+		e.recaptchaAnswers(200, `{"success":true,"score":0.5}`)
+		for _, v := range []string{"v1", "v2"} {
+			b := map[string]any{"surveyId": sv.String(), "finished": false, "data": map[string]any{}, "recaptchaToken": "a-recaptcha-token"}
+			post(t, v, b).expectError(t, 400, "bad_request", "reCAPTCHA verification failed")
 		}
 	})
 
@@ -81,6 +95,20 @@ func TestCreateResponseTurnstile(t *testing.T) {
 		}
 	})
 
+	t.Run("reCAPTCHA token from a page from before the switch", func(t *testing.T) {
+		e.recaptchaAnswers(200, `{"success":true,"score":0.95}`)
+		before := len(e.turnstileRequests())
+		for _, v := range []string{"v1", "v2"} {
+			b := map[string]any{"surveyId": sv.String(), "finished": true, "data": map[string]any{}, "recaptchaToken": "a-recaptcha-token"}
+			if r := post(t, v, b); r.Status != 200 {
+				t.Fatalf("%s: %d %s", v, r.Status, r.Body)
+			}
+		}
+		if after := len(e.turnstileRequests()); after != before {
+			t.Fatalf("%d siteverify requests for reCAPTCHA tokens", after-before)
+		}
+	})
+
 	t.Run("spam protection off", func(t *testing.T) {
 		before := len(e.turnstileRequests())
 		off := e.survey(ws, "recaptcha", `{"enabled":false,"threshold":0.1}`)
@@ -92,6 +120,15 @@ func TestCreateResponseTurnstile(t *testing.T) {
 		if after := len(e.turnstileRequests()); after != before {
 			t.Fatalf("%d siteverify requests for a survey without spam protection", after-before)
 		}
+	})
+
+	t.Run("reCAPTCHA token on an instance without reCAPTCHA keys", func(t *testing.T) {
+		e := newEnv(t, func(c *config.Config) { c.TurnstileSiteKey, c.TurnstileSecretKey = "site", "secret" })
+		ws := e.workspace()
+		sv := e.survey(ws, "recaptcha", `{"enabled":true,"threshold":0.1}`)
+		e.recaptchaAnswers(200, `{"success":true,"score":1}`)
+		e.post(t, respond(ws, "v2"), map[string]any{"surveyId": sv.String(), "finished": true, "data": map[string]any{}, "recaptchaToken": "a-recaptcha-token"}).
+			expectError(t, 400, "bad_request", "Missing turnstile token")
 	})
 
 	t.Run("organization without billing record", func(t *testing.T) {
