@@ -90,6 +90,10 @@ func (s *Service) SignUpload(ctx context.Context, fileName, workspaceID string, 
 		PresignedFields: post.Fields,
 		FileURL:         "/storage/" + workspaceID + "/" + string(access) + "/" + strings.Join(urlPath, "/"),
 	}
+	if fileSize == nil && s.bucket.PutUploads() {
+		// A caller that predates fileSize (an old survey runtime still open in a browser, a management API integration) gets the POST alone, which a store without POST uploads refuses; the warning names the workspace so those callers can be found.
+		s.bucket.log.WarnContext(ctx, "Upload signed as a presigned POST only: STORAGE_UPLOAD_METHOD is put but the request sent no fileSize", "workspaceId", workspaceID, "access", string(access))
+	}
 	if fileSize != nil && s.bucket.PutUploads() {
 		put, err := s.bucket.SignPut(ctx, storedName, contentType, filePath, *fileSize)
 		if err != nil {

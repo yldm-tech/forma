@@ -209,6 +209,11 @@ type PresignedPut struct {
 
 // SignPut is the presigned PUT of the same upload SignUpload signs as a POST policy, for stores that take no POST uploads (Cloudflare R2): valid for two minutes, for one object at filePath/fileName, with contentType and a Content-Length of exactly size bytes both signed, so the store refuses another type or another size (S3 answers 403 SignatureDoesNotMatch). Nothing grants public access: the object is private like every other, and is read through the /storage route.
 func (b *Bucket) SignPut(ctx context.Context, fileName, contentType, filePath string, size int64) (*PresignedPut, error) {
+	return b.signPut(ctx, fileName, contentType, filePath, size, uploadExpiry)
+}
+
+// signPut is SignPut valid for expiry, so a check of a store can see it refuse an expired URL without waiting two minutes.
+func (b *Bucket) signPut(ctx context.Context, fileName, contentType, filePath string, size int64, expiry time.Duration) (*PresignedPut, error) {
 	if b.client == nil {
 		b.log.ErrorContext(ctx, "Failed to get signed upload URL: S3 client is not set")
 		return nil, fail(CodeS3Client)
@@ -219,7 +224,7 @@ func (b *Bucket) SignPut(ctx context.Context, fileName, contentType, filePath st
 	signed := http.Header{}
 	signed.Set("Content-Type", contentType)
 	signed.Set("Content-Length", strconv.FormatInt(size, 10))
-	u, err := b.client.PresignHeader(ctx, http.MethodPut, b.name, filePath+"/"+fileName, uploadExpiry, nil, signed)
+	u, err := b.client.PresignHeader(ctx, http.MethodPut, b.name, filePath+"/"+fileName, expiry, nil, signed)
 	if err != nil {
 		return nil, unknown("sign upload URL", err)
 	}

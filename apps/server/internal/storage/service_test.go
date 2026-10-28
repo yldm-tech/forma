@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -195,6 +196,59 @@ func TestServiceSignUploadPut(t *testing.T) {
 	}
 	if up.UploadMethod != "" || up.UploadURL != "" || up.UploadHeaders != nil || len(up.PresignedFields) == 0 {
 		t.Fatalf("upload without a size %+v, want the POST alone", up)
+	}
+}
+
+// A name that needs URL encoding goes into the PUT's signed path, where a POST only carried it as a form field: letters outside ASCII, a space, %, +, & and = all survive SanitizeFileName. The file is stored under the key of the answer's fileUrl and read back through it.
+func TestServiceSignUploadPutEncodedName(t *testing.T) {
+	t.Parallel()
+	s, _ := newPutService(t)
+	ctx := t.Context()
+	const file = "%PDF-1.7"
+	size := int64(len(file))
+
+	up, err := s.SignUpload(ctx, "請求書 100% a+b&c=d.pdf", "ws-123", AccessPrivate, 10<<20, &size, "surveys", "s1", "elements", "e1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "/storage/ws-123/private/surveys/s1/elements/e1/%E8%AB%8B%E6%B1%82%E6%9B%B8%20100%25%20a%2Bb%26c%3Dd--fid--" + fixedID.String() + ".pdf"; up.FileURL != want {
+		t.Fatalf("fileUrl %s, want %s", up.FileURL, want)
+	}
+	if status, body := putUpload(t, &PresignedPut{URL: up.UploadURL, Headers: up.UploadHeaders}, "", []byte(file)); status != http.StatusOK {
+		t.Fatalf("PUT answered %d %s", status, body)
+	}
+	if got := reader(t)(s.Open(ctx, routeFileName(t, up.FileURL, "/storage/ws-123/private/"), "ws-123", "ws-123", AccessPrivate)); got != file {
+		t.Fatalf("opened %q", got)
+	}
+}
+
+// In put mode a request without fileSize can only be answered with the POST, which a store without POST uploads refuses; each such answer is logged with its workspace, so the callers that still send no size can be found. Answers with a size, and every answer in post mode, are not.
+func TestServiceSignUploadPutWarnsWithoutSize(t *testing.T) {
+	t.Parallel()
+	var logs bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&logs, nil))
+	sign := func(method string, fileSize *int64) {
+		t.Helper()
+		s3 := s3test.Config(t)
+		s3.UploadMethod = method
+		b, err := NewBucket(config.Config{S3: s3}, log)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := NewService(b).SignUpload(t.Context(), "report.pdf", "ws-123", AccessPublic, 10<<20, fileSize); err != nil {
+			t.Fatal(err)
+		}
+	}
+	size := int64(8)
+
+	sign(config.UploadMethodPut, &size)
+	sign(config.UploadMethodPost, nil)
+	if logs.Len() != 0 {
+		t.Fatalf("logged %q, want nothing", logs.String())
+	}
+	sign(config.UploadMethodPut, nil)
+	if got := logs.String(); !strings.Contains(got, "level=WARN") || !strings.Contains(got, "sent no fileSize") || !strings.Contains(got, "workspaceId=ws-123") || !strings.Contains(got, "access=public") {
+		t.Fatalf("logged %q, want a warning naming the workspace", got)
 	}
 }
 
