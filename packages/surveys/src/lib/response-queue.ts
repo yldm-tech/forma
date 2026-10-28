@@ -83,6 +83,14 @@ export const delay = (ms: number): Promise<void> => {
 export const RECOVERY_BASE_DELAY_MS = 5_000;
 export const RECOVERY_MAX_DELAY_MS = 60_000;
 
+// What a create answers when Turnstile gave it no token, without a request: details.code is the spam protection error the runtime shows the respondent, and status 0 (no answer from the server) is not a refusal, so syncPersistedResponses keeps a stored answer for a later visit instead of dropping it.
+const TURNSTILE_NO_TOKEN_ERROR: ApiErrorResponse = {
+  code: "bad_request",
+  message: "Spam protection issued no token for this response.",
+  status: 0,
+  details: { code: RECAPTCHA_VERIFICATION_ERROR_CODE },
+};
+
 /**
  * One queue per response being collected. Its locks belong to the instance: a survey keeps a single queue for its whole life, so the in-flight request and the answers waiting behind it are always held by the same object. Locks shared by surveyId let a second instance (a remount, or a second embed of the same survey) see "a request is in flight" and leave its own answers queued with nobody left to send them.
  */
@@ -92,7 +100,7 @@ export class ResponseQueue {
   private surveyState: SurveyState;
   readonly api: ApiClient;
   private responseRecaptchaToken?: string;
-  private responseTurnstileToken?: string;
+  private getTurnstileToken?: () => Promise<string | null>;
   // Maps queued response objects to their IndexedDB ids for cleanup after successful sends.
   private readonly pendingDbIds: Map<TResponseUpdate, number> = new Map();
   private isSyncing = false;
@@ -123,9 +131,9 @@ export class ResponseQueue {
     this.responseRecaptchaToken = token;
   }
 
-  /** The Cloudflare Turnstile token the create of the response carries, on an instance whose spam protection uses Turnstile. */
-  setResponseTurnstileToken(token?: string) {
-    this.responseTurnstileToken = token;
+  /** Where each create of a response gets its Cloudflare Turnstile token, on an instance whose spam protection uses Turnstile. It is asked on every attempt, the retry of a create that failed and a stored create syncPersistedResponses sends included: Cloudflare accepts a token once, so the token of a create the server may already have checked cannot go with the next. */
+  setTurnstileTokenProvider(provider?: () => Promise<string | null>) {
+    this.getTurnstileToken = provider;
   }
 
   private serializeSurveyState(): SerializedSurveyState {
@@ -916,6 +924,12 @@ export class ResponseQueue {
           return err(response.error);
         }
       } else {
+        let turnstileToken: string | undefined;
+        if (this.getTurnstileToken) {
+          const token = await this.getTurnstileToken();
+          if (!token) return err(TURNSTILE_NO_TOKEN_ERROR);
+          turnstileToken = token;
+        }
         const createPayload = this.getCreatePayload(responseUpdate, state);
         response = await this.api.createResponse({
           ...createPayload,
@@ -927,7 +941,7 @@ export class ResponseQueue {
           pinAuthToken: state.pinAuthToken || null,
           recaptchaToken: this.responseRecaptchaToken ?? undefined,
           // Left out when there is none, so a create without Turnstile is the body it always was.
-          turnstileToken: this.responseTurnstileToken ?? undefined,
+          turnstileToken,
         });
 
         if (!response.ok) {

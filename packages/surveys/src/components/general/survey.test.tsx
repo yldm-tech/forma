@@ -44,9 +44,10 @@ vi.mock("@/lib/offline-storage", () => ({
   saveSurveyProgress: offlineStorageMocks.saveSurveyProgress,
 }));
 
-// A stand-in for the Turnstile widget: each challenge the survey creates is recorded, and hands out what turnstileMocks.token says.
+// A stand-in for the Turnstile widget: each challenge the survey creates is recorded, and hands out a new token on every getToken (turnstileMocks.token with a number), or none when turnstileMocks.token is null.
 const turnstileMocks = vi.hoisted(() => ({
   token: "turnstile-token" as string | null,
+  issued: 0,
   challenges: [] as { siteKey: string; mounts: string[]; getToken: () => Promise<string | null> }[],
 }));
 
@@ -64,8 +65,12 @@ vi.mock("@/lib/turnstile", async (importActual) => {
     async mount() {
       this.mounts.push(this.language);
     }
+    whenReady() {
+      return Promise.resolve(turnstileMocks.token !== null);
+    }
     getToken() {
-      return Promise.resolve(turnstileMocks.token);
+      const { token } = turnstileMocks;
+      return Promise.resolve(token === null ? null : `${token}-${++turnstileMocks.issued}`);
     }
     remove() {}
   }
@@ -1227,6 +1232,7 @@ describe("Survey Turnstile spam protection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     turnstileMocks.token = "turnstile-token";
+    turnstileMocks.issued = 0;
     turnstileMocks.challenges.length = 0;
     apiClientMocks.createDisplay.mockResolvedValue({ ok: true, data: { id: "display-created" } });
     apiClientMocks.createResponse.mockResolvedValue({ ok: true, data: { id: "response-created" } });
@@ -1243,7 +1249,7 @@ describe("Survey Turnstile spam protection", () => {
     fireEvent.click(await screen.findByTestId("submit-block-1"));
     await waitFor(() =>
       expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
-        expect.objectContaining({ turnstileToken: "turnstile-token", data: { q1: "block-1-answer" } })
+        expect.objectContaining({ turnstileToken: "turnstile-token-1", data: { q1: "block-1-answer" } })
       )
     );
     fireEvent.click(await screen.findByTestId("submit-block-2"));
@@ -1254,6 +1260,21 @@ describe("Survey Turnstile spam protection", () => {
     expect(turnstileMocks.challenges[0].siteKey).toBe("turnstile-site");
     expect(turnstileMocks.challenges[0].mounts).toEqual(["en"]);
   });
+
+  // Cloudflare accepts a token once, and a create that failed may have spent it (a 503 when the server's check timed out after Cloudflare answered): the retry asks the challenge for another.
+  test("a create retried after a failure carries a fresh token", async () => {
+    apiClientMocks.createResponse
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: "internal_server_error", message: "unavailable", status: 503 },
+      })
+      .mockResolvedValue({ ok: true, data: { id: "response-created" } });
+    renderProtected();
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    const tokens = apiClientMocks.createResponse.mock.calls.map((call) => call[0].turnstileToken);
+    expect(tokens).toEqual(["turnstile-token-1", "turnstile-token-2"]);
+  }, 10000);
 
   test("without a token the respondent sees the spam protection error and nothing is sent", async () => {
     turnstileMocks.token = null;

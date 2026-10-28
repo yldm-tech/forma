@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import {
   TURNSTILE_SCRIPT_ID,
+  TURNSTILE_RETRY_WAIT_MS,
   TURNSTILE_SCRIPT_URL,
   TurnstileChallenge,
   type TurnstileApi,
@@ -72,16 +73,62 @@ describe("TurnstileChallenge", () => {
     });
   });
 
-  test("waits for the challenge, then hands out its token while it is fresh", async () => {
+  test("waits for the challenge, then hands out its token once", async () => {
     const t = fakeTurnstile();
     const challenge = new TurnstileChallenge("site-key", "en", async () => t.api);
     await challenge.mount(document.createElement("div"));
     const pending = challenge.getToken();
     t.options().callback!("token-1");
     await expect(pending).resolves.toBe("token-1");
+    expect(t.api.reset).not.toHaveBeenCalled();
+
+    // Cloudflare accepts a token once: the next create (a retry of one that failed) gets a fresh challenge, not the spent token.
+    let second: string | null | undefined;
+    const secondCall = challenge.getToken().then((token) => (second = token));
+    await Promise.resolve();
+    expect(second).toBeUndefined();
+    expect(t.api.reset).toHaveBeenCalledWith("widget-1");
+    t.options().callback!("token-2");
+    await secondCall;
+    expect(second).toBe("token-2");
+  });
+
+  test("two creates waiting at once get a token each", async () => {
+    const t = fakeTurnstile();
+    const challenge = new TurnstileChallenge("site-key", "en", async () => t.api);
+    await challenge.mount(document.createElement("div"));
+    const first = challenge.getToken();
+    const second = challenge.getToken();
+    t.options().callback!("token-1");
+    await expect(first).resolves.toBe("token-1");
+    await vi.waitFor(() => expect(t.api.reset).toHaveBeenCalledTimes(1));
+    t.options().callback!("token-2");
+    await expect(second).resolves.toBe("token-2");
+  });
+
+  test("whenReady waits for a token without taking it", async () => {
+    const t = fakeTurnstile();
+    const challenge = new TurnstileChallenge("site-key", "en", async () => t.api);
+    await challenge.mount(document.createElement("div"));
+    const ready = challenge.whenReady();
+    t.options().callback!("token-1");
+    await expect(ready).resolves.toBe(true);
+    await expect(challenge.whenReady()).resolves.toBe(true);
     await expect(challenge.getToken()).resolves.toBe("token-1");
 
-    // An expired token is not sent: the next one Turnstile issues is.
+    // After the token went with a create, readiness means a fresh one.
+    const readyAgain = challenge.whenReady();
+    expect(t.api.reset).toHaveBeenCalledWith("widget-1");
+    t.options().callback!("token-2");
+    await expect(readyAgain).resolves.toBe(true);
+    await expect(challenge.getToken()).resolves.toBe("token-2");
+  });
+
+  test("an expired token is not sent: the next one Turnstile issues is", async () => {
+    const t = fakeTurnstile();
+    const challenge = new TurnstileChallenge("site-key", "en", async () => t.api);
+    await challenge.mount(document.createElement("div"));
+    t.options().callback!("token-1");
     t.expire();
     const next = challenge.getToken();
     t.refresh();
@@ -100,7 +147,7 @@ describe("TurnstileChallenge", () => {
     await expect(next).resolves.toBe("token-2");
   });
 
-  test("a widget error fails the waiting submit and the next ones, until a later success", async () => {
+  test("a configuration error fails the waiting submit and the next ones, until a later success", async () => {
     const t = fakeTurnstile();
     const challenge = new TurnstileChallenge("site-key", "en", async () => t.api);
     await challenge.mount(document.createElement("div"));
@@ -110,6 +157,44 @@ describe("TurnstileChallenge", () => {
     await expect(challenge.getToken()).resolves.toBeNull();
     t.options().callback!("token-after-retry");
     await expect(challenge.getToken()).resolves.toBe("token-after-retry");
+  });
+
+  test("an error Turnstile retries keeps the submit waiting for the retry", async () => {
+    vi.useFakeTimers();
+    try {
+      const t = fakeTurnstile();
+      const challenge = new TurnstileChallenge("site-key", "en", async () => t.api);
+      await challenge.mount(document.createElement("div"));
+      const pending = challenge.getToken();
+      expect(t.options()["error-callback"]!("300010")).toBe(true);
+      let settled = false;
+      void pending.then(() => (settled = true));
+      await vi.advanceTimersByTimeAsync(8_000);
+      expect(settled).toBe(false);
+      t.options().callback!("token-after-retry");
+      await expect(pending).resolves.toBe("token-after-retry");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("an error Turnstile retries fails the submit when no retry succeeds in time", async () => {
+    vi.useFakeTimers();
+    try {
+      const t = fakeTurnstile();
+      const challenge = new TurnstileChallenge("site-key", "en", async () => t.api);
+      await challenge.mount(document.createElement("div"));
+      const pending = challenge.getToken();
+      t.options()["error-callback"]!("600010");
+      await vi.advanceTimersByTimeAsync(8_000);
+      // Turnstile's own retry fails again: the wait is still counted from the first error.
+      t.options()["error-callback"]!("600010");
+      await vi.advanceTimersByTimeAsync(TURNSTILE_RETRY_WAIT_MS - 8_000);
+      await expect(pending).resolves.toBeNull();
+      await expect(challenge.getToken()).resolves.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("a script that does not load fails every submit", async () => {

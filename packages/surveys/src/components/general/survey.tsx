@@ -1224,6 +1224,19 @@ export function Survey({
         : null,
     [isTurnstile, turnstileSiteKey, turnstileLanguageCode]
   );
+  // Every create of the response, a retried one included, takes a token of its own (Cloudflare accepts a token once). A challenge replaced while a create waited for its token (the language changed) is asked again under its replacement.
+  const turnstileChallengeRef = useRef<TurnstileChallenge | null>(null);
+  turnstileChallengeRef.current = turnstileChallenge;
+  const takeTurnstileToken = async (): Promise<string | null> => {
+    for (;;) {
+      const challenge = turnstileChallengeRef.current;
+      if (!challenge) return null;
+      const token = await challenge.getToken();
+      if (token !== null || turnstileChallengeRef.current === challenge) return token;
+    }
+  };
+  // Set while rendering rather than in an effect, so the stored answers an effect of this render sends are already sent with a token.
+  responseQueue?.setTurnstileTokenProvider(turnstileChallenge ? takeTurnstileToken : undefined);
 
   useEffect(() => {
     if (isPreviewMode || !survey.recaptcha?.enabled) return;
@@ -1274,12 +1287,10 @@ export function Survey({
 
     setLoadingElement(true);
 
-    // Only the first write of the response carries a token; the updates that follow need none.
+    // Only the first write of the response carries a token; the updates that follow need none. With Turnstile the card waits for the challenge, so a respondent it cannot vouch for sees the error before moving on, and the queue takes the token itself when it sends the create.
     if (isSpamProtectionEnabled && !surveyState?.responseId && turnstileChallenge) {
-      const token = await turnstileChallenge.getToken();
-      if (responseQueue && token) {
-        responseQueue.setResponseTurnstileToken(token);
-      } else {
+      const isReady = await turnstileChallenge.whenReady();
+      if (!responseQueue || !isReady) {
         setShowError(true);
         setErrorType(TResponseErrorCodesEnum.RecaptchaError);
         setLoadingElement(false);
