@@ -153,7 +153,7 @@ func TestServeSDKBundles(t *testing.T) {
 			}
 			want := map[string]string{
 				"Content-Type":                "application/javascript; charset=UTF-8",
-				"Cache-Control":               "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400",
+				"Cache-Control":               "public, max-age=3600, s-maxage=600, stale-while-revalidate=3600, stale-if-error=86400",
 				"Access-Control-Allow-Origin": "*",
 				"Vary":                        "Accept-Encoding",
 			}
@@ -310,7 +310,7 @@ func TestOnlyHTMLIsNoTransform(t *testing.T) {
 		"/app/workspaces/1":       "no-cache, no-transform",
 		"/":                       "no-store, no-transform",
 		"/app/assets/app-1a2b.js": "public, max-age=31536000, immutable",
-		"/js/surveys.umd.cjs":     "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400",
+		"/js/surveys.umd.cjs":     "public, max-age=3600, s-maxage=600, stale-while-revalidate=3600, stale-if-error=86400",
 	} {
 		if got := get(r, http.MethodGet, path).Header().Get("Cache-Control"); got != want {
 			t.Errorf("%s: Cache-Control = %q, want %q", path, got, want)
@@ -394,7 +394,7 @@ func TestBuildIsCompressed(t *testing.T) {
 	h.Register(r)
 	server := httpserver.Compress(r)
 
-	sdk := "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400"
+	sdk := "public, max-age=3600, s-maxage=600, stale-while-revalidate=3600, stale-if-error=86400"
 	for path, cacheControl := range map[string]string{
 		"/js/surveys.umd.js":          sdk,
 		"/js/surveys.umd.cjs":         sdk,

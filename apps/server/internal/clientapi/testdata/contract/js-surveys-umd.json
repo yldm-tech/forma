@@ -16,7 +16,7 @@
     "status": 200,
     "headers": {
       "access-control-allow-origin": "*",
-      "cache-control": "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400",
+      "cache-control": "public, max-age=3600, s-maxage=600, stale-while-revalidate=3600, stale-if-error=86400",
       "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
       "content-type": "application/javascript; charset=UTF-8",
       "vary": "Accept-Encoding",

@@ -301,7 +301,7 @@ jobs:
           # The server gzips the survey runtime and the SPA's scripts for a client that accepts gzip, under the same names and cache headers. A GET, not a HEAD: the server decides on the body it writes.
           headers="$(curl -fsS -D - -o /dev/null -H 'Accept-Encoding: gzip' http://localhost:3000/js/surveys.umd.js)"
           grep -iF 'content-encoding: gzip' <<<"$headers"
-          grep -iF 'cache-control: public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400' <<<"$headers"
+          grep -iF 'cache-control: public, max-age=3600, s-maxage=600, stale-while-revalidate=3600, stale-if-error=86400' <<<"$headers"
           grep -iE '^vary: .*accept-encoding' <<<"$headers"
           # The bundle carries an ETag, so a browser that kept it past its hour revalidates it with a 304 instead of downloading the runtime again.
           etag="$(sed -n 's/^[Ee][Tt][Aa][Gg]: *//p' <<<"$headers" | tr -d '\r')"
