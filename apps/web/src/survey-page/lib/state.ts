@@ -77,6 +77,8 @@ export interface TSurveyProps {
   contactId?: string;
   canReadUserIdFromUrl: boolean;
   recaptchaSiteKey?: string;
+  /** Set instead of recaptchaSiteKey when the instance's spam protection uses Cloudflare Turnstile; the runtime renders its widget. */
+  turnstileSiteKey?: string;
   isSpamProtectionEnabled: boolean;
   verifiedEmail?: string;
   imprintUrl?: string;

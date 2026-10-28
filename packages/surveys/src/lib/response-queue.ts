@@ -92,6 +92,7 @@ export class ResponseQueue {
   private surveyState: SurveyState;
   readonly api: ApiClient;
   private responseRecaptchaToken?: string;
+  private responseTurnstileToken?: string;
   // Maps queued response objects to their IndexedDB ids for cleanup after successful sends.
   private readonly pendingDbIds: Map<TResponseUpdate, number> = new Map();
   private isSyncing = false;
@@ -120,6 +121,11 @@ export class ResponseQueue {
 
   setResponseRecaptchaToken(token?: string) {
     this.responseRecaptchaToken = token;
+  }
+
+  /** The Cloudflare Turnstile token the create of the response carries, on an instance whose spam protection uses Turnstile. */
+  setResponseTurnstileToken(token?: string) {
+    this.responseTurnstileToken = token;
   }
 
   private serializeSurveyState(): SerializedSurveyState {
@@ -830,7 +836,7 @@ export class ResponseQueue {
     state: SurveyState
   ): Omit<
     Parameters<ApiClient["createResponse"]>[0],
-    "contactId" | "userId" | "singleUseId" | "surveyId" | "displayId" | "recaptchaToken"
+    "contactId" | "userId" | "singleUseId" | "surveyId" | "displayId" | "recaptchaToken" | "turnstileToken"
   > {
     if (!state.shouldCreateResponseFromState) {
       return {
@@ -920,6 +926,8 @@ export class ResponseQueue {
           displayId: state.displayId,
           pinAuthToken: state.pinAuthToken || null,
           recaptchaToken: this.responseRecaptchaToken ?? undefined,
+          // Left out when there is none, so a create without Turnstile is the body it always was.
+          turnstileToken: this.responseTurnstileToken ?? undefined,
         });
 
         if (!response.ok) {

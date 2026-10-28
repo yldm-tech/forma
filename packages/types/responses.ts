@@ -518,6 +518,8 @@ export const ZResponseInput = z.object({
   // The survey client already sends this on every create (see `response-queue.ts`), but it used to be
   // absent from this schema, so Zod stripped it before the v1 handler could enforce the reCAPTCHA gate.
   recaptchaToken: z.string().nullish(),
+  // The Cloudflare Turnstile token of a survey with spam protection on, on an instance that uses Turnstile; checked on create only.
+  turnstileToken: z.string().nullish(),
   finished: z.boolean(),
   endingId: z.string().nullish(),
   language: z.string().optional(),

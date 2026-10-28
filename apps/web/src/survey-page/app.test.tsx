@@ -335,6 +335,19 @@ describe("the survey", () => {
     expect(document.getElementById("forma-survey-container")).toBeTruthy();
   });
 
+  // Turnstile spam protection: the server names Turnstile's site key instead of reCAPTCHA's, and the page hands it to the runtime, which renders the widget; no reCAPTCHA script is loaded.
+  test("hands the runtime Turnstile's site key when the server names it", async () => {
+    renderPage({
+      view: "survey",
+      locale: "en-US",
+      survey: surveyProps({ turnstileSiteKey: "turnstile-site", isSpamProtectionEnabled: true }),
+    });
+    await waitFor(() => expect(renderSurvey).toHaveBeenCalled());
+    expect(lastRender()).toMatchObject({ turnstileSiteKey: "turnstile-site", isSpamProtectionEnabled: true });
+    expect(lastRender().recaptchaSiteKey).toBeUndefined();
+    expect(document.getElementById("forma-recaptcha-script")).toBeNull();
+  });
+
   // F1 and D-R03: progress is saved unless the creator turned it off for a kiosk or a shared device; the offline mode stays behind its link parameter.
   test("saves respondents' progress unless the survey turned it off", async () => {
     renderPage({ view: "survey", locale: "en-US", survey: surveyProps() });

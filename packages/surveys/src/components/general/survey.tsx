@@ -39,6 +39,7 @@ import {
 } from "@/components/general/response-error-component";
 import { Subheader } from "@/components/general/subheader";
 import { SurveyCloseButton } from "@/components/general/survey-close-button";
+import { TurnstileWidget } from "@/components/general/turnstile-widget";
 import { WelcomeCard } from "@/components/general/welcome-card";
 import { AutoCloseWrapper } from "@/components/wrappers/auto-close-wrapper";
 import { CardlessSurveyLayout } from "@/components/wrappers/cardless-survey-layout";
@@ -61,7 +62,14 @@ import { ResponseQueue, isSameRespondent } from "@/lib/response-queue";
 import { SURVEY_INSTRUCTIONS_ID, getSurveyPagePosition, hasSurveyInstructions } from "@/lib/survey-page";
 import { SurveyState } from "@/lib/survey-state";
 import { useOnlineStatus } from "@/lib/use-online-status";
-import { cn, findBlockByElementId, getDefaultLanguageCode, getElementsFromSurveyBlocks } from "@/lib/utils";
+import { TurnstileChallenge, turnstileLanguage } from "@/lib/turnstile";
+import {
+  cn,
+  findBlockByElementId,
+  getDefaultLanguageCode,
+  getElementsFromSurveyBlocks,
+  getSurveyLanguageTag,
+} from "@/lib/utils";
 import { hashVerifyToken } from "@/lib/verify-token";
 import { TResponseErrorCodesEnum } from "@/types/response-error-codes";
 
@@ -146,6 +154,7 @@ export function Survey({
   isWebEnvironment = true,
   getRecaptchaToken,
   isSpamProtectionEnabled,
+  turnstileSiteKey,
   dir = "auto",
   setDir,
   onLanguageChange,
@@ -1205,6 +1214,17 @@ export function Survey({
     [reservedValues, responseData]
   );
 
+  // Turnstile is the spam protection when the host passes its site key (the instance chose it over reCAPTCHA). Its widget is rendered once for the survey, in the survey's language, and a new widget replaces it when the language changes before the response exists; a preview never sends a response, so it renders none.
+  const isTurnstile = Boolean(isSpamProtectionEnabled && turnstileSiteKey && !isPreviewMode);
+  const turnstileLanguageCode = turnstileLanguage(getSurveyLanguageTag(localSurvey, selectedLanguage));
+  const turnstileChallenge = useMemo(
+    () =>
+      isTurnstile && turnstileSiteKey
+        ? new TurnstileChallenge(turnstileSiteKey, turnstileLanguageCode)
+        : null,
+    [isTurnstile, turnstileSiteKey, turnstileLanguageCode]
+  );
+
   useEffect(() => {
     if (isPreviewMode || !survey.recaptcha?.enabled) return;
 
@@ -1254,7 +1274,18 @@ export function Survey({
 
     setLoadingElement(true);
 
-    if (isSpamProtectionEnabled && !surveyState?.responseId && getRecaptchaToken) {
+    // Only the first write of the response carries a token; the updates that follow need none.
+    if (isSpamProtectionEnabled && !surveyState?.responseId && turnstileChallenge) {
+      const token = await turnstileChallenge.getToken();
+      if (responseQueue && token) {
+        responseQueue.setResponseTurnstileToken(token);
+      } else {
+        setShowError(true);
+        setErrorType(TResponseErrorCodesEnum.RecaptchaError);
+        setLoadingElement(false);
+        return;
+      }
+    } else if (isSpamProtectionEnabled && !surveyState?.responseId && getRecaptchaToken) {
       const token = await getRecaptchaToken();
       if (responseQueue && token) {
         responseQueue.setResponseRecaptchaToken(token);
@@ -1605,7 +1636,7 @@ export function Survey({
                 isCloseButtonVisible || isLanguageSwitchVisible ? "p-2" : "p-3"
               )}>
               {isBrandingEnabled ? <FormaBranding /> : null}
-              {isSpamProtectionEnabled ? <RecaptchaBranding /> : null}
+              {isSpamProtectionEnabled && !turnstileSiteKey ? <RecaptchaBranding /> : null}
             </div>
           </div>
         </div>
@@ -1635,6 +1666,11 @@ export function Survey({
     </div>
   ) : null;
 
+  // Outside the cards, which the stacked layout renders once per peeking card: one widget for the survey.
+  const turnstileWidget = turnstileChallenge ? (
+    <TurnstileWidget key={turnstileLanguageCode} challenge={turnstileChallenge} />
+  ) : null;
+
   const stackedCardsContainer = (
     <StackedCardsContainer
       cardArrangement={cardArrangement}
@@ -1662,6 +1698,7 @@ export function Survey({
         <>
           {instructions}
           {stackedCardsContainer}
+          {turnstileWidget}
         </>
       </CardlessSurveyLayout>
     );
@@ -1671,6 +1708,7 @@ export function Survey({
     <>
       {instructions}
       {stackedCardsContainer}
+      {turnstileWidget}
     </>
   );
 }

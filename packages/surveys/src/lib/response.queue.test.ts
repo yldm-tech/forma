@@ -113,6 +113,31 @@ describe("ResponseQueue", () => {
     expect(queue["responseRecaptchaToken"]).toBe("token123");
   });
 
+  // Turnstile spam protection: the token goes with the create of the response only, and a queue without one sends the create body it always did.
+  test("sends the Turnstile token with the create only", async () => {
+    queue.setResponseTurnstileToken("turnstile-token");
+    apiMock.createResponse.mockResolvedValue({ ok: true, data: { id: "newid" } });
+    await queue.sendResponse(responseUpdate);
+    expect(apiMock.createResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ turnstileToken: "turnstile-token" })
+    );
+
+    surveyState.responseId = "newid";
+    apiMock.updateResponse.mockResolvedValue({ ok: true, data: {} });
+    await queue.sendResponse({ ...responseUpdate, finished: true });
+    expect(apiMock.updateResponse).toHaveBeenCalledTimes(1);
+    expect(apiMock.updateResponse.mock.calls[0][0]).not.toHaveProperty("turnstileToken");
+  });
+
+  test("leaves the Turnstile token out of a create without one", async () => {
+    apiMock.createResponse.mockResolvedValue({ ok: true, data: { id: "newid" } });
+    await queue.sendResponse(responseUpdate);
+    expect(apiMock.createResponse.mock.calls[0][0].turnstileToken).toBeUndefined();
+    expect(JSON.parse(JSON.stringify(apiMock.createResponse.mock.calls[0][0]))).not.toHaveProperty(
+      "turnstileToken"
+    );
+  });
+
   test("add accumulates response, sets survey state, and processes queue", async () => {
     vi.spyOn(queue, "processQueue").mockImplementation(() => Promise.resolve({ success: true }));
     queue.add(responseUpdate);

@@ -73,6 +73,7 @@ export class ApiClient {
     responseInput: Omit<TResponseInput, "workspaceId"> & {
       contactId: string | null;
       recaptchaToken?: string;
+      turnstileToken?: string;
     }
   ): Promise<Result<TResponseCreateResponse, ApiErrorResponse>> {
     const fromV1 = !!responseInput.userId;
