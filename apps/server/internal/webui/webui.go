@@ -340,7 +340,7 @@ func (h *Handler) serveFile(c *gin.Context, name string) bool {
 	// Vite fingerprints everything under assets/, so those files never change under the same name.
 	case strings.HasPrefix(name, "assets/"):
 		c.Header("Cache-Control", "public, max-age=31536000, immutable")
-	// The SDK and survey runtime bundles keep fixed names because customer pages embed them, so browsers revalidate hourly while a CDN may hold them for 30 days. Same headers forma2 sent. The ETag, a hash of the content, lets that hourly revalidation end in a 304 instead of the whole bundle; it is weak because the server gzips the body. A URL pinned to the content (VersionedPath, the public survey pages) never needs revalidating, and the survey runtime's locale files are named by their content. A URL naming other content than this build's comes from another build: a pinned runtime URL on a page rendered by a server with another build during a deploy, or a locale file by the hash a runtime cached from an earlier build knows it by (currentSurveyLocale). It is answered with what this build has, never stored, so no cache keeps that content under the other version.
+	// The SDK and survey runtime bundles keep fixed names because customer pages embed them, so browsers revalidate hourly and a CDN every 10 minutes. forma2 let a CDN hold them for 30 days, which kept the previous release's SDK at Cloudflare after a deploy (0.2.136 shipped Turnstile support, and the edge still served a 27-hour-old forma.umd.js without it); a 10-minute edge lifetime bounds that window, and with the ETag and stale-while-revalidate the edge refresh is a 304 served in the background. The ETag, a hash of the content, lets that hourly revalidation end in a 304 instead of the whole bundle; it is weak because the server gzips the body. A URL pinned to the content (VersionedPath, the public survey pages) never needs revalidating, and the survey runtime's locale files are named by their content. A URL naming other content than this build's comes from another build: a pinned runtime URL on a page rendered by a server with another build during a deploy, or a locale file by the hash a runtime cached from an earlier build knows it by (currentSurveyLocale). It is answered with what this build has, never stored, so no cache keeps that content under the other version.
 	case strings.HasPrefix(name, sdkDir+"/"):
 		hash := h.hashes[name]
 		switch version, pinned := c.GetQuery(versionParam); {
@@ -349,7 +349,7 @@ func (h *Handler) serveFile(c *gin.Context, name string) bool {
 		case strings.HasPrefix(name, surveyLocaleDir), pinned:
 			c.Header("Cache-Control", "public, max-age=31536000, immutable")
 		default:
-			c.Header("Cache-Control", "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400")
+			c.Header("Cache-Control", "public, max-age=3600, s-maxage=600, stale-while-revalidate=3600, stale-if-error=86400")
 		}
 		c.Header("ETag", `W/"`+hash+`"`)
 		c.Header("Access-Control-Allow-Origin", "*")

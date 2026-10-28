@@ -57,7 +57,7 @@ func TestSDKBundlesRevalidateWithTheirETag(t *testing.T) {
 		if again.Code != http.StatusNotModified || again.Body.Len() != 0 {
 			t.Fatalf("%s revalidated: code %d with %d bytes, want 304 without a body", p, again.Code, again.Body.Len())
 		}
-		if got := again.Header().Get("Cache-Control"); got != "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400" {
+		if got := again.Header().Get("Cache-Control"); got != "public, max-age=3600, s-maxage=600, stale-while-revalidate=3600, stale-if-error=86400" {
 			t.Errorf("%s revalidated: Cache-Control %q", p, got)
 		}
 		if changed := getWith(r, p, "If-None-Match", `W/"0000000000000000"`); changed.Code != http.StatusOK || changed.Body.String() != runtimeBundle {
@@ -115,7 +115,7 @@ func TestPinnedSDKURLs(t *testing.T) {
 		"/js/surveys.umd.js?hash=0000000000000000": "no-store",
 		"/js/surveys.umd.js?hash=":                 "no-store",
 		// Another parameter, such as a customer's own cache buster on an embed snippet, leaves the bundle's usual caching alone.
-		"/js/surveys.umd.js?v=3": "public, max-age=3600, s-maxage=2592000, stale-while-revalidate=3600, stale-if-error=86400",
+		"/js/surveys.umd.js?v=3": "public, max-age=3600, s-maxage=600, stale-while-revalidate=3600, stale-if-error=86400",
 	} {
 		rec := get(r, http.MethodGet, path)
 		if rec.Code != http.StatusOK || rec.Body.String() != runtimeBundle {
