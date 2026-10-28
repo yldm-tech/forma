@@ -33,8 +33,10 @@ export interface AuthOptions {
   termsUrl?: string;
   privacyUrl?: string;
   isFormaCloud: boolean;
-  /** Whether reCAPTCHA keys are configured, so a survey may turn spam protection on. */
+  /** Whether Turnstile or reCAPTCHA keys are configured, so a survey may turn spam protection on. */
   spamProtectionAvailable: boolean;
+  /** The service spam protection uses: Turnstile whenever it is configured, otherwise reCAPTCHA; absent when neither is. */
+  spamProtectionProvider?: "turnstile" | "recaptcha";
 }
 
 export interface NotificationSurvey {

@@ -48,9 +48,11 @@ const survey = (overrides: Partial<TSurvey> = {}): TSurvey =>
 const Harness = ({
   initial,
   spamProtectionAllowed,
+  spamProtectionProvider,
 }: {
   initial: TSurvey;
   spamProtectionAllowed: boolean;
+  spamProtectionProvider?: "turnstile" | "recaptcha";
 }) => {
   const [localSurvey, setLocalSurvey] = useState(initial);
   return (
@@ -60,6 +62,7 @@ const Harness = ({
         setLocalSurvey={setLocalSurvey}
         finishedResponseCount={0}
         isSpamProtectionAllowed={spamProtectionAllowed}
+        spamProtectionProvider={spamProtectionProvider}
         surveySchedulingConfig={{ timeZone: "UTC", localHour: 0, localMinute: 0 }}
         locale="en-US"
       />
@@ -73,10 +76,18 @@ const Harness = ({
   );
 };
 
-const renderCard = (initial: TSurvey, spamProtectionAllowed = false) =>
+const renderCard = (
+  initial: TSurvey,
+  spamProtectionAllowed = false,
+  spamProtectionProvider?: "turnstile" | "recaptcha"
+) =>
   render(
     <I18nextProvider i18n={i18n}>
-      <Harness initial={initial} spamProtectionAllowed={spamProtectionAllowed} />
+      <Harness
+        initial={initial}
+        spamProtectionAllowed={spamProtectionAllowed}
+        spamProtectionProvider={spamProtectionProvider}
+      />
     </I18nextProvider>
   );
 
@@ -239,5 +250,41 @@ describe("spam protection", () => {
     expect(storedRecaptcha()).toBe(JSON.stringify({ enabled: false, threshold: 0.1 }));
     // It cannot be turned back on without keys, so the switch goes away.
     expect(screen.queryByRole("switch", { name: /^Spam protection/ })).toBeNull();
+  });
+
+  // Turnstile has no score: the switch names Turnstile, shows its own note and no threshold, and stores the same setting the server reads.
+  test("with Turnstile, turns on and off without reCAPTCHA's threshold", () => {
+    renderCard(survey(), true, "turnstile");
+    expect(
+      screen.getByText(i18n.t("workspace.surveys.edit.turnstile_spam_protection.description"))
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(i18n.t("workspace.surveys.edit.enable_recaptcha_to_protect_your_survey_from_spam"))
+    ).toBeNull();
+    fireEvent.click(spamSwitch());
+    expect(storedRecaptcha()).toBe(JSON.stringify({ enabled: true, threshold: 0.1 }));
+    expect(
+      screen.getByText(i18n.t("workspace.surveys.edit.turnstile_spam_protection.web_note"))
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(i18n.t("workspace.surveys.edit.spam_protection_threshold_heading"), { exact: false })
+    ).toBeNull();
+    expect(screen.queryByText(i18n.t("workspace.surveys.edit.spam_protection_web_note"))).toBeNull();
+    expect(screen.queryByRole("slider")).toBeNull();
+
+    fireEvent.click(spamSwitch());
+    expect(storedRecaptcha()).toBe(JSON.stringify({ enabled: false, threshold: 0.1 }));
+  });
+
+  test("with reCAPTCHA named as the provider, keeps the threshold", () => {
+    renderCard(
+      survey({ recaptcha: { enabled: true, threshold: 0.5 } } as Partial<TSurvey>),
+      true,
+      "recaptcha"
+    );
+    expect(
+      screen.getByText(i18n.t("workspace.surveys.edit.enable_recaptcha_to_protect_your_survey_from_spam"))
+    ).toBeTruthy();
+    expect(screen.getByRole("slider")).toBeTruthy();
   });
 });

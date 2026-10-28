@@ -32,6 +32,8 @@ interface PreviewSurveyProps {
   setLanguageCode?: (code: string) => void;
   locale?: TUserLocale;
   isSpamProtectionAllowed: boolean;
+  /** The service the instance's spam protection uses; only reCAPTCHA shows a notice under the survey. */
+  spamProtectionProvider?: "turnstile" | "recaptcha";
 }
 
 let setBlockId = (_: string) => {};
@@ -75,6 +77,7 @@ export const PreviewSurvey = ({
   setLanguageCode,
   locale,
   isSpamProtectionAllowed,
+  spamProtectionProvider,
 }: PreviewSurveyProps) => {
   // ENG-1837: the preview is an authoring surface — the Variables and Hidden Fields cards are the
   // live source of truth, and the saved EmbeddedData rows only catch up on save. Overriding the
@@ -261,9 +264,10 @@ export const PreviewSurvey = ({
     }
   }, [workspace]);
 
+  // The preview never sends a response, so it renders no Turnstile widget; what it shows of spam protection is reCAPTCHA's notice, and only where reCAPTCHA is the service.
   const isSpamProtectionEnabled = useMemo(() => {
-    return isSpamProtectionAllowed && survey.recaptcha?.enabled;
-  }, [survey.recaptcha?.enabled, isSpamProtectionAllowed]);
+    return isSpamProtectionAllowed && spamProtectionProvider !== "turnstile" && survey.recaptcha?.enabled;
+  }, [survey.recaptcha?.enabled, isSpamProtectionAllowed, spamProtectionProvider]);
 
   const handlePreviewModalClose = () => {
     setIsModalOpen(false);
