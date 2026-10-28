@@ -113,6 +113,71 @@ describe("ResponseQueue", () => {
     expect(queue["responseRecaptchaToken"]).toBe("token123");
   });
 
+  // Turnstile spam protection: the token goes with the create only, and a queue without a token provider sends the create body it always did.
+  test("sends a Turnstile token with the create only", async () => {
+    const provider = vi.fn().mockResolvedValue("turnstile-token");
+    queue.setTurnstileTokenProvider(provider);
+    apiMock.createResponse.mockResolvedValue({ ok: true, data: { id: "newid" } });
+    await queue.sendResponse(responseUpdate);
+    expect(apiMock.createResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ turnstileToken: "turnstile-token" })
+    );
+
+    surveyState.responseId = "newid";
+    apiMock.updateResponse.mockResolvedValue({ ok: true, data: {} });
+    await queue.sendResponse({ ...responseUpdate, finished: true });
+    expect(apiMock.updateResponse).toHaveBeenCalledTimes(1);
+    expect(apiMock.updateResponse.mock.calls[0][0]).not.toHaveProperty("turnstileToken");
+    expect(provider).toHaveBeenCalledTimes(1);
+  });
+
+  test("leaves the Turnstile token out of a create without a provider", async () => {
+    apiMock.createResponse.mockResolvedValue({ ok: true, data: { id: "newid" } });
+    await queue.sendResponse(responseUpdate);
+    expect(apiMock.createResponse.mock.calls[0][0].turnstileToken).toBeUndefined();
+    expect(JSON.parse(JSON.stringify(apiMock.createResponse.mock.calls[0][0]))).not.toHaveProperty(
+      "turnstileToken"
+    );
+  });
+
+  // Cloudflare accepts a token once, and the server may have spent it before the create failed (a 500 after siteverify, a 503 when the verifier timed out after Cloudflare answered): the retry must carry another.
+  test.each([500, 503])(
+    "a create retried after a %s sends a fresh Turnstile token",
+    async (status) => {
+      let issued = 0;
+      queue.setTurnstileTokenProvider(() => Promise.resolve(`turnstile-token-${++issued}`));
+      queue.queue.push(responseUpdate);
+      apiMock.createResponse
+        .mockResolvedValueOnce({
+          ok: false,
+          error: { code: "internal_server_error", message: "failed", status },
+        })
+        .mockResolvedValueOnce({ ok: true, data: { id: "newid" } });
+
+      const result = await queue.processQueue();
+
+      expect(result.success).toBe(true);
+      expect(apiMock.createResponse).toHaveBeenCalledTimes(2);
+      const tokens = apiMock.createResponse.mock.calls.map((call: any[]) => call[0].turnstileToken);
+      expect(tokens).toEqual(["turnstile-token-1", "turnstile-token-2"]);
+    },
+    10000
+  );
+
+  test("a create Turnstile gave no token is not sent and shows the spam protection error", async () => {
+    queue.setTurnstileTokenProvider(() => Promise.resolve(null));
+    queue.queue.push(responseUpdate);
+
+    const result = await queue.processQueue();
+
+    expect(result.success).toBe(false);
+    expect(apiMock.createResponse).not.toHaveBeenCalled();
+    expect(config.onResponseSendingFailed).toHaveBeenCalledWith(
+      responseUpdate,
+      TResponseErrorCodesEnum.RecaptchaError
+    );
+  });
+
   test("add accumulates response, sets survey state, and processes queue", async () => {
     vi.spyOn(queue, "processQueue").mockImplementation(() => Promise.resolve({ success: true }));
     queue.add(responseUpdate);
@@ -1141,6 +1206,62 @@ describe("ResponseQueue", () => {
     expect(offlineQueue.queue).toEqual([responseUpdate]);
     expect(offlineQueue["pendingDbIds"].get(responseUpdate)).toBe(10);
     expect(offlineQueue["isSyncing"]).toBe(false);
+  });
+
+  describe("Turnstile tokens of stored creates", () => {
+    const storedCreate = (): PendingResponseEntry => ({
+      id: 10,
+      surveyId: "s1",
+      responseUpdate,
+      surveyStateSnapshot: {
+        responseId: null,
+        displayId: "d1",
+        surveyId: "s1",
+        singleUseId: null,
+        userId: null,
+        contactId: null,
+        responseAcc: { finished: false, data: {} },
+      },
+      createdAt: Date.now(),
+    });
+
+    // A reload loses the token the earlier page held; the stored create asks the provider for one when it is sent.
+    test("a stored create sent by syncPersistedResponses carries a token of its own", async () => {
+      const { getPendingResponsesStrict, removePendingResponseStrict } = await import("./offline-storage");
+      vi.mocked(getPendingResponsesStrict).mockResolvedValueOnce([storedCreate()]);
+      const offlineQueue = new ResponseQueue(
+        getConfig({ persistOffline: true, surveyId: "s1" }),
+        getSurveyState()
+      );
+      offlineQueue.setTurnstileTokenProvider(() => Promise.resolve("stored-create-token"));
+      const offlineApi = offlineQueue.api as any;
+      offlineApi.createResponse.mockResolvedValue({ ok: true, data: { id: "newid" } });
+
+      const result = await offlineQueue.syncPersistedResponses();
+
+      expect(result).toEqual({ success: true, syncedCount: 1 });
+      expect(offlineApi.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ turnstileToken: "stored-create-token" })
+      );
+      expect(removePendingResponseStrict).toHaveBeenCalledWith(10);
+    });
+
+    test("a stored create Turnstile gave no token stays stored", async () => {
+      const { getPendingResponsesStrict, removePendingResponseStrict } = await import("./offline-storage");
+      vi.mocked(getPendingResponsesStrict).mockResolvedValueOnce([storedCreate()]);
+      const offlineQueue = new ResponseQueue(
+        getConfig({ persistOffline: true, surveyId: "s1" }),
+        getSurveyState()
+      );
+      offlineQueue.setTurnstileTokenProvider(() => Promise.resolve(null));
+      const offlineApi = offlineQueue.api as any;
+
+      const result = await offlineQueue.syncPersistedResponses();
+
+      expect(result).toEqual({ success: false, syncedCount: 0 });
+      expect(offlineApi.createResponse).not.toHaveBeenCalled();
+      expect(removePendingResponseStrict).not.toHaveBeenCalledWith(10);
+    });
   });
 
   // R-01 and R-02: a survey keeps one queue, and an answer that cannot be sent waits in it instead of being lost or ending the survey.

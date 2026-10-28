@@ -4079,6 +4079,10 @@
         "translated": "已翻译",
         "trigger_survey_when_one_of_the_actions_is_fired": "当以下任一操作发生时触发问卷…",
         "try_lollipop_or_mountain": "尝试 'lollipop' 或 'mountain' ...",
+        "turnstile_spam_protection": {
+          "description": "垃圾回复防护使用 Cloudflare Turnstile，在保存受访者的第一个回答前确认其是真人。大多数受访者不会看到验证。",
+          "web_note": "垃圾回复防护适用于链接问卷。Forma Web SDK 在你的网站上显示的问卷，只有当此 Forma 实例在 Turnstile 中允许你网站的域名时才能提交。不带 Turnstile 令牌直接发送到 API 的回复会被拒绝。"
+        },
         "type_field_id": "输入字段 ID",
         "underline": "下划线",
         "unsaved_changes_warning": "你在问卷中有未保存的更改。离开前是否要保存？",

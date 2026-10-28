@@ -8,8 +8,10 @@ import (
 
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/audit"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/httpapi"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/turnstile"
 )
 
 // signupInput is a validated sign-up request.
@@ -39,8 +41,15 @@ func (s *Service) createAccount(ctx context.Context, in signupInput) (issuedToke
 	if err := s.limiter.ApplyIP(ctx, ratelimit.AuthSignup); err != nil {
 		return issuedToken{}, err
 	}
-	if s.cfg.TurnstileConfigured() && !s.turnstile.verify(ctx, in.TurnstileToken) {
-		return issuedToken{}, errCaptchaFailed()
+	if s.cfg.TurnstileConfigured() {
+		// Fails closed: an account is not created while Cloudflare cannot vouch for the token.
+		ok, err := s.turnstile.Verify(ctx, in.TurnstileToken, httpapi.ClientIP(ctx), turnstile.ActionSignUp)
+		if err != nil {
+			s.log.WarnContext(ctx, "Turnstile verification unavailable; refusing sign-up", "err", err)
+		}
+		if !ok {
+			return issuedToken{}, errCaptchaFailed()
+		}
 	}
 	// The form sends an empty string for "no invite"; anything blank means none.
 	inviteToken := strings.TrimSpace(in.InviteToken)

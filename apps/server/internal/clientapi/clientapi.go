@@ -21,6 +21,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/turnstile"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/storage"
@@ -46,16 +47,17 @@ type Handler struct {
 	segments   *contact.Evaluator
 	files      *storage.Service
 	recaptcha  *Recaptcha
+	turnstile  *turnstile.Verifier
 	// cipher opens the workspaces' identity secrets (sdkidentity).
 	cipher *secret.Cipher
 	log    *slog.Logger
 	now    func() time.Time
 }
 
-func NewHandler(cfg config.Config, db *gorm.DB, cache *redis.Client, limiter *ratelimit.Limiter, workspaces *workspace.Repository, responses *response.Service, contacts *contact.Service, files *storage.Service, recaptcha *Recaptcha, cipher *secret.Cipher, log *slog.Logger) *Handler {
+func NewHandler(cfg config.Config, db *gorm.DB, cache *redis.Client, limiter *ratelimit.Limiter, workspaces *workspace.Repository, responses *response.Service, contacts *contact.Service, files *storage.Service, recaptcha *Recaptcha, turnstileVerifier *turnstile.Verifier, cipher *secret.Cipher, log *slog.Logger) *Handler {
 	return &Handler{
 		cfg: cfg, db: db, cache: cache, limiter: limiter, workspaces: workspaces, responses: responses, contacts: contacts,
-		segments: contact.NewEvaluator(db, log), files: files, recaptcha: recaptcha, cipher: cipher, log: log, now: time.Now,
+		segments: contact.NewEvaluator(db, log), files: files, recaptcha: recaptcha, turnstile: turnstileVerifier, cipher: cipher, log: log, now: time.Now,
 	}
 }
 

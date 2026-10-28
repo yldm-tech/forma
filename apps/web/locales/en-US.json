@@ -4079,6 +4079,10 @@
         "translated": "Translated",
         "trigger_survey_when_one_of_the_actions_is_fired": "Trigger survey when one of the actions is fired…",
         "try_lollipop_or_mountain": "Try “lollipop” or “mountain”…",
+        "turnstile_spam_protection": {
+          "description": "Spam protection uses Cloudflare Turnstile to check that each respondent is a person before their first answer is saved. Most respondents never see a challenge.",
+          "web_note": "Spam protection works for link surveys. A survey that the Forma web SDK shows on your website can be submitted only if this Forma instance allows your website's domain for Turnstile. Responses sent straight to the API without a Turnstile token are rejected."
+        },
         "type_field_id": "Type field id",
         "underline": "Underline",
         "unsaved_changes_warning": "You have unsaved changes in your survey. Would you like to save them before leaving?",

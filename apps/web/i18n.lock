@@ -3918,6 +3918,8 @@ checksums:
     workspace/surveys/edit/translated: 5b9d805410310b726f12bacb06da44e3
     workspace/surveys/edit/trigger_survey_when_one_of_the_actions_is_fired: 8570291668ec9879d204f10e861112db
     workspace/surveys/edit/try_lollipop_or_mountain: c550a0f07b3ae40a237e30a4314a249c
+    workspace/surveys/edit/turnstile_spam_protection/description: 16277ba9d457857b3ad26dd6be86247f
+    workspace/surveys/edit/turnstile_spam_protection/web_note: 81d2822450c2492ff1515f27a12f7da7
     workspace/surveys/edit/type_field_id: 714b845806236bb8a9d6a09933b836e9
     workspace/surveys/edit/underline: aed1340c6de1b829ec96c0d0da99e9ec
     workspace/surveys/edit/unsaved_changes_warning: a164f276c9f7344022aa4640b32abcf9

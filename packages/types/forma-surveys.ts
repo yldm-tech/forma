@@ -95,6 +95,10 @@ export interface SurveyContainerProps extends Omit<SurveyBaseProps, "onFileUploa
   recaptchaSiteKey?: string;
   getRecaptchaToken?: () => Promise<string | null>;
   /**
+   * The Cloudflare Turnstile site key, when the instance's spam protection uses Turnstile. With `isSpamProtectionEnabled`, the runtime renders Turnstile's widget below the survey (shown only when Cloudflare asks the respondent to interact) and sends its token with the first write of the response, instead of asking `getRecaptchaToken`.
+   */
+  turnstileSiteKey?: string;
+  /**
    * Keeps a link survey's progress in the browser's IndexedDB (the answers, the card, the response and display ids, and the answers not yet sent) for 24 hours, so a reload goes on in the same response. The link page passes the survey's `isProgressSavingEnabled`. Unlike `offlineSupport`, it neither holds answers back while the browser is offline nor asks before the page is left.
    */
   persistProgress?: boolean;

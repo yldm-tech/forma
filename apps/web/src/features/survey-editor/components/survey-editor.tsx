@@ -61,6 +61,8 @@ interface SurveyEditorProps {
   isReadOnly: boolean;
   colors: string[];
   isSpamProtectionAllowed: boolean;
+  /** The service the instance's spam protection uses (AuthOptions.spamProtectionProvider). */
+  spamProtectionProvider?: "turnstile" | "recaptcha";
   isCxMode: boolean;
   surveySchedulingConfig: TSurveySchedulingConfig;
   locale: TUserLocale;
@@ -82,6 +84,7 @@ export const SurveyEditor = ({
   isReadOnly,
   colors,
   isSpamProtectionAllowed,
+  spamProtectionProvider,
   isCxMode,
   surveySchedulingConfig,
   locale,
@@ -228,6 +231,7 @@ export const SurveyEditor = ({
                 finishedResponseCount={finishedResponseCount}
                 isReadOnly={isReadOnly}
                 isSpamProtectionAllowed={isSpamProtectionAllowed}
+                spamProtectionProvider={spamProtectionProvider}
                 quotas={quotas}
                 surveySchedulingConfig={surveySchedulingConfig}
                 locale={locale}
@@ -259,6 +263,7 @@ export const SurveyEditor = ({
             setLanguageCode={setSelectedLanguageCode}
             locale={locale}
             isSpamProtectionAllowed={isSpamProtectionAllowed}
+            spamProtectionProvider={spamProtectionProvider}
           />
         </aside>
       </div>

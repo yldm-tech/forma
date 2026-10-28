@@ -90,8 +90,9 @@ function SurveyEditorPage() {
         finishedResponseCount={responseCounts.finishedResponseCount}
         isReadOnly={workspaceDetail.access.isReadOnly}
         colors={SURVEY_BG_COLORS}
-        // Offered only when the instance has reCAPTCHA keys: without them the server refuses a survey that turns it on.
+        // Offered only when the instance has Turnstile or reCAPTCHA keys: without them the server refuses a survey that turns it on.
         isSpamProtectionAllowed={authOptions.spamProtectionAvailable}
+        spamProtectionProvider={authOptions.spamProtectionProvider}
         isCxMode={mode === "cx"}
         surveySchedulingConfig={resolveSurveySchedulingConfig(workspaceDetail.surveyScheduling)}
         locale={ZUserLocale.safeParse(me.locale).data ?? "en-US"}

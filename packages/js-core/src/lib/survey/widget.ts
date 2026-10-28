@@ -3,6 +3,7 @@ import { CONTAINER_ID, LIVE_REGION_ID } from "@/lib/common/constants";
 import { FORMA_EVENTS, emitFormaEvent } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
 import { executeRecaptcha, loadRecaptchaScript } from "@/lib/common/recaptcha";
+import { loadTurnstileScript } from "@/lib/common/turnstile";
 import { TimeoutStack } from "@/lib/common/timeout-stack";
 import {
   filterSurveys,
@@ -161,14 +162,35 @@ export const renderWidget = async (
     return;
   }
 
-  const recaptchaSiteKey = config.get().workspace.data.recaptchaSiteKey;
-  const isSpamProtectionEnabled = Boolean(recaptchaSiteKey && survey.recaptcha?.enabled);
+  // The server names the site key of its one spam protection service: Turnstile's or reCAPTCHA's.
+  const { recaptchaSiteKey, turnstileSiteKey } = config.get().workspace.data;
+  const isSpamProtectionEnabled = Boolean(
+    (turnstileSiteKey || recaptchaSiteKey) && survey.recaptcha?.enabled
+  );
 
   const getRecaptchaToken = (): Promise<string | null> => {
     return executeRecaptcha(recaptchaSiteKey);
   };
 
-  if (isSpamProtectionEnabled && recaptchaSiteKey) {
+  if (isSpamProtectionEnabled && turnstileSiteKey && !formaSurveys.supportsTurnstile) {
+    // /js/surveys.umd.js is not versioned and the edge may serve a copy older than this SDK, one that knows only reCAPTCHA: it would refuse the respondent's first answer, so the survey is not shown.
+    logger.error(
+      `Survey ${survey.id} left out: the surveys library does not support Turnstile spam protection`
+    );
+    setIsSurveyRunning(false);
+    return;
+  }
+
+  if (isSpamProtectionEnabled && turnstileSiteKey) {
+    // As for reCAPTCHA below: a script that cannot load (blocked, a CSP without challenges.cloudflare.com) releases `isSurveyRunning` and the survey is not shown, rather than shown unprotected and refused on its first answer.
+    try {
+      await loadTurnstileScript();
+    } catch (error) {
+      logger.error(`Failed to load Turnstile script: ${String(error)}`);
+      setIsSurveyRunning(false);
+      return;
+    }
+  } else if (isSpamProtectionEnabled && recaptchaSiteKey) {
     // Same shape as the surveys-library load above: a rejection here (blocked by an extension, a CSP without google.com, a firewalled network) must release `isSurveyRunning`, or the flag stays true for the rest of the page session and every later trigger is skipped with "A survey is already running". Bailing out rather than rendering unprotected keeps spam protection meaningful.
     try {
       await loadRecaptchaScript(recaptchaSiteKey);
@@ -213,6 +235,7 @@ export const renderWidget = async (
       // detached copy: a later `setEmbeddedData` affects the next response, never this one.
       hiddenFieldsRecord: buildDisplayHiddenFields(hiddenFieldsObject),
       recaptchaSiteKey,
+      turnstileSiteKey,
       isSpamProtectionEnabled,
       getRecaptchaToken,
       onDisplayCreated: () => {

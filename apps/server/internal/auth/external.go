@@ -2,11 +2,9 @@ package auth
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"crypto/sha1" //nolint:gosec // The Have I Been Pwned range API is keyed by SHA-1; only a 5-character prefix leaves the process and the digest is never stored or used to authenticate.
 	"encoding/hex"
-	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -15,11 +13,9 @@ import (
 )
 
 const (
-	hibpRangeURL     = "https://api.pwnedpasswords.com/range/"
-	hibpTimeout      = 3 * time.Second
-	turnstileURL     = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
-	turnstileTimeout = 5 * time.Second
-	// externalResponseLimit bounds what is read from either service. A padded range response is about 30 KB.
+	hibpRangeURL = "https://api.pwnedpasswords.com/range/"
+	hibpTimeout  = 3 * time.Second
+	// externalResponseLimit bounds what is read of a range response, about 30 KB padded.
 	externalResponseLimit = 1 << 20
 )
 
@@ -71,41 +67,4 @@ func (b *breachChecker) compromised(ctx context.Context, password string) bool {
 		b.log.WarnContext(ctx, "HIBP breach check failed; allowing password (fail open)", "err", err)
 	}
 	return false
-}
-
-// turnstileVerifier checks a Cloudflare Turnstile token, as forma2's verifyTurnstileToken did.
-type turnstileVerifier struct {
-	client    *http.Client
-	verifyURL string
-	secret    string
-}
-
-// verify reports whether Cloudflare accepted the token. Any failure to get an answer counts as not accepted.
-func (v *turnstileVerifier) verify(ctx context.Context, token string) bool {
-	ctx, cancel := context.WithTimeout(ctx, turnstileTimeout)
-	defer cancel()
-	body, err := json.Marshal(map[string]string{"secret": v.secret, "response": token})
-	if err != nil {
-		return false
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, v.verifyURL, bytes.NewReader(body))
-	if err != nil {
-		return false
-	}
-	req.Header.Set("Content-Type", "application/json")
-	res, err := v.client.Do(req)
-	if err != nil {
-		return false
-	}
-	defer func() { _ = res.Body.Close() }()
-	if res.StatusCode != http.StatusOK {
-		return false
-	}
-	var out struct {
-		Success bool `json:"success"`
-	}
-	if err := json.NewDecoder(io.LimitReader(res.Body, externalResponseLimit)).Decode(&out); err != nil {
-		return false
-	}
-	return out.Success
 }

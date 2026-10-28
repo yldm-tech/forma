@@ -49,7 +49,7 @@ const awaitSurveyScript = (scriptUrl: string): Promise<void> =>
   });
 
 /**
- * forma2's SurveyInline: loads reCAPTCHA when the survey uses it, waits for the runtime and renders the survey inline.
+ * forma2's SurveyInline: loads reCAPTCHA when the survey uses it, waits for the runtime and renders the survey inline. With Turnstile (props.turnstileSiteKey) the runtime loads and renders the widget itself.
  *
  * Memoized, because every render here hands the runtime a new props object and so renders the survey again. The page re-renders on every card (its title follows the card), and the survey must only be rendered again when one of its props actually changed.
  */

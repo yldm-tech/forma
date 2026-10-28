@@ -71,6 +71,7 @@ export const SurveyClientWrapper = ({
   contactId,
   canReadUserIdFromUrl,
   recaptchaSiteKey,
+  turnstileSiteKey,
   isSpamProtectionEnabled,
   isPreview,
   verifiedEmail,
@@ -271,6 +272,7 @@ export const SurveyClientWrapper = ({
           contactId={contactId}
           userId={userId}
           recaptchaSiteKey={recaptchaSiteKey}
+          turnstileSiteKey={turnstileSiteKey}
           isSpamProtectionEnabled={isSpamProtectionEnabled}
           persistProgress={persistProgress}
           offlineSupport={offlineSupport}

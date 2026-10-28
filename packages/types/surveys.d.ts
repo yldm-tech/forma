@@ -8,6 +8,7 @@ declare global {
       renderSurvey: (props: SurveyContainerProps) => void;
       onFilePick: (files: { name: string; type: string; base64: string }[]) => void;
       setNonce: (nonce: string | undefined) => void;
+      supportsTurnstile: boolean;
     };
     __formaNonce?: string;
   }

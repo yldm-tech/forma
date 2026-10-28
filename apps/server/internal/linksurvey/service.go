@@ -124,27 +124,29 @@ type verifyEmailState struct {
 
 // surveyState is forma2's SurveyClientWrapper props, and PinScreen's: behind a PIN, Survey is null until the PIN is entered and Locale is the gate's.
 type surveyState struct {
-	Survey                  json.RawMessage `json:"survey"`
-	SurveyID                uuid.UUID       `json:"surveyId"`
-	Workspace               workspaceState  `json:"workspace"`
-	Styling                 json.RawMessage `json:"styling"`
-	PublicDomain            string          `json:"publicDomain"`
-	ResponseCount           *int            `json:"responseCount"`
-	LanguageCode            string          `json:"languageCode"`
-	Locale                  string          `json:"locale"`
-	IsEmbed                 bool            `json:"isEmbed"`
-	IsPreview               bool            `json:"isPreview"`
-	SingleUseID             string          `json:"singleUseId,omitempty"`
-	SingleUseResponseID     *uuid.UUID      `json:"singleUseResponseId,omitempty"`
-	ContactID               string          `json:"contactId,omitempty"`
-	CanReadUserIDFromURL    bool            `json:"canReadUserIdFromUrl"`
-	RecaptchaSiteKey        string          `json:"recaptchaSiteKey,omitempty"`
-	IsSpamProtectionEnabled bool            `json:"isSpamProtectionEnabled"`
-	VerifiedEmail           string          `json:"verifiedEmail,omitempty"`
-	ImprintURL              string          `json:"imprintUrl,omitempty"`
-	PrivacyURL              string          `json:"privacyUrl,omitempty"`
-	TermsURL                string          `json:"termsUrl,omitempty"`
-	IsFormaCloud            bool            `json:"isFormaCloud"`
+	Survey               json.RawMessage `json:"survey"`
+	SurveyID             uuid.UUID       `json:"surveyId"`
+	Workspace            workspaceState  `json:"workspace"`
+	Styling              json.RawMessage `json:"styling"`
+	PublicDomain         string          `json:"publicDomain"`
+	ResponseCount        *int            `json:"responseCount"`
+	LanguageCode         string          `json:"languageCode"`
+	Locale               string          `json:"locale"`
+	IsEmbed              bool            `json:"isEmbed"`
+	IsPreview            bool            `json:"isPreview"`
+	SingleUseID          string          `json:"singleUseId,omitempty"`
+	SingleUseResponseID  *uuid.UUID      `json:"singleUseResponseId,omitempty"`
+	ContactID            string          `json:"contactId,omitempty"`
+	CanReadUserIDFromURL bool            `json:"canReadUserIdFromUrl"`
+	RecaptchaSiteKey     string          `json:"recaptchaSiteKey,omitempty"`
+	// TurnstileSiteKey is set when Turnstile is the instance's spam protection provider (config.SpamProtectionProvider); the runtime then renders Turnstile's widget and sends its token, and RecaptchaSiteKey is empty.
+	TurnstileSiteKey        string `json:"turnstileSiteKey,omitempty"`
+	IsSpamProtectionEnabled bool   `json:"isSpamProtectionEnabled"`
+	VerifiedEmail           string `json:"verifiedEmail,omitempty"`
+	ImprintURL              string `json:"imprintUrl,omitempty"`
+	PrivacyURL              string `json:"privacyUrl,omitempty"`
+	TermsURL                string `json:"termsUrl,omitempty"`
+	IsFormaCloud            bool   `json:"isFormaCloud"`
 }
 
 type workspaceState struct {
@@ -361,6 +363,14 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 		Enabled bool `json:"enabled"`
 	}
 	_ = json.Unmarshal(sv.Recaptcha, &recaptcha)
+	// Only the site key of the provider the server verifies with reaches the page, so the runtime sends the token the server expects.
+	var recaptchaSiteKey, turnstileSiteKey string
+	switch s.cfg.SpamProtectionProvider() {
+	case config.SpamProtectionTurnstile:
+		turnstileSiteKey = s.cfg.TurnstileSiteKey
+	case config.SpamProtectionRecaptcha:
+		recaptchaSiteKey = s.cfg.RecaptchaSiteKey
+	}
 	props := &surveyState{
 		Survey:                  public,
 		SurveyID:                sv.ID,
@@ -375,8 +385,9 @@ func (s *Service) render(ctx context.Context, in renderInput) (page, error) {
 		SingleUseID:             in.singleUseID,
 		ContactID:               in.contactID,
 		CanReadUserIDFromURL:    in.allowURLUserID && in.contactID == "" && q.userIDParam() != "",
-		RecaptchaSiteKey:        s.cfg.RecaptchaSiteKey,
-		IsSpamProtectionEnabled: s.cfg.RecaptchaConfigured() && recaptcha.Enabled,
+		RecaptchaSiteKey:        recaptchaSiteKey,
+		TurnstileSiteKey:        turnstileSiteKey,
+		IsSpamProtectionEnabled: s.cfg.SpamProtectionConfigured() && recaptcha.Enabled,
 		VerifiedEmail:           verified,
 		ImprintURL:              s.cfg.ImprintURL,
 		PrivacyURL:              s.cfg.PrivacyURL,
