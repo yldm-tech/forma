@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"net/url"
 	"slices"
 	"strings"
 	"testing"
@@ -150,6 +151,88 @@ func TestStorageUpload(t *testing.T) {
 	}
 	e.do("POST", path, map[string]any{"fileName": "a.pdf", "fileType": "application/pdf", "surveyId": sv.String(), "elementId": "small"}).
 		expectError(t, 429, "too_many_requests", "Maximum number of requests reached. Please try again later.")
+}
+
+// The optional fileSize is checked against the element's limit before anything is signed and answered with the limit the survey runtime reads; on a POST-mode store a size within it changes nothing in the answer.
+func TestStorageUploadFileSize(t *testing.T) {
+	e := newEnv(t)
+	ws := e.workspace()
+	sv := e.survey(ws, "blocks", `[{"id":"b1","name":"Main","elements":[
+		{"id":"small","type":"fileUpload","headline":{"default":"F"},"required":false,"allowedFileExtensions":["pdf"],"maxSizeInMB":2.5},
+		{"id":"any","type":"fileUpload","headline":{"default":"F"},"required":false}]}]`)
+	path := "/api/v1/client/" + ws.String() + "/storage"
+	upload := func(element string, size any) result {
+		e.clock.nextWindow()
+		return e.do("POST", path, map[string]any{"fileName": "report.pdf", "fileType": "application/pdf", "fileSize": size, "surveyId": sv.String(), "elementId": element})
+	}
+	details := upload("small", 2621441).expectError(t, 400, "bad_request", "File size exceeds the upload limit")
+	if details["fileSize"] != float64(2621441) || details["maxFileSize"] != float64(2621440) {
+		t.Fatalf("details %v", details)
+	}
+	// Without an advertised size the limit is the 1 GiB ceiling.
+	details = upload("any", 1<<30+1).expectError(t, 400, "bad_request", "File size exceeds the upload limit")
+	if details["maxFileSize"] != float64(1<<30) {
+		t.Fatalf("details %v", details)
+	}
+	for _, size := range []any{0, 2621440} {
+		d := upload("small", size).data(t)
+		if _, ok := d["uploadMethod"]; ok || len(d) != 3 {
+			t.Fatalf("a POST-mode answer with fileSize %v: %v", size, d)
+		}
+	}
+	for size, want := range map[any]string{
+		"big":   "Invalid input: expected number, received string",
+		1.5:     "Invalid input: expected int, received number",
+		-1:      "Too small: expected number to be >=0",
+		1 << 54: "Too big: expected int to be <=9007199254740991",
+	} {
+		details := upload("small", size).expectError(t, 400, "bad_request", msgInvalidFields)
+		if details["fileSize"] != want {
+			t.Errorf("fileSize %v: details %v", size, details)
+		}
+	}
+	e.clock.nextWindow()
+	details = e.do("POST", path, map[string]any{"fileName": "report.pdf", "fileType": "application/pdf", "fileSize": nil, "surveyId": sv.String(), "elementId": "small"}).expectError(t, 400, "bad_request", msgInvalidFields)
+	if details["fileSize"] != "Invalid input: expected number, received null" {
+		t.Errorf("fileSize null: details %v", details)
+	}
+}
+
+// With STORAGE_UPLOAD_METHOD=put an upload that declares its size is also signed as a presigned PUT of the object, its type and its exact length; one that does not, from a runtime that predates fileSize, gets the POST alone.
+func TestStorageUploadPut(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) { c.S3.UploadMethod = config.UploadMethodPut })
+	ws := e.workspace()
+	sv := e.survey(ws, "blocks", `[{"id":"b1","name":"Main","elements":[{"id":"small","type":"fileUpload","headline":{"default":"F"},"required":false,"maxSizeInMB":2.5}]}]`)
+	path := "/api/v1/client/" + ws.String() + "/storage"
+	e.clock.nextWindow()
+	d := e.do("POST", path, map[string]any{"fileName": "report.pdf", "fileType": "application/pdf", "fileSize": 1234, "surveyId": sv.String(), "elementId": "small"}).data(t)
+	if d["uploadMethod"] != "put" {
+		t.Fatalf("answer %v, want a PUT", d)
+	}
+	u, err := url.Parse(d["uploadUrl"].(string))
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefix := "/forma-uploads/" + ws.String() + "/private/surveys/" + sv.String() + "/elements/small/report--fid--"
+	if u.Scheme+"://"+u.Host != "http://localhost:9000" || !strings.HasPrefix(u.Path, prefix) || u.Path != "/forma-uploads/"+d["presignedFields"].(map[string]any)["key"].(string) {
+		t.Fatalf("uploadUrl %s, want the POST's key %v", u, d["presignedFields"].(map[string]any)["key"])
+	}
+	if q := u.Query(); q.Get("X-Amz-SignedHeaders") != "content-length;content-type;host" || q.Get("X-Amz-Expires") != "120" {
+		t.Fatalf("uploadUrl query %v", q)
+	}
+	if h, ok := d["uploadHeaders"].(map[string]any); !ok || len(h) != 1 || h["Content-Type"] != "application/pdf" {
+		t.Fatalf("uploadHeaders %v", d["uploadHeaders"])
+	}
+	e.clock.nextWindow()
+	details := e.do("POST", path, map[string]any{"fileName": "report.pdf", "fileType": "application/pdf", "fileSize": 2621441, "surveyId": sv.String(), "elementId": "small"}).expectError(t, 400, "bad_request", "File size exceeds the upload limit")
+	if details["maxFileSize"] != float64(2621440) {
+		t.Fatalf("details %v", details)
+	}
+	e.clock.nextWindow()
+	d = e.do("POST", path, map[string]any{"fileName": "report.pdf", "fileType": "application/pdf", "surveyId": sv.String(), "elementId": "small"}).data(t)
+	if _, ok := d["uploadMethod"]; ok || d["presignedFields"] == nil {
+		t.Fatalf("answer without a size %v, want the POST alone", d)
+	}
 }
 
 // The element id becomes a directory of the stored file's key, so ZUploadPrivateFileRequest allows only letters, digits, hyphens and underscores in it; the extension list must be a list; and a name with nothing left once sanitized is the storage's invalid input.

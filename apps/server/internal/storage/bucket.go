@@ -10,6 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +29,8 @@ const (
 	CodeS3Client      Code = "s3_client_error"
 	CodeFileNotFound  Code = "file_not_found_error"
 	CodeInvalidInput  Code = "invalid_input"
+	// CodeFileTooLarge is an upload whose declared size is over its limit.
+	CodeFileTooLarge Code = "file_too_large"
 )
 
 const (
@@ -73,13 +76,15 @@ type Bucket struct {
 	client    *minio.Client
 	name      string
 	pathStyle bool
-	log       *slog.Logger
+	// putUploads is STORAGE_UPLOAD_METHOD=put: uploads whose size is known are also signed as a presigned PUT, and clients are told to use it.
+	putUploads bool
+	log        *slog.Logger
 }
 
 // NewBucket builds the client of cfg.S3. Like forma2's it passes the region only when one is set, and static keys only when both are set; otherwise the AWS default credential chain applies.
 func NewBucket(cfg config.Config, log *slog.Logger) (*Bucket, error) {
 	s3 := cfg.S3
-	b := &Bucket{name: s3.BucketName, pathStyle: s3.ForcePathStyle, log: log}
+	b := &Bucket{name: s3.BucketName, pathStyle: s3.ForcePathStyle, putUploads: s3.UploadMethod == config.UploadMethodPut, log: log}
 	if !s3.Configured() {
 		return b, nil
 	}
@@ -194,6 +199,35 @@ func (b *Bucket) SignUpload(ctx context.Context, fileName, contentType, filePath
 	}
 	return &PresignedPost{URL: signedURL, Fields: fields}, nil
 }
+
+// PresignedPut is a browser upload straight to the bucket: one PUT to URL with every header of Headers and a body of exactly the size it was signed for.
+type PresignedPut struct {
+	URL string
+	// Headers are the signed headers the client sets itself. Content-Length is signed too, but a browser sets it from the body and refuses to have it set, so it is not among them.
+	Headers map[string]string
+}
+
+// SignPut is the presigned PUT of the same upload SignUpload signs as a POST policy, for stores that take no POST uploads (Cloudflare R2): valid for two minutes, for one object at filePath/fileName, with contentType and a Content-Length of exactly size bytes both signed, so the store refuses another type or another size (S3 answers 403 SignatureDoesNotMatch). Nothing grants public access: the object is private like every other, and is read through the /storage route.
+func (b *Bucket) SignPut(ctx context.Context, fileName, contentType, filePath string, size int64) (*PresignedPut, error) {
+	if b.client == nil {
+		b.log.ErrorContext(ctx, "Failed to get signed upload URL: S3 client is not set")
+		return nil, fail(CodeS3Client)
+	}
+	if size < 0 {
+		return nil, fail(CodeInvalidInput)
+	}
+	signed := http.Header{}
+	signed.Set("Content-Type", contentType)
+	signed.Set("Content-Length", strconv.FormatInt(size, 10))
+	u, err := b.client.PresignHeader(ctx, http.MethodPut, b.name, filePath+"/"+fileName, uploadExpiry, nil, signed)
+	if err != nil {
+		return nil, unknown("sign upload URL", err)
+	}
+	return &PresignedPut{URL: u.String(), Headers: map[string]string{"Content-Type": contentType}}, nil
+}
+
+// PutUploads reports STORAGE_UPLOAD_METHOD=put.
+func (b *Bucket) PutUploads() bool { return b.putUploads }
 
 // SignDownload is forma2's getSignedDownloadUrl: a GET URL valid for 30 minutes. A key that does not exist is file_not_found_error; any other failure of the existence check is logged and the URL signed anyway.
 func (b *Bucket) SignDownload(ctx context.Context, key string) (string, error) {

@@ -116,6 +116,48 @@ func TestV1StorageAcceptsASession(t *testing.T) {
 	}
 }
 
+// A public upload may declare its size: over 5 MB it is refused before anything is signed, and with STORAGE_UPLOAD_METHOD=put the answer adds a presigned PUT of the object for exactly that size, which the editor uploads with. Without a size, as API callers from before it send, the answer is the POST alone.
+func TestV1StorageFileSize(t *testing.T) {
+	for _, method := range []string{config.UploadMethodPost, config.UploadMethodPut} {
+		t.Run(method, func(t *testing.T) {
+			e := newEnv(t, func(c *config.Config) { c.S3.UploadMethod = method })
+			s := e.seedRecording()
+			key := s.bound["<api-key:manage>"]
+			upload := func(size any) map[string]any {
+				return map[string]any{"workspaceId": s.bound["<id:workspace>"], "fileName": "logo.png", "fileType": "image/png", "fileSize": size}
+			}
+			body := expectStatus(t, "too large", e.do("POST", "/api/v1/management/storage", upload(5<<20+1), "x-api-key", key), 400)
+			if details, _ := body["details"].(map[string]any); body["message"] != "File size exceeds the upload limit" || details["fileSize"] != float64(5<<20+1) || details["maxFileSize"] != float64(5<<20) {
+				t.Fatalf("too large = %v", body)
+			}
+			body = expectStatus(t, "not an integer", e.do("POST", "/api/v1/management/storage", upload(1.5), "x-api-key", key), 400)
+			if details, _ := body["details"].(map[string]any); details["fileSize"] != "Invalid input: expected int, received number" {
+				t.Fatalf("not an integer = %v", body)
+			}
+
+			data := expectStatus(t, "within the limit", e.do("POST", "/api/v1/management/storage", upload(5<<20), "x-api-key", key), 200)["data"].(map[string]any)
+			if method == config.UploadMethodPost {
+				if _, ok := data["uploadMethod"]; ok || len(data) != 3 {
+					t.Fatalf("a POST-mode answer = %v", data)
+				}
+				return
+			}
+			fields := data["presignedFields"].(map[string]any)
+			if data["uploadMethod"] != "put" || !strings.HasPrefix(data["uploadUrl"].(string), "http://localhost:9000/forma-uploads/"+fields["key"].(string)+"?") || !strings.Contains(data["uploadUrl"].(string), "X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost") {
+				t.Fatalf("a PUT answer = %v", data)
+			}
+			if h, _ := data["uploadHeaders"].(map[string]any); len(h) != 1 || h["Content-Type"] != "image/png" {
+				t.Fatalf("uploadHeaders = %v", data["uploadHeaders"])
+			}
+			noSize := map[string]any{"workspaceId": s.bound["<id:workspace>"], "fileName": "logo.png", "fileType": "image/png"}
+			data = expectStatus(t, "without a size", e.do("POST", "/api/v1/management/storage", noSize, "x-api-key", key), 200)["data"].(map[string]any)
+			if _, ok := data["uploadMethod"]; ok || len(data) != 3 {
+				t.Fatalf("an answer without a size = %v", data)
+			}
+		})
+	}
+}
+
 // Without x-api-key, GET /api/v1/management/me is the signed-in user, unwrapped; Authorization is never read there.
 // With GATEWAY_RATE_LIMITING=1 forma2 left an API key's requests on the routes its gateway policy covers to the gateway, so a spent api:v1 window does not refuse them here. The webhook collection is outside the policy's /api/v1/webhooks/ prefix and is still charged. The gateway counts a key only by its x-api-key header, so one sent as a Bearer token is charged here too.
 func TestV1GatewayRateLimiting(t *testing.T) {

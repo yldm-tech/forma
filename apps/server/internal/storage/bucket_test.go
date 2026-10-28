@@ -273,6 +273,124 @@ func TestPresignedFieldsJSON(t *testing.T) {
 	}
 }
 
+// putUpload sends the request a browser sends for a presigned PUT: the signed headers, with contentType in place of the signed type when it is not empty, and the file as the whole body, whose length Go sets as Content-Length as a browser does.
+func putUpload(t *testing.T, put *PresignedPut, contentType string, body []byte) (int, string) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPut, put.URL, bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for k, v := range put.Headers {
+		req.Header.Set(k, v)
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	out, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, string(out)
+}
+
+func TestSignPutStoresExactlyTheSignedFile(t *testing.T) {
+	t.Parallel()
+	b, s3 := newBucket(t)
+	const key = "ws/private/surveys/s1/elements/e1/report--fid--1.pdf"
+	before := time.Now().UTC()
+
+	put, err := b.SignPut(t.Context(), "report--fid--1.pdf", "application/pdf", "ws/private/surveys/s1/elements/e1", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := url.Parse(put.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The object itself, path-style, on the configured endpoint.
+	if got, want := u.Scheme+"://"+u.Host+u.Path, s3.EndpointURL.String()+"/"+s3.BucketName+"/"+key; got != want {
+		t.Fatalf("URL %s, want %s", got, want)
+	}
+	q := u.Query()
+	// Two minutes, as the POST policy, with the type and the length signed beside the host.
+	if q.Get("X-Amz-Expires") != "120" || q.Get("X-Amz-SignedHeaders") != "content-length;content-type;host" || q.Get("X-Amz-Algorithm") != "AWS4-HMAC-SHA256" {
+		t.Fatalf("signed query %v", q)
+	}
+	if signedAt, err := time.Parse("20060102T150405Z", q.Get("X-Amz-Date")); err != nil || signedAt.Before(before.Truncate(time.Second)) || signedAt.After(time.Now().UTC()) {
+		t.Fatalf("X-Amz-Date %q (%v) is not the signing time", q.Get("X-Amz-Date"), err)
+	}
+	// No ACL or any other grant rides along: the object is private like every other.
+	for name := range q {
+		if strings.Contains(strings.ToLower(name), "acl") || strings.HasPrefix(strings.ToLower(name), "x-amz-grant") {
+			t.Fatalf("signed query grants access: %v", q)
+		}
+	}
+	// The client sets the type itself; a browser sets Content-Length from the body and may not set it.
+	if len(put.Headers) != 1 || put.Headers["Content-Type"] != "application/pdf" {
+		t.Fatalf("headers %v, want only the Content-Type", put.Headers)
+	}
+
+	for _, refused := range []struct {
+		name, contentType string
+		body              []byte
+	}{
+		{"a larger body than signed", "", []byte("12345678901")},
+		{"a smaller body than signed", "", []byte("1234")},
+		{"another content type", "text/html", []byte("12345")},
+	} {
+		if status, body := putUpload(t, put, refused.contentType, refused.body); status != http.StatusForbidden {
+			t.Errorf("%s answered %d %s, want 403", refused.name, status, body)
+		}
+	}
+	if exists(t, s3, key) {
+		t.Fatal("a refused upload was stored")
+	}
+	if status, body := putUpload(t, put, "", []byte("12345")); status != http.StatusOK {
+		t.Fatalf("upload answered %d %s, want 200", status, body)
+	}
+	obj, err := b.Open(t.Context(), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = obj.Body.Close() }()
+	content, _ := io.ReadAll(obj.Body)
+	if string(content) != "12345" || obj.ContentType != "application/pdf" || obj.ContentLength != 5 {
+		t.Fatalf("stored %q as %s (%d bytes)", content, obj.ContentType, obj.ContentLength)
+	}
+	// Nothing reads the bucket without a signature: files are served through /storage.
+	resp, err := http.Get(s3.EndpointURL.String() + "/" + s3.BucketName + "/" + key) //nolint:gosec,noctx // the test server's own URL
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("an unsigned GET of the uploaded file answered %d, want 403", resp.StatusCode)
+	}
+}
+
+func TestSignPutEmptyFile(t *testing.T) {
+	t.Parallel()
+	b, s3 := newBucket(t)
+	put, err := b.SignPut(t.Context(), "empty--fid--1.txt", "text/plain", "ws/private", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status, body := putUpload(t, put, "", []byte("x")); status != http.StatusForbidden {
+		t.Fatalf("a byte against an empty file answered %d %s, want 403", status, body)
+	}
+	if status, body := putUpload(t, put, "", nil); status != http.StatusOK {
+		t.Fatalf("empty upload answered %d %s", status, body)
+	}
+	if !exists(t, s3, "ws/private/empty--fid--1.txt") {
+		t.Fatal("the empty file was not stored")
+	}
+	if _, err := b.SignPut(t.Context(), "a.txt", "text/plain", "ws/private", -1); CodeOf(err) != CodeInvalidInput {
+		t.Fatalf("a negative size: %v, want invalid_input", err)
+	}
+}
+
 func TestSignDownload(t *testing.T) {
 	t.Parallel()
 	b, s3 := newBucket(t)
@@ -387,10 +505,11 @@ func TestUnconfiguredBucket(t *testing.T) {
 	}
 	ctx := t.Context()
 	_, signErr := b.SignUpload(ctx, "a.png", "image/png", "ws/public", 1)
+	_, putErr := b.SignPut(ctx, "a.png", "image/png", "ws/public", 1)
 	_, downloadErr := b.SignDownload(ctx, "k")
 	_, openErr := b.Open(ctx, "k")
 	for name, err := range map[string]error{
-		"SignUpload": signErr, "SignDownload": downloadErr, "Open": openErr,
+		"SignUpload": signErr, "SignPut": putErr, "SignDownload": downloadErr, "Open": openErr,
 		"Delete": b.Delete(ctx, "k"), "DeleteByPrefix": b.DeleteByPrefix(ctx, "ws/"),
 	} {
 		if CodeOf(err) != CodeS3Client {
@@ -422,5 +541,8 @@ func TestUnreachableStoreIsUnknown(t *testing.T) {
 	// Signing needs no request when the region is known, so an upload can be signed while the store is down, as with the AWS SDK.
 	if _, err := b.SignUpload(ctx(), "a.png", "image/png", "ws/public", 1); err != nil {
 		t.Errorf("SignUpload = %v", err)
+	}
+	if _, err := b.SignPut(ctx(), "a.png", "image/png", "ws/public", 1); err != nil {
+		t.Errorf("SignPut = %v", err)
 	}
 }

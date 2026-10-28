@@ -12,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // The contract test replays the exchanges in testdata/contract (see its README) in an order their scenarios need, against the data seedRecording creates, and requires the same status, the listed headers and a body equal to the expected one with its placeholders matched by kind. An id or contact token placeholder binds to the first value it meets and must name the same value wherever it appears again.
@@ -63,11 +65,15 @@ var replayOrder = []string{
 	"v2-responses-create-single-use-missing-url", "v2-responses-create-single-use-mismatched-id",
 	"v1-storage-upload-init", "v2-storage-upload-init", "v1-storage-extension-not-allowed", "v1-storage-invalid-file-name",
 	"v1-storage-malformed-json", "v1-storage-missing-fields", "v1-storage-no-file-upload-element", "v1-storage-unknown-survey",
+	"v1-storage-upload-init-file-size", "v1-storage-file-too-large", "v1-storage-invalid-file-size",
 	// After the storage:upload window has taken five requests.
 	"v1-storage-rate-limited",
 	// After the api:client window has taken a hundred.
 	"v1-environment-rate-limited", "v1-responses-rate-limited", "v2-displays-rate-limited", "v2-responses-rate-limited",
 }
+
+// putReplayOrder are the storage cases of a store configured with STORAGE_UPLOAD_METHOD=put, replayed against a server of their own (TestContractExchangesPutUploads) on the same scenario.
+var putReplayOrder = []string{"v1-storage-upload-init-put", "v2-storage-upload-init-put", "v1-storage-upload-put-without-file-size"}
 
 // singleUseID is the canonical single-use id of the contract's single-use link.
 const singleUseID = "clsingleuseaaaaaaaaaaaaa1"
@@ -362,7 +368,7 @@ func TestContractExchanges(t *testing.T) {
 			all = append(all, name)
 		}
 	}
-	ordered := slices.Clone(replayOrder)
+	ordered := slices.Concat(replayOrder, putReplayOrder)
 	slices.Sort(ordered)
 	slices.Sort(all)
 	if !slices.Equal(ordered, all) {
@@ -393,6 +399,21 @@ func TestContractExchanges(t *testing.T) {
 		default:
 			e.clock.nextWindow()
 		}
+		res := r.send(e, f)
+		t.Run(name, func(t *testing.T) {
+			sub := &replay{t: t, bound: r.bound}
+			sub.check(f, res)
+		})
+	}
+}
+
+// The client API of a store configured with STORAGE_UPLOAD_METHOD=put answers its storage cases as they are written down.
+func TestContractExchangesPutUploads(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) { c.S3.UploadMethod = config.UploadMethodPut })
+	r := &replay{t: t, bound: e.seedRecording(t)}
+	for _, name := range putReplayOrder {
+		e.clock.nextWindow()
+		f := loadRecorded(t, name)
 		res := r.send(e, f)
 		t.Run(name, func(t *testing.T) {
 			sub := &replay{t: t, bound: r.bound}

@@ -8,6 +8,8 @@ Each `<case>.json` file is one HTTP exchange of the management APIs (`/api/v1/ma
 
 The rate-limited cases fill the key's counter for the current window in Valkey (`fb:rate_limit:api:v1:<apiKeyId>:<windowStart>` = 100) and then send one request; `v1-storage-rate-limited` does the same with `storage:upload` at 5.
 
+The cases in `putReplayOrder` (`v1-storage-upload-put`) are replayed by `TestContractExchangesPutUploads` against a second server on the same scenario whose store is configured with `STORAGE_UPLOAD_METHOD=put`; every other case runs against the default, `post`.
+
 ## API keys
 
 Requests carry the key as `x-api-key` unless the case says `bearer` (then `Authorization: Bearer <key>`). Every key belongs to the one organization; `workspace` is `My workspace`, `workspace2` is `Other workspace`.
@@ -40,7 +42,7 @@ The same as the client API exchanges:
 - `request.headers` holds `origin`, `content-type`, `accept`, `x-api-key`, `authorization`, `mcp-protocol-version` and the `access-control-request-*` preflight headers. `request.body` is the JSON sent, or a string when the case sends a body that is not JSON. `request.query` values are strings as sent.
 - `response.headers` lists the headers checked: `content-type`, `cache-control`, `vary`, `content-security-policy`, `x-frame-options`, `allow`, `www-authenticate`, `retry-after`, `location`, `mcp-session-id` and every `access-control-*` header. `Access-Control-Allow-Origin`, `X-Frame-Options`, `Allow` and `Cache-Control` must also be absent where a case does not list them. The global headers every response carries (`X-Content-Type-Options`, `Strict-Transport-Security`, `Referrer-Policy`, `Permissions-Policy`) are not listed per case.
 - `response.bodyFormat`: `json` (the parsed body) or `empty` (no body).
-- `notes` appears only where it adds something: `decodedPolicy` on the storage upload cases (the base64 `Policy` decoded and normalised), and `contactLinkToken` on the contact-link cases (the JWT header, the claim names and the lifetime, which the replay checks on every token in the answer).
+- `notes` appears only where it adds something: `decodedPolicy` on the storage upload cases (the base64 `Policy` decoded and normalised) and `signedHeaders` where they add a presigned PUT (the headers `uploadUrl` is signed with and their values), and `contactLinkToken` on the contact-link cases (the JWT header, the claim names and the lifetime, which the replay checks on every token in the answer).
 
 ## Placeholders
 
@@ -67,7 +69,7 @@ Values that differ on every run are placeholders that keep the surrounding text.
 | `<timestamp>` | An ISO 8601 UTC timestamp the server generates (`createdAt`, `updatedAt`, `expiresAt`, the policy `expiration`). Timestamps a request sends (`createdAt` overrides, date filters) are literal. |
 | `<uuid>` | A random UUID (the `--fid--` suffix of an uploaded file name). |
 | `<webapp-url>` | `WEBAPP_URL` (and `PUBLIC_URL`). |
-| `<s3-endpoint>`, `<s3:policy>`, `<s3:signature>`, `<s3:amz-date>`, `<yyyymmdd>` | The presigned POST values, exactly as in the client API exchanges. |
+| `<s3-endpoint>`, `<s3:policy>`, `<s3:signature>`, `<s3:amz-date>`, `<yyyymmdd>` | The presigned POST and PUT values, exactly as in the client API exchanges. |
 | `<sealed-single-use-id>` | An encrypted single-use id: base64url of the id sealed under `ENCRYPTION_KEY`, bound to its survey. |
 | `<single-use-id>`, `<single-use-signature>` | An unencrypted single-use link: `suId` is a fresh cuid2 and `suToken` the hex HMAC-SHA256 of `forma.single-use.v1:<surveyId>:<suId>` keyed with `ENCRYPTION_KEY`. |
 | `<contact-link-token>` | The JWT of a personal survey link (`/c/<token>`); its shape is in `notes.contactLinkToken`. |
@@ -97,6 +99,7 @@ Inputs and outputs:
 - `POST /api/v2/management/contacts` rejects attribute keys that do not exist (400, the issue text ends in `. `). A bulk contact upload answers 200 `Contacts bulk upload successful`, creating the attribute keys it names.
 - A duplicate team name is 409, and deleting a workspace team that does not exist is 404.
 - The webhook signing secret appears only in the create response. Webhook URLs that resolve to private addresses are refused with 400. Every webhook source, `activepieces` included, is accepted.
+- `POST /api/v1/management/storage` takes an optional `fileSize` (bytes, `z.number().int().nonnegative()`), added for presigned PUT uploads (stores without POST uploads, such as Cloudflare R2). Over the 5 MB limit of a public file it answers 400 `File size exceeds the upload limit` with `fileSize` and `maxFileSize` in the details, before anything is signed (`v1-storage-file-too-large`). With `STORAGE_UPLOAD_METHOD=put` and a size, the answer keeps the presigned POST and adds `uploadMethod: "put"`, `uploadUrl` (a presigned PUT of the same key, valid for two minutes, with `content-length;content-type;host` signed, so the body must be exactly `fileSize` bytes of that type) and `uploadHeaders` (the headers to send besides `Content-Length`) (`v1-storage-upload-put`). Without a size, as callers from before it send, the answer is the POST alone in either mode.
 - `POST /api/v1/management/surveys` with `recaptcha.enabled` answers 403 when no reCAPTCHA keys are configured. No OpenAPI document is served at `/api/v2/openapi.json`; an unknown `/api` path answers the JSON 404.
 - Rate limits are fixed 60-second windows aligned to the epoch, counted per API key: `api:v1` and `api:v2` 100 each, and `storage:upload` 5 for the management storage route, which counts instead of `api:v1`.
 - CORS headers (`Access-Control-Allow-Origin: *` with the method and header lists) are per response, not per route: v2 sends them on 200 only (not on 201, 207 or errors); v1 sends them where the handler passes the CORS flag, which is the response create success and a scattering of 400/404 validation errors (every case shows which). A preflight (`OPTIONS`) answers 204 with `Allow: GET, HEAD, OPTIONS, POST` and no CORS headers.

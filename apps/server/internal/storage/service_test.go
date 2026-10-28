@@ -1,14 +1,19 @@
 package storage
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
+	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
+	"github.com/yldm-tech/forma/apps/server/internal/storage/s3test"
 )
 
 var fixedID = uuid.MustParse("6f1a3c1e-8a63-4b8e-9a35-5d3c1d1f2a10")
@@ -41,7 +46,7 @@ func TestServiceSignUpload(t *testing.T) {
 		{"encoded in the URL only", "invoice 100%.pdf", AccessPrivate, nil, "ws-123/private/invoice 100%--fid--" + fixedID.String() + ".pdf", "/storage/ws-123/private/invoice%20100%25--fid--" + fixedID.String() + ".pdf"},
 	}
 	for _, tc := range cases {
-		up, err := s.SignUpload(ctx, tc.fileName, "ws-123", tc.access, 10<<20, tc.segments...)
+		up, err := s.SignUpload(ctx, tc.fileName, "ws-123", tc.access, 10<<20, nil, tc.segments...)
 		if err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
@@ -60,14 +65,136 @@ func TestServiceSignUpload(t *testing.T) {
 	}
 
 	for _, segment := range []string{"", ".", "..", "bad segment", "bad/segment", `bad\segment`, "bad?segment", "bad#segment"} {
-		if _, err := s.SignUpload(ctx, "test-doc.pdf", "ws-123", AccessPrivate, 10<<20, "surveys", segment); CodeOf(err) != CodeInvalidInput {
+		if _, err := s.SignUpload(ctx, "test-doc.pdf", "ws-123", AccessPrivate, 10<<20, nil, "surveys", segment); CodeOf(err) != CodeInvalidInput {
 			t.Errorf("segment %q: %v, want invalid_input", segment, err)
 		}
 	}
 	for _, name := range []string{"", "----.png", "#?*.png", "   ", "no-extension", "page.html", "trailing-dot."} {
-		if _, err := s.SignUpload(ctx, name, "ws-123", AccessPublic, PublicUploadMaxSize); CodeOf(err) != CodeInvalidInput {
+		if _, err := s.SignUpload(ctx, name, "ws-123", AccessPublic, PublicUploadMaxSize, nil); CodeOf(err) != CodeInvalidInput {
 			t.Errorf("name %q: %v, want invalid_input", name, err)
 		}
+	}
+}
+
+// A declared size over the limit is refused before anything is signed; within it, a POST-mode store answers exactly what it answered before sizes were declared.
+func TestServiceSignUploadFileSize(t *testing.T) {
+	t.Parallel()
+	s, _ := newService(t)
+	ctx := t.Context()
+	size := func(n int64) *int64 { return &n }
+
+	if _, err := s.SignUpload(ctx, "big.pdf", "ws-123", AccessPrivate, 10, size(11), "surveys", "s1"); CodeOf(err) != CodeFileTooLarge {
+		t.Fatalf("11 bytes against 10: %v, want file_too_large", err)
+	}
+	if _, err := s.SignUpload(ctx, "big.pdf", "ws-123", AccessPrivate, 10, size(-1)); CodeOf(err) != CodeInvalidInput {
+		t.Fatalf("a negative size: %v, want invalid_input", err)
+	}
+	// A bad name is still the first failure.
+	if _, err := s.SignUpload(ctx, "page.html", "ws-123", AccessPublic, 10, size(11)); CodeOf(err) != CodeInvalidInput {
+		t.Fatalf("a bad name with a large size: %v, want invalid_input", err)
+	}
+	for _, n := range []*int64{nil, size(0), size(10)} {
+		up, err := s.SignUpload(ctx, "ok.pdf", "ws-123", AccessPrivate, 10, n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, err := json.Marshal(up)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := answerKeys(t, raw); !slices.Equal(got, []string{"signedUrl", "presignedFields", "fileUrl"}) {
+			t.Fatalf("a POST-mode answer has the keys %v", got)
+		}
+	}
+}
+
+// answerKeys are the keys of a JSON object in their order, whatever their values hold.
+func answerKeys(t *testing.T, raw []byte) []string {
+	t.Helper()
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	if _, err := dec.Token(); err != nil {
+		t.Fatal(err)
+	}
+	var keys []string
+	for dec.More() {
+		k, err := dec.Token()
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys = append(keys, k.(string))
+		var skip json.RawMessage
+		if err := dec.Decode(&skip); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return keys
+}
+
+// newPutService is newService on a store configured with STORAGE_UPLOAD_METHOD=put.
+func newPutService(t *testing.T) (*Service, config.S3Config) {
+	t.Helper()
+	s3 := s3test.Config(t)
+	s3.UploadMethod = config.UploadMethodPut
+	b, err := NewBucket(config.Config{S3: s3}, discardLog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := NewService(b)
+	s.newID = func() uuid.UUID { return fixedID }
+	return s, s3
+}
+
+// With STORAGE_UPLOAD_METHOD=put an upload whose size is declared is also signed as a presigned PUT of that size, for the same key and type as the POST; the POST fields stay, so a client that predates the PUT keeps working on a store that takes POST. Without a size only the POST is signed.
+func TestServiceSignUploadPut(t *testing.T) {
+	t.Parallel()
+	s, s3 := newPutService(t)
+	ctx := t.Context()
+	size := int64(len("%PDF-1.7"))
+
+	up, err := s.SignUpload(ctx, "report.pdf", "ws-123", AccessPrivate, 10<<20, &size, "surveys", "s1", "elements", "e1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := "ws-123/private/surveys/s1/elements/e1/report--fid--" + fixedID.String() + ".pdf"
+	if up.UploadMethod != "put" || up.UploadHeaders["Content-Type"] != "application/pdf" || len(up.UploadHeaders) != 1 {
+		t.Fatalf("upload %+v, want a PUT with the extension's type", up)
+	}
+	if !strings.HasPrefix(up.UploadURL, s3.EndpointURL.String()+"/"+s3.BucketName+"/"+key+"?") {
+		t.Fatalf("uploadUrl %s is not the object's", up.UploadURL)
+	}
+	if fieldValue(up.PresignedFields, "key") != key || up.SignedURL == "" || up.FileURL != "/storage/ws-123/private/surveys/s1/elements/e1/report--fid--"+fixedID.String()+".pdf" {
+		t.Fatalf("POST fields %+v, want them beside the PUT", up)
+	}
+	raw, err := json.Marshal(up)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := answerKeys(t, raw); !slices.Equal(got, []string{"signedUrl", "presignedFields", "fileUrl", "uploadMethod", "uploadUrl", "uploadHeaders"}) {
+		t.Fatalf("a PUT answer has the keys %v", got)
+	}
+
+	// The PUT stores the file where the URL the answer gave reads it back.
+	status, body := putUpload(t, &PresignedPut{URL: up.UploadURL, Headers: up.UploadHeaders}, "", []byte("%PDF-1.7"))
+	if status != http.StatusOK {
+		t.Fatalf("PUT answered %d %s", status, body)
+	}
+	if got := reader(t)(s.Open(ctx, routeFileName(t, up.FileURL, "/storage/ws-123/private/"), "ws-123", "ws-123", AccessPrivate)); got != "%PDF-1.7" {
+		t.Fatalf("opened %q", got)
+	}
+
+	// The limit is checked before signing in this mode too.
+	over := int64(10<<20 + 1)
+	if _, err := s.SignUpload(ctx, "report.pdf", "ws-123", AccessPrivate, 10<<20, &over); CodeOf(err) != CodeFileTooLarge {
+		t.Fatalf("over the limit: %v, want file_too_large", err)
+	}
+
+	// A client that sends no size gets the POST alone.
+	up, err = s.SignUpload(ctx, "report.pdf", "ws-123", AccessPrivate, 10<<20, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if up.UploadMethod != "" || up.UploadURL != "" || up.UploadHeaders != nil || len(up.PresignedFields) == 0 {
+		t.Fatalf("upload without a size %+v, want the POST alone", up)
 	}
 }
 
@@ -77,7 +204,7 @@ func TestServiceSignUploadUnconfigured(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := NewService(b)
-	if _, err := s.SignUpload(t.Context(), "a.png", "ws", AccessPublic, PublicUploadMaxSize); CodeOf(err) != CodeS3Client {
+	if _, err := s.SignUpload(t.Context(), "a.png", "ws", AccessPublic, PublicUploadMaxSize, nil); CodeOf(err) != CodeS3Client {
 		t.Fatalf("SignUpload = %v, want s3_client_error", err)
 	}
 	// Nothing can be stored without a bucket, so there is nothing to clean up.
@@ -120,7 +247,7 @@ func TestServiceOpen(t *testing.T) {
 	read := reader(t)
 
 	// An upload's URL leads back to the key it was stored under, a literal % included.
-	up, err := s.SignUpload(ctx, "invoice 100%.pdf", "ws-123", AccessPrivate, 10<<20)
+	up, err := s.SignUpload(ctx, "invoice 100%.pdf", "ws-123", AccessPrivate, 10<<20, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

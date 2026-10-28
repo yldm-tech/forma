@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // AccessType is who may read a stored file: anyone (public), or whoever may read its workspace (private).
@@ -33,17 +35,22 @@ func NewService(bucket *Bucket) *Service {
 // Configured is forma2's IS_STORAGE_CONFIGURED.
 func (s *Service) Configured() bool { return s.bucket.Configured() }
 
-// Upload is a signed upload: the client POSTs PresignedFields and the file to SignedURL, then keeps FileURL, the relative URL the file is served at.
+// Upload is a signed upload: the client POSTs PresignedFields and the file to SignedURL, then keeps FileURL, the relative URL the file is served at. When UploadMethod is "put" the client PUTs the file to UploadURL with UploadHeaders instead; the three are left out otherwise, so an answer without them is a POST upload, as every answer before them was.
 type Upload struct {
-	SignedURL       string          `json:"signedUrl"`
-	PresignedFields PresignedFields `json:"presignedFields"`
-	FileURL         string          `json:"fileUrl"`
+	SignedURL       string            `json:"signedUrl"`
+	PresignedFields PresignedFields   `json:"presignedFields"`
+	FileURL         string            `json:"fileUrl"`
+	UploadMethod    string            `json:"uploadMethod,omitempty"`
+	UploadURL       string            `json:"uploadUrl,omitempty"`
+	UploadHeaders   map[string]string `json:"uploadHeaders,omitempty"`
 }
 
 // SignUpload is forma2's getSignedUrlForUpload. The file name is sanitized and made unique with a --fid--<uuid> suffix before its extension; segments are the directories between the access type and the file (a respondent's upload goes under surveys/<survey id>/elements/<element id>). A name with nothing left after sanitizing, without an allowed extension, or a segment that is not letters, digits, hyphens and underscores, is invalid_input.
 //
+// fileSize is the size the client says the file has, nil when it did not say. A size over maxSize (when maxSize is not zero) is file_too_large, before anything is signed. With STORAGE_UPLOAD_METHOD=put and a size, the upload is also signed as a presigned PUT of exactly that size and the answer tells the client to use it; without a size only the POST is signed, which a client that predates fileSize knows.
+//
 // The file is stored with its extension's own content type, never the type the caller sent: forma2 signed the caller's string, so a respondent could store "text/plain;,text/html" on a .txt file, which passes the type check (it reads only what comes before the first semicolon) while browsers, which take the last type of a comma-separated list, render it as HTML on the admin app's origin.
-func (s *Service) SignUpload(ctx context.Context, fileName, workspaceID string, access AccessType, maxSize int64, segments ...string) (*Upload, error) {
+func (s *Service) SignUpload(ctx context.Context, fileName, workspaceID string, access AccessType, maxSize int64, fileSize *int64, segments ...string) (*Upload, error) {
 	safeName := SanitizeFileName(fileName)
 	contentType, ok := mimeTypes[Extension(safeName)]
 	if safeName == "" || !ok {
@@ -52,6 +59,14 @@ func (s *Service) SignUpload(ctx context.Context, fileName, workspaceID string, 
 	for _, segment := range segments {
 		if !safePathSegment.MatchString(segment) {
 			return nil, fail(CodeInvalidInput)
+		}
+	}
+	if fileSize != nil {
+		if *fileSize < 0 {
+			return nil, fail(CodeInvalidInput)
+		}
+		if maxSize != 0 && *fileSize > maxSize {
+			return nil, fail(CodeFileTooLarge)
 		}
 	}
 	base, extension := "", safeName
@@ -70,11 +85,19 @@ func (s *Service) SignUpload(ctx context.Context, fileName, workspaceID string, 
 		urlPath = append(urlPath, encodeURIComponent(segment))
 	}
 	urlPath = append(urlPath, encodeURIComponent(storedName))
-	return &Upload{
+	upload := &Upload{
 		SignedURL:       post.URL,
 		PresignedFields: post.Fields,
 		FileURL:         "/storage/" + workspaceID + "/" + string(access) + "/" + strings.Join(urlPath, "/"),
-	}, nil
+	}
+	if fileSize != nil && s.bucket.PutUploads() {
+		put, err := s.bucket.SignPut(ctx, storedName, contentType, filePath, *fileSize)
+		if err != nil {
+			return nil, err
+		}
+		upload.UploadMethod, upload.UploadURL, upload.UploadHeaders = config.UploadMethodPut, put.URL, put.Headers
+	}
+	return upload, nil
 }
 
 // Open is forma2's getFileStreamForDownload: the file at fileName (the path after the access type, decoded once, as the route received it) under workspaceID, else, when it is not there, under rawID, the id the URL carried. A path with a . or .. segment is invalid_input, so a caller authorized for one workspace's prefix can never name another's object.

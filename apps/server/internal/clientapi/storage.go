@@ -1,6 +1,7 @@
 package clientapi
 
 import (
+	"math"
 	"net/http"
 	"regexp"
 	"slices"
@@ -25,7 +26,7 @@ var allowedExtensionsMessage = func() string {
 	return "Invalid option: expected one of " + strings.Join(quoted, "|")
 }()
 
-// storageUpload is forma2's client storage route: a presigned upload of a respondent's file to a file upload element of one of the workspace's surveys, stored privately under surveys/{survey}/elements/{element}. Besides the per-address storage:upload limit, a workspace takes at most storage:upload:workspace uploads a minute.
+// storageUpload is forma2's client storage route: a presigned upload of a respondent's file to a file upload element of one of the workspace's surveys, stored privately under surveys/{survey}/elements/{element}. Besides the per-address storage:upload limit, a workspace takes at most storage:upload:workspace uploads a minute. An optional fileSize (bytes) over the element's limit is refused with 400, and with STORAGE_UPLOAD_METHOD=put it adds a presigned PUT of that size to the answer (storage.Service.SignUpload).
 func (h *Handler) storageUpload(c *gin.Context) {
 	ctx := c.Request.Context()
 	ws, ok := h.workspace(c, c.Param("workspaceId"), msgUnexpected)
@@ -65,6 +66,7 @@ func (h *Handler) storageUpload(c *gin.Context) {
 			allowed = append(allowed, s)
 		}
 	}
+	fileSize := is.fileSize(in.get("fileSize"))
 	surveyID, _ := is.id("surveyId", in.get("surveyId"), required)
 	elementID, hasElement := is.str("elementId", in.get("elementId"), required)
 	elementID = jsTrim(elementID)
@@ -128,12 +130,42 @@ func (h *Handler) storageUpload(c *gin.Context) {
 		return
 	}
 
-	upload, err := h.files.SignUpload(ctx, fileName, ws.ID.String(), storage.AccessPrivate, storage.RespondentUploadMaxSize(element.MaxSizeInMB), "surveys", sv.ID.String(), "elements", elementID)
+	maxSize := storage.RespondentUploadMaxSize(element.MaxSizeInMB)
+	upload, err := h.files.SignUpload(ctx, fileName, ws.ID.String(), storage.AccessPrivate, maxSize, fileSize, "surveys", sv.ID.String(), "elements", elementID)
+	if storage.CodeOf(err) == storage.CodeFileTooLarge {
+		writeError(c, badRequest(fileTooLargeMessage, fields{{"fileSize", *fileSize}, {"maxFileSize", maxSize}}))
+		return
+	}
 	if err != nil {
 		h.storageError(c, err, fileName)
 		return
 	}
 	writeData(c, upload, noStore)
+}
+
+// fileTooLargeMessage answers an upload whose fileSize is over the element's limit; its details carry fileSize and maxFileSize, in bytes, which the survey runtime reads to tell the respondent the file is too large.
+const fileTooLargeMessage = "File size exceeds the upload limit"
+
+// maxSafeInteger is JavaScript's Number.MAX_SAFE_INTEGER, the largest size z.number().int() accepts.
+const maxSafeInteger = 1<<53 - 1
+
+// fileSize reads the optional fileSize of an upload request, z.number().int().nonnegative(): the size in bytes the client will upload, which a presigned PUT is signed for. Clients from before it send none.
+func (is *issues) fileSize(v any) *int64 {
+	f := is.number("fileSize", v, optional)
+	switch {
+	case f == nil:
+		return nil
+	case *f != math.Trunc(*f):
+		is.add("fileSize", "Invalid input: expected int, received number")
+	case *f < 0:
+		is.add("fileSize", "Too small: expected number to be >=0")
+	case *f > maxSafeInteger:
+		is.add("fileSize", "Too big: expected int to be <=9007199254740991")
+	default:
+		size := int64(*f)
+		return &size
+	}
+	return nil
 }
 
 // storageError is forma2's getErrorResponseFromStorageError: invalid input 400 naming the file, a storage configuration error 500 with the code the survey runtime reads to say uploads are unavailable, anything else 500.
