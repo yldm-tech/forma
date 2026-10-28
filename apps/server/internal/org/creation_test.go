@@ -2,6 +2,7 @@ package org
 
 import (
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -108,5 +109,63 @@ func TestOrganizationCreationWhereSignupIsOpen(t *testing.T) {
 				e.organization(u, "Mine")
 			}
 		})
+	}
+}
+
+// An invite-only instance with no organization lets whoever signs in create the first, as sign-up does for its first user: on an SSO-only instance without a default organization nothing else would ever create one. Once it exists the rule is back: a second user without an organization is refused.
+func TestOrganizationCreationBootstrapsAnInviteOnlyInstance(t *testing.T) {
+	e := newEnv(t, inviteOnly)
+	first, second := e.user(), e.user()
+	if !e.creationAllowed(first) {
+		t.Fatal("the first user of an instance without organizations is not offered to create one")
+	}
+	created := e.organization(first, "Acme")
+	if e.count(`SELECT count(*) FROM memberships WHERE organization_id = ? AND user_id = ? AND role = 'owner' AND accepted`, created.ID, first) != 1 {
+		t.Fatal("the first user did not become the organization's owner")
+	}
+	if e.creationAllowed(second) {
+		t.Fatal("a second user without an organization is offered to create one")
+	}
+	e.fails(e.do(second, http.MethodPost, "/api/app/organizations", map[string]string{"name": "Mine"}), http.StatusForbidden, CodeOrganizationCreationRestricted, "")
+	if !e.creationAllowed(first) {
+		t.Fatal("the first organization's owner is not offered to create another")
+	}
+}
+
+// Users racing for an invite-only instance's first organization are serialized: exactly one of them gets it.
+func TestOrganizationCreationBootstrapRace(t *testing.T) {
+	e := newEnv(t, inviteOnly)
+	const racers = 6
+	users := make([]uuid.UUID, racers)
+	for i := range users {
+		users[i] = e.user()
+	}
+	e.authz.Deliver(t)
+	codes := make(chan int, racers)
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for _, u := range users {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			codes <- e.doUndelivered(u, http.MethodPost, "/api/app/organizations", map[string]string{"name": "First"}).Code
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(codes)
+	created := 0
+	for code := range codes {
+		switch code {
+		case http.StatusCreated:
+			created++
+		case http.StatusForbidden:
+		default:
+			t.Errorf("unexpected status %d", code)
+		}
+	}
+	if n := e.count(`SELECT count(*) FROM organizations`); created != 1 || n != 1 {
+		t.Fatalf("%d creations answered 201 and %d organizations exist, want 1 and 1", created, n)
 	}
 }

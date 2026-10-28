@@ -32,6 +32,7 @@ Everything runs from the repository root. The TypeScript side uses [Vite+](https
 - `make deps-up` / `make deps-down` — start or stop local dependencies (`docker-compose.dev.yml`); `deps-up` also runs `make authz-schema`, which writes `apps/server/authzed/schema.zed` into the local SpiceDB.
 - `forma authz schema check|apply`, `forma authz backfill [--apply] ...`, `forma authz outbox status|drain|replay` — operate the SpiceDB projection (`forma authz help`). Each prints one JSON line; exit 0 clean, 2 drift, 1 failed.
 - `forma user activate|deactivate <email>` — turn an account on or off on the whole instance (`users.is_active`), the operator's switch, which no API writes; an organization suspends and restores its own members instead (`forma user help`).
+- `forma organization create --owner <email> --name <name>` — give a user an organization they own on a self-hosted instance, where the app lets only an organization's owner create another (`forma organization help`).
 - `cp .env.example .env`, `make migrate`, then `make dev-server` — apply the schema (goose, then River's job queue tables) and run the Go server on `:3000`. `make dev-worker` runs `forma worker`, the background job process.
 - `make dev-web` — run the Vite dev server on `:5173`, the app at `http://localhost:5173/app/`; it proxies `/api` and `/health` to the Go server.
 - `make build` — build the SPA (and the SDK bundles it ships), embed it, and compile `bin/forma`.

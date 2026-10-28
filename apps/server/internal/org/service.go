@@ -11,6 +11,7 @@ import (
 	_ "time/tzdata"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/yldm-tech/forma/apps/server/internal/ai"
 	"github.com/yldm-tech/forma/apps/server/internal/authz"
@@ -59,19 +60,19 @@ type Created struct {
 	WorkspaceID uuid.UUID `json:"workspaceId"`
 }
 
-// CodeOrganizationCreationRestricted refuses a new organization to a user who may not create one: on an invite-only instance, someone who owns no organization.
+// CodeOrganizationCreationRestricted refuses a new organization to a user who may not create one: on an invite-only instance that already has an organization, someone who owns none.
 const CodeOrganizationCreationRestricted = "organization_creation_restricted"
 
 func errOrganizationCreationRestricted() error {
 	return &apperr.Error{Status: http.StatusForbidden, Code: CodeOrganizationCreationRestricted, Message: "This instance is invite-only: only the owner of an organization can create another one. Ask an organization owner to invite you."}
 }
 
-// CanCreate reports whether the user may create an organization. Where public sign-up is open (Forma Cloud, end-to-end runs) anyone signed in may, as forma2's always-on multi-organization mode allowed. On an invite-only instance only an accepted owner of an organization that has not suspended them may: everyone else got in through an invite (or single sign-on) and works in the organizations they were let into, so they cannot open a tenant of their own; the operator decides who that is. The instance's first user owns the organization sign-up created for them, so they can create more.
+// CanCreate reports whether the user may create an organization. Where public sign-up is open (Forma Cloud, end-to-end runs) anyone signed in may, as forma2's always-on multi-organization mode allowed. On an invite-only instance only an accepted owner of an organization that has not suspended them may: everyone else got in through an invite (or single sign-on) and works in the organizations they were let into, so they cannot open a tenant of their own; the operator decides who that is, and `forma organization create` gives anyone one. The instance's first user owns the organization sign-up created for them, so they can create more. An instance with no organization at all lets whoever signs in create the first, as sign-up does for its first user: on an SSO-only instance without AUTH_SSO_DEFAULT_ORGANIZATION_ID nothing else would ever create one, and an instance whose organizations were all deleted can start again.
 func (s *Service) CanCreate(ctx context.Context, userID uuid.UUID) (bool, error) {
 	if s.cfg.SignupEnabled() {
 		return true, nil
 	}
-	return s.repo.ownsActiveOrganization(ctx, userID)
+	return s.repo.mayCreateOnInviteOnlyInstance(ctx, userID)
 }
 
 // Create is forma2's createOrganizationAction, the same in the setup flow and the organization switcher: the organization with its default billing, the caller as its accepted owner, the default workspace, and the caller opted out of per-response alerts for it. Who may call it is CanCreate's rule. Unlike forma2, the steps share one transaction, so a failure cannot leave an organization without its owner or workspace.
@@ -89,26 +90,24 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, name string, tim
 }
 
 func (s *Service) create(ctx context.Context, userID uuid.UUID, name string, timeZone *string) (*Created, error) {
-	allowed, err := s.CanCreate(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	if !allowed {
-		return nil, errOrganizationCreationRestricted()
-	}
 	var orgID, workspaceID uuid.UUID
-	err = s.repo.transaction(ctx, func(tx *Repository) error {
+	err := s.repo.transaction(ctx, func(tx *Repository) error {
+		// CanCreate's rule is checked under the creation lock on an invite-only instance, so of two users racing for its first organization only one gets it.
+		if !s.cfg.SignupEnabled() {
+			if err := tx.lockInviteOnlyCreation(ctx); err != nil {
+				return err
+			}
+			allowed, err := tx.mayCreateOnInviteOnlyInstance(ctx, userID)
+			if err != nil {
+				return err
+			}
+			if !allowed {
+				return errOrganizationCreationRestricted()
+			}
+		}
 		var err error
-		if orgID, err = tx.insertOrganization(ctx, name, timeZone, s.cfg.IsFormaCloud); err != nil {
-			return err
-		}
-		if err := tx.insertMembership(ctx, orgID, userID, RoleOwner, true); err != nil {
-			return err
-		}
-		if workspaceID, err = s.workspaces.WithTx(tx.db).Create(ctx, orgID, workspace.NewWorkspace{Name: workspace.DefaultName}); err != nil {
-			return err
-		}
-		return tx.unsubscribeAlerts(ctx, userID, orgID)
+		orgID, workspaceID, err = insertCreated(ctx, tx, s.workspaces, userID, name, timeZone, s.cfg.IsFormaCloud)
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -124,6 +123,38 @@ func (s *Service) create(ctx context.Context, userID uuid.UUID, name string, tim
 	}
 	s.captureCreated(ctx, userID, o, workspaceID)
 	return &Created{Organization: o, WorkspaceID: workspaceID}, nil
+}
+
+// insertCreated writes a new organization inside the caller's transaction: the organization with its default billing, the user as its accepted owner, the default workspace, and the user opted out of per-response alerts for it.
+func insertCreated(ctx context.Context, tx *Repository, workspaces *workspace.Repository, userID uuid.UUID, name string, timeZone *string, isFormaCloud bool) (orgID, workspaceID uuid.UUID, err error) {
+	if orgID, err = tx.insertOrganization(ctx, name, timeZone, isFormaCloud); err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	if err := tx.insertMembership(ctx, orgID, userID, RoleOwner, true); err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	if workspaceID, err = workspaces.WithTx(tx.db).Create(ctx, orgID, workspace.NewWorkspace{Name: workspace.DefaultName}); err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	if err := tx.unsubscribeAlerts(ctx, userID, orgID); err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	return orgID, workspaceID, nil
+}
+
+// CreateForOwner is the instance operator's `forma organization create`: the organization Create writes, owned by the user, on an instance whose rule (CanCreate) leaves that user unable to create one, such as an owner whose last organization was deleted while others remain. It skips CanCreate, the audit log, the Stripe setup and the immediate SpiceDB delivery, so it is for self-hosted instances only; the database triggers queue the new rows' projection for the worker.
+func CreateForOwner(ctx context.Context, db *gorm.DB, log *slog.Logger, ownerID uuid.UUID, name string) (orgID, workspaceID uuid.UUID, err error) {
+	if name, err = checkName(name); err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	repo := NewRepository(db)
+	workspaces := workspace.NewRepository(db, log)
+	err = repo.transaction(ctx, func(tx *Repository) error {
+		var err error
+		orgID, workspaceID, err = insertCreated(ctx, tx, workspaces, ownerID, name, nil, false)
+		return err
+	})
+	return orgID, workspaceID, err
 }
 
 // captureCreated is forma2's product events of a new organization. It is the user's first when they belong to no other, as in forma2's setup flow; the switcher only ever creates further ones.
@@ -385,7 +416,7 @@ func ValidTimeZone(name string) bool {
 	return scheduling.ValidZone(name)
 }
 
-// Delete is forma2's deleteOrganizationAction: owners only (organization.write). There is no "last organization" check; a user left without one is sent to create one by the root page. Everything the organization holds cascades, the SpiceDB cleanup follows from the triggers, and on Forma Cloud its Stripe subscriptions are cancelled.
+// Delete is forma2's deleteOrganizationAction: owners only (organization.write). There is no "last organization" check: a user left without one is sent by the root page to create one where they may, and on an invite-only instance, where an organization's last one going leaves its owner unable to create another while other organizations remain, the operator gives them one with `forma organization create`. Everything the organization holds cascades, the SpiceDB cleanup follows from the triggers, and on Forma Cloud its Stripe subscriptions are cancelled.
 func (s *Service) Delete(ctx context.Context, userID, organizationID uuid.UUID) error {
 	old, err := s.delete(ctx, userID, organizationID)
 	s.record(ctx, audit.ActionDeleted, audit.TargetOrganization, organizationID.String(), organizationID.String(), err, old, nil)
