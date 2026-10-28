@@ -33,6 +33,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   patches = [];
+  canCreateOrganization = true;
 });
 
 const organization: OrganizationDetail = {
@@ -61,6 +62,9 @@ const organization: OrganizationDetail = {
 /** The bodies of the organization updates the page sent. */
 let patches: Partial<OrganizationDetail>[] = [];
 
+/** The server's answer to whether the caller may create an organization. */
+let canCreateOrganization = true;
+
 /** The server behind the page's other cards. */
 const stubServer = () =>
   vi.stubGlobal(
@@ -79,6 +83,7 @@ const stubServer = () =>
         },
         "GET /api/app/auth/me": { id: "u1", name: "Grace" },
         "GET /api/app/auth/options": { smtpConfigured: true },
+        "GET /api/app/organization-creation": { allowed: canCreateOrganization },
       };
       if (key === `PATCH ${API}`) {
         const patch = JSON.parse(init.body as string) as Partial<OrganizationDetail>;
@@ -183,6 +188,27 @@ describe("OrganizationGeneralPage", () => {
     renderPage({ storageConfigured: true, isFormaCloud: false, role: "manager" });
     expect(await screen.findByText("0.2.42")).toBeTruthy();
     expect(screen.queryByText(t("organizations.retention.card_title"))).toBeNull();
+  });
+
+  // On an invite-only instance only the owner of an organization may create another one: the card is shown to whoever the server says may.
+  test("the Create new organization card is shown only to someone who may create one", async () => {
+    renderPage({ storageConfigured: true, isFormaCloud: false, role: "manager" });
+    expect(
+      await screen.findByText(t("workspace.settings.general.create_new_organization_description"))
+    ).toBeTruthy();
+    cleanup();
+    canCreateOrganization = false;
+    renderPage({ storageConfigured: true, isFormaCloud: false, role: "manager" });
+    expect(await screen.findByText("0.2.42")).toBeTruthy();
+    await waitFor(() =>
+      expect(vi.mocked(fetch).mock.calls.some(([path]) => path === "/api/app/organization-creation")).toBe(
+        true
+      )
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(
+      screen.queryByText(t("workspace.settings.general.create_new_organization_description"))
+    ).toBeNull();
   });
 
   test.each(["member", "billing"] as const)(

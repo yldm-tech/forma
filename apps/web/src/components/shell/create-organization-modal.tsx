@@ -13,7 +13,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
 /**
- * forma2's CreateOrganizationModal, opened from the organization switcher and from organization settings. Any signed-in user may create an organization.
+ * forma2's CreateOrganizationModal, opened from the organization switcher, organization settings and the landing page for whoever may create an organization (organizationCreationQuery): anyone where public sign-up is open, only the owner of an organization on an invite-only instance.
  *
  * A submission stays in progress from the click until the browser is on the new organization: after the POST returns, the creator's permissions take a few seconds to arrive (untilAuthorized) and the navigation follows, and a button that came back during that wait could create a second organization, as names are not unique. The ref ignores a second submit in the same tick, before the disabled button has rendered; a dismissal meanwhile is held back, since the navigation would follow anyway, and takes effect if the create fails.
  */

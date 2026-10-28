@@ -22,6 +22,7 @@ import { billingSummaryQuery } from "../../lib/queries/billing";
 import { instanceQuery } from "../../lib/queries/instance";
 import {
   type OrganizationDetail,
+  organizationCreationQuery,
   organizationKeys,
   useDeleteOrganization,
   useUpdateOrganization,
@@ -440,10 +441,12 @@ const DeleteOrganization = ({
   );
 };
 
-/** forma2's CreateOrganizationCard: any signed-in user may create another organization. */
+/** forma2's CreateOrganizationCard, for whoever may create another organization: anyone where public sign-up is open, only the owner of an organization on an invite-only instance. */
 const CreateOrganizationCard = () => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const { data: canCreate } = useQuery(organizationCreationQuery);
+  if (canCreate !== true) return null;
   return (
     <SettingsCard
       width="full"

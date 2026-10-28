@@ -23,12 +23,13 @@ import { PHONE_READY } from "../../../../lib/phone";
 import { guardPageError } from "../../../../lib/route-guards";
 import { meQuery } from "../../../../lib/queries/auth";
 import {
+  organizationCreationQuery,
   organizationNavigationQuery,
   organizationQuery,
   organizationsQuery,
 } from "../../../../lib/queries/organizations";
 
-// forma2's landing page, for a member who can open no workspace in the organization; anyone who can is sent to their first workspace instead. It offers the two ways forward the page names, a workspace when the member may create one and an organization of their own, and opens on a phone, where an invited member often signs in first; there, as everywhere on a phone, no workspace is created, so it offers only the organization.
+// forma2's landing page, for a member who can open no workspace in the organization; anyone who can is sent to their first workspace instead. It offers the ways forward the page names, a workspace when the member may create one and an organization of their own when they may create one (on an invite-only instance only the owner of an organization may, so an invitee is told to ask for access instead), and opens on a phone, where an invited member often signs in first; there, as everywhere on a phone, no workspace is created, so it offers at most the organization.
 export const Route = createFileRoute("/_authenticated/organizations/$organizationId/landing")({
   staticData: PHONE_READY,
   loader: async ({ context: { queryClient }, params, location }) => {
@@ -36,7 +37,10 @@ export const Route = createFileRoute("/_authenticated/organizations/$organizatio
       .fetchQuery(organizationNavigationQuery(params.organizationId))
       .catch(guardPageError);
     if (navigation.path !== location.pathname) throw redirect({ href: navigation.path, replace: true });
-    await queryClient.ensureQueryData(organizationQuery(params.organizationId)).catch(guardPageError);
+    await Promise.all([
+      queryClient.ensureQueryData(organizationQuery(params.organizationId)),
+      queryClient.ensureQueryData(organizationCreationQuery),
+    ]).catch(guardPageError);
     return navigation;
   },
   pendingComponent: RoutePending,
@@ -51,6 +55,7 @@ function Landing() {
   const canCreateWorkspace = navigation.canCreateWorkspace && !isPhone;
   const { data: me } = useSuspenseQuery(meQuery);
   const { data: organization } = useSuspenseQuery(organizationQuery(organizationId));
+  const { data: canCreateOrganization } = useSuspenseQuery(organizationCreationQuery);
   const [createOpen, setCreateOpen] = useState(false);
   const [createOrganizationOpen, setCreateOrganizationOpen] = useState(false);
 
@@ -81,7 +86,9 @@ function Landing() {
               {t("organizations.landing.no_workspaces_warning_title")}
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              {t("organizations.landing.no_workspaces_warning_subtitle")}
+              {canCreateOrganization
+                ? t("organizations.landing.no_workspaces_warning_subtitle")
+                : t("organization_creation.landing_ask_for_access")}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
@@ -91,20 +98,24 @@ function Landing() {
                 {t("common.create_workspace")}
               </Button>
             )}
-            <Button
-              type="button"
-              variant={canCreateWorkspace ? "secondary" : "default"}
-              onClick={() => setCreateOrganizationOpen(true)}>
-              <Building2Icon />
-              {t("workspace.settings.general.create_new_organization")}
-            </Button>
+            {canCreateOrganization && (
+              <Button
+                type="button"
+                variant={canCreateWorkspace ? "secondary" : "default"}
+                onClick={() => setCreateOrganizationOpen(true)}>
+                <Building2Icon />
+                {t("workspace.settings.general.create_new_organization")}
+              </Button>
+            )}
           </div>
         </main>
       </div>
       {canCreateWorkspace && (
         <CreateWorkspaceModal open={createOpen} setOpen={setCreateOpen} organizationId={organization.id} />
       )}
-      <CreateOrganizationModal open={createOrganizationOpen} setOpen={setCreateOrganizationOpen} />
+      {canCreateOrganization && (
+        <CreateOrganizationModal open={createOrganizationOpen} setOpen={setCreateOrganizationOpen} />
+      )}
     </div>
   );
 }

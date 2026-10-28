@@ -8,7 +8,7 @@ import {
   organizationSwitchPath,
   switcherOrganizations,
 } from "../../lib/navigation";
-import { organizationsQuery } from "../../lib/queries/organizations";
+import { organizationCreationQuery, organizationsQuery } from "../../lib/queries/organizations";
 import { BreadcrumbItem } from "../ui/breadcrumb";
 import {
   DropdownMenu,
@@ -21,7 +21,7 @@ import { CreateOrganizationModal } from "./create-organization-modal";
 import { SwitcherDropdownBody } from "./switcher-dropdown-body";
 
 /**
- * forma2's OrganizationBreadcrumb: the current organization, a switcher loaded when it opens with "Create new organization" under the list (any signed-in user may create one, as the workspace switcher offers "Add new workspace"), and a link to its settings.
+ * forma2's OrganizationBreadcrumb: the current organization, a switcher loaded when it opens with "Create new organization" under the list (as the workspace switcher offers "Add new workspace") to whoever may create one, which on an invite-only instance is only the owner of an organization, and a link to its settings.
  *
  * On a phone, where the admin is read-only, it is only the switcher: another organization opens on its survey list, which a phone opens, while creating one and the settings do not appear, and choosing the current organization (which otherwise opens its settings) stays put. Before the workspace crumb it shows only its icon there, to leave the narrow bar room; the name stays its accessible name.
  */
@@ -41,6 +41,7 @@ export const OrganizationBreadcrumb = ({
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const organizations = useQuery({ ...organizationsQuery, enabled: open });
+  const canCreate = useQuery({ ...organizationCreationQuery, enabled: open && !isPhone }).data === true;
 
   return (
     <BreadcrumbItem isActive={open}>
@@ -66,7 +67,7 @@ export const OrganizationBreadcrumb = ({
               if (isPhone && id === organizationId) return;
               void navigate({ href: organizationSwitchPath(id, organizationId) });
             }}>
-            {!isPhone && (
+            {!isPhone && canCreate && (
               <DropdownMenuCheckboxItem
                 className="w-full justify-between"
                 onSelect={() => setCreateOpen(true)}>
