@@ -2,6 +2,7 @@
 # Starts the running instance the browser suite (apps/e2e/, .github/workflows/e2e.yml) drives: docker-compose.dev.yml's PostgreSQL, Valkey, SpiceDB and RustFS, then bin/forma (built beforehand, `make build` or `make server`) migrated, with the SpiceDB schema written, optionally seeded, and serving with its job worker as `forma start` does in the container.
 #
 #   tooling/scripts/ci-stack.sh up      start everything; SEED_ARGS="" seeds the base data, and any flags in it are passed to `forma seed`
+#   tooling/scripts/ci-stack.sh restart stop the server and start it again with the environment as it is now (a second configuration, such as TURNSTILE_* for the Turnstile spec), seeding first when SEED_ARGS is set; the containers and their data stay
 #   tooling/scripts/ci-stack.sh down    stop the server and the containers
 #
 # Configuration is .env.example's, under the overrides below; any variable already set wins over both, so a local run can move the ports (POSTGRES_PORT, VALKEY_PORT, SPICEDB_GRPC_PORT, RUSTFS_PORT, with DATABASE_URL, REDIS_URL, AUTHZED_ENDPOINT and S3_ENDPOINT_URL to match) or the compose project (COMPOSE_PROJECT_NAME). The server's output goes to FORMA_LOG (default forma.log in a temporary directory, printed at start).
@@ -31,12 +32,66 @@ while IFS='=' read -r key value; do
   fi
 done <.env.example
 
-down() {
+stop_server() {
   if [[ -f "${pid_file}" ]]; then
-    kill "$(cat "${pid_file}")" 2>/dev/null || true
+    local pid
+    pid="$(cat "${pid_file}")"
+    kill "${pid}" 2>/dev/null || true
+    # Waits for the port to be free before a restart binds it again.
+    for _ in $(seq 1 30); do
+      kill -0 "${pid}" 2>/dev/null || break
+      sleep 1
+    done
     rm -f "${pid_file}"
   fi
+}
+
+down() {
+  stop_server
   "${compose[@]}" down --volumes
+}
+
+seed() {
+  if [[ -n "${SEED_ARGS+set}" ]]; then
+    # shellcheck disable=SC2086 # SEED_ARGS is a list of flags
+    ALLOW_SEED=1 "${forma}" seed ${SEED_ARGS}
+    # Deliver the seeded tenancy to SpiceDB now rather than on the worker's next tick, so the first request already sees it.
+    "${forma}" authz outbox drain
+  fi
+}
+
+start_server() {
+  local ready="http://localhost:${HTTP_ADDR##*:}/health/ready"
+  # A server still answering here (one this script lost track of) would pass the readiness check below for the new one.
+  if curl -fs -o /dev/null "${ready}"; then
+    echo "Something already serves ${ready}; stop it first." >&2
+    exit 1
+  fi
+  echo "forma start logs to ${log_file}"
+  "${forma}" start >>"${log_file}" 2>&1 &
+  echo $! >"${pid_file}"
+
+  for _ in $(seq 1 120); do
+    if ! kill -0 "$(cat "${pid_file}")" 2>/dev/null; then
+      echo "forma start exited; its log:" >&2
+      cat "${log_file}" >&2
+      exit 1
+    fi
+    if curl -fs -o /dev/null "${ready}"; then
+      echo "forma is ready at ${WEBAPP_URL}"
+      return 0
+    fi
+    sleep 1
+  done
+  echo "forma did not become ready at ${ready}; its log:" >&2
+  cat "${log_file}" >&2
+  exit 1
+}
+
+restart() {
+  stop_server
+  seed
+  start_server
 }
 
 up() {
@@ -61,40 +116,17 @@ up() {
     sleep 3
   done
 
-  if [[ -n "${SEED_ARGS+set}" ]]; then
-    # shellcheck disable=SC2086 # SEED_ARGS is a list of flags
-    ALLOW_SEED=1 "${forma}" seed ${SEED_ARGS}
-    # Deliver the seeded tenancy to SpiceDB now rather than on the worker's next tick, so the first request already sees it.
-    "${forma}" authz outbox drain
-  fi
-
-  echo "forma start logs to ${log_file}"
-  "${forma}" start >"${log_file}" 2>&1 &
-  echo $! >"${pid_file}"
-
-  local ready="http://localhost:${HTTP_ADDR##*:}/health/ready"
-  for _ in $(seq 1 120); do
-    if ! kill -0 "$(cat "${pid_file}")" 2>/dev/null; then
-      echo "forma start exited; its log:" >&2
-      cat "${log_file}" >&2
-      exit 1
-    fi
-    if curl -fs -o /dev/null "${ready}"; then
-      echo "forma is ready at ${WEBAPP_URL}"
-      return 0
-    fi
-    sleep 1
-  done
-  echo "forma did not become ready at ${ready}; its log:" >&2
-  cat "${log_file}" >&2
-  exit 1
+  seed
+  : >"${log_file}"
+  start_server
 }
 
 case "${1:-up}" in
   up) up ;;
+  restart) restart ;;
   down) down ;;
   *)
-    echo "usage: $0 [up|down]" >&2
+    echo "usage: $0 [up|restart|down]" >&2
     exit 2
     ;;
 esac
