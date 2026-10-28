@@ -17,4 +17,7 @@ export type TStorageConfigurationErrorCode = (typeof STORAGE_ERROR_CODES)[keyof 
 export interface TStorageApiErrorDetails {
   fileName?: string;
   storage_error_code?: string;
+  /** Sent with a 400 when the request's fileSize is over the upload's limit, both in bytes. */
+  fileSize?: number;
+  maxFileSize?: number;
 }

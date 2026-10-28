@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
 // The contract test replays the exchanges in testdata/contract (see its README) in the order their scenarios need, against the data seedRecording creates, and requires the same status, the listed headers and a body equal to the expected one with its placeholders matched by kind. An id placeholder binds to the first id it meets and must name the same id wherever it appears again. Steps whose name starts with "@" are setup requests and writes that are not cases themselves.
@@ -43,6 +45,9 @@ type recorded struct {
 		} `json:"contactLinkToken"`
 	} `json:"notes"`
 }
+
+// putReplayOrder are the storage cases of a store configured with STORAGE_UPLOAD_METHOD=put, replayed against a server of their own (TestContractExchangesPutUploads) on the same scenario.
+var putReplayOrder = []string{"v1-storage-upload-put"}
 
 // replayOrder is the order the scenarios need: v1 first (action classes, attribute keys, the contacts the client API identified, surveys, the client API's responses and the v1 ones, storage), then v2, whose lists the v1 writes populate. The rate-limit cases come last.
 var replayOrder = []string{
@@ -100,7 +105,7 @@ var replayOrder = []string{
 
 	"v1-storage-upload", "v1-storage-upload-environment-id", "v1-storage-extension-not-allowed", "v1-storage-invalid-file-name",
 	"v1-storage-malformed-json", "v1-storage-missing-fields", "v1-storage-missing-workspace", "v1-storage-no-key", "v1-storage-other-workspace-key",
-	"v1-storage-read-key", "v1-storage-unknown-workspace",
+	"v1-storage-read-key", "v1-storage-unknown-workspace", "v1-storage-file-too-large",
 
 	"v2-management-options", "v2-health", "v2-roles-no-key", "v2-roles", "v2-openapi-not-served",
 	"v2-me-no-key", "v2-me-invalid-key", "v2-me", "v2-me-bearer", "v2-me-cross-origin", "v2-me-organization-only-key", "v2-me-other-workspace-key",
@@ -456,7 +461,7 @@ func TestContractExchanges(t *testing.T) {
 	for _, f := range files {
 		all = append(all, strings.TrimSuffix(filepath.Base(f), ".json"))
 	}
-	var ordered []string
+	ordered := slices.Clone(putReplayOrder)
 	for _, name := range replayOrder {
 		if !strings.HasPrefix(name, "@") {
 			ordered = append(ordered, name)
@@ -482,6 +487,22 @@ func TestContractExchanges(t *testing.T) {
 		s.prepare(name)
 		res := r.send(e, f)
 		e.deliver()
+		t.Run(name, func(t *testing.T) {
+			sub := &replay{t: t, bound: r.bound}
+			sub.check(f, res)
+		})
+	}
+}
+
+// The management API of a store configured with STORAGE_UPLOAD_METHOD=put answers its storage cases as they are written down.
+func TestContractExchangesPutUploads(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) { c.S3.UploadMethod = config.UploadMethodPut })
+	s := e.seedRecording()
+	r := &replay{t: t, bound: s.bound}
+	for _, name := range putReplayOrder {
+		e.clock.nextWindow()
+		f := loadRecorded(t, name)
+		res := r.send(e, f)
 		t.Run(name, func(t *testing.T) {
 			sub := &replay{t: t, bound: r.bound}
 			sub.check(f, res)

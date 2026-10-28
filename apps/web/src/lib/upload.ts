@@ -1,4 +1,4 @@
-// forma2's handleFileUpload (modules/storage/file-upload.ts) and its error toasts: a public file is signed by POST /api/v1/management/storage with the session, then posted straight to the bucket with the presigned form fields, and kept by its relative /storage URL.
+// forma2's handleFileUpload (modules/storage/file-upload.ts) and its error toasts: a public file is signed by POST /api/v1/management/storage with the session, then posted straight to the bucket with the presigned form fields (or PUT there, when the server signs a presigned PUT), and kept by its relative /storage URL.
 import { STORAGE_CONFIGURATION_ERROR_CODES } from "@forma/types/storage";
 import type { TFunction } from "i18next";
 import { showStorageNotConfiguredToast } from "../components/ui/storage-not-configured-toast";
@@ -27,6 +27,10 @@ interface SignedUpload {
   /** The form fields of the presigned POST, in the order the bucket expects them before the file. */
   presignedFields: Record<string, string>;
   fileUrl: string;
+  /** Sent only for a presigned PUT (STORAGE_UPLOAD_METHOD=put): the file is then PUT to uploadUrl with uploadHeaders instead of POSTed to signedUrl. */
+  uploadMethod?: "put";
+  uploadUrl?: string;
+  uploadHeaders?: Record<string, string>;
 }
 
 export interface FileUploadResult {
@@ -37,6 +41,8 @@ export interface FileUploadResult {
 /** forma2's getFileUploadErrorFromResponse: a rejected file name, a bucket the server cannot reach with its configuration, or any other failure. */
 const signingError = (error: unknown): FileUploadError => {
   if (!(error instanceof ApiError)) return FileUploadError.UPLOAD_FAILED;
+  if (error.status === 400 && typeof error.details?.maxFileSize === "number")
+    return FileUploadError.FILE_SIZE_EXCEEDED;
   if (error.status === 400 && error.details?.fileName) return FileUploadError.INVALID_FILE_NAME;
   const code = error.details?.storage_error_code;
   if (error.status >= 500 && typeof code === "string" && STORAGE_CONFIGURATION_ERROR_CODES.has(code)) {
@@ -61,6 +67,7 @@ export const handleFileUpload = async (
     const res = await api.post<{ data: SignedUpload }>(STORAGE_PATH, {
       fileName: file.name,
       fileType: file.type,
+      fileSize: file.size,
       allowedFileExtensions,
       workspaceId,
     });
@@ -69,14 +76,18 @@ export const handleFileUpload = async (
     return { error: signingError(error), url: "" };
   }
 
-  const form = new FormData();
-  for (const [key, value] of Object.entries(signed.presignedFields)) form.append(key, value);
-  // The file goes last and as-is, so fetch streams it; the bucket takes the key and content type from the signed fields.
-  form.append("file", file);
-
   let uploaded: Response;
   try {
-    uploaded = await fetch(signed.signedUrl, { method: "POST", body: form });
+    if (signed.uploadMethod === "put" && signed.uploadUrl) {
+      // The file is the whole body; the bucket checks it against the signed Content-Type and Content-Length, which the browser sets from the file's size.
+      uploaded = await fetch(signed.uploadUrl, { method: "PUT", headers: signed.uploadHeaders, body: file });
+    } else {
+      const form = new FormData();
+      for (const [key, value] of Object.entries(signed.presignedFields)) form.append(key, value);
+      // The file goes last and as-is, so fetch streams it; the bucket takes the key and content type from the signed fields.
+      form.append("file", file);
+      uploaded = await fetch(signed.signedUrl, { method: "POST", body: form });
+    }
   } catch {
     return { error: FileUploadError.STORAGE_UPLOAD_FAILED, url: "" };
   }

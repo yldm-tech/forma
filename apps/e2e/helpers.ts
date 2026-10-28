@@ -1,4 +1,4 @@
-import { type APIRequestContext, type Page, expect } from "@playwright/test";
+import { type APIRequestContext, type Page, type Response, expect } from "@playwright/test";
 
 /** The password every account a spec creates signs in with; it meets the sign-up rules (mixed case, a number, 8+ characters). */
 export const PASSWORD = "Playwright#2026";
@@ -93,3 +93,22 @@ export const publish = async (page: Page): Promise<OnboardedSurvey> => {
 
 /** The headline of the question a survey started from scratch begins with. */
 export const DEFAULT_QUESTION = "What would you like to know?";
+
+/** How the server under test tells browsers to upload to the bucket, its STORAGE_UPLOAD_METHOD (post unless set): .github/workflows/e2e.yml runs the upload specs (tagged @upload) a second time against a server started with put. */
+export const BUCKET_UPLOAD_METHOD = (process.env.STORAGE_UPLOAD_METHOD ?? "post").toUpperCase();
+
+/** The page's upload straight to the bucket, on an origin other than the app's: a presigned POST, or a presigned PUT where the server signs one. The CORS preflight a PUT needs is not it. */
+export const waitForBucketUpload = (page: Page, baseURL: string): Promise<Response> => {
+  const appOrigin = new URL(baseURL).origin;
+  return page.waitForResponse(
+    (response) =>
+      ["POST", "PUT"].includes(response.request().method()) && new URL(response.url()).origin !== appOrigin,
+    { timeout: 15_000 }
+  );
+};
+
+/** A 2x2 PNG, built here so the specs own their fixture. */
+export const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR42mPgL8sDIgYIBQAZJgPNigndUQAAAABJRU5ErkJggg==",
+  "base64"
+);

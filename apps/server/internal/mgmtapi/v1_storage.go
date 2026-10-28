@@ -1,6 +1,7 @@
 package mgmtapi
 
 import (
+	"math"
 	"net/http"
 	"strconv"
 
@@ -18,7 +19,7 @@ const maxPublicFileSize = 5 * 1024 * 1024
 // allowedExtensionsMessage is zod's message for a value outside ZAllowedFileExtension.
 var allowedExtensionsMessage = "Invalid option: expected one of " + v1api.QuotedOptions(storage.AllowedExtensions)
 
-// v1StorageUpload is forma2's POST /api/v1/management/storage: a presigned upload of a public file (a logo, a background image) for a workspace the caller may write, by API key or by the signed-in user. An API key may name the workspace by its legacy environment id; a session must name it by id.
+// v1StorageUpload is forma2's POST /api/v1/management/storage: a presigned upload of a public file (a logo, a background image) for a workspace the caller may write, by API key or by the signed-in user. An API key may name the workspace by its legacy environment id; a session must name it by id. An optional fileSize (bytes) over the 5 MB limit is refused with 400, and with STORAGE_UPLOAD_METHOD=put it adds a presigned PUT of that size to the answer (storage.Service.SignUpload).
 func (h *Handler) v1StorageUpload(c *gin.Context) {
 	body, ok := mgmtv1.ReadBody(c)
 	if !ok {
@@ -45,6 +46,7 @@ func (h *Handler) v1StorageUpload(c *gin.Context) {
 		is.add("fileType", "Too small: expected string to have >=1 characters")
 	}
 	rawWorkspace, _ := is.id("workspaceId", o.get("workspaceId"), required)
+	fileSize := is.fileSize(o.get("fileSize"))
 	var allowed []string
 	if raw := o.get("allowedFileExtensions"); !isAbsent(raw) {
 		list, ok := raw.([]any)
@@ -75,7 +77,11 @@ func (h *Handler) v1StorageUpload(c *gin.Context) {
 	if !h.v1.Authorize(c, http.MethodPost, workspaceID) {
 		return
 	}
-	upload, err := h.files.SignUpload(c.Request.Context(), fileName, workspaceID.String(), storage.AccessPublic, maxPublicFileSize)
+	upload, err := h.files.SignUpload(c.Request.Context(), fileName, workspaceID.String(), storage.AccessPublic, maxPublicFileSize, fileSize)
+	if storage.CodeOf(err) == storage.CodeFileTooLarge {
+		v1api.BadRequest(c, "File size exceeds the upload limit", map[string]any{"fileSize": *fileSize, "maxFileSize": maxPublicFileSize}, true)
+		return
+	}
 	if err != nil {
 		h.log.ErrorContext(c.Request.Context(), "Error getting signed url for upload", "err", err)
 		switch code := storage.CodeOf(err); code {
@@ -89,4 +95,23 @@ func (h *Handler) v1StorageUpload(c *gin.Context) {
 		return
 	}
 	v1OK(c, upload)
+}
+
+// fileSize reads the optional fileSize of an upload request, z.number().int().nonnegative(): the size in bytes the client will upload, which a presigned PUT is signed for and which is refused over the upload's limit before anything is signed. Callers from before it send none.
+func (is *issues) fileSize(v any) *int64 {
+	f := is.number("fileSize", v, optional)
+	switch {
+	case f == nil:
+		return nil
+	case *f != math.Trunc(*f):
+		is.add("fileSize", "Invalid input: expected int, received number")
+	case *f < 0:
+		is.add("fileSize", "Too small: expected number to be >=0")
+	case *f > maxSafeInteger:
+		is.add("fileSize", "Too big: expected int to be <=9007199254740991")
+	default:
+		size := int64(*f)
+		return &size
+	}
+	return nil
 }

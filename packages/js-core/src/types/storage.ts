@@ -15,6 +15,10 @@ export interface TUploadFileResponse {
     } | null;
     updatedFileName: string;
     presignedFields?: Record<string, string>;
+    /** Sent only for a presigned PUT: the file is then PUT to uploadUrl with uploadHeaders instead of POSTed to signedUrl. */
+    uploadMethod?: "put";
+    uploadUrl?: string;
+    uploadHeaders?: Record<string, string>;
   };
 }
 

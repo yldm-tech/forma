@@ -242,7 +242,15 @@ type S3Config struct {
 	// ForcePathStyle addresses the bucket as <endpoint>/<bucket> instead of <bucket>.<endpoint>, which most self-hosted services need.
 	ForcePathStyle bool   `env:"S3_FORCE_PATH_STYLE" envDefault:"0"`
 	BucketName     string `env:"S3_BUCKET_NAME"`
+	// UploadMethod is how browsers are told to upload straight to the bucket. post (the default, and forma2's only method) is a presigned POST form, which Amazon S3, MinIO and RustFS take; put adds a presigned PUT of the exact file size to every upload answer whose request sends fileSize, for stores without POST uploads such as Cloudflare R2. The POST fields are answered either way, so a client that predates put keeps working on a store that takes POST.
+	UploadMethod string `env:"STORAGE_UPLOAD_METHOD" envDefault:"post"`
 }
+
+// The STORAGE_UPLOAD_METHOD values.
+const (
+	UploadMethodPost = "post"
+	UploadMethodPut  = "put"
+)
 
 // Configured is forma2's IS_STORAGE_CONFIGURED.
 func (s S3Config) Configured() bool { return s.BucketName != "" }
@@ -252,6 +260,9 @@ func (s S3Config) validate() error {
 		if (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
 			return fmt.Errorf("S3_ENDPOINT_URL must be an http(s) URL without a path, got %q", u.String())
 		}
+	}
+	if s.UploadMethod != UploadMethodPost && s.UploadMethod != UploadMethodPut {
+		return fmt.Errorf("STORAGE_UPLOAD_METHOD must be post or put, got %q", s.UploadMethod)
 	}
 	return nil
 }

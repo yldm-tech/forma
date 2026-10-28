@@ -314,6 +314,8 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		"s3 endpoint path":         {"S3_ENDPOINT_URL", "https://gateway.example.com/forma"},
 		"s3 endpoint relative":     {"S3_ENDPOINT_URL", "localhost:9000"},
 		"s3 path style flag":       {"S3_FORCE_PATH_STYLE", "true"},
+		"upload method":            {"STORAGE_UPLOAD_METHOD", "multipart"},
+		"upload method case":       {"STORAGE_UPLOAD_METHOD", "PUT"},
 	}
 	for name, kv := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -603,6 +605,10 @@ func TestLoadS3(t *testing.T) {
 	if cfg.S3.Configured() || cfg.S3.ForcePathStyle || cfg.S3.EndpointURL != nil {
 		t.Fatalf("S3 = %+v, want storage unconfigured by default", cfg.S3)
 	}
+	// Browsers POST uploads unless told otherwise, as every instance did before the switch.
+	if cfg.S3.UploadMethod != UploadMethodPost {
+		t.Fatalf("STORAGE_UPLOAD_METHOD defaults to %q, want post", cfg.S3.UploadMethod)
+	}
 
 	for k, v := range map[string]string{
 		"S3_ACCESS_KEY": "devrustfs-service", "S3_SECRET_KEY": "devrustfs-service123", "S3_REGION": "us-east-1",
@@ -622,6 +628,11 @@ func TestLoadS3(t *testing.T) {
 	t.Setenv("S3_ENDPOINT_URL", "https://gateway.storjshare.io/")
 	if _, err := Load(); err != nil {
 		t.Fatalf("Load rejected an endpoint with a bare trailing slash: %v", err)
+	}
+
+	t.Setenv("STORAGE_UPLOAD_METHOD", "put")
+	if cfg, err = Load(); err != nil || cfg.S3.UploadMethod != UploadMethodPut {
+		t.Fatalf("STORAGE_UPLOAD_METHOD=put: %q, %v", cfg.S3.UploadMethod, err)
 	}
 }
 

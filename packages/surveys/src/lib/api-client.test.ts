@@ -216,10 +216,98 @@ describe("ApiClient", () => {
       expect(JSON.parse(requestInit.body as string)).toEqual({
         fileName: "test.jpg",
         fileType: "image/jpeg",
+        // "abcd" is three bytes once decoded.
+        fileSize: 3,
         allowedFileExtensions: ["jpg"],
         surveyId: "survey123",
         elementId: "element123",
       });
+    });
+
+    test("PUTs the decoded file to the signed URL with the signed headers when the server signs a presigned PUT", async () => {
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              signedUrl: "https://fake-s3-url.com",
+              fileUrl: "/storage/ws-test/private/surveys/s/elements/e/test--fid--1.jpg",
+              presignedFields: { policy: "test" },
+              uploadMethod: "put",
+              uploadUrl: "https://fake-s3-url.com/ws-test/private/test--fid--1.jpg?X-Amz-Signature=s",
+              uploadHeaders: { "Content-Type": "image/jpeg" },
+            },
+          }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({ ok: true } as unknown as Response);
+
+      const fileUrl = await client.uploadFile({
+        base64: "data:image/jpeg;base64,abcd",
+        name: "test.jpg",
+        type: "image/jpeg",
+      });
+
+      expect(fileUrl).toBe("/storage/ws-test/private/surveys/s/elements/e/test--fid--1.jpg");
+      const [url, init] = vi.mocked(global.fetch).mock.calls[1] as [string, RequestInit];
+      expect(url).toBe("https://fake-s3-url.com/ws-test/private/test--fid--1.jpg?X-Amz-Signature=s");
+      expect(init.method).toBe("PUT");
+      expect(init.headers).toEqual({ "Content-Type": "image/jpeg" });
+      // The whole body is the file, as many bytes as the size the upload was signed for.
+      const body = init.body as Blob;
+      expect(body).toBeInstanceOf(Blob);
+      expect(body.size).toBe(3);
+      expect(new Uint8Array(await body.arrayBuffer())).toEqual(Uint8Array.from([0x69, 0xb7, 0x1d]));
+    });
+
+    test("throws FileTooLargeError when the server refuses the file's size before signing", async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          code: "bad_request",
+          message: "File size exceeds the upload limit",
+          details: { fileSize: 6000000, maxFileSize: 5242880 },
+        }),
+      } as unknown as Response);
+
+      await expect(() =>
+        client.uploadFile({
+          base64: "data:image/jpeg;base64,abcd",
+          name: "test.jpg",
+          type: "image/jpeg",
+        })
+      ).rejects.toMatchObject({ name: FILE_UPLOAD_ERROR_NAMES.FILE_TOO_LARGE });
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    test("throws StorageUploadFailedError when the bucket refuses the PUT", async () => {
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              signedUrl: "https://fake-s3-url.com",
+              fileUrl: "/storage/ws-test/private/test.jpg",
+              presignedFields: { policy: "test" },
+              uploadMethod: "put",
+              uploadUrl: "https://fake-s3-url.com/k",
+              uploadHeaders: { "Content-Type": "image/jpeg" },
+            },
+          }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          text: async () => "<Error><Code>SignatureDoesNotMatch</Code></Error>",
+        } as unknown as Response);
+
+      await expect(() =>
+        client.uploadFile({
+          base64: "data:image/jpeg;base64,abcd",
+          name: "test.jpg",
+          type: "image/jpeg",
+        })
+      ).rejects.toMatchObject({ name: FILE_UPLOAD_ERROR_NAMES.STORAGE_UPLOAD_FAILED });
     });
 
     test("throws an error if file is invalid", async () => {
