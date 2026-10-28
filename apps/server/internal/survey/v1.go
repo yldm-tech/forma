@@ -433,7 +433,7 @@ func recaptchaEnabled(v any) bool {
 	return enabled
 }
 
-// CreateV1 is forma2's POST /api/v1/management/surveys after the workspace was resolved and authorized: the body checked against ZSurveyCreateInputWithWorkspaceId (questions or blocks, not both), legacy questions converted into one block each, a reCAPTCHA setting refused when the instance has no keys, then createSurvey: the survey, its triggers, languages and follow-ups, and an app survey's private segment. The caller is the API key; the survey has no creator.
+// CreateV1 is forma2's POST /api/v1/management/surveys after the workspace was resolved and authorized: the body checked against ZSurveyCreateInputWithWorkspaceId (questions or blocks, not both), legacy questions converted into one block each, spam protection (the recaptcha setting) refused when the instance has neither Turnstile nor reCAPTCHA keys, then createSurvey: the survey, its triggers, languages and follow-ups, and an app survey's private segment. The caller is the API key; the survey has no creator.
 func (s *Service) CreateV1(ctx context.Context, caller Caller, workspaceID uuid.UUID, body map[string]any) (*Survey, error) {
 	// The create schema omits these, so zod stripped them: a create sets neither overwrites nor the archive stamp.
 	delete(body, "workspaceOverwrites")
@@ -528,7 +528,7 @@ func (s *Service) CreateV1(ctx context.Context, caller Caller, workspaceID uuid.
 	if len(recipientIssues) > 0 {
 		return nil, &V1Invalid{Issues: recipientIssues}
 	}
-	if recaptchaEnabled(body["recaptcha"]) && !s.cfg.RecaptchaConfigured() {
+	if recaptchaEnabled(body["recaptcha"]) && !s.cfg.SpamProtectionConfigured() {
 		return nil, apperr.OperationNotAllowed("Spam protection is not enabled for this organization")
 	}
 	if _, err := s.checkCustomScripts(ctx, caller, workspaceID, nil, customScripts{Scripts: optString(body["customHeadScripts"]), Mode: optString(body["customHeadScriptsMode"])}); err != nil {
@@ -654,7 +654,7 @@ func (s *Service) UpdateV1(ctx context.Context, caller Caller, current *Survey, 
 	// The editor's own fields; a v1 update's dates are read in the organization's zone and snapped to its local time, as forma2 read them in the instance's.
 	in.SchedulingTimeZone = nil
 	in.SchedulingExactTimes = false
-	if recaptchaEnabled(merged["recaptcha"]) && !s.cfg.RecaptchaConfigured() {
+	if recaptchaEnabled(merged["recaptcha"]) && !s.cfg.SpamProtectionConfigured() {
 		return nil, apperr.OperationNotAllowed("Spam protection is not enabled for this organization")
 	}
 	if err := s.authz.Require(ctx, caller.Actor, authz.SurveyWrite, authz.Survey(current.ID)); err != nil {

@@ -10,6 +10,8 @@ declare global {
       // Optional: the surveys bundle is served by the (possibly self-hosted, older)
       // Forma instance, so it may predate setNonce.
       setNonce?: (nonce: string | undefined) => void;
+      // Set by a runtime that renders Cloudflare Turnstile; an older one served from a cache leaves it out.
+      supportsTurnstile?: boolean;
     };
   }
 }

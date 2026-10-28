@@ -12,6 +12,7 @@ import { Config } from "@/lib/common/config";
 import { onFormaEvent, resetFormaEventSubscribers } from "@/lib/common/events";
 import { Logger } from "@/lib/common/logger";
 import { loadRecaptchaScript } from "@/lib/common/recaptcha";
+import { loadTurnstileScript } from "@/lib/common/turnstile";
 import type * as CommonUtils from "@/lib/common/utils";
 import {
   filterSurveys,
@@ -68,6 +69,10 @@ vi.mock("@/lib/common/timeout-stack", () => ({
 vi.mock("@/lib/common/recaptcha", () => ({
   loadRecaptchaScript: vi.fn().mockResolvedValue(undefined),
   executeRecaptcha: vi.fn().mockResolvedValue("token"),
+}));
+
+vi.mock("@/lib/common/turnstile", () => ({
+  loadTurnstileScript: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/common/utils", async (importOriginal) => {
@@ -1381,13 +1386,17 @@ describe("widget-file", () => {
   });
 
   describe("delay timeout and reCAPTCHA bookkeeping", () => {
-    const buildConfigMock = (recaptchaSiteKey?: string): { get: Mock; update: Mock } => ({
+    const buildConfigMock = (
+      recaptchaSiteKey?: string,
+      turnstileSiteKey?: string
+    ): { get: Mock; update: Mock } => ({
       get: vi.fn().mockReturnValue({
         appUrl: "https://fake.app",
         workspaceId: "env_123",
         workspace: {
           data: {
             recaptchaSiteKey,
+            turnstileSiteKey,
             settings: {
               clickOutsideClose: true,
               overlay: "none",
@@ -1461,6 +1470,68 @@ describe("widget-file", () => {
 
       expect(getFormaSurveys().renderSurvey).toHaveBeenCalledTimes(1);
 
+      vi.useRealTimers();
+    });
+
+    // Turnstile spam protection: the state names Turnstile's site key, the SDK loads its script before showing the survey and hands the key to the runtime, which renders the widget.
+    test("loads Turnstile and hands its site key to the runtime for a survey with spam protection on", async () => {
+      getInstanceConfigMock.mockReturnValue(buildConfigMock(undefined, "turnstile_key") as unknown as Config);
+      (filterSurveys as Mock).mockReturnValue([]);
+      widget.setIsSurveyRunning(false);
+      window.formaSurveys = { ...createMockFormaSurveys(), supportsTurnstile: true };
+      vi.useFakeTimers();
+
+      await widget.renderWidget({ ...mockSurvey, delay: 0, recaptcha: { enabled: true, threshold: 0.1 } });
+      vi.advanceTimersByTime(0);
+
+      expect(loadTurnstileScript).toHaveBeenCalledTimes(1);
+      expect(loadRecaptchaScript).not.toHaveBeenCalled();
+      expect(getFormaSurveys().renderSurvey).toHaveBeenCalledWith(
+        expect.objectContaining({ turnstileSiteKey: "turnstile_key", isSpamProtectionEnabled: true })
+      );
+      vi.useRealTimers();
+    });
+
+    test("releases isSurveyRunning when the Turnstile script fails to load", async () => {
+      getInstanceConfigMock.mockReturnValue(buildConfigMock(undefined, "turnstile_key") as unknown as Config);
+      (filterSurveys as Mock).mockReturnValue([]);
+      widget.setIsSurveyRunning(false);
+      window.formaSurveys = { ...createMockFormaSurveys(), supportsTurnstile: true };
+      vi.mocked(loadTurnstileScript).mockRejectedValueOnce(new Error("Error loading Turnstile script"));
+      vi.useFakeTimers();
+
+      await expect(
+        widget.renderWidget({ ...mockSurvey, delay: 0, recaptcha: { enabled: true, threshold: 0.1 } })
+      ).resolves.toBeUndefined();
+      vi.advanceTimersByTime(0);
+      expect(getFormaSurveys().renderSurvey).not.toHaveBeenCalled();
+
+      await widget.renderWidget({ ...mockSurvey, delay: 0 });
+      vi.advanceTimersByTime(0);
+      expect(getFormaSurveys().renderSurvey).toHaveBeenCalledTimes(1);
+      expect(getFormaSurveys().renderSurvey).toHaveBeenCalledWith(
+        expect.objectContaining({ isSpamProtectionEnabled: false })
+      );
+      vi.useRealTimers();
+    });
+
+    // /js/surveys.umd.js is unversioned and edge-cached: a copy older than this SDK knows only reCAPTCHA and would refuse the respondent's first answer, so the protected survey is not shown through it.
+    test("leaves out a Turnstile-protected survey when the loaded runtime does not support Turnstile", async () => {
+      getInstanceConfigMock.mockReturnValue(buildConfigMock(undefined, "turnstile_key") as unknown as Config);
+      (filterSurveys as Mock).mockReturnValue([]);
+      widget.setIsSurveyRunning(false);
+      window.formaSurveys = createMockFormaSurveys();
+      vi.useFakeTimers();
+
+      await widget.renderWidget({ ...mockSurvey, delay: 0, recaptcha: { enabled: true, threshold: 0.1 } });
+      vi.advanceTimersByTime(0);
+      expect(getFormaSurveys().renderSurvey).not.toHaveBeenCalled();
+      expect(loadTurnstileScript).not.toHaveBeenCalled();
+
+      // isSurveyRunning was released, and a survey without spam protection still shows through the same runtime.
+      await widget.renderWidget({ ...mockSurvey, delay: 0 });
+      vi.advanceTimersByTime(0);
+      expect(getFormaSurveys().renderSurvey).toHaveBeenCalledTimes(1);
       vi.useRealTimers();
     });
   });

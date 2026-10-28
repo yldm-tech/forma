@@ -29,6 +29,8 @@ type responseInput struct {
 	SingleUseID    *string
 	PinAuthToken   *string
 	RecaptchaToken *string
+	// TurnstileToken is the Cloudflare Turnstile token of a survey with spam protection on, on an instance that uses Turnstile (checkSpamProtection); optional, so a body without it reads as before.
+	TurnstileToken *string
 	Finished       bool
 	EndingID       *string
 	Language       *string
@@ -54,6 +56,7 @@ func parseResponseInput(body any, text string, v2 bool) (*responseInput, *issues
 	out.SingleUseID = is.optString("singleUseId", in.get("singleUseId"), nullish)
 	out.PinAuthToken = is.optString("pinAuthToken", in.get("pinAuthToken"), nullish)
 	out.RecaptchaToken = is.optString("recaptchaToken", in.get("recaptchaToken"), nullish)
+	out.TurnstileToken = is.optString("turnstileToken", in.get("turnstileToken"), nullish)
 	if f := is.boolean("finished", in.get("finished"), required); f != nil {
 		out.Finished = *f
 	}
@@ -108,7 +111,7 @@ func memberKeys(members []jsvalue.Member) []string {
 	return keys
 }
 
-// createResponseV1 is forma2's v1 response create, which the survey runtime uses for an identified user: the body (before the workspace), the workspace, the schema, the survey and its checks in forma2's v1 order (workspace, status, PIN, the ingest contract, the verified-email gate, reCAPTCHA, single-use), the uploads and the answers, then the write.
+// createResponseV1 is forma2's v1 response create, which the survey runtime uses for an identified user: the body (before the workspace), the workspace, the schema, the survey and its checks in forma2's v1 order (workspace, status, PIN, the ingest contract, the verified-email gate, spam protection, single-use), the uploads and the answers, then the write.
 func (h *Handler) createResponseV1(c *gin.Context) {
 	ctx := c.Request.Context()
 	body, text, err := parseBody(c.Request)
@@ -156,7 +159,7 @@ func (h *Handler) checkNewResponseV1(ctx context.Context, sv *response.Survey, w
 	if err := h.verifiedEmailGate(sv, ingest.Data, in.metaString("url")); err != nil {
 		return nil, nil, err
 	}
-	if err := h.checkRecaptcha(ctx, sv, workspaceID, in.RecaptchaToken); err != nil {
+	if err := h.checkSpamProtection(ctx, sv, workspaceID, in); err != nil {
 		return nil, nil, err
 	}
 	singleUseID, err := h.responses.SingleUseID(sv, workspaceID, false, in.SingleUseID, in.metaString("url"))
@@ -177,7 +180,7 @@ func (h *Handler) checkNewResponseV1(ctx context.Context, sv *response.Survey, w
 	return ingest.Data, ingest.Flags, nil
 }
 
-// createResponseV2 is forma2's v2 response create, which the survey runtime uses for anonymous respondents and known contacts: the workspace, the body, the survey, the ingest contract, then checkSurveyValidity (workspace, status, PIN, single-use, the verified-email gate, reCAPTCHA), the uploads, the length of "Other" answers and the answers, then the write.
+// createResponseV2 is forma2's v2 response create, which the survey runtime uses for anonymous respondents and known contacts: the workspace, the body, the survey, the ingest contract, then checkSurveyValidity (workspace, status, PIN, single-use, the verified-email gate, spam protection), the uploads, the length of "Other" answers and the answers, then the write.
 func (h *Handler) createResponseV2(c *gin.Context) {
 	ctx := c.Request.Context()
 	ws, ok := h.workspace(c, c.Param("workspaceId"), msgGeneric)
@@ -226,7 +229,7 @@ func (h *Handler) checkNewResponseV2(ctx context.Context, sv *response.Survey, w
 	if err := h.verifiedEmailGate(sv, ingest.Data, in.metaString("url")); err != nil {
 		return nil, nil, err
 	}
-	if err := h.checkRecaptcha(ctx, sv, workspaceID, in.RecaptchaToken); err != nil {
+	if err := h.checkSpamProtection(ctx, sv, workspaceID, in); err != nil {
 		return nil, nil, err
 	}
 	elements, err := surveyElements(sv.Blocks)
@@ -364,7 +367,7 @@ func (h *Handler) validateAnswers(sv *response.Survey, data map[string]any, lang
 	return badRequest("Validation failed", details)
 }
 
-// updateResponse is forma2's response update (v1, re-exported by v2): the workspace, the body (ZResponseUpdateInput), the response and its survey (404 Response when either is not the workspace's), the PIN, the verification token when the body carries one (response.CheckVerifiedEmail), the ingest contract, the survey's status and the response's, the uploads and the answers merged over the stored ones, then the write. The update never re-checks single-use, reCAPTCHA or the display and never changes meta or the contact.
+// updateResponse is forma2's response update (v1, re-exported by v2): the workspace, the body (ZResponseUpdateInput), the response and its survey (404 Response when either is not the workspace's), the PIN, the verification token when the body carries one (response.CheckVerifiedEmail), the ingest contract, the survey's status and the response's, the uploads and the answers merged over the stored ones, then the write. The update never re-checks single-use, spam protection or the display and never changes meta or the contact.
 func (h *Handler) updateResponse(c *gin.Context) {
 	ctx := c.Request.Context()
 	responseID := c.Param("responseId")

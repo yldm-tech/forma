@@ -33,6 +33,7 @@ commands:
   authz              operate the SpiceDB projection: schema, backfill and outbox (forma authz help)
   seed               write the demo organization, users, surveys and responses; needs ALLOW_SEED=1 [--clear]
   user               turn an account on or off on the whole instance: forma user activate|deactivate <email> (forma user help)
+  organization       give a user an organization they own: forma organization create --owner <email> --name <name> (forma organization help)
   version            print the release version the binary was built as (0.0.0 for a development build)
 `
 
@@ -77,6 +78,12 @@ func run(args []string) int {
 			return 0
 		}
 		err = runUser(ctx, args[1:], os.Stdout)
+	case "organization":
+		if len(args) == 2 && (args[1] == "help" || args[1] == "-h" || args[1] == "--help") {
+			fmt.Print(organizationUsage)
+			return 0
+		}
+		err = runOrganization(ctx, args[1:], os.Stdout)
 	case "version":
 		fmt.Println(buildinfo.Version)
 		return 0

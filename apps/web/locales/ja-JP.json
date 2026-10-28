@@ -736,6 +736,11 @@
     "product_name_label": "製品名または会社名を教えてください",
     "product_name_placeholder": "例：Acme"
   },
+  "organization_creation": {
+    "invitation_required_description": "招待メールのリンクを開くと組織に参加できます。サインインしたままで開いて構いません。招待を受けていない場合は、組織のオーナーに招待を依頼してください。この Forma インスタンスは招待制で、組織を作成できるのは組織のオーナーだけです。",
+    "invitation_required_title": "所属している組織がありません",
+    "landing_ask_for_access": "ワークスペースへのアクセスは組織のオーナーに依頼してください。"
+  },
   "organizations": {
     "landing": {
       "no_workspaces_warning_subtitle": "ワークスペースへのアクセスは組織のオーナーに依頼してください。自分の組織を作成することもできます。",
@@ -4074,6 +4079,10 @@
         "translated": "翻訳済み",
         "trigger_survey_when_one_of_the_actions_is_fired": "以下のアクションのいずれかが発火したときにフォームをトリガーします...",
         "try_lollipop_or_mountain": "「lollipop」や「mountain」を試してみてください...",
+        "turnstile_spam_protection": {
+          "description": "スパム対策はCloudflare Turnstileを使用して、最初の回答が保存される前に回答者が人間であることを確認します。ほとんどの回答者にはチャレンジは表示されません。",
+          "web_note": "スパム対策はリンクフォームで機能します。Forma Web SDKがあなたのウェブサイトに表示するフォームは、このFormaインスタンスがTurnstileでそのウェブサイトのドメインを許可している場合にのみ送信できます。TurnstileトークンなしでAPIに直接送信された回答は拒否されます。"
+        },
         "type_field_id": "フィールドIDを入力",
         "underline": "下線",
         "unsaved_changes_warning": "フォームに未保存の変更があります。離れる前に保存しますか？",

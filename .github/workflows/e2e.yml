@@ -1,6 +1,6 @@
 name: E2E Tests
 
-# The Playwright browser suite (apps/e2e) against `forma start` with PostgreSQL, Valkey, SpiceDB and RustFS: sign-up and onboarding, a link survey published, answered and its response filtered and exported, an app survey shown by the SDK on a host page, an image uploaded in the survey editor, a workspace logo uploaded and a respondent's file uploaded on a survey page (these upload specs, tagged @upload, run a second time against a server started with STORAGE_UPLOAD_METHOD=put), and WCAG AA checks with axe on the login page, the survey editor and a public survey page at a desktop and a phone viewport. Not a required check, as in forma2: it runs on demand and on pull requests that change anything it builds, serves or boots, which is the SPA, the workspace packages and tooling it is built from, any server code outside tests, the dev stack's compose file, environment and RustFS init script, and the job's own inputs (Makefile, .node-version, this file).
+# The Playwright browser suite (apps/e2e) against `forma start` with PostgreSQL, Valkey, SpiceDB and RustFS: sign-up and onboarding, a link survey published, answered and its response filtered and exported, an app survey shown by the SDK on a host page, an image uploaded in the survey editor, a workspace logo uploaded and a respondent's file uploaded on a survey page (these upload specs, tagged @upload, run a second time against a server started with STORAGE_UPLOAD_METHOD=put), Turnstile spam protection on sign-up and on a public survey with Cloudflare's test keys, and WCAG AA checks with axe on the login page, the survey editor and a public survey page at a desktop and a phone viewport. Not a required check, as in forma2: it runs on demand and on pull requests that change anything it builds, serves or boots, which is the SPA, the workspace packages and tooling it is built from, any server code outside tests, the dev stack's compose file, environment and RustFS init script, and the job's own inputs (Makefile, .node-version, this file).
 
 on:
   workflow_dispatch:
@@ -81,6 +81,29 @@ jobs:
       - name: Run the browser suite
         working-directory: apps/e2e
         run: vp exec playwright test
+
+      # Turnstile spam protection (apps/e2e/turnstile.spec.ts) needs TURNSTILE_* keys, which would put a challenge on every other spec's sign-up, so the server is restarted for it with Cloudflare's test keys: a site key whose widget always passes, first with the secret that accepts its token, then with the one that refuses every token.
+      - name: Run the Turnstile spec with keys that pass
+        env:
+          FORMA_LOG: ${{ runner.temp }}/forma.log
+          TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+          E2E_TURNSTILE: pass
+        run: |
+          bash tooling/scripts/ci-stack.sh restart
+          cd apps/e2e && vp exec playwright test turnstile.spec.ts
+
+      # Sign-up refuses every token now, so the seeded owner signs in instead.
+      - name: Run the Turnstile spec with a secret that refuses every token
+        env:
+          FORMA_LOG: ${{ runner.temp }}/forma.log
+          TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY: 2x0000000000000000000000000000000AA
+          SEED_ARGS: ""
+          E2E_TURNSTILE: fail
+        run: |
+          bash tooling/scripts/ci-stack.sh restart
+          cd apps/e2e && vp exec playwright test turnstile.spec.ts
 
       # The upload specs again, against a server that signs presigned PUT uploads (the method for stores without POST uploads, such as Cloudflare R2), on a fresh stack.
       - name: Restart the stack with presigned PUT uploads

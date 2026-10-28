@@ -10,10 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
-	"github.com/yldm-tech/forma/apps/server/internal/response"
 )
 
 // recaptchaVerifyURL is Google's siteverify endpoint.
@@ -79,34 +76,4 @@ func (r *Recaptcha) Verify(ctx context.Context, token string, threshold float64)
 		return false
 	}
 	return true
-}
-
-// checkRecaptcha is forma2's verifyResponseRecaptcha, shared by both response creates: a survey with reCAPTCHA on needs a token (400), its organization's billing record (404 Organization), and Google's acceptance (400). Without the spam protection entitlement forma2 only logged and still verified; the rewrite has no licence gate, so it always verifies.
-func (h *Handler) checkRecaptcha(ctx context.Context, sv *response.Survey, workspaceID uuid.UUID, token *string) error {
-	var settings struct {
-		Enabled   bool    `json:"enabled"`
-		Threshold float64 `json:"threshold"`
-	}
-	if len(sv.Recaptcha) > 0 {
-		_ = json.Unmarshal(sv.Recaptcha, &settings)
-	}
-	if !settings.Enabled {
-		return nil
-	}
-	if token == nil || *token == "" {
-		h.log.WarnContext(ctx, "Missing recaptcha token")
-		return badRequest("Missing recaptcha token", fields{{"code", codeRecaptchaFailed}})
-	}
-	var billed bool
-	if err := h.db.WithContext(ctx).Raw(`SELECT EXISTS (SELECT 1 FROM workspaces w JOIN organization_billing b ON b.organization_id = w.organization_id WHERE w.id = ?)`, workspaceID).Scan(&billed).Error; err != nil {
-		// forma2 read a failed lookup as a missing record.
-		h.log.ErrorContext(ctx, "Failed to get organization billing by workspace ID", "err", err)
-	}
-	if !billed {
-		return notFound("Organization", nil)
-	}
-	if !h.recaptcha.Verify(ctx, *token, settings.Threshold) {
-		return badRequest("reCAPTCHA verification failed", fields{{"code", codeRecaptchaFailed}})
-	}
-	return nil
 }

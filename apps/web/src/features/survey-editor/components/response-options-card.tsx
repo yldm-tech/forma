@@ -25,6 +25,8 @@ interface ResponseOptionsCardProps {
   setLocalSurvey: (survey: TSurvey | ((prev: TSurvey) => TSurvey)) => void;
   finishedResponseCount: number;
   isSpamProtectionAllowed: boolean;
+  /** The service the instance's spam protection uses. Turnstile has no score, so the threshold is reCAPTCHA's alone. */
+  spamProtectionProvider?: "turnstile" | "recaptcha";
   surveySchedulingConfig: TSurveySchedulingConfig;
   locale: TUserLocale;
 }
@@ -34,6 +36,7 @@ export const ResponseOptionsCard = ({
   setLocalSurvey,
   finishedResponseCount,
   isSpamProtectionAllowed,
+  spamProtectionProvider,
   surveySchedulingConfig,
   locale,
 }: Readonly<ResponseOptionsCardProps>) => {
@@ -390,7 +393,7 @@ export const ResponseOptionsCard = ({
     setResponseLimitError(responseLimitIssue(Number.parseInt(e.target.value)));
   };
 
-  // Turning it off is always allowed: a survey saved with it on keeps it after the instance loses its reCAPTCHA keys, and the server refuses to save it on until it is switched off.
+  // Turning it off is always allowed: a survey saved with it on keeps it after the instance loses its spam protection keys, and the server refuses to save it on until it is switched off.
   const handleRecaptchaToggle = () => {
     if (recaptchaToggle) {
       setRecaptchaToggle(false);
@@ -403,6 +406,15 @@ export const ResponseOptionsCard = ({
       setLocalSurvey({ ...localSurvey, recaptcha: { enabled: true, threshold: 0.1 } });
     }
   };
+
+  const isTurnstile = isSpamProtectionAllowed && spamProtectionProvider === "turnstile";
+  // Names the service in use: Turnstile, or reCAPTCHA with its score threshold.
+  let spamProtectionDescription = t("workspace.surveys.edit.spam_protection_unavailable");
+  if (isTurnstile) {
+    spamProtectionDescription = t("workspace.surveys.edit.turnstile_spam_protection.description");
+  } else if (isSpamProtectionAllowed) {
+    spamProtectionDescription = t("workspace.surveys.edit.enable_recaptcha_to_protect_your_survey_from_spam");
+  }
 
   const handleThresholdChange = (value: number) => {
     setRecaptchaThreshold(value);
@@ -583,49 +595,53 @@ export const ResponseOptionsCard = ({
               isChecked={recaptchaToggle}
               onToggle={handleRecaptchaToggle}
               title={t("workspace.surveys.edit.enable_spam_protection")}
-              description={
-                isSpamProtectionAllowed
-                  ? t("workspace.surveys.edit.enable_recaptcha_to_protect_your_survey_from_spam")
-                  : t("workspace.surveys.edit.spam_protection_unavailable")
-              }
+              description={spamProtectionDescription}
               childBorder={true}>
-              <div className="w-full px-2 py-4">
-                <p className="text-sm font-semibold text-slate-800">
-                  {t("workspace.surveys.edit.spam_protection_threshold_heading")} : {recaptchaThreshold}
-                </p>
-                <p className="mb-2 text-xs text-slate-500">
-                  {t("workspace.surveys.edit.spam_protection_threshold_range_description")}
-                </p>
-                <div className="flex w-full items-center gap-1">
-                  <div className="text-center">
-                    <p className="mx-2">0.1</p>
-                    <p className="mx-2 text-xs text-slate-500">
-                      {t("workspace.surveys.edit.spam_protection_lenient")}
-                    </p>
-                  </div>
-
-                  <Slider
-                    value={[recaptchaThreshold]}
-                    className="grow"
-                    max={0.9}
-                    min={0.1}
-                    step={0.1}
-                    onValueChange={(value) => {
-                      const [threshold] = value;
-                      if (threshold !== undefined) handleThresholdChange(threshold);
-                    }}
-                  />
-                  <div className="text-center">
-                    <p className="mx-2">0.9</p>
-                    <p className="mx-2 text-xs text-slate-500">
-                      {t("workspace.surveys.edit.spam_protection_strict")}
-                    </p>
-                  </div>
+              {isTurnstile ? (
+                <div className="w-full px-2 py-4">
+                  <Alert variant="warning" size="default" className="w-fill text-sm" role="status">
+                    <AlertTitle>{t("workspace.surveys.edit.turnstile_spam_protection.web_note")}</AlertTitle>
+                  </Alert>
                 </div>
-                <Alert variant="warning" size="default" className="w-fill mt-2 text-sm" role="status">
-                  <AlertTitle>{t("workspace.surveys.edit.spam_protection_web_note")}</AlertTitle>
-                </Alert>
-              </div>
+              ) : (
+                <div className="w-full px-2 py-4">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {t("workspace.surveys.edit.spam_protection_threshold_heading")} : {recaptchaThreshold}
+                  </p>
+                  <p className="mb-2 text-xs text-slate-500">
+                    {t("workspace.surveys.edit.spam_protection_threshold_range_description")}
+                  </p>
+                  <div className="flex w-full items-center gap-1">
+                    <div className="text-center">
+                      <p className="mx-2">0.1</p>
+                      <p className="mx-2 text-xs text-slate-500">
+                        {t("workspace.surveys.edit.spam_protection_lenient")}
+                      </p>
+                    </div>
+
+                    <Slider
+                      value={[recaptchaThreshold]}
+                      className="grow"
+                      max={0.9}
+                      min={0.1}
+                      step={0.1}
+                      onValueChange={(value) => {
+                        const [threshold] = value;
+                        if (threshold !== undefined) handleThresholdChange(threshold);
+                      }}
+                    />
+                    <div className="text-center">
+                      <p className="mx-2">0.9</p>
+                      <p className="mx-2 text-xs text-slate-500">
+                        {t("workspace.surveys.edit.spam_protection_strict")}
+                      </p>
+                    </div>
+                  </div>
+                  <Alert variant="warning" size="default" className="w-fill mt-2 text-sm" role="status">
+                    <AlertTitle>{t("workspace.surveys.edit.spam_protection_web_note")}</AlertTitle>
+                  </Alert>
+                </div>
+              )}
             </AdvancedOptionToggle>
           )}
 

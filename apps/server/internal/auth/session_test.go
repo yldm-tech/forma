@@ -193,7 +193,7 @@ func TestOptions(t *testing.T) {
 	e := newEnv(t)
 	r := e.browser().get("/auth/options")
 	expectStatus(t, r, http.StatusOK, "")
-	if m := r.json(); m["signupEnabled"] != true || m["emailAuthEnabled"] != true || m["passwordResetEnabled"] != true || m["emailVerificationRequired"] != true || m["smtpConfigured"] != true || m["turnstileSiteKey"] != nil || m["isFormaCloud"] != false || m["termsUrl"] != nil || m["privacyUrl"] != nil || m["spamProtectionAvailable"] != false {
+	if m := r.json(); m["signupEnabled"] != true || m["emailAuthEnabled"] != true || m["passwordResetEnabled"] != true || m["emailVerificationRequired"] != true || m["smtpConfigured"] != true || m["turnstileSiteKey"] != nil || m["isFormaCloud"] != false || m["termsUrl"] != nil || m["privacyUrl"] != nil || m["spamProtectionAvailable"] != false || m["spamProtectionProvider"] != nil {
 		t.Fatalf("fresh instance options %v", m)
 	}
 	e.seedUser("ada@example.com", strongPassword, userOpts{})
@@ -210,12 +210,19 @@ func TestOptions(t *testing.T) {
 	})
 	cloud.seedUser("ada@example.com", strongPassword, userOpts{})
 	if m := cloud.browser().get("/auth/options").json(); m["signupEnabled"] != true || m["turnstileSiteKey"] != "site-key" || m["passwordResetEnabled"] != false || m["emailVerificationRequired"] != false ||
-		m["isFormaCloud"] != true || m["termsUrl"] != "https://forma.example/terms" || m["privacyUrl"] != "https://forma.example/privacy" || m["spamProtectionAvailable"] != true {
+		m["isFormaCloud"] != true || m["termsUrl"] != "https://forma.example/terms" || m["privacyUrl"] != "https://forma.example/privacy" || m["spamProtectionAvailable"] != true || m["spamProtectionProvider"] != "turnstile" {
 		t.Fatalf("cloud options %v", m)
+	}
+	// reCAPTCHA serves spam protection only on an instance without Turnstile.
+	recaptchaOnly := newEnv(t, func(c *config.Config) {
+		c.RecaptchaSiteKey, c.RecaptchaSecretKey = "recaptcha-site", "recaptcha-secret"
+	})
+	if m := recaptchaOnly.browser().get("/auth/options").json(); m["spamProtectionAvailable"] != true || m["spamProtectionProvider"] != "recaptcha" || m["turnstileSiteKey"] != nil {
+		t.Fatalf("reCAPTCHA-only options %v", m)
 	}
 	// A site key without its secret cannot verify a token, so spam protection is not offered.
 	halfRecaptcha := newEnv(t, func(c *config.Config) { c.RecaptchaSiteKey = "recaptcha-site" })
-	if m := halfRecaptcha.browser().get("/auth/options").json(); m["spamProtectionAvailable"] != false {
+	if m := halfRecaptcha.browser().get("/auth/options").json(); m["spamProtectionAvailable"] != false || m["spamProtectionProvider"] != nil {
 		t.Fatalf("site key only options %v", m)
 	}
 	ssoOnly := newEnv(t, func(c *config.Config) { c.EmailAuthDisabled = true })

@@ -129,6 +129,8 @@ export interface TWorkspaceState {
     actionClasses: TWorkspaceStateActionClass[];
     settings: TWorkspaceStateSettings;
     recaptchaSiteKey?: string;
+    // Set instead of recaptchaSiteKey when the instance's spam protection uses Cloudflare Turnstile.
+    turnstileSiteKey?: string;
     // How many live app surveys the server left out of `surveys`, the oldest ones, because the workspace has more than the state lists. Absent when none were.
     truncated?: number;
   };

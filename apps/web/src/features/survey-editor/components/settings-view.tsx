@@ -24,6 +24,7 @@ interface SettingsViewProps {
   finishedResponseCount: number;
   isReadOnly: boolean;
   isSpamProtectionAllowed: boolean;
+  spamProtectionProvider?: "turnstile" | "recaptcha";
   quotas: TSurveyQuota[];
   surveySchedulingConfig: TSurveySchedulingConfig;
   locale: TUserLocale;
@@ -42,6 +43,7 @@ export const SettingsView = ({
   finishedResponseCount,
   isReadOnly,
   isSpamProtectionAllowed,
+  spamProtectionProvider,
   quotas,
   surveySchedulingConfig,
   locale,
@@ -84,6 +86,7 @@ export const SettingsView = ({
         setLocalSurvey={setLocalSurvey}
         finishedResponseCount={finishedResponseCount}
         isSpamProtectionAllowed={isSpamProtectionAllowed}
+        spamProtectionProvider={spamProtectionProvider}
         surveySchedulingConfig={surveySchedulingConfig}
         locale={locale}
       />

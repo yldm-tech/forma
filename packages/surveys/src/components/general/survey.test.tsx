@@ -44,6 +44,39 @@ vi.mock("@/lib/offline-storage", () => ({
   saveSurveyProgress: offlineStorageMocks.saveSurveyProgress,
 }));
 
+// A stand-in for the Turnstile widget: each challenge the survey creates is recorded, and hands out a new token on every getToken (turnstileMocks.token with a number), or none when turnstileMocks.token is null.
+const turnstileMocks = vi.hoisted(() => ({
+  token: "turnstile-token" as string | null,
+  issued: 0,
+  challenges: [] as { siteKey: string; mounts: string[]; getToken: () => Promise<string | null> }[],
+}));
+
+vi.mock("@/lib/turnstile", async (importActual) => {
+  const actual = await importActual<typeof import("@/lib/turnstile")>();
+  class TurnstileChallenge {
+    siteKey: string;
+    mounts: string[] = [];
+    language: string;
+    constructor(siteKey: string, language: string) {
+      this.siteKey = siteKey;
+      this.language = language;
+      turnstileMocks.challenges.push(this);
+    }
+    async mount() {
+      this.mounts.push(this.language);
+    }
+    whenReady() {
+      return Promise.resolve(turnstileMocks.token !== null);
+    }
+    getToken() {
+      const { token } = turnstileMocks;
+      return Promise.resolve(token === null ? null : `${token}-${++turnstileMocks.issued}`);
+    }
+    remove() {}
+  }
+  return { ...actual, TurnstileChallenge };
+});
+
 vi.mock("@/lib/use-online-status", () => ({
   useOnlineStatus: () => true,
 }));
@@ -1171,5 +1204,102 @@ describe("Survey card arrangement", () => {
     renderWith("link", { cardArrangement: { linkSurveys: "cardless", appSurveys: "simple" } });
     const root = await screen.findByTestId("survey-root");
     expect(root.getAttribute("data-card-arrangement")).toBe("cardless");
+  });
+});
+
+describe("Survey Turnstile spam protection", () => {
+  const spamProtected = {
+    ...baseSurvey,
+    recaptcha: { enabled: true, threshold: 0.1 },
+  } as TJsWorkspaceStateSurvey;
+  const getRecaptchaToken = vi.fn();
+  const renderProtected = (props: Record<string, unknown> = {}) =>
+    render(
+      <Survey
+        appUrl="http://localhost:3000"
+        workspaceId="ws1234567890123456789012"
+        survey={spamProtected}
+        styling={{} as any}
+        isBrandingEnabled={false}
+        languageCode="en"
+        isSpamProtectionEnabled
+        turnstileSiteKey="turnstile-site"
+        getRecaptchaToken={getRecaptchaToken}
+        {...props}
+      />
+    );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    turnstileMocks.token = "turnstile-token";
+    turnstileMocks.issued = 0;
+    turnstileMocks.challenges.length = 0;
+    apiClientMocks.createDisplay.mockResolvedValue({ ok: true, data: { id: "display-created" } });
+    apiClientMocks.createResponse.mockResolvedValue({ ok: true, data: { id: "response-created" } });
+    apiClientMocks.updateResponse.mockResolvedValue({ ok: true, data: { quotaFull: false } });
+    window.parent.postMessage = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  test("renders one widget in the survey's language and sends its token with the first write only", async () => {
+    renderProtected();
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ turnstileToken: "turnstile-token-1", data: { q1: "block-1-answer" } })
+      )
+    );
+    fireEvent.click(await screen.findByTestId("submit-block-2"));
+    await waitFor(() => expect(apiClientMocks.updateResponse).toHaveBeenCalledTimes(1));
+    expect(apiClientMocks.updateResponse.mock.calls[0][0]).not.toHaveProperty("turnstileToken");
+    expect(getRecaptchaToken).not.toHaveBeenCalled();
+    expect(turnstileMocks.challenges).toHaveLength(1);
+    expect(turnstileMocks.challenges[0].siteKey).toBe("turnstile-site");
+    expect(turnstileMocks.challenges[0].mounts).toEqual(["en"]);
+  });
+
+  // Cloudflare accepts a token once, and a create that failed may have spent it (a 503 when the server's check timed out after Cloudflare answered): the retry asks the challenge for another.
+  test("a create retried after a failure carries a fresh token", async () => {
+    apiClientMocks.createResponse
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: "internal_server_error", message: "unavailable", status: 503 },
+      })
+      .mockResolvedValue({ ok: true, data: { id: "response-created" } });
+    renderProtected();
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() => expect(apiClientMocks.createResponse).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    const tokens = apiClientMocks.createResponse.mock.calls.map((call) => call[0].turnstileToken);
+    expect(tokens).toEqual(["turnstile-token-1", "turnstile-token-2"]);
+  }, 10000);
+
+  test("without a token the respondent sees the spam protection error and nothing is sent", async () => {
+    turnstileMocks.token = null;
+    renderProtected();
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    expect(await screen.findByText("Error")).toBeTruthy();
+    expect(apiClientMocks.createResponse).not.toHaveBeenCalled();
+  });
+
+  test("a preview renders no widget", async () => {
+    renderProtected({ isPreviewMode: true });
+    expect(await screen.findByTestId("submit-block-1")).toBeTruthy();
+    expect(turnstileMocks.challenges).toHaveLength(0);
+  });
+
+  test("reCAPTCHA stays in charge when the host passes no Turnstile key", async () => {
+    getRecaptchaToken.mockResolvedValue("recaptcha-token");
+    renderProtected({ turnstileSiteKey: undefined });
+    fireEvent.click(await screen.findByTestId("submit-block-1"));
+    await waitFor(() =>
+      expect(apiClientMocks.createResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ recaptchaToken: "recaptcha-token" })
+      )
+    );
+    expect(apiClientMocks.createResponse.mock.calls[0][0].turnstileToken).toBeUndefined();
+    expect(turnstileMocks.challenges).toHaveLength(0);
   });
 });

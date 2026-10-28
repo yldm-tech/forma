@@ -133,10 +133,10 @@ type Config struct {
 	PasswordHIBPCheckDisabled bool `env:"PASSWORD_HIBP_CHECK_DISABLED" envDefault:"0"`
 	// SessionMaxAge is a session's lifetime in seconds.
 	SessionMaxAge int `env:"SESSION_MAX_AGE" envDefault:"86400"`
-	// RecaptchaSiteKey and RecaptchaSecretKey configure Google reCAPTCHA for survey spam protection; a survey may enable it only when both are set, forma2's IS_RECAPTCHA_CONFIGURED.
+	// RecaptchaSiteKey and RecaptchaSecretKey configure Google reCAPTCHA v3 for survey spam protection, used only when Turnstile is not configured (SpamProtectionProvider).
 	RecaptchaSiteKey   string `env:"RECAPTCHA_SITE_KEY"`
 	RecaptchaSecretKey string `env:"RECAPTCHA_SECRET_KEY"`
-	// Cloudflare Turnstile protects sign-up only when both keys are set.
+	// TurnstileSiteKey and TurnstileSecretKey configure Cloudflare Turnstile; with both set it protects sign-up and is the survey spam protection provider.
 	TurnstileSiteKey   string `env:"TURNSTILE_SITE_KEY"`
 	TurnstileSecretKey string `env:"TURNSTILE_SECRET_KEY"`
 
@@ -451,9 +451,38 @@ func (c Config) CustomScriptsRefusal() string {
 	}
 }
 
-// RecaptchaConfigured reports whether surveys may turn on reCAPTCHA spam protection.
+// RecaptchaConfigured reports whether both reCAPTCHA keys are set. Whether surveys use reCAPTCHA is SpamProtectionProvider's decision.
 func (c Config) RecaptchaConfigured() bool {
 	return c.RecaptchaSiteKey != "" && c.RecaptchaSecretKey != ""
+}
+
+// SpamProtectionProvider names the service that checks the respondents of a survey with spam protection on.
+type SpamProtectionProvider string
+
+const (
+	// SpamProtectionNone: neither service is configured, so no survey may turn spam protection on.
+	SpamProtectionNone SpamProtectionProvider = ""
+	// SpamProtectionTurnstile is Cloudflare Turnstile, chosen whenever both TURNSTILE_* keys are set.
+	SpamProtectionTurnstile SpamProtectionProvider = "turnstile"
+	// SpamProtectionRecaptcha is Google reCAPTCHA v3, for an instance that configured only RECAPTCHA_*.
+	SpamProtectionRecaptcha SpamProtectionProvider = "recaptcha"
+)
+
+// SpamProtectionProvider is the service survey spam protection uses: Turnstile when both of its keys are set, otherwise reCAPTCHA when both of its keys are, otherwise none. One instance uses one service, so the survey page, the SDK and the server agree on which token a response carries.
+func (c Config) SpamProtectionProvider() SpamProtectionProvider {
+	switch {
+	case c.TurnstileConfigured():
+		return SpamProtectionTurnstile
+	case c.RecaptchaConfigured():
+		return SpamProtectionRecaptcha
+	default:
+		return SpamProtectionNone
+	}
+}
+
+// SpamProtectionConfigured reports whether surveys may turn on spam protection.
+func (c Config) SpamProtectionConfigured() bool {
+	return c.SpamProtectionProvider() != SpamProtectionNone
 }
 
 // LinkSurveyEmailSecret signs the link survey email verification tokens: LINK_SURVEY_TOKEN_SECRET, else the derived secret.
@@ -479,7 +508,7 @@ func (c Config) derivedTokenSecret() string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
-// TurnstileConfigured reports whether sign-up requires a Turnstile challenge.
+// TurnstileConfigured reports whether both Turnstile keys are set: sign-up then requires a Turnstile challenge, and Turnstile is the survey spam protection provider.
 func (c Config) TurnstileConfigured() bool {
 	return c.TurnstileSiteKey != "" && c.TurnstileSecretKey != ""
 }

@@ -736,6 +736,11 @@
     "product_name_label": "您的產品或公司叫什麼名字？",
     "product_name_placeholder": "例如：Acme"
   },
+  "organization_creation": {
+    "invitation_required_description": "開啟邀請電子郵件中的連結即可加入組織，無需先登出。如果沒有收到邀請，請聯絡組織擁有者邀請你。這個 Forma 實例僅限受邀加入，只有組織擁有者才能建立新的組織。",
+    "invitation_required_title": "你不屬於任何組織",
+    "landing_ask_for_access": "請聯絡組織擁有者以取得工作區存取權。"
+  },
   "organizations": {
     "landing": {
       "no_workspaces_warning_subtitle": "請聯絡組織擁有者以取得工作區存取權，或建立您自己的組織。",
@@ -4074,6 +4079,10 @@
         "translated": "已翻譯",
         "trigger_survey_when_one_of_the_actions_is_fired": "當觸發其中一個操作時，觸發問卷...",
         "try_lollipop_or_mountain": "嘗試「棒棒糖」或「山峰」...",
+        "turnstile_spam_protection": {
+          "description": "垃圾郵件保護使用 Cloudflare Turnstile，在儲存受訪者的第一個回答前確認其為真人。大多數受訪者不會看到驗證。",
+          "web_note": "垃圾郵件保護適用於連結問卷。Forma Web SDK 在你的網站上顯示的問卷，只有當此 Forma 執行個體在 Turnstile 中允許你網站的網域時才能提交。未附 Turnstile 權杖而直接傳送到 API 的回應會被拒絕。"
+        },
         "type_field_id": "輸入欄位 ID",
         "underline": "底線",
         "unsaved_changes_warning": "您的問卷中有未儲存的變更。您要先儲存它們再離開嗎？",

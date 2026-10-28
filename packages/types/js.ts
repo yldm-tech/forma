@@ -69,6 +69,8 @@ export const ZJsWorkspaceState = z.object({
     actionClasses: z.array(ZJsWorkspaceStateActionClass),
     workspace: ZJsWorkspaceStateWorkspaceSetting,
     recaptchaSiteKey: z.string().optional(),
+    // Set instead of recaptchaSiteKey when the instance's spam protection uses Cloudflare Turnstile.
+    turnstileSiteKey: z.string().optional(),
   }),
 });
 

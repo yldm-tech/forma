@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 )
 
@@ -35,8 +37,16 @@ type recorded struct {
 	} `json:"response"`
 }
 
-// coveredElsewhere are exchanges whose routes other modules serve and replay: the survey pages and the OG image (internal/linksurvey/contract_test.go).
-var coveredElsewhere = regexp.MustCompile(`^(page-|v1-og-image)`)
+// coveredElsewhere are exchanges whose routes other modules serve and replay: the survey pages and the OG image (internal/linksurvey/contract_test.go), and the exchanges of an instance with Turnstile spam protection, which TestContractExchangesTurnstile replays in its own order.
+var coveredElsewhere = regexp.MustCompile(`^(page-|v1-og-image)|-turnstile`)
+
+// turnstileReplayOrder are the exchanges of an instance whose spam protection provider is Cloudflare Turnstile: the environment state naming its site key, a survey with spam protection on refusing a create without a token, with a token Cloudflare refuses and while Cloudflare gives no verdict, then taking one with an accepted token, the update that finishes it without a token, and a survey with spam protection off taking a create with none.
+var turnstileReplayOrder = []string{
+	"v2-environment-turnstile",
+	"v2-responses-create-turnstile-missing-token", "v2-responses-create-turnstile-invalid-token", "v2-responses-create-turnstile-unavailable",
+	"v2-responses-create-turnstile", "v1-responses-update-turnstile-no-token",
+	"v2-responses-create-turnstile-off",
+}
 
 // replayOrder is the order the scenarios need: identify before a contact's displays, a display before the response that references it, the first quota response before the one that finds the quota full. The rate-limit cases come last, each after its window has been exhausted.
 var replayOrder = []string{
@@ -352,6 +362,48 @@ func (r *replay) check(f recorded, res result) {
 		if len(res.Body) != 0 {
 			t.Fatalf("body %q, want none", res.Body)
 		}
+	}
+}
+
+// The client API answers the exchanges of a Turnstile instance as they are written down: the Turnstile site key is the test key Cloudflare documents, and the stand-in for siteverify accepts turnstilePassToken, fails for turnstileDownToken and refuses any other token.
+func TestContractExchangesTurnstile(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) {
+		c.TurnstileSiteKey, c.TurnstileSecretKey = "1x00000000000000000000AA", "turnstile-secret"
+	})
+	files, err := filepath.Glob(filepath.Join("testdata", "contract", "*-turnstile*.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var all []string
+	for _, f := range files {
+		all = append(all, strings.TrimSuffix(filepath.Base(f), ".json"))
+	}
+	ordered := slices.Clone(turnstileReplayOrder)
+	slices.Sort(ordered)
+	slices.Sort(all)
+	if !slices.Equal(ordered, all) {
+		t.Fatalf("the Turnstile replay order lists %v, testdata/contract has %v", ordered, all)
+	}
+
+	bound := e.seedRecording(t)
+	ws, err := uuid.Parse(bound["<id:workspace>"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	spamProtected := e.survey(ws, "name", "Spam protected", "recaptcha", `{"enabled":true,"threshold":0.1}`, "blocks", `[{"id":"clblockspamaaaaaaaaaaaaa1","name":"Main","elements":[
+		{"id":"q1","type":"openText","headline":{"default":"What brings you here?"},"required":false,"inputType":"text","charLimit":{"enabled":false}}]}]`)
+	e.surveyLanguage(spamProtected, uuid.MustParse(bound["<id:language:en-US>"]), true)
+	bound["<id:survey:spamProtected>"] = spamProtected.String()
+
+	r := &replay{t: t, bound: bound}
+	for _, name := range turnstileReplayOrder {
+		f := loadRecorded(t, name)
+		e.clock.nextWindow()
+		res := r.send(e, f)
+		t.Run(name, func(t *testing.T) {
+			sub := &replay{t: t, bound: r.bound}
+			sub.check(f, res)
+		})
 	}
 }
 

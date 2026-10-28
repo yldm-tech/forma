@@ -137,7 +137,7 @@ func TestSurveyPageRendersTheSurvey(t *testing.T) {
 	if s["isEmbed"] != true || s["isPreview"] != true || s["languageCode"] != "default" || s["locale"] != "ja-JP" || p.Lang != "ja-JP" {
 		t.Fatalf("flags %v", s)
 	}
-	if s["recaptchaSiteKey"] != "site-key" || s["isSpamProtectionEnabled"] != true || s["isFormaCloud"] != false {
+	if s["recaptchaSiteKey"] != "site-key" || s["turnstileSiteKey"] != nil || s["isSpamProtectionEnabled"] != true || s["isFormaCloud"] != false {
 		t.Fatalf("recaptcha %v", s)
 	}
 	if s["imprintUrl"] != "https://example.com/imprint" || s["privacyUrl"] != "https://example.com/privacy" || s["termsUrl"] != "https://example.com/terms" || s["publicDomain"] != "http://surveys.localhost:3999" {
@@ -176,6 +176,25 @@ func TestSurveyPageRendersTheSurvey(t *testing.T) {
 }
 
 // The welcome card's response count is fetched only when the card shows it, and then served from the cache for a minute.
+// With Turnstile as the provider the page hands the runtime Turnstile's site key and no reCAPTCHA key, so the runtime renders Turnstile's widget and sends the token the server verifies.
+func TestSurveyPageTurnstileSiteKey(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) {
+		c.TurnstileSiteKey, c.TurnstileSecretKey = "turnstile-site", "turnstile-secret"
+		c.RecaptchaSiteKey, c.RecaptchaSecretKey = "recaptcha-site", "recaptcha-secret"
+	})
+	ws := e.workspace()
+	for _, tc := range []struct {
+		recaptcha string
+		enabled   bool
+	}{{`{"enabled":true,"threshold":0.5}`, true}, {`{"enabled":false,"threshold":0.1}`, false}} {
+		p := e.page("/s/" + e.survey(ws, "recaptcha", tc.recaptcha).String())
+		s := p.sub("survey")
+		if s["turnstileSiteKey"] != "turnstile-site" || s["recaptchaSiteKey"] != nil || s["isSpamProtectionEnabled"] != tc.enabled {
+			t.Fatalf("%s: %v", tc.recaptcha, s)
+		}
+	}
+}
+
 func TestSurveyPageResponseCount(t *testing.T) {
 	e := newEnv(t)
 	ws := e.workspace()

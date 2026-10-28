@@ -45,6 +45,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/turnstile"
 	surveyv3 "github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
@@ -201,9 +202,10 @@ var linkSurveySet = wire.NewSet(
 	linksurvey.NewHandler,
 )
 
-// clientAPISet is the client API under /api/v1/client and /api/v2/client, with its reCAPTCHA verifier, and the settings of how far it trusts the SDK with a workspace's contacts (/api/app/workspaces/{id}/sdk-identity).
+// clientAPISet is the client API under /api/v1/client and /api/v2/client, with its spam protection verifiers (reCAPTCHA, Cloudflare Turnstile), and the settings of how far it trusts the SDK with a workspace's contacts (/api/app/workspaces/{id}/sdk-identity).
 var clientAPISet = wire.NewSet(
 	clientapi.NewRecaptcha,
+	turnstile.New,
 	clientapi.NewHandler,
 	sdkidentity.NewService,
 	sdkidentity.NewHandler,

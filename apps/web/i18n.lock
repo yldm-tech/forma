@@ -692,6 +692,9 @@ checksums:
     onboarding/product_name_description: 71e243056ced62e4f193923dc0f091de
     onboarding/product_name_label: 36d1baa3678419e8198696b0eb746e98
     onboarding/product_name_placeholder: 5ec6ce1b5ac5c32e07c8c107bc6b3b68
+    organization_creation/invitation_required_description: 906e5fe668d6e0b072aaf9303c248d8e
+    organization_creation/invitation_required_title: 87e52b76548fefd5a988282dddefbc1b
+    organization_creation/landing_ask_for_access: c6cfa81223325a774c4cf34b967b1dce
     organizations/landing/no_workspaces_warning_subtitle: 97517f885c16541694ad0851505e7003
     organizations/landing/no_workspaces_warning_title: ba051776860ec4d73c7d177b1379bbda
     organizations/members/account_inactive_tooltip: afa13fc8be6b8a77c9846ce074871799
@@ -3915,6 +3918,8 @@ checksums:
     workspace/surveys/edit/translated: 5b9d805410310b726f12bacb06da44e3
     workspace/surveys/edit/trigger_survey_when_one_of_the_actions_is_fired: 8570291668ec9879d204f10e861112db
     workspace/surveys/edit/try_lollipop_or_mountain: c550a0f07b3ae40a237e30a4314a249c
+    workspace/surveys/edit/turnstile_spam_protection/description: 16277ba9d457857b3ad26dd6be86247f
+    workspace/surveys/edit/turnstile_spam_protection/web_note: 81d2822450c2492ff1515f27a12f7da7
     workspace/surveys/edit/type_field_id: 714b845806236bb8a9d6a09933b836e9
     workspace/surveys/edit/underline: aed1340c6de1b829ec96c0d0da99e9ec
     workspace/surveys/edit/unsaved_changes_warning: a164f276c9f7344022aa4640b32abcf9

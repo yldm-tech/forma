@@ -93,6 +93,34 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+// Turnstile, when both of its keys are set, is the spam protection provider; reCAPTCHA serves an instance that configured only its own keys; half a pair of keys configures nothing.
+func TestSpamProtectionProvider(t *testing.T) {
+	cases := []struct {
+		name                           string
+		turnstileSite, turnstileSecret string
+		recaptchaSite, recaptchaSecret string
+		want                           SpamProtectionProvider
+	}{
+		{"none", "", "", "", "", SpamProtectionNone},
+		{"turnstile", "ts", "tk", "", "", SpamProtectionTurnstile},
+		{"recaptcha", "", "", "rs", "rk", SpamProtectionRecaptcha},
+		{"both prefer turnstile", "ts", "tk", "rs", "rk", SpamProtectionTurnstile},
+		{"half a turnstile pair falls back to recaptcha", "ts", "", "rs", "rk", SpamProtectionRecaptcha},
+		{"half pairs only", "", "tk", "rs", "", SpamProtectionNone},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := Config{TurnstileSiteKey: tc.turnstileSite, TurnstileSecretKey: tc.turnstileSecret, RecaptchaSiteKey: tc.recaptchaSite, RecaptchaSecretKey: tc.recaptchaSecret}
+			if got := c.SpamProtectionProvider(); got != tc.want {
+				t.Fatalf("SpamProtectionProvider() = %q, want %q", got, tc.want)
+			}
+			if c.SpamProtectionConfigured() != (tc.want != SpamProtectionNone) {
+				t.Fatalf("SpamProtectionConfigured() = %v", c.SpamProtectionConfigured())
+			}
+		})
+	}
+}
+
 func TestDerivedAuthSettings(t *testing.T) {
 	cases := []struct {
 		name      string
