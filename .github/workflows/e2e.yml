@@ -1,6 +1,6 @@
 name: E2E Tests
 
-# The Playwright browser suite (apps/e2e) against `forma start` with PostgreSQL, Valkey, SpiceDB and RustFS: sign-up and onboarding, a link survey published, answered and its response filtered and exported, an app survey shown by the SDK on a host page, an image uploaded in the survey editor, and WCAG AA checks with axe on the login page, the survey editor and a public survey page at a desktop and a phone viewport. Not a required check, as in forma2: it runs on demand and on pull requests that change anything it builds, serves or boots, which is the SPA, the workspace packages and tooling it is built from, any server code outside tests, the dev stack's compose file, environment and RustFS init script, and the job's own inputs (Makefile, .node-version, this file).
+# The Playwright browser suite (apps/e2e) against `forma start` with PostgreSQL, Valkey, SpiceDB and RustFS: sign-up and onboarding, a link survey published, answered and its response filtered and exported, an app survey shown by the SDK on a host page, an image uploaded in the survey editor, a workspace logo uploaded and a respondent's file uploaded on a survey page (these upload specs, tagged @upload, run a second time against a server started with STORAGE_UPLOAD_METHOD=put), and WCAG AA checks with axe on the login page, the survey editor and a public survey page at a desktop and a phone viewport. Not a required check, as in forma2: it runs on demand and on pull requests that change anything it builds, serves or boots, which is the SPA, the workspace packages and tooling it is built from, any server code outside tests, the dev stack's compose file, environment and RustFS init script, and the job's own inputs (Makefile, .node-version, this file).
 
 on:
   workflow_dispatch:
@@ -82,6 +82,21 @@ jobs:
         working-directory: apps/e2e
         run: vp exec playwright test
 
+      # The upload specs again, against a server that signs presigned PUT uploads (the method for stores without POST uploads, such as Cloudflare R2), on a fresh stack.
+      - name: Restart the stack with presigned PUT uploads
+        env:
+          FORMA_LOG: ${{ runner.temp }}/forma-put.log
+          STORAGE_UPLOAD_METHOD: put
+        run: |
+          bash tooling/scripts/ci-stack.sh down
+          bash tooling/scripts/ci-stack.sh up
+
+      - name: Run the upload specs with presigned PUT uploads
+        working-directory: apps/e2e
+        env:
+          STORAGE_UPLOAD_METHOD: put
+        run: vp exec playwright test --grep @upload
+
       - name: Upload the Playwright report
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -98,4 +113,6 @@ jobs:
         with:
           name: e2e-server-log
           if-no-files-found: ignore
-          path: ${{ runner.temp }}/forma.log
+          path: |
+            ${{ runner.temp }}/forma.log
+            ${{ runner.temp }}/forma-put.log
