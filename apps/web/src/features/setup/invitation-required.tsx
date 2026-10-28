@@ -7,7 +7,7 @@ import { errorMessage } from "../../lib/errors";
 import { signOut } from "../../lib/queries/auth";
 import { toast } from "../../lib/toast";
 
-/** What a user without an organization sees, in place of the step that creates one, on an invite-only instance where only the owner of an organization may create another: they get in through an invitation, so they are told to ask an owner for one, and can sign out to come back through its link. */
+/** What a user without an organization sees, in place of the step that creates one, on an invite-only instance where only the owner of an organization may create another: someone never let into one, removed from theirs, or whose last organization was deleted. The way forward is an invitation, whose link they open signed in as they are, so the notice says that first and asks those without one to request it from an owner; signing out is there for someone signed in with another account. */
 export const InvitationRequired = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();

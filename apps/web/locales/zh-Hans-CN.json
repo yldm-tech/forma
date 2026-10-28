@@ -737,8 +737,8 @@
     "product_name_placeholder": "例如：Acme"
   },
   "organization_creation": {
-    "invitation_required_description": "此 Forma 实例仅限受邀加入，只有组织所有者才能创建新的组织。请联系组织所有者邀请你，然后打开邀请邮件中的链接。",
-    "invitation_required_title": "你还没有加入任何组织",
+    "invitation_required_description": "打开邀请邮件中的链接即可加入组织，无需先退出登录。如果没有收到邀请，请联系组织所有者邀请你。此 Forma 实例仅限受邀加入，只有组织所有者才能创建新的组织。",
+    "invitation_required_title": "你不属于任何组织",
     "landing_ask_for_access": "请联系组织所有者获取工作区访问权限。"
   },
   "organizations": {

@@ -1,6 +1,6 @@
 import { type QueryClient, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { surveyKeys } from "../../features/surveys/list/query";
-import { api } from "../api";
+import { ApiError, api } from "../api";
 import type { OrganizationRole } from "../roles";
 
 export interface Organization {
@@ -114,11 +114,17 @@ export const organizationsQuery = queryOptions({
       .then((res) => res.organizations),
 });
 
-/** Whether the caller may create an organization: anyone where public sign-up is open, only the owner of an organization on an invite-only instance. It sits under organizationKeys.all, so creating or leaving an organization asks again. */
+/** Whether the caller may create an organization: anyone where public sign-up is open, only the owner of an organization on an invite-only instance (or anyone while it has none). It sits under organizationKeys.all, so creating or leaving an organization asks again. A server that does not know the endpoint yet, an older replica during a rolling deploy, answers 404; that reads as not allowed, so the pages that ask hide creation instead of failing. */
 export const organizationCreationQuery = queryOptions({
   queryKey: organizationKeys.creation,
   queryFn: ({ signal }) =>
-    api.get<{ allowed: boolean }>("/api/app/organization-creation", { signal }).then((res) => res.allowed),
+    api
+      .get<{ allowed: boolean }>("/api/app/organization-creation", { signal })
+      .then((res) => res.allowed)
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) return false;
+        throw error;
+      }),
 });
 
 export const organizationQuery = (id: string) =>

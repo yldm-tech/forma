@@ -41,7 +41,8 @@ const renderLanding = async ({
 }: {
   canCreateWorkspace: boolean;
   phone: boolean;
-  canCreateOrganization?: boolean;
+  /** "unknown endpoint" is an older server, as during a rolling deploy, that answers the question with 404. */
+  canCreateOrganization?: boolean | "unknown endpoint";
 }) => {
   vi.stubGlobal("matchMedia", (query: string) => ({
     matches: phone && query === "(max-width: 639px)",
@@ -55,7 +56,11 @@ const renderLanding = async ({
       if (path === "/api/app/auth/me") {
         return json(200, { id: "u1", name: "Ada", email: "ada@example.com", locale: "en-US" });
       }
-      if (path === "/api/app/organization-creation") return json(200, { allowed: canCreateOrganization });
+      if (path === "/api/app/organization-creation") {
+        return canCreateOrganization === "unknown endpoint"
+          ? json(404, { code: "not_found", message: "Not found" })
+          : json(200, { allowed: canCreateOrganization });
+      }
       if (path === `/api/app/organizations/${ORG}/navigation`)
         return json(200, { path: LANDING, canCreateWorkspace });
       if (path === `/api/app/organizations/${ORG}`) {
@@ -131,6 +136,18 @@ describe("the organization landing page", () => {
       screen.queryByRole("button", { name: i18n.t("workspace.settings.general.create_new_organization") })
     ).toBeNull();
     expect(screen.queryByRole("button", { name: i18n.t("common.create_workspace") })).toBeNull();
+  });
+
+  test("a server that does not answer whether an organization may be created still shows the page, without offering one", async () => {
+    await renderLanding({
+      canCreateWorkspace: true,
+      phone: false,
+      canCreateOrganization: "unknown endpoint",
+    });
+    expect(await screen.findByRole("button", { name: i18n.t("common.create_workspace") })).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: i18n.t("workspace.settings.general.create_new_organization") })
+    ).toBeNull();
   });
 
   test("on an invite-only instance, a manager is still offered a workspace but not an organization", async () => {

@@ -737,8 +737,8 @@
     "product_name_placeholder": "e.g. Acme"
   },
   "organization_creation": {
-    "invitation_required_description": "This Forma instance is invite-only, and only the owner of an organization can create another one. Ask an organization owner to invite you, then open the link in the invitation email.",
-    "invitation_required_title": "You are not part of an organization yet",
+    "invitation_required_description": "Open the link in your invitation email to join an organization; you do not need to sign out first. If you have no invitation, ask an organization owner for one: this Forma instance is invite-only, and only the owner of an organization can create another one.",
+    "invitation_required_title": "You do not belong to an organization",
     "landing_ask_for_access": "Ask your organization's owner for access to a workspace."
   },
   "organizations": {

@@ -26,7 +26,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 /** Opens the page as a signed-in user the server does or does not let create an organization; returns the requests sent and the router. */
-const renderPage = async (canCreate: boolean) => {
+const renderPage = async (canCreate: boolean | "unknown endpoint") => {
   const requests: string[] = [];
   let signedIn = true;
   vi.stubGlobal(
@@ -39,7 +39,11 @@ const renderPage = async (canCreate: boolean) => {
           ? json({ id: "u1", name: "Ada", email: "ada@example.com", locale: "en-US" })
           : json({ code: "not_authenticated", message: "Not authenticated" }, 401);
       }
-      if (key === "GET /api/app/organization-creation") return json({ allowed: canCreate });
+      if (key === "GET /api/app/organization-creation") {
+        return canCreate === "unknown endpoint"
+          ? json({ code: "not_found", message: "Not found" }, 404)
+          : json({ allowed: canCreate });
+      }
       if (key === "POST /api/app/auth/sign-out") {
         signedIn = false;
         return new Response(null, { status: 204 });
@@ -84,5 +88,11 @@ describe("/setup/organization/create", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/auth/login"));
     expect(requests).toContain("POST /api/app/auth/sign-out");
     expect(requests).not.toContain("POST /api/app/organizations");
+  });
+
+  test("a server that does not answer whether an organization may be created, as an older replica during a rolling deploy, shows the notice instead of failing", async () => {
+    await renderPage("unknown endpoint");
+    expect(await screen.findByText(t("organization_creation.invitation_required_title"))).toBeTruthy();
+    expect(screen.queryByLabelText(t("workspace.settings.general.organization_name"))).toBeNull();
   });
 });
