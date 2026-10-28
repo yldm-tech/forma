@@ -42,12 +42,17 @@ stop_server() {
       kill -0 "${pid}" 2>/dev/null || break
       sleep 1
     done
+    if kill -0 "${pid}" 2>/dev/null; then
+      echo "forma (pid ${pid}) did not stop within 30 s." >&2
+      return 1
+    fi
     rm -f "${pid_file}"
   fi
 }
 
 down() {
-  stop_server
+  # The containers go even when the server would not stop.
+  stop_server || true
   "${compose[@]}" down --volumes
 }
 
@@ -63,7 +68,7 @@ seed() {
 start_server() {
   local ready="http://localhost:${HTTP_ADDR##*:}/health/ready"
   # A server still answering here (one this script lost track of) would pass the readiness check below for the new one.
-  if curl -fs -o /dev/null "${ready}"; then
+  if curl -fs --max-time 5 -o /dev/null "${ready}"; then
     echo "Something already serves ${ready}; stop it first." >&2
     exit 1
   fi
@@ -77,7 +82,7 @@ start_server() {
       cat "${log_file}" >&2
       exit 1
     fi
-    if curl -fs -o /dev/null "${ready}"; then
+    if curl -fs --max-time 5 -o /dev/null "${ready}"; then
       echo "forma is ready at ${WEBAPP_URL}"
       return 0
     fi
