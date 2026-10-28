@@ -109,6 +109,8 @@ export const ZUploadPrivateFileRequest = z
     fileName: z.string().trim().min(1),
     fileType: z.string().trim().min(1),
     allowedFileExtensions: z.array(ZAllowedFileExtension).optional(),
+    // The size in bytes the client will upload. A size over the element's limit is refused before anything is signed, and with STORAGE_UPLOAD_METHOD=put the upload is signed as a presigned PUT of exactly this size. Clients from before it send none.
+    fileSize: z.number().int().nonnegative().optional(),
     surveyId: z.cuid2(),
     elementId: z
       .string()
@@ -146,6 +148,10 @@ export const ZUploadFileResponse = z.object({
       .nullable(),
     presignedFields: z.record(z.string(), z.string()).optional(),
     updatedFileName: z.string(),
+    // Sent only when the server signs a presigned PUT (STORAGE_UPLOAD_METHOD=put and a fileSize in the request): the file is then PUT to uploadUrl with uploadHeaders, as its whole body, instead of POSTed to signedUrl. Without uploadMethod the upload is the presigned POST.
+    uploadMethod: z.literal("put").optional(),
+    uploadUrl: z.string().optional(),
+    uploadHeaders: z.record(z.string(), z.string()).optional(),
   }),
 });
 
@@ -157,6 +163,8 @@ export const ZUploadPublicFileRequest = z
     fileType: z.string().trim().min(1),
     workspaceId: z.cuid2(),
     allowedFileExtensions: z.array(ZAllowedFileExtension).optional(),
+    // As in ZUploadPrivateFileRequest, against the 5 MB limit of a public file.
+    fileSize: z.number().int().nonnegative().optional(),
   })
   .superRefine((data, ctx) => {
     refineFileUploadInput({

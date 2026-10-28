@@ -123,9 +123,21 @@ export class ApiClient {
       throw new Error(`Invalid file object`);
     }
 
+    // The file is decoded before it is signed: the server signs a presigned PUT for its exact size.
+    let blob: Blob;
+    try {
+      const binaryString = atob(file.base64.split(",")[1]);
+      const uint8Array = Uint8Array.from([...binaryString].map((char) => char.charCodeAt(0)));
+      blob = new Blob([uint8Array], { type: file.type });
+    } catch (err) {
+      console.error(err);
+      throw new Error("Error uploading file");
+    }
+
     const payload = {
       fileName: file.name,
       fileType: file.type,
+      fileSize: blob.size,
       allowedFileExtensions,
       surveyId,
       elementId,
@@ -141,6 +153,12 @@ export class ApiClient {
 
     if (!response.ok) {
       const json = await parseUploadErrorResponse(response);
+
+      if (response.status === 400 && typeof json?.details?.maxFileSize === "number") {
+        const err = new Error("File size exceeds the size limit for your plan");
+        err.name = FILE_UPLOAD_ERROR_NAMES.FILE_TOO_LARGE;
+        throw err;
+      }
 
       if (response.status === 400 && json?.details?.fileName) {
         const err = new Error("Invalid file name");
@@ -165,40 +183,34 @@ export class ApiClient {
 
     const { data } = json;
 
-    const { signedUrl, fileUrl, presignedFields } = data as {
-      signedUrl: string;
-      presignedFields: Record<string, string>;
-      fileUrl: string;
-    };
+    const { signedUrl, fileUrl, presignedFields, uploadMethod, uploadUrl, uploadHeaders } = data;
 
-    if (!signedUrl || !presignedFields || !fileUrl) {
+    // A presigned PUT when the server signs one (STORAGE_UPLOAD_METHOD=put, for stores without POST uploads such as Cloudflare R2); otherwise, and always from a server that predates it, the presigned POST.
+    let target: string;
+    let init: RequestInit;
+    if (uploadMethod === "put" && uploadUrl) {
+      // The whole body is the file; the store checks it against the signed Content-Type and Content-Length, which the browser sets from the body.
+      target = uploadUrl;
+      init = { method: "PUT", headers: uploadHeaders, body: blob };
+    } else if (signedUrl && presignedFields) {
+      const formData = new FormData();
+      Object.entries(presignedFields).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      formData.append("file", blob);
+      target = signedUrl;
+      init = { method: "POST", body: formData };
+    } else {
       throw new Error("Invalid response");
     }
-
-    const formData = new FormData();
-
-    Object.entries(presignedFields).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-
-    try {
-      const binaryString = atob(file.base64.split(",")[1]);
-      const uint8Array = Uint8Array.from([...binaryString].map((char) => char.charCodeAt(0)));
-      const blob = new Blob([uint8Array], { type: file.type });
-
-      formData.append("file", blob);
-    } catch (err) {
-      console.error(err);
-      throw new Error("Error uploading file");
+    if (!fileUrl) {
+      throw new Error("Invalid response");
     }
 
     let uploadResponse: Response;
 
     try {
-      uploadResponse = await fetch(signedUrl, {
-        method: "POST",
-        body: formData,
-      });
+      uploadResponse = await fetch(target, init);
     } catch (err) {
       console.error("Error uploading file", err);
       const error = new Error("File upload service is unavailable");
@@ -209,7 +221,7 @@ export class ApiClient {
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
 
-      if (presignedFields && errorText.includes("EntityTooLarge")) {
+      if (errorText.includes("EntityTooLarge")) {
         const error = new Error("File size exceeds the size limit for your plan");
         error.name = FILE_UPLOAD_ERROR_NAMES.FILE_TOO_LARGE;
         throw error;

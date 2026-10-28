@@ -111,6 +111,7 @@ describe("FileInput", () => {
     expect(JSON.parse(sign?.body as string)).toEqual({
       fileName: "logo.png",
       fileType: "image/png",
+      fileSize: 3,
       allowedFileExtensions: ["png", "jpeg", "jpg", "webp", "heic"],
       workspaceId: WS,
     });

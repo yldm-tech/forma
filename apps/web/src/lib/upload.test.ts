@@ -55,6 +55,7 @@ describe("handleFileUpload", () => {
     expect(JSON.parse(signInit.body as string)).toEqual({
       fileName: "logo.png",
       fileType: "image/png",
+      fileSize: 1000,
       allowedFileExtensions: ["png", "jpg"],
       workspaceId: WORKSPACE,
     });
@@ -65,6 +66,45 @@ describe("handleFileUpload", () => {
     expect([...form.keys()]).toEqual(["Content-Type", "bucket", "key", "Policy", "file"]);
     expect(form.get("key")).toBe("k/logo.png");
     expect((form.get("file") as File).name).toBe("logo.png");
+  });
+
+  test("PUTs the file itself to the signed URL with the signed headers when the server signs a presigned PUT", async () => {
+    const PUT = {
+      data: {
+        ...SIGNED.data,
+        uploadMethod: "put",
+        uploadUrl: "https://bucket.example.com/uploads/k/logo.png?X-Amz-Signature=s",
+        uploadHeaders: { "Content-Type": "image/png" },
+      },
+    };
+    const fetchMock = stub(json(200, PUT), new Response(null, { status: 200 }));
+    const logo = file();
+
+    expect(await handleFileUpload(logo, WORKSPACE)).toEqual({ url: SIGNED.data.fileUrl });
+    const [bucketUrl, bucketInit] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
+    expect(bucketUrl).toBe(PUT.data.uploadUrl);
+    expect(bucketInit.method).toBe("PUT");
+    expect(bucketInit.headers).toEqual({ "Content-Type": "image/png" });
+    // The body is the file as-is, so the browser sends its size as the signed Content-Length.
+    expect(bucketInit.body).toBe(logo);
+  });
+
+  test("a PUT the bucket refuses fails the upload", async () => {
+    stub(
+      json(200, {
+        data: {
+          ...SIGNED.data,
+          uploadMethod: "put",
+          uploadUrl: "https://bucket.example.com/k",
+          uploadHeaders: {},
+        },
+      }),
+      new Response("<Error><Code>SignatureDoesNotMatch</Code></Error>", { status: 403 })
+    );
+    expect(await handleFileUpload(file(), WORKSPACE)).toEqual({
+      error: FileUploadError.STORAGE_UPLOAD_FAILED,
+      url: "",
+    });
   });
 
   test("without allowed extensions the field is left out, as forma2 sent it", async () => {
@@ -92,6 +132,15 @@ describe("handleFileUpload", () => {
       "a rejected file name",
       json(400, { code: "bad_request", message: "Invalid input", details: { fileName: "----.png" } }),
       FileUploadError.INVALID_FILE_NAME,
+    ],
+    [
+      "a file over the server's limit",
+      json(400, {
+        code: "bad_request",
+        message: "File size exceeds the upload limit",
+        details: { fileSize: 6000000, maxFileSize: 5242880 },
+      }),
+      FileUploadError.FILE_SIZE_EXCEEDED,
     ],
     [
       "a bucket the server cannot use",
