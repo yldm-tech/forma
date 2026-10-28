@@ -107,7 +107,8 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	t.Helper()
 	t.Parallel()
 	u, _ := url.Parse(webApp)
-	cfg := config.Config{WebAppURL: u, RateLimitingDisabled: true, AuditLogEnabled: true, UserManagementMinimumRole: "manager", TrustedProxyHopCount: 1}
+	// Sign-up is open (E2E_TESTING), so the fixtures can make any fresh user an organization's creator; the tests of the invite-only rule close it.
+	cfg := config.Config{WebAppURL: u, RateLimitingDisabled: true, AuditLogEnabled: true, UserManagementMinimumRole: "manager", TrustedProxyHopCount: 1, E2ETesting: true}
 	for _, f := range configure {
 		f(&cfg)
 	}

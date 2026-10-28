@@ -220,6 +220,25 @@ func (r *Repository) delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// mayCreateOnInviteOnlyInstance is CanCreate's rule where public sign-up is closed: the user is an accepted owner of an organization that has not suspended them, or the instance has no organization yet.
+func (r *Repository) mayCreateOnInviteOnlyInstance(ctx context.Context, userID uuid.UUID) (bool, error) {
+	var allowed bool
+	if err := r.db.WithContext(ctx).Raw(
+		`SELECT EXISTS (SELECT 1 FROM memberships WHERE user_id = ? AND role = 'owner' AND accepted AND suspended_at IS NULL) OR NOT EXISTS (SELECT 1 FROM organizations)`, userID,
+	).Scan(&allowed).Error; err != nil {
+		return false, fmt.Errorf("check whether the user may create an organization: %w", err)
+	}
+	return allowed, nil
+}
+
+// lockInviteOnlyCreation takes the transaction-scoped lock that serializes organization creation on an invite-only instance, so two users racing for the instance's first organization cannot both find it has none.
+func (r *Repository) lockInviteOnlyCreation(ctx context.Context) error {
+	if err := r.db.WithContext(ctx).Exec(`SELECT pg_advisory_xact_lock(hashtext('forma.invite-only-organization-creation'))`).Error; err != nil {
+		return fmt.Errorf("lock organization creation: %w", err)
+	}
+	return nil
+}
+
 // hasAnyUser reports whether the instance has a user; without one it is a fresh instance.
 func (r *Repository) hasAnyUser(ctx context.Context) (bool, error) {
 	var exists bool
