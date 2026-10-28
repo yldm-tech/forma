@@ -46,6 +46,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ssrf"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/turnstile"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/v3api"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
@@ -214,7 +215,8 @@ func InitializeServer(ctx context.Context, cfg config.Config, log *slog.Logger) 
 	}
 	linksurveyHandler := linksurvey.NewHandler(cfg, linksurveyService, limiter, webuiHandler, log)
 	recaptcha := clientapi.NewRecaptcha(cfg, log)
-	clientapiHandler := clientapi.NewHandler(cfg, db, client, limiter, workspaceRepository, responseService, contactService, storageService, recaptcha, cipher, log)
+	verifier := turnstile.New(cfg)
+	clientapiHandler := clientapi.NewHandler(cfg, db, client, limiter, workspaceRepository, responseService, contactService, storageService, recaptcha, verifier, cipher, log)
 	webhookRepository := webhook.NewRepository(db)
 	ssrfGuard := ssrf.New(cfg)
 	webhookService := webhook.NewService(webhookRepository, authorizer, limiter, emitter, ssrfGuard, log)
@@ -435,8 +437,8 @@ var instanceSet = wire.NewSet(instance.NewReleases, instance.NewHandler)
 // linkSurveySet is the public survey pages (/s, /c, /p), their PIN and email verification gates, and the OG image.
 var linkSurveySet = wire.NewSet(linksurvey.NewRepository, linksurvey.NewService, linksurvey.NewHandler)
 
-// clientAPISet is the client API under /api/v1/client and /api/v2/client, with its reCAPTCHA verifier, and the settings of how far it trusts the SDK with a workspace's contacts (/api/app/workspaces/{id}/sdk-identity).
-var clientAPISet = wire.NewSet(clientapi.NewRecaptcha, clientapi.NewHandler, sdkidentity.NewService, sdkidentity.NewHandler)
+// clientAPISet is the client API under /api/v1/client and /api/v2/client, with its spam protection verifiers (reCAPTCHA, Cloudflare Turnstile), and the settings of how far it trusts the SDK with a workspace's contacts (/api/app/workspaces/{id}/sdk-identity).
+var clientAPISet = wire.NewSet(clientapi.NewRecaptcha, turnstile.New, clientapi.NewHandler, sdkidentity.NewService, sdkidentity.NewHandler)
 
 // webhookSet is webhooks: the settings page's routes under /api/app, the /api/v1/webhooks subscription API, and the SSRF guard every request to a webhook's URL goes through.
 var webhookSet = wire.NewSet(ssrf.New, webhook.NewRepository, webhook.NewService, webhook.NewHandler, webhook.NewV1Handler)

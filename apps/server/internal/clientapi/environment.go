@@ -17,6 +17,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/embeddeddata"
 	"github.com/yldm-tech/forma/apps/server/internal/langcode"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/analytics"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/config"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/jsvalue"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/rowid"
 	"github.com/yldm-tech/forma/apps/server/internal/survey"
@@ -291,7 +292,11 @@ func (h *Handler) buildState(ctx context.Context, workspaceID uuid.UUID) (fields
 	}
 
 	state := fields{{"surveys", h.resolveStorageURLs(stateSurveys)}, {"actionClasses", classes}, {"workspace", settings}}
-	if h.cfg.RecaptchaConfigured() {
+	// The site key of the one spam protection service the instance uses (config.SpamProtectionProvider), which tells the SDK which token a survey with spam protection on must send.
+	switch h.cfg.SpamProtectionProvider() {
+	case config.SpamProtectionTurnstile:
+		state = append(state, field{"turnstileSiteKey", h.cfg.TurnstileSiteKey})
+	case config.SpamProtectionRecaptcha:
 		state = append(state, field{"recaptchaSiteKey", h.cfg.RecaptchaSiteKey})
 	}
 	state = append(state, field{"project", settings})

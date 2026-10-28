@@ -146,7 +146,7 @@ func TestFeatureRoutesCoexist(t *testing.T) {
 		t.Fatal(err)
 	}
 	linksurvey.NewHandler(cfg, nil, nil, web, log).Register(r)
-	clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, log).Register(r)
+	clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, log).Register(r)
 
 	want := map[string]bool{
 		"GET /s/:surveyId":                                                            true,
@@ -339,7 +339,7 @@ func newProductionRouter(t *testing.T, cfg config.Config) *gin.Engine {
 		ai.NewHandler(nil, nil, sessions),
 		storage.NewHandler(cfg, nil, nil, sessions, nil, nil, nil, nil, log),
 		linksurvey.NewHandler(cfg, nil, nil, web, log),
-		clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, log),
+		clientapi.NewHandler(cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, log),
 		webhook.NewHandler(nil, sessions),
 		webhook.NewV1Handler(nil, v1, log),
 		mgmtapi.NewHandler(cfg, nil, nil, v1, nil, nil, nil, nil, nil, nil, sessions, nil, nil, nil, nil, nil, nil, log),

@@ -194,7 +194,7 @@ func (s *Service) Update(ctx context.Context, caller Caller, in UpdateInput, dra
 	var recaptcha struct {
 		Enabled bool `json:"enabled"`
 	}
-	if !isNullJSON(in.Recaptcha) && json.Unmarshal(in.Recaptcha, &recaptcha) == nil && recaptcha.Enabled && !s.cfg.RecaptchaConfigured() {
+	if !isNullJSON(in.Recaptcha) && json.Unmarshal(in.Recaptcha, &recaptcha) == nil && recaptcha.Enabled && !s.cfg.SpamProtectionConfigured() {
 		return nil, apperr.OperationNotAllowed("Spam protection is not enabled for this organization")
 	}
 	if err := draftVersionConflict(current, &in, draft); err != nil {

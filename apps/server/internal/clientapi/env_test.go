@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -30,6 +31,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/turnstile"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey/valkeytest"
 	"github.com/yldm-tech/forma/apps/server/internal/response"
 	"github.com/yldm-tech/forma/apps/server/internal/storage"
@@ -105,6 +107,25 @@ type env struct {
 		status int
 		forms  []url.Values
 	}
+	// cloudflare stands in for Turnstile's siteverify: it accepts turnstilePassToken, fails with Cloudflare's internal error for turnstileDownToken and refuses every other token, recording each request.
+	cloudflare *httptest.Server
+	turnstile  struct {
+		mu       sync.Mutex
+		requests []map[string]string
+	}
+}
+
+// The tokens the Turnstile stand-in answers by.
+const (
+	turnstilePassToken = "turnstile-pass"
+	turnstileDownToken = "turnstile-down"
+)
+
+// turnstileRequests are the siteverify requests the stand-in received.
+func (e *env) turnstileRequests() []map[string]string {
+	e.turnstile.mu.Lock()
+	defer e.turnstile.mu.Unlock()
+	return slices.Clone(e.turnstile.requests)
 }
 
 func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
@@ -156,8 +177,25 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	t.Cleanup(e.google.Close)
 	recaptcha := NewRecaptcha(cfg, log)
 	recaptcha.endpoint = e.google.URL
+	e.cloudflare = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req map[string]string
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		e.turnstile.mu.Lock()
+		defer e.turnstile.mu.Unlock()
+		e.turnstile.requests = append(e.turnstile.requests, req)
+		status, answer := http.StatusOK, `{"success":false,"error-codes":["invalid-input-response"]}`
+		switch req["response"] {
+		case turnstilePassToken:
+			answer = `{"success":true,"error-codes":[]}`
+		case turnstileDownToken:
+			status, answer = http.StatusInternalServerError, `{"success":false,"error-codes":["internal-error"]}`
+		}
+		w.WriteHeader(status)
+		_, _ = io.WriteString(w, answer)
+	}))
+	t.Cleanup(e.cloudflare.Close)
 
-	e.h = NewHandler(cfg, e.db, e.cache, limiter, workspace.NewRepository(e.db, log), responses, contacts, storage.NewService(bucket), recaptcha, e.cipher, log)
+	e.h = NewHandler(cfg, e.db, e.cache, limiter, workspace.NewRepository(e.db, log), responses, contacts, storage.NewService(bucket), recaptcha, turnstile.NewWithEndpoint(cfg.TurnstileSecretKey, e.cloudflare.URL), e.cipher, log)
 	e.h.now = e.clock.Now
 	web, err := webui.NewFromFS(fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}, "js/surveys.umd.cjs": {Data: []byte("/* surveys */")}})
 	if err != nil {

@@ -54,8 +54,11 @@ func NewHandler(cfg config.Config, svc *Service, limiter *ratelimit.Limiter, web
 	return &Handler{cfg: cfg, svc: svc, limiter: limiter, shell: newShell(web.SurveyShell()), log: log, scriptPath: web.VersionedPath(surveysScript), localePaths: web.SurveyLocalePaths(), policy: pagePolicy(cfg)}
 }
 
-// Script sources a survey page loads beside the page bundle: Cal.com's embed for a scheduling question, and Google reCAPTCHA (api.js, which loads its release from gstatic) where RECAPTCHA_* lets a survey turn on spam protection. Paths are part of the sources, so the rest of www.google.com stays out.
-const calEmbedScript = "https://cal.com/embed.js"
+// Script sources a survey page loads beside the page bundle: Cal.com's embed for a scheduling question, and the script of the instance's spam protection provider (config.SpamProtectionProvider): Cloudflare Turnstile's api.js, whose challenge frame the policy's frame-src already allows (any https: source), or Google reCAPTCHA (api.js, which loads its release from gstatic). Paths are part of the reCAPTCHA sources, so the rest of www.google.com stays out; challenges.cloudflare.com serves nothing but Turnstile.
+const (
+	calEmbedScript   = "https://cal.com/embed.js"
+	turnstileScripts = "https://challenges.cloudflare.com"
+)
 
 var recaptchaScripts = []string{"https://www.google.com/recaptcha/", "https://www.gstatic.com/recaptcha/"}
 
@@ -70,7 +73,10 @@ func pagePolicy(cfg config.Config) string {
 		sources = append(sources, domain.Scheme+"://"+domain.Host)
 	}
 	sources = append(sources, calEmbedScript)
-	if cfg.RecaptchaConfigured() {
+	switch cfg.SpamProtectionProvider() {
+	case config.SpamProtectionTurnstile:
+		sources = append(sources, turnstileScripts)
+	case config.SpamProtectionRecaptcha:
 		sources = append(sources, recaptchaScripts...)
 	}
 	return httpserver.DocumentPolicy(cfg, sources...)

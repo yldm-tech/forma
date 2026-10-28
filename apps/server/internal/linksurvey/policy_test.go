@@ -3,6 +3,7 @@ package linksurvey
 import (
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -56,6 +57,21 @@ func TestSurveyPagePolicy(t *testing.T) {
 func TestSurveyPagePolicyWithoutRecaptcha(t *testing.T) {
 	if got, want := newEnv(t).page("/s/"+uuid.NewString()).Header.Get("Content-Security-Policy"), pagePolicyWith("'self' http://localhost:3999 https://cal.com/embed.js"); got != want {
 		t.Errorf("without reCAPTCHA: Content-Security-Policy =\n%q\nwant\n%q", got, want)
+	}
+}
+
+// With Turnstile as the spam protection provider the page loads Turnstile's script from challenges.cloudflare.com, its challenge frame is within frame-src's https: sources, and Google is not named even when reCAPTCHA keys are configured too.
+func TestSurveyPagePolicyWithTurnstile(t *testing.T) {
+	e := newEnv(t, func(c *config.Config) {
+		c.TurnstileSiteKey, c.TurnstileSecretKey = "site-key", "secret-key"
+		c.RecaptchaSiteKey, c.RecaptchaSecretKey = "recaptcha-site", "recaptcha-secret"
+	})
+	got := e.page("/s/" + uuid.NewString()).Header.Get("Content-Security-Policy")
+	if want := pagePolicyWith("'self' http://localhost:3999 https://cal.com/embed.js https://challenges.cloudflare.com"); got != want {
+		t.Errorf("with Turnstile: Content-Security-Policy =\n%q\nwant\n%q", got, want)
+	}
+	if !strings.Contains(got, "frame-src 'self' https://app.cal.com https:;") {
+		t.Errorf("frame-src does not allow Turnstile's challenge frame: %q", got)
 	}
 }
 
