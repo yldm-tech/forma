@@ -14,7 +14,11 @@ import { afterEach, beforeAll, expect, test, vi } from "vite-plus/test";
 import { initI18n } from "../../lib/i18n";
 import type { Me } from "../../lib/queries/auth";
 import { billingKeys } from "../../lib/queries/billing";
-import { type OrganizationSummary, organizationsQuery } from "../../lib/queries/organizations";
+import {
+  type OrganizationSummary,
+  organizationCreationQuery,
+  organizationsQuery,
+} from "../../lib/queries/organizations";
 import { type Workspace, workspacesQuery } from "../../lib/queries/workspaces";
 import { TopControlBar } from "./top-control-bar";
 
@@ -62,7 +66,7 @@ const stubScreen = (isPhone: boolean) =>
 
 const OTHER_ORG = "0190a000-0000-7000-8000-000000000003";
 
-/** The workspace's top bar on its survey list, with the contacts page to navigate to. The switchers' lists are loaded already: the organization and another one, and the workspace. */
+/** The workspace's top bar on its survey list, with the contacts page to navigate to. The switchers' lists are loaded already: the organization and another one, and the workspace; and the user may create an organization. */
 const renderTopBar = async (role = "owner") => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   queryClient.setQueryData(billingKeys.summary(ORG), { isFormaCloud: false });
@@ -71,6 +75,7 @@ const renderTopBar = async (role = "owner") => {
     { id: OTHER_ORG, name: "Globex", role: "member", suspendedAt: null },
   ] as OrganizationSummary[]);
   queryClient.setQueryData(workspacesQuery(ORG).queryKey, [{ id: WS, name: "Website" }] as Workspace[]);
+  queryClient.setQueryData(organizationCreationQuery.queryKey, true);
   const page = () => (
     <TopControlBar
       user={user}
