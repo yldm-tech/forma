@@ -3,7 +3,6 @@ package auth
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -96,30 +95,5 @@ func TestBreachCheckerDisabledMakesNoRequest(t *testing.T) {
 	b.disabled = false
 	if b.compromised(context.Background(), "") || calls.Load() != 0 {
 		t.Fatal("an empty password was looked up")
-	}
-}
-
-func TestTurnstileVerifier(t *testing.T) {
-	var got map[string]string
-	answer := true
-	status := http.StatusOK
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewDecoder(r.Body).Decode(&got)
-		w.WriteHeader(status)
-		_ = json.NewEncoder(w).Encode(map[string]bool{"success": answer})
-	}))
-	defer srv.Close()
-	v := &turnstileVerifier{client: srv.Client(), verifyURL: srv.URL, secret: "s3cret"}
-
-	if !v.verify(context.Background(), "tok") || got["secret"] != "s3cret" || got["response"] != "tok" {
-		t.Fatalf("accepted token not verified; request %v", got)
-	}
-	answer = false
-	if v.verify(context.Background(), "tok") {
-		t.Fatal("rejected token verified")
-	}
-	answer, status = true, http.StatusInternalServerError
-	if v.verify(context.Background(), "tok") {
-		t.Fatal("a failed verification call counted as success")
 	}
 }

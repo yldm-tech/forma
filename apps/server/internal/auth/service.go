@@ -24,6 +24,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/mailer"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/turnstile"
 )
 
 // Token lifetimes. Email verification links live an hour (forma2's EMAIL_VERIFICATION_TTL_SECONDS) and the sign-up intent as long, so the browser that signed up can still be recognized when the link is used; email change links a day; a pending second factor ten minutes (Better Auth's two-factor cookie); an emailed account deletion an hour.
@@ -65,7 +66,7 @@ type Service struct {
 	mailer    *mailer.Mailer
 	audit     *audit.Emitter
 	breaches  *breachChecker
-	turnstile *turnstileVerifier
+	turnstile *turnstile.Verifier
 	failures  *failureThrottle
 	billing   *billing.Lifecycle
 	// delivery projects the access an account gains or loses into SpiceDB before the request answers; nil with AuthZed disabled.
@@ -87,7 +88,7 @@ func NewService(cfg config.Config, repo *Repository, sessions *Sessions, invites
 		mailer:    mail,
 		audit:     emitter,
 		breaches:  &breachChecker{client: client, rangeURL: hibpRangeURL, disabled: cfg.PasswordHIBPCheckDisabled, log: log},
-		turnstile: &turnstileVerifier{client: client, verifyURL: turnstileURL, secret: cfg.TurnstileSecretKey},
+		turnstile: turnstile.New(cfg),
 		failures:  &failureThrottle{rdb: rdb, log: log, now: time.Now},
 		billing:   lifecycle,
 		delivery:  delivery,

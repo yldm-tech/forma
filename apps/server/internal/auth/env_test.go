@@ -40,6 +40,7 @@ import (
 	"github.com/yldm-tech/forma/apps/server/internal/platform/pgtest"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/ratelimit"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/secret"
+	"github.com/yldm-tech/forma/apps/server/internal/platform/turnstile"
 	"github.com/yldm-tech/forma/apps/server/internal/platform/valkey/valkeytest"
 )
 
@@ -159,14 +160,14 @@ func newEnv(t *testing.T, configure ...func(*config.Config)) *env {
 	hibp := httptest.NewServer(http.HandlerFunc(e.serveRange))
 	t.Cleanup(hibp.Close)
 	e.svc.breaches.rangeURL = hibp.URL + "/range/"
-	turnstile := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	cloudflare := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		e.mu.Lock()
 		ok := e.turnstileOK
 		e.mu.Unlock()
 		_ = json.NewEncoder(w).Encode(map[string]bool{"success": ok})
 	}))
-	t.Cleanup(turnstile.Close)
-	e.svc.turnstile.verifyURL = turnstile.URL
+	t.Cleanup(cloudflare.Close)
+	e.svc.turnstile = turnstile.NewWithEndpoint(cfg.TurnstileSecretKey, cloudflare.URL)
 
 	r := gin.New()
 	r.Use(httpapi.NewClientIPResolver(cfg, log).Middleware())
