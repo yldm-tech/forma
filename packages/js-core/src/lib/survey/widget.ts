@@ -172,6 +172,15 @@ export const renderWidget = async (
     return executeRecaptcha(recaptchaSiteKey);
   };
 
+  if (isSpamProtectionEnabled && turnstileSiteKey && !formaSurveys.supportsTurnstile) {
+    // /js/surveys.umd.js is not versioned and the edge may serve a copy older than this SDK, one that knows only reCAPTCHA: it would refuse the respondent's first answer, so the survey is not shown.
+    logger.error(
+      `Survey ${survey.id} left out: the surveys library does not support Turnstile spam protection`
+    );
+    setIsSurveyRunning(false);
+    return;
+  }
+
   if (isSpamProtectionEnabled && turnstileSiteKey) {
     // As for reCAPTCHA below: a script that cannot load (blocked, a CSP without challenges.cloudflare.com) releases `isSurveyRunning` and the survey is not shown, rather than shown unprotected and refused on its first answer.
     try {

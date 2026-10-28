@@ -170,5 +170,7 @@ if (globalThis.window !== undefined) {
     renderSurvey,
     onFilePick,
     setNonce: setStyleNonce,
+    // Tells js-core this runtime renders Cloudflare Turnstile (turnstileSiteKey), so a newer SDK does not show a protected survey through an older runtime, which would ask reCAPTCHA for a token it cannot issue.
+    supportsTurnstile: true,
   } as typeof globalThis.window.formaSurveys;
 }
