@@ -6,6 +6,11 @@
 Experience management — surveys, responses and workflows.
 </p>
 
+<p align="center">
+  <a href="https://x.com/suzukaze_haduki"><img alt="X" src="https://img.shields.io/badge/X-%40suzukaze__haduki-000000?logo=x&logoColor=white"></a>
+  <a href="https://github.com/sponsors/houko"><img alt="GitHub Sponsors" src="https://img.shields.io/badge/GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white"></a>
+</p>
+
 ## About
 
 Forma is a survey and experience-management platform. Collect feedback with in-app, website, link and
